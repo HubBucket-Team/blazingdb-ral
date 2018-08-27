@@ -40,11 +40,25 @@ gdf_error process__binary_operation_column_column(
 	operands.pop();
 
 	if(is_literal(left_operand)){
+		size_t right_index = get_index(right_operand);
+		
 		if(is_literal(right_operand)){
 			//kind of silly, should evalute literals
 			//then copy results to output
 		}else{
-			//otro caso inverso
+			//for now we shortcut for our usecase
+			//assuming type char
+			if(inputs[right_index]->dtype == GDF_INT8){
+
+				gdf_data data = {.ui08=stoi(left_operand)};
+				gdf_scalar left = {data, GDF_UINT8};
+
+				gdf_error err = gdf_binary_operation_v_s_v(inputs[right_index],&left,output,operation);
+				if(err == GDF_SUCCESS){
+					inputs.push_back(temp);
+					operands.push("$" + std::to_string(inputs.size()-1));
+				}
+			}
 		}
 	}else{
 		size_t left_index = get_index(left_operand);
@@ -57,7 +71,7 @@ gdf_error process__binary_operation_column_column(
 			//assuming type char
 			if(inputs[left_index]->dtype == GDF_INT8){
 
-				gdf_data data = {.ui32=stoi(right_operand)};
+				gdf_data data = {.ui08=stoi(right_operand)};
 				gdf_scalar right = {data, GDF_UINT8};
 
 				gdf_error err = gdf_binary_operation_v_s_v(inputs[left_index],&right,output,operation);

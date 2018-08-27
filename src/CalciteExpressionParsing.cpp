@@ -4,20 +4,20 @@
 
 gdf_error get_operation(
 		std::string operator_string,
-		gdf_comparison_operator * operation
+		gdf_binary_operator * operation
 ){
 	if(operator_string == "="){
-		*operation = GDF_EQUALS;
+		*operation = GDF_EQUAL;
 	}else if(operator_string == "<>"){
-		*operation = GDF_NOT_EQUALS;
+		*operation = GDF_NOT_EQUAL;
 	}else if(operator_string == ">"){
-		*operation = GDF_GREATER_THAN;
+		*operation = GDF_GREATER;
 	}else if(operator_string == ">="){
-		*operation = GDF_GREATER_THAN_OR_EQUALS;
+		*operation = GDF_GREATER_EQUAL;
 	}else if(operator_string == "<"){
-		*operation = GDF_LESS_THAN;
+		*operation = GDF_LESS;
 	}else if(operator_string == "<="){
-		*operation = GDF_LESS_THAN_OR_EQUALS;
+		*operation = GDF_LESS_EQUAL;
 	}else{
 		return GDF_UNSUPPORTED_DTYPE;
 	}

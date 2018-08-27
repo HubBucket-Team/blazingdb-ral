@@ -28,7 +28,7 @@ gdf_error process__binary_operation_column_column(
 	}else{
 		output = temp;
 	}
-	gdf_comparison_operator operation;
+	gdf_binary_operator operation;
 	gdf_error err = get_operation(operator_string,&operation);
 	if(err != GDF_SUCCESS){
 		return err;
@@ -44,7 +44,7 @@ gdf_error process__binary_operation_column_column(
 			//kind of silly, should evalute literals
 			//then copy results to output
 		}else{
-
+			//otro caso inverso
 		}
 	}else{
 		size_t left_index = get_index(left_operand);
@@ -57,7 +57,10 @@ gdf_error process__binary_operation_column_column(
 			//assuming type char
 			if(inputs[left_index]->dtype == GDF_INT8){
 
-				gdf_error err = gpu_comparison_static_i8(inputs[left_index], stoi(right_operand), output,operation);
+				gdf_data data = {.ui32=stoi(right_operand)};
+				gdf_scalar right = {data, GDF_UINT8};
+
+				gdf_error err = gdf_binary_operation_v_s_v(inputs[left_index],&right,output,operation);
 				if(err == GDF_SUCCESS){
 					inputs.push_back(temp);
 					operands.push("$" + std::to_string(inputs.size()-1));
@@ -67,7 +70,7 @@ gdf_error process__binary_operation_column_column(
 
 			size_t right_index = get_index(right_operand);
 
-			gdf_error err = gpu_comparison(inputs[left_index],inputs[right_index],
+			gdf_error err = gdf_binary_operation_v_v_v(inputs[left_index],inputs[right_index],
 					output,operation);
 			if(err == GDF_SUCCESS){
 				inputs.push_back(temp);
@@ -81,7 +84,7 @@ gdf_error process__binary_operation_column_column(
 
 template <typename T>
 gdf_error process__binary_operation_column_literal(
-		gdf_comparison_operator operation,
+		gdf_binary_operator operation,
 		gdf_column * left,
 		T right,
 		gdf_column * output
@@ -90,7 +93,7 @@ gdf_error process__binary_operation_column_literal(
 }
 template <typename T>
 gdf_error process__binary_operation_literal_column(
-		gdf_comparison_operator operation,
+		gdf_binary_operator operation,
 		T left,
 		gdf_column * right,
 		gdf_column * output

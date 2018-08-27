@@ -14,7 +14,7 @@
 
 gdf_error get_operation(
 		std::string operator_string,
-		gdf_comparison_operator * operation
+		gdf_binary_operator * operation
 );
 
 bool is_literal(std::string operand);

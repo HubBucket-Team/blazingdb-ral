@@ -80,7 +80,7 @@ void create_gdf_column(gdf_column * column, gdf_dtype type, size_t num_values, v
 		cudaMemcpy(data,input_data, num_values * width_per_value, cudaMemcpyHostToDevice);
 	}
 
-	column->null_count = 0;
+	//column->null_count = 0;
 }
 
 void runOriginalTest(){
@@ -125,10 +125,10 @@ void runOriginalTest(){
 		cuda_error = cudaMalloc((void **) &valid_out,1);
 		gdf_column lhs;
 		gdf_error error = gdf_column_view(&lhs,(void *) data_left, valid_device,num_elements,GDF_INT8);
-		lhs.null_count = 2;
+		//lhs.null_count = 2;
 		gdf_column rhs;
 		error = gdf_column_view(&rhs,(void *) data_right, valid_device,num_elements,GDF_INT8);
-		rhs.null_count = 2;
+		//rhs.null_count = 2;
 		gdf_column output;
 		error = gdf_column_view(&output,(void *) data_out, valid_out,num_elements,GDF_INT8);
 
@@ -138,23 +138,22 @@ void runOriginalTest(){
 		print_column(&rhs);
 
 
-		error = gpu_comparison(&lhs,&rhs,&output,GDF_EQUALS);
+		error = gdf_binary_operation_v_v_v(&lhs,&rhs,&output,GDF_EQUAL);
 
 		print_column(&output);
 
-		error = gpu_comparison(&lhs,&rhs,&output,GDF_GREATER_THAN);
+		error = gdf_binary_operation_v_v_v(&lhs,&rhs,&output,GDF_GREATER);
 
 		print_column(&output);
 
 		//copy the data on the host and compare
 		thrust::device_ptr<int8_t> out_ptr = thrust::device_pointer_cast((int8_t *) output.data);
+		
+		gdf_data data = {.ui08=3};
+		gdf_scalar three = {data, GDF_UINT8};
 
-
-
-
-
-		error = gpu_comparison_static_i8(&lhs,3,&output,GDF_EQUALS);
-		error = gpu_comparison(&lhs,&rhs,&output,GDF_GREATER_THAN);
+		error = gdf_binary_operation_v_s_v(&lhs,&three,&output,GDF_EQUAL);
+		error = gdf_binary_operation_v_v_v(&lhs,&rhs,&output,GDF_GREATER);
 
 		print_column(&output);
 

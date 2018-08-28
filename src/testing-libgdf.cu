@@ -80,7 +80,7 @@ void create_gdf_column(gdf_column * column, gdf_dtype type, size_t num_values, v
 		cudaMemcpy(data,input_data, num_values * width_per_value, cudaMemcpyHostToDevice);
 	}
 
-	//column->null_count = 0;
+	column->null_count = 0;
 }
 
 void runOriginalTest(){
@@ -125,10 +125,10 @@ void runOriginalTest(){
 		cuda_error = cudaMalloc((void **) &valid_out,1);
 		gdf_column lhs;
 		gdf_error error = gdf_column_view(&lhs,(void *) data_left, valid_device,num_elements,GDF_INT8);
-		//lhs.null_count = 2;
+		lhs.null_count = 2;
 		gdf_column rhs;
 		error = gdf_column_view(&rhs,(void *) data_right, valid_device,num_elements,GDF_INT8);
-		//rhs.null_count = 2;
+		rhs.null_count = 2;
 		gdf_column output;
 		error = gdf_column_view(&output,(void *) data_out, valid_out,num_elements,GDF_INT8);
 

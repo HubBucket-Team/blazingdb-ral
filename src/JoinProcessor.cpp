@@ -159,19 +159,22 @@ gdf_error process_join(std::string condition,
 		operand.pop();
 		int left_index = get_index(operand.top());
 		operand.pop();
+		
+		/*Update to new API
 		if(join_type == INNER_JOIN){
 			err = gdf_inner_join_generic(data_frame.get_column(left_index), data_frame.get_column(right_index), &output);
 		}else if(join_type == LEFT_JOIN){
 			err = gdf_left_join_generic(data_frame.get_column(left_index), data_frame.get_column(right_index), &output);
 		}else if(join_type == OUTER_JOIN){
 			err = gdf_outer_join_generic(data_frame.get_column(left_index), data_frame.get_column(right_index), &output);
-		}
+		}*/
 	}else{
 		if(operator_count > 3 || join_type == OUTER_JOIN){
 			return GDF_JOIN_TOO_MANY_COLUMNS;
 		}
 		gdf_column ** left_columns = new gdf_column*[operator_count];
 		gdf_column ** right_columns = new gdf_column*[operator_count];
+		gdf_context ctxt{0, GDF_SORT, 0};
 		for(int i = 0; i < operator_count; i++){
 			int right_index = get_index(operand.top());
 			operand.pop();
@@ -180,8 +183,8 @@ gdf_error process_join(std::string condition,
 			left_columns[i] = data_frame.get_column(left_index);
 			right_columns[i] = data_frame.get_column(right_index);
 		}
-		err = gdf_multi_left_join_generic(operator_count, left_columns,
-				right_columns, &output);
+		err = gdf_left_join(operator_count, left_columns,
+				right_columns, &output, &ctxt);
 		delete[] left_columns;
 		delete[] right_columns;
 

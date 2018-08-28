@@ -17,7 +17,7 @@
 gdf_error process__binary_operation_column_column(
 		std::string operator_string,
 		std::stack<std::string> & operands,
-		std::vector<gdf_column *> & inputs,
+		blazing_frame & inputs,
 		gdf_column * final_output,
 		gdf_column * temp,
 		bool is_last //set to true if we write to output
@@ -48,15 +48,15 @@ gdf_error process__binary_operation_column_column(
 		}else{
 			//for now we shortcut for our usecase
 			//assuming type char
-			if(inputs[right_index]->dtype == GDF_INT8){
+			if(inputs.get_column(right_index)->dtype == GDF_INT8){
 
 				gdf_data data = {.ui08=stoi(left_operand)};
 				gdf_scalar left = {data, GDF_UINT8};
 
-				gdf_error err = gdf_binary_operation_v_s_v(inputs[right_index],&left,output,operation);
+				gdf_error err = gdf_binary_operation_v_s_v(inputs.get_column(right_index),&left,output,operation);
 				if(err == GDF_SUCCESS){
-					inputs.push_back(temp);
-					operands.push("$" + std::to_string(inputs.size()-1));
+					inputs.add_column(temp);
+					operands.push("$" + std::to_string(inputs.get_size_column()-1));
 				}
 			}
 		}
@@ -69,26 +69,26 @@ gdf_error process__binary_operation_column_column(
 
 			//for now we shortcut for our usecase
 			//assuming type char
-			if(inputs[left_index]->dtype == GDF_INT8){
+			if(inputs.get_column(left_index)->dtype == GDF_INT8){
 
 				gdf_data data = {.ui08=stoi(right_operand)};
 				gdf_scalar right = {data, GDF_UINT8};
 
-				gdf_error err = gdf_binary_operation_v_s_v(inputs[left_index],&right,output,operation);
+				gdf_error err = gdf_binary_operation_v_s_v(inputs.get_column(left_index),&right,output,operation);
 				if(err == GDF_SUCCESS){
-					inputs.push_back(temp);
-					operands.push("$" + std::to_string(inputs.size()-1));
+					inputs.add_column(temp);
+					operands.push("$" + std::to_string(inputs.get_size_column()-1));
 				}
 			}
 		}else{
 
 			size_t right_index = get_index(right_operand);
 
-			gdf_error err = gdf_binary_operation_v_v_v(inputs[left_index],inputs[right_index],
+			gdf_error err = gdf_binary_operation_v_v_v(inputs.get_column(left_index),inputs.get_column(right_index),
 					output,operation);
 			if(err == GDF_SUCCESS){
-				inputs.push_back(temp);
-				operands.push("$" + std::to_string(inputs.size()-1));
+				inputs.add_column(temp);
+				operands.push("$" + std::to_string(inputs.get_size_column()-1));
 			}
 			return err;
 		}
@@ -121,7 +121,7 @@ gdf_error process__binary_operation_literal_column(
 //processing in reverse we never need to have more than TWO spaces to work in
 //
 gdf_error evaluate_expression(
-		std::vector<gdf_column *> inputs,
+		blazing_frame inputs,
 		std::string expression,
 		gdf_column * output,
 		gdf_column * temp){

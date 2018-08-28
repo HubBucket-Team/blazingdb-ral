@@ -11,10 +11,10 @@
 #include <vector>
 #include <gdf/gdf.h>
 #include <string>
-
+#include "DataFrame.h"
 
 gdf_error evaluate_expression(
-		std::vector<gdf_column *> inputs,
+		blazing_frame inputs,
 		std::string expression,
 		gdf_column * output,
 		gdf_column * temp);

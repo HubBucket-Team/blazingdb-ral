@@ -20,6 +20,8 @@ public:
 			if(column_index < cur_count + columns[i].size()){
 				return columns[i][column_index - cur_count];
 			}
+			
+			cur_count += columns[i].size();
 		}
 	}
 
@@ -29,15 +31,23 @@ public:
 			//fill row_indeces with 0 to n
 		}
 	}
+	
+	void add_column(gdf_column * column_to_add, int table_index=0){
+		columns[table_index].push_back(column_to_add);
+	}
 
 	void remove_table(size_t table_index){
-
 		columns.erase(columns.begin() + table_index);
 	}
 
 	void swap_table(std::vector<gdf_column * > columns_to_add, size_t index){
 		columns[index] = columns_to_add;
 	}
+	
+	size_t get_size_column(int table_index=0) {
+		return columns[table_index].size();
+	}
+	
 private:
 	std::vector<std::vector<gdf_column *> > columns;
 	std::vector<gdf_column *> row_indeces; //per table row indexes used for materializing

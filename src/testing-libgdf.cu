@@ -15,7 +15,8 @@
 #include <thrust/functional.h>
 #include <thrust/execution_policy.h>
 #include <cuda_runtime.h>
-//#include "LogicalFilter.h"
+#include "LogicalFilter.h"
+#include "DataFrame.h"
 #include <thrust/iterator/discard_iterator.h>
 #include <thrust/iterator/constant_iterator.h>
 #include <cuda.h>
@@ -174,14 +175,9 @@ void runOriginalTest(){
 		delete valid;
 }
 
-/*
 void runInterpreterTest(){
 	std::string expression = "AND(=(*($0, $0), 1), =($1, 2))";
 	expression = "=(=($1, $0), $0)";
-
-
-
-
 
 	gdf_column left;
 	gdf_column right;
@@ -212,6 +208,10 @@ void runInterpreterTest(){
 	create_gdf_column(inputs[2], GDF_INT8, num_values, (void *) input3, 1);
 
 
+	blazing_frame blzframe;
+	blzframe.add_table(inputs);
+
+
 	gdf_column * output = new gdf_column;
 	create_gdf_column(output, GDF_INT8, num_values, nullptr, 1);
 
@@ -228,7 +228,7 @@ void runInterpreterTest(){
 	std::cout<<std::endl<<"Output before ==>"<<std::endl;
 	print_column(output);
 	evaluate_expression(
-			inputs,
+			blzframe,
 			expression,
 			output,
 			temp);
@@ -244,7 +244,7 @@ void runInterpreterTest(){
 	std::cout<<std::endl<<"Output before ==>"<<std::endl;
 	print_column(output);
 	evaluate_expression(
-			inputs,
+			blzframe,
 			expression,
 			output,
 			temp);
@@ -261,7 +261,7 @@ void runInterpreterTest(){
 	delete output;
 	delete temp;
 	//needs to be able to call this with temp == null to indicate we need to know how much space to allocate for temp
-} */
+}
 
 void runParquetTest(){
 
@@ -307,7 +307,7 @@ void runParquetTest(){
 int main(void)
 {
 
-//	runOriginalTest();
-//	runInterpreterTest();
+	//runOriginalTest();
+	runInterpreterTest();
 	return 0;
 }

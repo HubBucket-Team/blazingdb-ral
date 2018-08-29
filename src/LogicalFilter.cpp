@@ -50,10 +50,10 @@ gdf_error process__binary_operation_column_column(
 			//assuming type char
 			if(inputs.get_column(right_index)->dtype == GDF_INT8){
 
-				gdf_data data = {.ui08=stoi(left_operand)};
+				gdf_data data = {.ui08=static_cast<uint8_t>(stoi(left_operand))};
 				gdf_scalar left = {data, GDF_UINT8};
 
-				gdf_error err = gdf_binary_operation_v_s_v(inputs.get_column(right_index),&left,output,operation);
+				gdf_error err = gdf_binary_operation_v_s_v(output,&left,inputs.get_column(right_index),operation);
 				if(err == GDF_SUCCESS){
 					inputs.add_column(temp);
 					operands.push("$" + std::to_string(inputs.get_size_column()-1));
@@ -70,11 +70,10 @@ gdf_error process__binary_operation_column_column(
 			//for now we shortcut for our usecase
 			//assuming type char
 			if(inputs.get_column(left_index)->dtype == GDF_INT8){
-
-				gdf_data data = {.ui08=stoi(right_operand)};
+				gdf_data data = {.ui08=static_cast<uint8_t>(stoi(right_operand))};
 				gdf_scalar right = {data, GDF_UINT8};
 
-				gdf_error err = gdf_binary_operation_v_s_v(inputs.get_column(left_index),&right,output,operation);
+				gdf_error err = gdf_binary_operation_v_s_v(output,&right,inputs.get_column(left_index),operation);
 				if(err == GDF_SUCCESS){
 					inputs.add_column(temp);
 					operands.push("$" + std::to_string(inputs.get_size_column()-1));
@@ -84,8 +83,8 @@ gdf_error process__binary_operation_column_column(
 
 			size_t right_index = get_index(right_operand);
 
-			gdf_error err = gdf_binary_operation_v_v_v(inputs.get_column(left_index),inputs.get_column(right_index),
-					output,operation);
+			gdf_error err = gdf_binary_operation_v_v_v(output,inputs.get_column(left_index),inputs.get_column(right_index),
+					operation);
 			if(err == GDF_SUCCESS){
 				inputs.add_column(temp);
 				operands.push("$" + std::to_string(inputs.get_size_column()-1));

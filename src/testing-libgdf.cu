@@ -8,50 +8,18 @@
  ============================================================================
  */
 
-
-#include <iostream>
-#include <gdf/gdf.h>
-#include <gdf/cffi/functions.h>
 #include <thrust/functional.h>
 #include <thrust/execution_policy.h>
 #include <cuda_runtime.h>
 #include "LogicalFilter.h"
 #include "DataFrame.h"
+#include "Utils.cuh"
 #include <thrust/iterator/discard_iterator.h>
 #include <thrust/iterator/constant_iterator.h>
 #include <cuda.h>
 
 #define BIT_FIVE 0x10
 #define BIT_SIX 0x20
-
-void print_column(gdf_column * column){
-
-	char * host_data_out = new char[column->size];
-	char * host_valid_out;
-
-	if(column->size % 8 != 0){
-		host_valid_out = new char[(column->size + (8 - (column->size % 8)))/8];
-	}else{
-		host_valid_out = new char[column->size / 8];
-	}
-
-
-	cudaMemcpy(host_data_out,column->data,sizeof(int8_t) * column->size, cudaMemcpyDeviceToHost);
-	cudaMemcpy(host_valid_out,column->valid,sizeof(int8_t) * (column->size + GDF_VALID_BITSIZE - 1) / GDF_VALID_BITSIZE, cudaMemcpyDeviceToHost);
-
-	std::cout<<"Printing Column"<<std::endl;
-
-	for(int i = 0; i < column->size; i++){
-		int col_position = i / 8;
-		int bit_offset = 8 - (i % 8);
-		std::cout<<"host_data_out["<<i<<"] = "<<((int)host_data_out[i])<<" valid="<<((host_valid_out[col_position] >> bit_offset ) & 1)<<std::endl;
-	}
-
-	delete[] host_data_out;
-	delete[] host_valid_out;
-
-	std::cout<<std::endl<<std::endl;
-}
 
 void free_gdf_column(gdf_column * column){
 	cudaFree(column->data);
@@ -69,7 +37,7 @@ void create_gdf_column(gdf_column * column, gdf_dtype type, size_t num_values, v
 
 	//assume all relevant bits are set to on
 	thrust::constant_iterator<unsigned char> valid(255);
-	thrust::device_vector<unsigned char> tester(num_values);
+	thrust::device_vector<unsigned char> tester(std::max(num_values,allocation_size_valid));
 	thrust::copy(valid, valid + allocation_size_valid, tester.begin());
 
 	thrust::copy(thrust::cuda::par,valid, valid + allocation_size_valid, thrust::detail::make_normal_iterator(valid_device) );

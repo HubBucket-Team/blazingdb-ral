@@ -8,7 +8,7 @@ find_package(CUDA REQUIRED)
 if(CUDA_FOUND)
     message(STATUS "CUDA ${CUDA_VERSION} found in ${CUDA_TOOLKIT_ROOT_DIR}")
 
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-std=c++11;--expt-extended-lambda)
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-std=c++11;--expt-extended-lambda -O0)
     message(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
 else()
     message(FATAL_ERROR "CUDA not found, please check your settings.")
@@ -22,6 +22,7 @@ set(SRC_FILES ${PROJECT_SRC}/CalciteExpressionParsing.cpp
               ${PROJECT_SRC}/JoinProcessor.cpp
               ${PROJECT_SRC}/LogicalFilter.cpp
               ${PROJECT_SRC}/QueryState.cpp
+              ${PROJECT_SRC}/Utils.cu
               ${PROJECT_SRC}/testing-libgdf.cu
 )
 

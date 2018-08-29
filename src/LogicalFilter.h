@@ -12,6 +12,7 @@
 #include <gdf/gdf.h>
 #include <string>
 #include "DataFrame.h"
+#include "Utils.cuh"
 
 gdf_error evaluate_expression(
 		blazing_frame inputs,

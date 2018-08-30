@@ -174,7 +174,7 @@ gdf_error process_join(std::string condition,
 		}
 		gdf_column ** left_columns = new gdf_column*[operator_count];
 		gdf_column ** right_columns = new gdf_column*[operator_count];
-		gdf_context ctxt{0, GDF_SORT, 0};
+		gdf_context ctxt{0, GDF_HASH, 0};
 		for(int i = 0; i < operator_count; i++){
 			int right_index = get_index(operand.top());
 			operand.pop();
@@ -192,7 +192,7 @@ gdf_error process_join(std::string condition,
 	if(err == GDF_SUCCESS){
 		cudaStream_t stream;
 		cudaStreamCreate(&stream);
-		gdf_join_result_type_to_gdf_column(output,left_indeces,right_indeces,stream);
+		//ya no gdf_join_result_type_to_gdf_column(output,left_indeces,right_indeces,stream);
 		cudaStreamDestroy(stream);
 	}
 

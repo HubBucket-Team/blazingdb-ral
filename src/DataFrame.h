@@ -23,6 +23,7 @@ public:
 			
 			cur_count += columns[i].size();
 		}
+		return nullptr; //error
 	}
 
 	void add_table(std::vector<gdf_column * > columns_to_add){

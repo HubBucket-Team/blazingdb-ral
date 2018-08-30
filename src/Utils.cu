@@ -11,7 +11,6 @@ void print_column(gdf_column * column){
 		host_valid_out = new char[column->size / 8];
 	}
 
-
 	cudaMemcpy(host_data_out,column->data,sizeof(int8_t) * column->size, cudaMemcpyDeviceToHost);
 	cudaMemcpy(host_valid_out,column->valid,sizeof(int8_t) * (column->size + GDF_VALID_BITSIZE - 1) / GDF_VALID_BITSIZE, cudaMemcpyDeviceToHost);
 

@@ -21,6 +21,7 @@ set(SRC_FILES ${PROJECT_SRC}/CalciteExpressionParsing.cpp
               ${PROJECT_SRC}/ColumnManipulation.cu
               ${PROJECT_SRC}/JoinProcessor.cpp
               ${PROJECT_SRC}/LogicalFilter.cpp
+              ${PROJECT_SRC}/StringUtil.cpp
               ${PROJECT_SRC}/QueryState.cpp
               ${PROJECT_SRC}/Utils.cu
               ${PROJECT_SRC}/testing-libgdf.cu

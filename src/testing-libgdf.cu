@@ -12,6 +12,7 @@
 #include <thrust/execution_policy.h>
 #include <cuda_runtime.h>
 #include "LogicalFilter.h"
+#include "CalciteInterpreter.h"
 #include "DataFrame.h"
 #include "Utils.cuh"
 #include <thrust/iterator/discard_iterator.h>
@@ -30,19 +31,17 @@ void create_gdf_column(gdf_column * column, gdf_dtype type, size_t num_values, v
 	char * data;
 	gdf_valid_type * valid_device;
 
-
 	//so allocations are supposed to be 64byte aligned
 	size_t allocation_size_valid = ((((num_values + 7 ) / 8) + 63 ) / 64) * 64;
 	cudaError_t cuda_error = cudaMalloc((void **) &valid_device, allocation_size_valid);
 
 	//assume all relevant bits are set to on
 	thrust::constant_iterator<unsigned char> valid(255);
-	thrust::device_vector<unsigned char> tester(std::max(num_values,allocation_size_valid));
+	thrust::device_vector<unsigned char> tester(allocation_size_valid);
 	thrust::copy(valid, valid + allocation_size_valid, tester.begin());
 
 	thrust::copy(thrust::cuda::par,valid, valid + allocation_size_valid, thrust::detail::make_normal_iterator(valid_device) );
-	 cuda_error = cudaMalloc((void **) &data,width_per_value * num_values);
-
+	cuda_error = cudaMalloc((void **) &data,width_per_value * num_values);
 
 	gdf_error error = gdf_column_view(column,(void *) data, valid_device,num_values,type);
 	if(input_data != nullptr){
@@ -67,13 +66,9 @@ void runOriginalTest(){
 	//	thrust::fill(thrust::detail::make_normal_iterator(left_ptr), thrust::detail::make_normal_iterator(left_ptr + num_elements), int8_value);
 		thrust::copy(thrust::make_counting_iterator<int8_t>(0),thrust::make_counting_iterator<int8_t>(0) + num_elements, thrust::detail::make_normal_iterator(left_ptr));
 
-
-
-
 		thrust::device_ptr<int8_t> right_ptr= thrust::device_pointer_cast((int8_t *) data_right);
 		int8_value = 2;
 		thrust::fill(thrust::detail::make_normal_iterator(right_ptr), thrust::detail::make_normal_iterator(right_ptr + num_elements), int8_value);
-
 
 		//for this simple test we will send in only 8 values
 		gdf_valid_type * valid = new gdf_valid_type;
@@ -106,7 +101,6 @@ void runOriginalTest(){
 		std::cout<<"Right"<<std::endl;
 		print_column(&rhs);
 
-
 		error = gdf_binary_operation_v_v_v(&lhs,&rhs,&output,GDF_EQUAL);
 
 		print_column(&output);
@@ -128,11 +122,9 @@ void runOriginalTest(){
 
 		gpu_apply_stencil(&lhs, &output, &rhs);
 
-
 		print_column(&rhs);
 
 	//	cudaMemcpy(valid,output.valid,1,cudaMemcpyDeviceToHost);
-
 
 		cudaFree(data_left);
 		cudaFree(data_right);
@@ -175,10 +167,8 @@ void runInterpreterTest(){
 	create_gdf_column(inputs[1], GDF_INT8, num_values, (void *) input2, 1);
 	create_gdf_column(inputs[2], GDF_INT8, num_values, (void *) input3, 1);
 
-
 	blazing_frame blzframe;
 	blzframe.add_table(inputs);
-
 
 	gdf_column * output = new gdf_column;
 	create_gdf_column(output, GDF_INT8, num_values, nullptr, 1);
@@ -190,6 +180,8 @@ void runInterpreterTest(){
 	print_column(inputs[0]);
 	std::cout<<std::endl<<"Input 1 ==>"<<std::endl;
 	print_column(inputs[1]);
+	std::cout<<std::endl<<"Input 2 ==>"<<std::endl;
+	print_column(inputs[2]);
 
 	expression = ">($1, 5)";
 	std::cout<<"evaluating "<<expression<<std::endl;
@@ -201,11 +193,8 @@ void runInterpreterTest(){
 			output,
 			temp);
 
-
-
 	std::cout<<std::endl<<"Output after ==>"<<std::endl;
 	print_column(output);
-
 
 	expression = "=(=($1, $0), $2)";
 	std::cout<<"evaluating "<<expression<<std::endl;
@@ -217,14 +206,8 @@ void runInterpreterTest(){
 			output,
 			temp);
 
-
-
 	std::cout<<std::endl<<"Output after ==>"<<std::endl;
 	print_column(output);
-
-
-
-
 
 	delete output;
 	delete temp;
@@ -232,8 +215,6 @@ void runInterpreterTest(){
 }
 
 void runParquetTest(){
-
-
 	gdf_column left;
 	gdf_column right;
 	gdf_column third;
@@ -264,7 +245,7 @@ void runParquetTest(){
 
 	gdf_column ** columns = new gdf_column*[1];
 	columns[0] = &left;
-	char * test = "tester";
+	char * test = (char *)"tester";
 	char ** tester = new char *[1];
 	tester[0] = test;
 	size_t * size = new size_t;
@@ -272,10 +253,34 @@ void runParquetTest(){
 	//gdf_error err = read_parquet("/home/felipe/parquet-test.parquet",nullptr,tester,columns,size);
 }
 
+void runCalciteTest()
+{
+	std::vector<std::vector<gdf_column *> > input_tables;
+	std::vector<std::string> table_names;
+	std::vector<std::vector<std::string>> column_names;
+	std::vector<gdf_column *> outputs;
+	std::vector<std::string> output_column_names;
+	void * temp_space;
+
+	std::string query = "\
+LogicalProject(join_x=[$5], join_x0=[$3])             				\n\
+ LogicalJoin(condition=[=($5, $0)], joinType=[inner])				\n\
+  LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4]) 	\n\
+   LogicalFilter(condition=[OR(<($0, 5), >($3, 3))]) 			\n\
+    LogicalJoin(condition=[=($3, $0)], joinType=[inner]) 		\n\
+     EnumerableTableScan(table=[[hr, emps]]) 					\n\
+     EnumerableTableScan(table=[[hr, joiner]])					\n\
+  EnumerableTableScan(table=[[hr, joiner]])";
+
+	gdf_error err = evaluate_query(input_tables, table_names, column_names,
+		query, outputs, output_column_names, temp_space);
+}
+
 int main(void)
 {
-
 	//runOriginalTest();
-	runInterpreterTest();
+	//runInterpreterTest();
+	runCalciteTest();
+
 	return 0;
 }

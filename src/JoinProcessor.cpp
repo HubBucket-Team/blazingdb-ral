@@ -55,28 +55,28 @@ struct bit_mask_pack_op : public thrust::unary_function<int64_t,gdf_valid_type>
 //TODO: temp function that should be removed when joins output gdf_column
 void gdf_join_result_type_to_gdf_column(
 		gdf_join_result_type * output,
-		gdf_column * left_indeces,
-		gdf_column * right_indeces,
+		gdf_column * left_indices,
+		gdf_column * right_indices,
 		cudaStream_t stream){
 	//TODO: this is a temporary but dangerous solution
 	// we will have to keep a reference to the result_type to ensure
 	//that we don't lose data
 
-	//set left_indcees and right_indeces to the pointers to output
+	//set left_indcees and right_indices to the pointers to output
 	size_t result_set_size =  gdf_join_result_size(output);
-	left_indeces->data =  gdf_join_result_data(output);
-	left_indeces->dtype = GDF_INT32;
-	left_indeces->size = result_set_size;
+	left_indices->data =  gdf_join_result_data(output);
+	left_indices->dtype = GDF_INT32;
+	left_indices->size = result_set_size;
 
-	right_indeces->data =  ((int *) gdf_join_result_data(output)) + result_set_size;
-	right_indeces->dtype = GDF_INT32;
-	right_indeces->size = result_set_size;
+	right_indices->data =  ((int *) gdf_join_result_data(output)) + result_set_size;
+	right_indices->dtype = GDF_INT32;
+	right_indices->size = result_set_size;
 
 
 	gdf_valid_type * valid_data;
 	cudaMalloc((void **) &valid_data,sizeof(char) * ((result_set_size + 7) / 8));
-	left_indeces->valid = valid_data;
-	right_indeces->valid = valid_data;
+	left_indices->valid = valid_data;
+	right_indices->valid = valid_data;
 	/*
 	 * we should not need this since its being implemented in libgdf
 	//TODO: if we can ensure that all algorithms cn handle nullptr
@@ -88,19 +88,19 @@ void gdf_join_result_type_to_gdf_column(
 	cudaMalloc((void **)&valid_ptr_left, num_bytes_valid );
 	cudaMalloc((void **)&valid_ptr_right, num_bytes_valid);
 
-	left_indeces->valid = valid_ptr_left;
-	right_indeces->valid = valid_ptr_right;
+	left_indices->valid = valid_ptr_left;
+	right_indices->valid = valid_ptr_right;
 	gdf_error err = gdf_column_view_augmented(temp_stencil,data,valid_ptr,
 			result_set_size,GDF_INT8,0);
-	all_bitmask_on(valid_ptr, & left_indeces->null_count, result_set_size, stream);
-	right_indeces->null_count = 0;
+	all_bitmask_on(valid_ptr, & left_indices->null_count, result_set_size, stream);
+	right_indices->null_count = 0;
 	temp_stencil->null_count = 0;
 
 	//gdf comparison to get stencil
 
-	err = gpu_comparison_static_i32(left_indeces,-1, temp_stencil,GDF_EQUALS);
+	err = gpu_comparison_static_i32(left_indices,-1, temp_stencil,GDF_EQUALS);
 	//sum to get count
-	sum_column_i8(temp_stencil, left_indeces->null_count, result_set_size);
+	sum_column_i8(temp_stencil, left_indices->null_count, result_set_size);
 	//convert stencil to bitmask
 
 
@@ -109,23 +109,23 @@ void gdf_join_result_type_to_gdf_column(
 				thrust::detail::make_normal_iterator(thrust::device_pointer_cast((int64_t *) temp_stencil->data));
 
 	thrust::transform(thrust::cuda::par.on(stream), valid_bit_mask_group_8_iter, valid_bit_mask_group_8_iter + ((result_set_size + GDF_VALID_BITSIZE - 1) / GDF_VALID_BITSIZE),
-				thrust::detail::make_normal_iterator(thrust::device_pointer_cast(left_indeces->valid)),bit_mask_pack_op());
+				thrust::detail::make_normal_iterator(thrust::device_pointer_cast(left_indices->valid)),bit_mask_pack_op());
 
-	err = gpu_comparison_static_i32(right_indeces,-1, temp_stencil,GDF_EQUALS);
+	err = gpu_comparison_static_i32(right_indices,-1, temp_stencil,GDF_EQUALS);
 
-	sum_column_i8(temp_stencil, right_indeces->null_count, result_set_size);
+	sum_column_i8(temp_stencil, right_indices->null_count, result_set_size);
 
 
 	thrust::transform(thrust::cuda::par.on(stream), valid_bit_mask_group_8_iter, valid_bit_mask_group_8_iter + ((result_set_size + GDF_VALID_BITSIZE - 1) / GDF_VALID_BITSIZE),
-				thrust::detail::make_normal_iterator(thrust::device_pointer_cast(right_indeces->valid)),bit_mask_pack_op());
+				thrust::detail::make_normal_iterator(thrust::device_pointer_cast(right_indices->valid)),bit_mask_pack_op());
 	*/
 }
 
-gdf_error process_join(std::string condition,
+gdf_error evaluate_join(std::string condition,
 		std::string join_type,
 		blazing_frame data_frame,
-		gdf_column * left_indeces,
-		gdf_column * right_indeces
+		gdf_column * left_indices,
+		gdf_column * right_indices
 ){
 	gdf_join_result_type * output;
 	//TODO: right now this only works for equijoins
@@ -136,6 +136,13 @@ gdf_error process_join(std::string condition,
 	int position = clean_expression.size();
 
 	std::stack<std::string> operand;
+
+	//TODO: for this to work properly we can only do multi column join
+	// when we have ands, when we have hors we hvae to perform the joisn seperately then
+	// do a unique merge of the indices
+
+
+	//right now with pred push down the join codnition takes the filters as the second argument to condition
 
 	int operator_count = 0;
 
@@ -192,7 +199,7 @@ gdf_error process_join(std::string condition,
 	if(err == GDF_SUCCESS){
 		cudaStream_t stream;
 		cudaStreamCreate(&stream);
-		//ya no gdf_join_result_type_to_gdf_column(output,left_indeces,right_indeces,stream);
+		//ya no gdf_join_result_type_to_gdf_column(output,left_indices,right_indices,stream);
 		cudaStreamDestroy(stream);
 	}
 

@@ -49,9 +49,17 @@ public:
 		return columns[table_index].size();
 	}
 	
+	size_t get_width(){
+		size_t width = 0;
+
+	}
+
+	void clear(){
+		this->columns.resize(0);
+	}
 private:
 	std::vector<std::vector<gdf_column *> > columns;
-	std::vector<gdf_column *> row_indeces; //per table row indexes used for materializing
+	//std::vector<gdf_column *> row_indeces; //per table row indexes used for materializing
 } blazing_frame;
 
 

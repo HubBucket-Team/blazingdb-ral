@@ -42,3 +42,20 @@ std::string & StringUtil::rtrim(std::string &s) {
         s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
         return s;
 }
+
+std::vector<std::string> StringUtil::split(std::string input, std::string regex) {
+    // passing -1 as the submatch index parameter performs splitting
+	size_t pos = 0;
+	std::vector<std::string> result;
+	while ((pos = input.find(regex)) != std::string::npos) {
+		std::string token;
+		token = input.substr(0, pos);
+		result.push_back(token);
+	  //  std::cout << token << std::endl;
+	    input.erase(0, pos + regex.length());
+	}
+	result.push_back(input);
+	return result;
+	//std::cout << s << std::endl;
+
+}

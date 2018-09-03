@@ -36,13 +36,13 @@ set(LIBGDF_INCLUDE_DIR ${LIBGDF_ROOT}/src/libgdf/include)
 ExternalProject_Add(libgdf_ep
 	CMAKE_ARGS -DCMAKE_BUILD_TYPE=RELEASE 
 	PREFIX ${LIBGDF_ROOT}
-	DOWNLOAD_COMMAND git clone --recursive https://github.com/BlazingDB/libgdf.git
+	DOWNLOAD_COMMAND git clone --recurse-submodules https://github.com/BlazingDB/libgdf.git
 	UPDATE_COMMAND ""
 	PATCH_COMMAND ""
 	BINARY_DIR ${LIBGDF_ROOT}/src/libgdf
 	SOURCE_DIR ${LIBGDF_ROOT}/src/libgdf
 	INSTALL_DIR ${LIBGDF_ROOT}/bin
-	CONFIGURE_COMMAND git checkout binary-operators-draft && cmake -DCMAKE_BUILD_TYPE=Release -DBINARY_OPERATION_VERSION:STRING=V2 .
+	CONFIGURE_COMMAND git checkout binary-operators-draft && git submodule update --init --recursive && cmake -DCMAKE_BUILD_TYPE=Release -DBINARY_OPERATION_VERSION:STRING=V2 .
 	BUILD_COMMAND make -j8
 	INSTALL_COMMAND ""
 	BUILD_BYPRODUCTS ${LIBGDF_LIB_DIR}/libgdf.so

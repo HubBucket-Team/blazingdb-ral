@@ -19,6 +19,8 @@
 #include <thrust/iterator/constant_iterator.h>
 #include <cuda.h>
 
+#include "ipc/calcite_client.h"
+
 #define BIT_FIVE 0x10
 #define BIT_SIX 0x20
 
@@ -280,7 +282,8 @@ int main(void)
 {
 	//runOriginalTest();
 	//runInterpreterTest();
-	runCalciteTest();
+	//runCalciteTest();
+	runCalciteClientTest("holas");
 
 	return 0;
 }

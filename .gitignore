@@ -30,3 +30,12 @@
 *.exe
 *.out
 *.app
+
+# Eclipse generated files by cmake
+.cproject
+.project
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+thirdparty/

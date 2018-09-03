@@ -3,6 +3,10 @@ project(testing-cmake-libgdf)
 set(CMAKE_CXX_STANDARD 11)
 message(STATUS "Using C++ standard: c++${CMAKE_CXX_STANDARD}")
 
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/" ${CMAKE_MODULE_PATH})
+set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Configuration/")
+message(STATUS "CMAKE_MODULE_PATH:" "${CMAKE_MODULE_PATH}")
+
 find_package(CUDA REQUIRED)
 
 if(CUDA_FOUND)
@@ -10,6 +14,9 @@ if(CUDA_FOUND)
 
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-std=c++11;--expt-extended-lambda -O0)
     message(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
+
+    include(CUDAConfig RESULT_VARIABLE result)
+    message("-- ConfigCuda: " ${result})
 else()
     message(FATAL_ERROR "CUDA not found, please check your settings.")
 endif()
@@ -47,6 +54,9 @@ ExternalProject_Add(libgdf_ep
 	INSTALL_COMMAND ""
 	BUILD_BYPRODUCTS ${LIBGDF_LIB_DIR}/libgdf.so
 )
+
+link_directories(${CUDA_LIBRARY_DIR})
+link_directories(${CUDA_LIBRARY_STUBS_DIR})
 
 set(PROJECT_LINK_LIBS libgdf.so)
 link_directories(${LIBGDF_LIB_DIR})

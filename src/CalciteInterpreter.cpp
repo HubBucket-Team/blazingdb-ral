@@ -264,7 +264,7 @@ gdf_err process_sort(blazing_frame & input, std::string query_part){
 
 	cudaFree(d_cols);
 	cudaFree(d_types);
-	dele
+
 	int widest_column = 0;
 	for(int i = 0; i < input.get_width();i++){
 		int cur_width;

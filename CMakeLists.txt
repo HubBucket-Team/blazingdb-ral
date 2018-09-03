@@ -32,6 +32,8 @@ set(SRC_FILES ${PROJECT_SRC}/CalciteExpressionParsing.cpp
               ${PROJECT_SRC}/QueryState.cpp
               ${PROJECT_SRC}/Utils.cu
               ${PROJECT_SRC}/testing-libgdf.cu
+
+              ${PROJECT_SRC}/ipc/calcite_client.cpp
 )
 
 include(ExternalProject)

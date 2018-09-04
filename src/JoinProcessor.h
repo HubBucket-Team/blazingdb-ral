@@ -12,11 +12,11 @@
 #include <gdf/gdf.h>
 #include "DataFrame.h"
 
-gdf_error process_join(std::string condition,
+gdf_error evaluate_join(std::string condition,
 		std::string join_type,
 		blazing_frame data_frame,
-		gdf_column * left_indeces,
-		gdf_column * right_indeces
+		gdf_column * left_indices,
+		gdf_column * right_indices
 		);
 
 

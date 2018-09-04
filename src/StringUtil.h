@@ -18,6 +18,8 @@ public:
     static std::vector<std::string> split(std::string &s, char delim);
     static std::vector<std::string> & split(std::string &s, char delim, std::vector<std::string> &elems);
     static std::string & rtrim(std::string &s);
+
+    static std::vector<std::string> split(std::string input, std::string regex);
 };
 
 #endif /* STRINGUTIL_H_ */

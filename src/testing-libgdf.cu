@@ -8,15 +8,11 @@
  ============================================================================
  */
 
-#include <thrust/functional.h>
-#include <thrust/execution_policy.h>
 #include <cuda_runtime.h>
 #include "LogicalFilter.h"
 #include "CalciteInterpreter.h"
 #include "DataFrame.h"
 #include "Utils.cuh"
-#include <thrust/iterator/discard_iterator.h>
-#include <thrust/iterator/constant_iterator.h>
 #include <cuda.h>
 
 #include "ipc/calcite_client.h"
@@ -24,34 +20,7 @@
 #define BIT_FIVE 0x10
 #define BIT_SIX 0x20
 
-void free_gdf_column(gdf_column * column){
-	cudaFree(column->data);
-	cudaFree(column->valid);
-}
 
-void create_gdf_column(gdf_column * column, gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value){
-	char * data;
-	gdf_valid_type * valid_device;
-
-	//so allocations are supposed to be 64byte aligned
-	size_t allocation_size_valid = ((((num_values + 7 ) / 8) + 63 ) / 64) * 64;
-	cudaError_t cuda_error = cudaMalloc((void **) &valid_device, allocation_size_valid);
-
-	//assume all relevant bits are set to on
-	thrust::constant_iterator<unsigned char> valid(255);
-	thrust::device_vector<unsigned char> tester(allocation_size_valid);
-	thrust::copy(valid, valid + allocation_size_valid, tester.begin());
-
-	thrust::copy(thrust::cuda::par,valid, valid + allocation_size_valid, thrust::detail::make_normal_iterator(valid_device) );
-	cuda_error = cudaMalloc((void **) &data,width_per_value * num_values);
-
-	gdf_error error = gdf_column_view(column,(void *) data, valid_device,num_values,type);
-	if(input_data != nullptr){
-		cudaMemcpy(data,input_data, num_values * width_per_value, cudaMemcpyHostToDevice);
-	}
-
-	column->null_count = 0;
-}
 
 void runOriginalTest(){
 	gdf_size_type num_elements = 8;
@@ -282,8 +251,8 @@ int main(void)
 {
 	//runOriginalTest();
 	//runInterpreterTest();
-	//runCalciteTest();
-	runCalciteClientTest("holas");
+	runCalciteTest();
+	//runCalciteClientTest("holas");
 
 	return 0;
 }

@@ -29,5 +29,6 @@ std::string clean_calcite_expression(std::string expression);
 
 std::string get_last_token(std::string expression, int * position);
 
+size_t get_index(std::string operand_string);
 
 #endif /* CALCITEEXPRESSIONPARSING_H_ */

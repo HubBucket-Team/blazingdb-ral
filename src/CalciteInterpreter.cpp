@@ -2,9 +2,11 @@
 #include "StringUtil.h"
 #include "DataFrame.h"
 #include <algorithm>
+#include <thread>
 
 #include "Utils.cuh"
 #include "LogicalFilter.h"
+#include "JoinProcessor.h"
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 const std::string LOGICAL_UNION_TEXT = "LogicalUnion";
@@ -64,6 +66,8 @@ bool is_double_input(std::string query_part){
 		return false;
 	}
 }
+
+//Input: [[hr, emps]] or [[emps]] Output: hr.emps or emps
 std::string extract_table_name(std::string query_part){
 	size_t start = query_part.find("[[") + 2;
 	size_t end = query_part.find("]]");
@@ -86,7 +90,7 @@ std::string extract_table_name(std::string query_part){
 
 }
 
-void create_output_and_evaluate(size_t size, gdf_column * output, gdf_column * temp){
+/*void create_output_and_evaluate(size_t size, gdf_column * output, gdf_column * temp){
 	int width;
 	get_column_byte_width(output, &width);
 	create_gdf_column(output,output->dtype,size,nullptr,width);
@@ -99,7 +103,7 @@ void create_output_and_evaluate(size_t size, gdf_column * output, gdf_column * t
 			&output,
 			&temp);
 
-}
+}*/
 
 std::string get_condition_expression(std::string query_part){
 	return get_named_expression(query_part,"condition");
@@ -108,14 +112,16 @@ std::string get_condition_expression(std::string query_part){
 bool contains_evaluation(std::string expression){
 	return (expression.find("(") != std::string::npos);
 }
-gdf_err process_project(blazing_frame & input, std::string query_part){
-	gdf_column temp;
 
-	create_gdf_column(temp,GDF_INT64,size,nullptr,8);
+gdf_error process_project(blazing_frame & input, std::string query_part){
+	gdf_column temp;
+	size_t size = input.get_size_column();
+
+	create_gdf_column(&temp,GDF_INT64,size,nullptr,8);
 
 	// LogicalProject(x=[$0], y=[$1], z=[$2], e=[$3], join_x=[$4], y0=[$5], EXPR$6=[+($0, $5)])
 	std::string combined_expression = query_part.substr(
-			query_part.find("(") - query_part.begin(),
+			query_part.find("(") + 1,
 			(query_part.rfind(")") - query_part.find("(")) - 1
 	);
 
@@ -123,14 +129,14 @@ gdf_err process_project(blazing_frame & input, std::string query_part){
 	std::vector<std::string> expressions = StringUtil::split(combined_expression,"], ");
 	//now we have a vector
 	//x=[$0
-	std::vector<bool> input_used_in_output(input.size(),false);
+	std::vector<bool> input_used_in_output(size,false);
 
 	std::vector<gdf_column * > columns(expressions.size());
 	for(int i = 0; i < expressions.size(); i++){
 
 		std::string expression = expressions[i].substr(
-				(expressions[i].find("=[") - expressions[i].begin()) + 2 ,
-				(expressions[i].end() - expressions[i].find("=[") ) - 2
+				expressions[i].find("=[") + 2 ,
+				(expressions[i].size() - expressions[i].find("=[")) - 2
 		);
 
 		if(contains_evaluation(expression)){
@@ -141,12 +147,12 @@ gdf_err process_project(blazing_frame & input, std::string query_part){
 			gdf_error err = evaluate_expression(
 					input,
 					expression,
-					&output,
+					output,
 					&temp);
 			columns[i] = output;
 		}else{
 			int index = get_index(expression);
-			columns[i] = input.get_column(index));
+			columns[i] = input.get_column(index);
 			if(input_used_in_output[index]){
 				//becuase we already used this we can't just 0 copy it
 				//we have to make a copy of it here
@@ -185,14 +191,15 @@ gdf_err process_project(blazing_frame & input, std::string query_part){
 }
 
 std::string get_named_expression(std::string query_part, std::string expression_name){
-	int start_position =( query_part.find(expression_name + "=[") - query_part.begin())+ 2;
-	int end_position = (query_part.find("]",start_position) - query_part.begin());
+	int start_position =( query_part.find(expression_name + "=["))+ 2 + expression_name.length();
+	int end_position = (query_part.find("]",start_position));
 	return query_part.substr(start_position,end_position - start_position);
 }
 
 
 gdf_error process_join(blazing_frame & input, std::string query_part){
 
+	size_t size = input.get_size_column();
 
 	gdf_column left_indices, right_indices;
 	//right now it outputs int32
@@ -210,7 +217,7 @@ gdf_error process_join(blazing_frame & input, std::string query_part){
 	);
 }
 
-gdf_err process_sort(blazing_frame & input, std::string query_part){
+gdf_error process_sort(blazing_frame & input, std::string query_part){
 
 
 	/*gdf_error gdf_order_by(size_t nrows,     //in: # rows
@@ -221,7 +228,7 @@ gdf_err process_sort(blazing_frame & input, std::string query_part){
 		       size_t* d_indx);*/
 
 	std::string combined_expression = query_part.substr(
-			query_part.find("(") - query_part.begin(),
+			query_part.find("("),
 			(query_part.rfind(")") - query_part.find("(")) - 1
 	);
 	//LogicalSort(sort0=[$4], sort1=[$7], dir0=[ASC], dir1=[ASC])
@@ -253,10 +260,11 @@ gdf_err process_sort(blazing_frame & input, std::string query_part){
 	}
 
 	size_t * indices;
-	cudaMalloc(indices,sizeof(size_t) * input.get_column(0)->size);
+	cudaMalloc((void**)&indices,sizeof(size_t) * input.get_column(0)->size);
 	gdf_error err = gdf_order_by(
 			input.get_column(0)->size,
 			cols,
+			1, //?
 			d_cols,
 			d_types,
 			indices
@@ -270,29 +278,29 @@ gdf_err process_sort(blazing_frame & input, std::string query_part){
 		int cur_width;
 		get_column_byte_width(input.get_column(i), &cur_width);
 		if(cur_width > widest_column){
-			wildest_column = cur_width;
+			widest_column = cur_width;
 		}
 
 	}
 	//find the widest possible column
 
 	gdf_column temp_output;
-	create_gdf_column(&temp_output,input.get_column(0)->dtype,input.get_column(0).size,nullptr,widest_column);
+	create_gdf_column(&temp_output,input.get_column(0)->dtype,input.get_column(0)->size,nullptr,widest_column);
 	//now we need to materialize
 	//i dont think we can do that in place since we are writing and reading out of order
 	for(int i = 0; i < input.get_width();i++){
 		temp_output.dtype = input.get_column(i)->dtype;
-		gdf_error err = materialize_column_size_t(
+		/*gdf_error err = materialize_column_size_t(
 				input.get_column(i),
 				&temp_output,
 				indices
-		);
+		);*/
 
 		gdf_column empty;
 
 		int width;
 		get_column_byte_width(input.get_column(i), &width);
-		create_gdf_column(&empty,input.input.get_column(i)->dtype,0,nullptr,width);
+		create_gdf_column(&empty,input.get_column(i)->dtype,0,nullptr,width);
 
 		//copy output back to dat aframe
 		err = gpu_concat(&temp_output, &empty, input.get_column(i));
@@ -306,7 +314,7 @@ gdf_err process_sort(blazing_frame & input, std::string query_part){
 }
 
 //TODO: this does not compact the allocations which would be nice if it could
-gdf_err process_filter(blazing_frame & input, std::string query_part){
+gdf_error process_filter(blazing_frame & input, std::string query_part){
 	gdf_column stencil, temp;
 	create_gdf_column(&stencil,GDF_INT8,input.get_column(0)->size,nullptr,1);
 	create_gdf_column(&temp,GDF_INT64,input.get_column(0)->size,nullptr,8);
@@ -340,43 +348,41 @@ gdf_err process_filter(blazing_frame & input, std::string query_part){
 	}
 	free_gdf_column(&stencil);
 	free_gdf_column(&temp);
-	return gdf_success;
+	return GDF_SUCCESS;
 
 }
 
+//Returns the index from table if exists
 size_t get_table_index(std::vector<std::string> table_names, std::string table_name){
 	auto it = std::find(table_names.begin(), table_names.end(), table_name);
 	if(it != table_names.end()){
 		return std::distance(table_names.begin(), it);
 	}else{
-		//well jeeze we need to have some kind of error here
+		throw std::invalid_argument( "index does not exists" );
 	}
-
-
 }
 
 //TODO: if a table needs to be used more than once you need to include it twice
 //i know that kind of sucks, its for the 0 copy stuff, this can easily be remedied
 //by changings scan to make copies
-blazing_frame evalute_split_query(
+blazing_frame evaluate_split_query(
 		std::vector<std::vector<gdf_column *> > input_tables,
 		std::vector<std::string> table_names,
 		std::vector<std::vector<std::string>> column_names,
 		std::vector<std::string> query){
+		assert(input_tables.size() == table_names.size());
 
 	if(query.size() == 1){
 		//process yourself and return
+
 		if(is_scan(query[0])){
 			blazing_frame scan_frame;
 			//EnumerableTableScan(table=[[hr, joiner]])
-
-
-
 			scan_frame.add_table(
 					input_tables[
 					             get_table_index(
 					            		 table_names,
-					            		 extract_table_name(query_part)
+					            		 extract_table_name(query[0])
 					             )
 					             ]
 			);
@@ -385,7 +391,6 @@ blazing_frame evalute_split_query(
 			//i dont think there are any other type of end nodes at the moment
 		}
 	}
-
 	if(is_double_input(query[0])){
 		//process left
 		int other_depth_one_start = 2;
@@ -435,9 +440,11 @@ blazing_frame evalute_split_query(
 
 		if(is_join(query[0])){
 			//we know that left and right are dataframes we want to join together
-			return process_join(left_frame,right_frame,query[0]);
+			return left_frame;//!!
+			//return process_join(left_frame,right_frame,query[0]);
 		}else if(is_union(query[0])){
-			return process_union(left_frame,right_frame,query[0]);
+			return right_frame;//!!
+			//return process_union(left_frame,right_frame,query[0]);
 		}else{
 			//probably an error here
 		}
@@ -454,17 +461,17 @@ blazing_frame evalute_split_query(
 		);
 		//process self
 		if(is_project(query[0])){
-			gdf_err err = process_project(child_frame,query[0]);
+			gdf_error err = process_project(child_frame,query[0]);
 			return child_frame;
 		}else if(is_aggregate(query[0])){
-			gdf_err err = process_aggregate(child_frame,query[0]);
+			//gdf_error err = process_aggregate(child_frame,query[0]);
 			return child_frame;
 		}else if(is_sort(query[0])){
-			gdf_err err = process_sort(child_frame,query[0]);
+			gdf_error err = process_sort(child_frame,query[0]);
 			return child_frame;
 		}else if(is_filter(query[0]))
 		{
-			gdf_err err = process_filter(child_frame,query[0]);
+			gdf_error err = process_filter(child_frame,query[0]);
 			return child_frame;
 		}else{
 			//some error
@@ -490,7 +497,7 @@ blazing_frame evalute_split_query(
 		//if I am not mistaken
 		blazing_frame * new_frames[count_depth_1];
 		for(int i = 0; i < count_depth_1; i++){
-			new_frames[i] = evaluate_split_query(
+			*new_frames[i] = evaluate_split_query(
 					input_tables,
 					table_names,
 					column_names,
@@ -511,7 +518,7 @@ gdf_error evaluate_query(
 		void * temp_space){
 
 	std::vector<std::string> splitted = StringUtil::split(query, '\n');
-
 	for(auto str : splitted)
 		std::cout<<StringUtil::rtrim(str)<<"\n";
+	blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
 }

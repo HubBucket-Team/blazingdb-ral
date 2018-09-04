@@ -8,15 +8,11 @@
  ============================================================================
  */
 
-#include <thrust/functional.h>
-#include <thrust/execution_policy.h>
 #include <cuda_runtime.h>
 #include "LogicalFilter.h"
 #include "CalciteInterpreter.h"
 #include "DataFrame.h"
 #include "Utils.cuh"
-#include <thrust/iterator/discard_iterator.h>
-#include <thrust/iterator/constant_iterator.h>
 #include <cuda.h>
 
 #define BIT_FIVE 0x10

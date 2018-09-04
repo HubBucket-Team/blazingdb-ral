@@ -127,7 +127,9 @@ gdf_error evaluate_join(std::string condition,
 		gdf_column * left_indices,
 		gdf_column * right_indices
 ){
-	gdf_join_result_type * output;
+	//gdf_join_result_type * output;
+	gdf_column left_result;
+	gdf_column right_result;
 	//TODO: right now this only works for equijoins
 	// since this is all that is implemented at the time
 
@@ -191,7 +193,7 @@ gdf_error evaluate_join(std::string condition,
 			right_columns[i] = data_frame.get_column(right_index);
 		}
 		err = gdf_left_join(operator_count, left_columns,
-				right_columns, &output, &ctxt);
+				right_columns, &left_result, &right_result, &ctxt);
 		delete[] left_columns;
 		delete[] right_columns;
 

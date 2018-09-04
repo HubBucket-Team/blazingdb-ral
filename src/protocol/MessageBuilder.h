@@ -1,8 +1,6 @@
 /*
- * MessageBuilder.h
- *
- *  Created on: Jul 14, 2017
- *      Author: BlazingDB
+ * Copyright 2018 BlazingDB, Inc.
+ *     Copyright 2017 Percy Camilo Triveño Aucahuasi <percy@blazingdb.com>
  */
 
 #ifndef MESSAGEBUILDER_H_
@@ -43,7 +41,7 @@ namespace BlazingProtocol {
     const Payload buildServerMessage(const std::string &statement, const std::string &authorization, const QueryResult &queryResult);
 
 
-    const Payload buildServerMessage(gdf_columns[][]);
+    //const Payload buildServerMessage(gdf_columns[][]);
 }
 
 #endif /* MESSAGEBUILDER_H_ */

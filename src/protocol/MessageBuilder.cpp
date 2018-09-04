@@ -1,11 +1,9 @@
 /*
- * MessageBuilder.cpp
- *
- *  Created on: Jul 14, 2017
- *      Author: BlazingDB
+ * Copyright 2018 BlazingDB, Inc.
+ *     Copyright 2017 Percy Camilo Triveño Aucahuasi <percy@blazingdb.com>
  */
 
-#include "Protocol/MessageBuilder.h"
+#include "MessageBuilder.h"
 
 #include "cudaIpcMemHandle_t_generated.h"
 #include "gdf_column_generated.h"
@@ -27,7 +25,7 @@ const BlazingProtocol::Payload BlazingProtocol::buildServerMessage(const std::st
     const int initial_buffer_size = 1024; // bytes
     flatbuffers::FlatBufferBuilder builder(initial_buffer_size);
 
-    std::vector<flatbuffers::Offset<BlazingDB::Protocol::Column>> columns_vector;
+    //std::vector<flatbuffers::Offset<BlazingDB::Protocol::Column>> columns_vector;
 
     auto statementString = builder.CreateString(statement);
     auto success = true;
@@ -40,4 +38,22 @@ const BlazingProtocol::Payload BlazingProtocol::buildServerMessage(const std::st
     const BlazingProtocol::Payload payload(builder.GetBufferPointer(), builder.GetSize());
 
     return payload;
+}
+
+
+// demo
+#include <iostream>
+
+//#include "Protocol/MessageBuilder.h"
+
+int ads_main(int argc, char *argv[]) {
+    const std::string statement = "seelct * from orders";
+    const std::string authorization = "TODO"; // TODO percy
+    BlazingProtocol::QueryResult queryResult;
+    queryResult.sock = 8080;
+    queryResult.duration = 123;
+
+    const BlazingProtocol::Payload payload = BlazingProtocol::buildServerMessage(statement, authorization, queryResult);
+
+    return 0;
 }

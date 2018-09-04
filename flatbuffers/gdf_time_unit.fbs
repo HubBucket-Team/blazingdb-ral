@@ -1,0 +1,9 @@
+namespace BlazingDB.Protocol;
+
+enum gdf_time_unit : byte {
+    TIME_UNIT_NONE=0, // default (undefined)
+    TIME_UNIT_s,   // second
+    TIME_UNIT_ms,  // millisecond
+    TIME_UNIT_us,  // microsecond
+    TIME_UNIT_ns   // nanosecond
+}

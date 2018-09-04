@@ -1,0 +1,6 @@
+namespace BlazingDB.Protocol;
+
+// cuda9.2: CUDA_IPC_HANDLE_SIZE is 64
+table cudaIpcMemHandle_t {
+    reserved:[byte];
+}

@@ -1,73 +1,47 @@
+#=============================================================================
+# Copyright 2018 BlazingDB, Inc.
+#     Copyright 2018 Percy Camilo Triveño Aucahuasi <percy@blazingdb.com>
+#=============================================================================
+
 cmake_minimum_required(VERSION 2.8)
 project(testing-cmake-libgdf)
+
 set(CMAKE_CXX_STANDARD 11)
 message(STATUS "Using C++ standard: c++${CMAKE_CXX_STANDARD}")
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/" ${CMAKE_MODULE_PATH})
-set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Configuration/")
 message(STATUS "CMAKE_MODULE_PATH:" "${CMAKE_MODULE_PATH}")
 
-find_package(CUDA REQUIRED)
+# Include CMake modules
+include(FeatureSummary)
+include(CheckIncludeFiles)
+include(CheckLibraryExists)
+include(CTest)
 
-if(CUDA_FOUND)
-    message(STATUS "CUDA ${CUDA_VERSION} found in ${CUDA_TOOLKIT_ROOT_DIR}")
+# NOTE Do not change the inclusion order
+# Configure dependencies
+include(ConfigureCUDA)
+include(ConfigureGoogleTest)
+include(ConfigureLibGDF)
+#include(ConfigureArrow)
+include(ConfigureFlatBuffers)
 
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-std=c++11;--expt-extended-lambda -O0)
-    message(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
+set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
+              ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteInterpreter.cpp
+              ${CMAKE_CURRENT_SOURCE_DIR}/src/ColumnManipulation.cu
+              ${CMAKE_CURRENT_SOURCE_DIR}/src/JoinProcessor.cpp
+              ${CMAKE_CURRENT_SOURCE_DIR}/src/LogicalFilter.cpp
+              ${CMAKE_CURRENT_SOURCE_DIR}/src/StringUtil.cpp
+              ${CMAKE_CURRENT_SOURCE_DIR}/src/QueryState.cpp
+              ${CMAKE_CURRENT_SOURCE_DIR}/src/Utils.cu
+              ${CMAKE_CURRENT_SOURCE_DIR}/src/testing-libgdf.cu
 
-    include(CUDAConfig RESULT_VARIABLE result)
-    message("-- ConfigCuda: " ${result})
-else()
-    message(FATAL_ERROR "CUDA not found, please check your settings.")
-endif()
-
-set(PROJECT_SRC "${PROJECT_SOURCE_DIR}/src")
-
-set(SRC_FILES ${PROJECT_SRC}/CalciteExpressionParsing.cpp
-              ${PROJECT_SRC}/CalciteInterpreter.cpp
-              ${PROJECT_SRC}/ColumnManipulation.cu
-              ${PROJECT_SRC}/JoinProcessor.cpp
-              ${PROJECT_SRC}/LogicalFilter.cpp
-              ${PROJECT_SRC}/StringUtil.cpp
-              ${PROJECT_SRC}/QueryState.cpp
-              ${PROJECT_SRC}/Utils.cu
-              ${PROJECT_SRC}/testing-libgdf.cu
-
-              ${PROJECT_SRC}/ipc/calcite_client.cpp
+              ${CMAKE_CURRENT_SOURCE_DIR}/src/ipc/calcite_client.cpp
 )
-
-include(ExternalProject)
-
-set(LIBGDF_ROOT ${CMAKE_BINARY_DIR}/thirdparty/libgdf)
-set(LIBGDF_LIB_DIR ${LIBGDF_ROOT}/src/libgdf)
-set(LIBGDF_INCLUDE_DIR ${LIBGDF_ROOT}/src/libgdf/include)
-
-ExternalProject_Add(libgdf_ep
-	CMAKE_ARGS -DCMAKE_BUILD_TYPE=RELEASE 
-	PREFIX ${LIBGDF_ROOT}
-	DOWNLOAD_COMMAND git clone --recurse-submodules https://github.com/BlazingDB/libgdf.git
-	UPDATE_COMMAND ""
-	PATCH_COMMAND ""
-	BINARY_DIR ${LIBGDF_ROOT}/src/libgdf
-	SOURCE_DIR ${LIBGDF_ROOT}/src/libgdf
-	INSTALL_DIR ${LIBGDF_ROOT}/bin
-	CONFIGURE_COMMAND git checkout binary-operators-draft && git submodule update --init --recursive && cmake -DCMAKE_BUILD_TYPE=Release -DBINARY_OPERATION_VERSION:STRING=V2 .
-	BUILD_COMMAND make -j8
-	INSTALL_COMMAND ""
-	BUILD_BYPRODUCTS ${LIBGDF_LIB_DIR}/libgdf.so
-)
-
-link_directories(${CUDA_LIBRARY_DIR})
-link_directories(${CUDA_LIBRARY_STUBS_DIR})
-
-set(PROJECT_LINK_LIBS libgdf.so)
-link_directories(${LIBGDF_LIB_DIR})
-
-include_directories(${LIBGDF_INCLUDE_DIR})
-
-add_library(libgdf SHARED IMPORTED)
-set_target_properties(libgdf PROPERTIES IMPORTED_LOCATION ${LIBGDF_LIB_DIR}/libgdf.so)
-add_dependencies(libgdf libgdf_ep)
 
 cuda_add_executable(testing-libgdf ${SRC_FILES})
-target_link_libraries(testing-libgdf libgdf cuda nvrtc)
+# TODO percy do not use libgdf.so here and use gdf (the static lib) instead
+target_link_libraries(testing-libgdf libgdf.so ${CUDA_CUDA_LIBRARY} ${CUDA_NVRTC_LIBRARY})
+
+# Print the project summary
+feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)

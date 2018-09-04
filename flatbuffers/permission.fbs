@@ -1,0 +1,18 @@
+namespace BlazingDB.Protocol;
+
+enum PermissionType : byte {
+  Create = 0,
+  CreateView,
+  Drop,
+  GrantOption,
+  Delete,
+  Insert,
+  Select
+}
+
+table Permission {
+  database_name:string;
+  table_name:string;
+  column_name:string;
+  permission_type:PermissionType;
+}

@@ -1,0 +1,10 @@
+include "permission.fbs";
+
+namespace BlazingDB.Protocol;
+
+table ClientMessage {
+  statement:string;
+  permissions:[Permission];
+}
+
+root_type ClientMessage;

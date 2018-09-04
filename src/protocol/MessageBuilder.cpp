@@ -46,7 +46,7 @@ const BlazingProtocol::Payload BlazingProtocol::buildServerMessage(const std::st
 
 //#include "Protocol/MessageBuilder.h"
 
-int ads_main(int argc, char *argv[]) {
+int BlazingProtocol::ads_main() {
     const std::string statement = "seelct * from orders";
     const std::string authorization = "TODO"; // TODO percy
     BlazingProtocol::QueryResult queryResult;

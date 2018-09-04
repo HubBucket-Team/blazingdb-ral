@@ -29,6 +29,8 @@
 #include <netdb.h>
 #include <netinet/in.h>
 
+#include "protocol/MessageBuilder.h"
+
 void listenUnixSocket() {
 	int unixSocket, clientSocket;
 	struct sockaddr_un addr;
@@ -123,6 +125,8 @@ int a_main() {
 
 void runCalciteClientTest(const std::string &sql) {
 	std::cout << "link to calcite service ... %" << std::endl;
+
+	BlazingProtocol::ads_main();
 
 	a_main();
 }

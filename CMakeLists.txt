@@ -26,6 +26,9 @@ include(ConfigureLibGDF)
 #include(ConfigureArrow)
 include(ConfigureFlatBuffers)
 
+# BEGIN MAIN #
+include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
 set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteInterpreter.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/ColumnManipulation.cu
@@ -49,3 +52,5 @@ add_dependencies(testing-libgdf FlatBuffersSchemas)
 
 # Print the project summary
 feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)
+
+#END MAIN #

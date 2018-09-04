@@ -42,6 +42,8 @@ namespace BlazingProtocol {
 
 
     //const Payload buildServerMessage(gdf_columns[][]);
+
+    int ads_main();
 }
 
 #endif /* MESSAGEBUILDER_H_ */

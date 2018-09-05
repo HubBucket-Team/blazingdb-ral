@@ -50,8 +50,7 @@ public:
 	}
 	
 	size_t get_width(){
-		size_t width = 0;
-
+		return this->columns.size(); //ToDo check correctness
 	}
 
 	void clear(){

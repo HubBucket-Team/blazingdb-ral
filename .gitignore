@@ -35,6 +35,7 @@
 build/
 thirdparty/
 /testing-libgdf
+gtests/
 
 # Eclipse generated files by cmake
 .cproject

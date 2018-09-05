@@ -150,7 +150,7 @@ gdf_error evaluate_join(std::string condition,
 
 	while(position > 0){
 		std::string token = get_last_token(clean_expression,&position);
-		std::cout<<"Token is ==> "<<token<<"\n";
+		//std::cout<<"Token is ==> "<<token<<"\n";
 
 		if(is_operator_token(token)){
 			operator_count++;

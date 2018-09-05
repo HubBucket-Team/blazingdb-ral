@@ -69,10 +69,10 @@ TEST(logical_filter_TEST, processing_expressions) {
 			host_output[i] = input2[i] > 5 ? 1 : 0;
 		}
 	
-		cudaMemcpy(device_output, output.data, num_values * 1, cudaMemcpyDeviceToHost);
+		cudaMemcpy(device_output, output->data, num_values * 1, cudaMemcpyDeviceToHost);
 
 		for(int i = 0; i < num_values; i++){
-			EXPECT_TRUE(host_output == device_output);
+			EXPECT_TRUE(host_output[i] == device_output[i]);
 		}
 	}
 
@@ -89,10 +89,10 @@ TEST(logical_filter_TEST, processing_expressions) {
 			host_output[i] = ((input1[i] == input2[i]) == input3[i]) ? 1 : 0;
 		}
 	
-		cudaMemcpy(device_output, output.data, num_values * 1, cudaMemcpyDeviceToHost);
+		cudaMemcpy(device_output, output->data, num_values * 1, cudaMemcpyDeviceToHost);
 
 		for(int i = 0; i < num_values; i++){
-			EXPECT_TRUE(host_output == device_output);
+			EXPECT_TRUE(host_output[i] == device_output[i]);
 		}
     }
 }

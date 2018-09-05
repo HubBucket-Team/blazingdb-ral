@@ -134,7 +134,7 @@ gdf_error evaluate_expression(
 
 	while(position > 0){
 		std::string token = get_last_token(clean_expression,&position);
-		std::cout<<"Token is ==> "<<token<<"\n";
+		//std::cout<<"Token is ==> "<<token<<"\n";
 
 		if(is_operator_token(token)){
 			process__binary_operation_column_column(

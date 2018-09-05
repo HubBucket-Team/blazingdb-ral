@@ -21,10 +21,10 @@ include(CTest)
 # NOTE Do not change the inclusion order
 # Configure dependencies
 include(ConfigureCUDA)
-include(ConfigureGoogleTest)
 include(ConfigureLibGDF)
 #include(ConfigureArrow)
 include(ConfigureFlatBuffers)
+include(ConfigureGoogleTest)
 
 # BEGIN MAIN #
 include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src)

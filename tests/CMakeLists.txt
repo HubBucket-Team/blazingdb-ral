@@ -31,5 +31,6 @@ message(STATUS "******** Configuring tests ********")
 
 add_subdirectory(foo-sample)
 add_subdirectory(logical-filter)
+add_subdirectory(calcite-interpreter)
 
 message(STATUS "******** Tests are ready ********")

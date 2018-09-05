@@ -53,11 +53,9 @@ TEST(logical_filter_TEST, processing_expressions) {
 	char * host_output = new char[num_values];
 	char * device_output = new char[num_values];
 
+	const int WIDTH_PER_VALUE = 1;
     {
-		std::string expression = "AND(=(*($0, $0), 1), =($1, 2))";
-		expression = "=(=($1, $0), $0)";
-
-		expression = ">($1, 5)";
+		std::string expression = ">($1, 5)";
 
 		evaluate_expression(
 				blzframe,
@@ -69,7 +67,27 @@ TEST(logical_filter_TEST, processing_expressions) {
 			host_output[i] = input2[i] > 5 ? 1 : 0;
 		}
 	
-		cudaMemcpy(device_output, output->data, num_values * 1, cudaMemcpyDeviceToHost);
+		cudaMemcpy(device_output, output->data, num_values * WIDTH_PER_VALUE, cudaMemcpyDeviceToHost);
+
+		for(int i = 0; i < num_values; i++){
+			EXPECT_TRUE(host_output[i] == device_output[i]);
+		}
+	}
+
+	{
+		std::string expression = "+(*($1, $0), $2)";
+
+		evaluate_expression(
+				blzframe,
+				expression,
+				output,
+				temp);
+
+		for(int i = 0; i < num_values; i++){
+			host_output[i] = ((input1[i] * input2[i]) + input3[i]);
+		}
+	
+		cudaMemcpy(device_output, output->data, num_values * WIDTH_PER_VALUE, cudaMemcpyDeviceToHost);
 
 		for(int i = 0; i < num_values; i++){
 			EXPECT_TRUE(host_output[i] == device_output[i]);
@@ -89,10 +107,90 @@ TEST(logical_filter_TEST, processing_expressions) {
 			host_output[i] = ((input1[i] == input2[i]) == input3[i]) ? 1 : 0;
 		}
 	
-		cudaMemcpy(device_output, output->data, num_values * 1, cudaMemcpyDeviceToHost);
+		cudaMemcpy(device_output, output->data, num_values * WIDTH_PER_VALUE, cudaMemcpyDeviceToHost);
 
 		for(int i = 0; i < num_values; i++){
 			EXPECT_TRUE(host_output[i] == device_output[i]);
 		}
     }
+
+	{
+		std::string expression = "*($0, $0)";
+
+		evaluate_expression(
+				blzframe,
+				expression,
+				output,
+				temp);
+
+		for(int i = 0; i < num_values; i++){
+			host_output[i] = input1[i] * input1[i];
+		}
+
+		cudaMemcpy(device_output, output->data, num_values * WIDTH_PER_VALUE, cudaMemcpyDeviceToHost);
+
+		for(int i = 0; i < num_values; i++){
+			EXPECT_TRUE(host_output[i] == device_output[i]);
+		}
+    }
+
+	{
+		std::string expression = "=(*($0, $0), 1))";
+
+		evaluate_expression(
+				blzframe,
+				expression,
+				output,
+				temp);
+
+		for(int i = 0; i < num_values; i++){
+			host_output[i] = ((input1[i] * input1[i]) == 1) ? 1 : 0;
+		}
+	
+		cudaMemcpy(device_output, output->data, num_values * WIDTH_PER_VALUE, cudaMemcpyDeviceToHost);
+
+		for(int i = 0; i < num_values; i++){
+			EXPECT_TRUE(host_output[i] == device_output[i]);
+		}
+    }
+
+	/*{
+		std::string expression = "AND($0, $1)";
+
+		evaluate_expression(
+				blzframe,
+				expression,
+				output,
+				temp);
+
+		for(int i = 0; i < num_values; i++){
+			host_output[i] = (input1[i] && input2[i]) ? 1 : 0;
+		}
+	
+		cudaMemcpy(device_output, output->data, num_values * WIDTH_PER_VALUE, cudaMemcpyDeviceToHost);
+
+		for(int i = 0; i < num_values; i++){
+			EXPECT_TRUE(host_output[i] == device_output[i]);
+		}
+    }*/
+
+	/*{
+		std::string expression = "AND(=(*($0, $0), 1), =($1, 2))";
+
+		evaluate_expression(
+				blzframe,
+				expression,
+				output,
+				temp);
+
+		for(int i = 0; i < num_values; i++){
+			host_output[i] = ((input1[i] * input1[i]) == 1) && (input2[i] == 2) ? 1 : 0;
+		}
+	
+		cudaMemcpy(device_output, output->data, num_values * WIDTH_PER_VALUE, cudaMemcpyDeviceToHost);
+
+		for(int i = 0; i < num_values; i++){
+			EXPECT_TRUE(host_output[i] == device_output[i]);
+		}
+    }*/
 }

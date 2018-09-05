@@ -18,6 +18,14 @@ gdf_error get_operation(
 		*operation = GDF_LESS;
 	}else if(operator_string == "<="){
 		*operation = GDF_LESS_EQUAL;
+	}else if(operator_string == "+"){
+		*operation = GDF_ADD;
+	}else if(operator_string == "-"){
+		*operation = GDF_SUB;
+	}else if(operator_string == "*"){
+		*operation = GDF_MUL;
+	}else if(operator_string == "/"){
+		*operation = GDF_DIV;
 	}else{
 		return GDF_UNSUPPORTED_DTYPE;
 	}

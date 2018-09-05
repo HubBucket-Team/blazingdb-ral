@@ -513,12 +513,20 @@ gdf_error evaluate_query(
 		std::vector<std::string> table_names,
 		std::vector<std::vector<std::string>> column_names,
 		std::string query,
-		std::vector<gdf_column *> outputs,
-		std::vector<std::string> output_column_names,
+		std::vector<gdf_column *> & outputs,
+		std::vector<std::string> & output_column_names,
 		void * temp_space){
 
 	std::vector<std::string> splitted = StringUtil::split(query, '\n');
 	for(auto str : splitted)
 		std::cout<<StringUtil::rtrim(str)<<"\n";
 	blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
+
+	size_t cur_count = 0;
+	for(size_t i=0;i<output_frame.get_width();i++){
+		for(size_t j=0;j<output_frame.get_size_column(i);j++){
+			outputs.push_back(output_frame.get_column(cur_count));
+			cur_count++;
+		}
+	}
 }

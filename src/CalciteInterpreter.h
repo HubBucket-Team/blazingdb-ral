@@ -14,8 +14,8 @@ gdf_error evaluate_query(
 		std::vector<std::string> table_names,
 		std::vector<std::vector<std::string>> column_names,
 		std::string query,
-		std::vector<gdf_column *> outputs,
-		std::vector<std::string> output_column_names,
+		std::vector<gdf_column *> & outputs,
+		std::vector<std::string> & output_column_names,
 		void * temp_space);
 
 blazing_frame evalute_split_query(

@@ -548,8 +548,8 @@ gdf_error evaluate_query(
 		void * temp_space){
 
 	std::vector<std::string> splitted = StringUtil::split(query, '\n');
-	for(auto str : splitted)
-		std::cout<<StringUtil::rtrim(str)<<"\n";
+	/*for(auto str : splitted)
+		std::cout<<StringUtil::rtrim(str)<<"\n";*/
 	blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
 
 	size_t cur_count = 0;

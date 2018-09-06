@@ -226,25 +226,61 @@ void runParquetTest(){
 
 void runCalciteTest()
 {
-	std::vector<std::vector<gdf_column *> > input_tables;
-	std::vector<std::string> table_names;
-	std::vector<std::vector<std::string>> column_names;
+
+	//lets make a simple test where we have three talbes that we join then filter then project
+	//this mimics our java code
+	std::vector<std::vector<gdf_column *> > input_tables(2);
+
+	std::vector<gdf_column * > hr_emps(3);
+	std::vector<gdf_column * > hr_joiner_1(2);
+	//std::vector<gdf_column * > hr_joiner_2(2);
+
+	int emps_x[3] = { 1, 2, 3};
+	int emps_y[3] = { 4, 5,6};
+	int emps_z[3] = { 10, 10, 10};
+
+	hr_emps[0] = new gdf_column;
+	create_gdf_column(hr_emps[0], GDF_INT32, 3, (void *) emps_x, 4);
+	hr_emps[1] = new gdf_column;
+	create_gdf_column(hr_emps[1], GDF_INT32, 3, (void *) emps_y, 4);
+	hr_emps[2] = new gdf_column;
+	create_gdf_column(hr_emps[2], GDF_INT32, 3, (void *) emps_z, 4);
+
+
+
+	int joiner_join_x[6] = { 1, 1, 1, 2, 2, 3};
+	int joiner_y[6] = { 1, 2, 3, 4 ,5 ,6};
+
+
+	hr_joiner_1[0] = new gdf_column;
+	create_gdf_column(hr_joiner_1[0], GDF_INT32, 6, (void *) joiner_join_x, 4);
+
+	hr_joiner_1[1] = new gdf_column;
+	create_gdf_column(hr_joiner_1[1], GDF_INT32, 6, (void *) joiner_y, 4);
+
+	input_tables[0] = hr_emps;
+	input_tables[1] = hr_joiner_1;
+	std::vector<std::string> table_names = { "hr.emps" , "hr.joiner"};
+	std::vector<std::vector<std::string>> column_names = {{"x","y","z"},{"join_x","join_y"}};
+
 	std::vector<gdf_column *> outputs;
 	std::vector<std::string> output_column_names;
-	void * temp_space;
+	void * temp_space = nullptr; //we arent really using this it seems
 
 	std::string query = "\
-LogicalProject(join_x=[$5], join_x0=[$3])             				\n\
- LogicalJoin(condition=[=($5, $0)], joinType=[inner])				\n\
-  LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4]) 	\n\
-   LogicalFilter(condition=[OR(<($0, 5), >($3, 3))]) 			\n\
-    LogicalJoin(condition=[=($3, $0)], joinType=[inner]) 		\n\
-     EnumerableTableScan(table=[[hr, emps]]) 					\n\
-     EnumerableTableScan(table=[[hr, joiner]])					\n\
-  EnumerableTableScan(table=[[hr, joiner]])";
+LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$6=[+($0, $4)])\n\
+  LogicalFilter(condition=[OR(<($0, 5), >($3, 3))])\n\
+    LogicalJoin(condition=[OR(=($3, $0), =($3, $1))], joinType=[inner])\n\
+      EnumerableTableScan(table=[[hr, emps]])\n\
+      EnumerableTableScan(table=[[hr, joiner]]) ";
 
 	gdf_error err = evaluate_query(input_tables, table_names, column_names,
 		query, outputs, output_column_names, temp_space);
+
+
+	for(int i = 0; i < outputs.size(); i++){
+		print_column(outputs[i]);
+	}
 }
 
 int main(void)

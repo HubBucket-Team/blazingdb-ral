@@ -11,7 +11,7 @@
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 const std::string LOGICAL_UNION_TEXT = "LogicalUnion";
-const std::string LOGICAL_SCAN_TEXT = "LogicalScan";
+const std::string LOGICAL_SCAN_TEXT = "TableScan";
 const std::string LOGICAL_AGGREGATE_TEXT = "LogicalAggregate";
 const std::string LOGICAL_PROJECT_TEXT = "LogicalProject";
 const std::string LOGICAL_SORT_TEXT = "LogicalSort";
@@ -151,6 +151,10 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 					output,
 					&temp);
 			columns[i] = output;
+			if(err != GDF_SUCCESS){
+				//TODO: clean up everything here so we dont run out of memory
+				return err;
+			}
 		}else{
 			int index = get_index(expression);
 			columns[i] = input.get_column(index);
@@ -167,7 +171,10 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 				//TODO: verify that this works concat whoudl be able to take in an empty one
 				//even better would be if we could pass it in a  a null pointer and use it for copy
 				gdf_error err = gpu_concat(input.get_column(index), &empty, output);
-
+				if(err != GDF_SUCCESS){
+					//TODO: clean up everything here so we dont run out of memory
+					return err;
+				}
 				free_gdf_column(&empty);
 			}else{
 				input_used_in_output[i] = true;
@@ -188,7 +195,7 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 	input.add_table(columns);
 
 	free_gdf_column(&temp);
-
+	return GDF_SUCCESS;
 }
 
 std::string get_named_expression(std::string query_part, std::string expression_name){
@@ -218,6 +225,10 @@ gdf_error process_join(blazing_frame & input, std::string query_part){
 			&right_indices
 	);
 
+	if(err != GDF_SUCCESS){
+		//TODO: clean up everything here so we dont run out of memory
+		return err;
+	}
 	//the options get interesting here. So if the join nis smaller than the input
 	// you could write the output in place, saving time for allocations then shrink later on
 	// the simplest solution is to reallocate space and free up the old after copying it over
@@ -235,16 +246,21 @@ gdf_error process_join(blazing_frame & input, std::string query_part){
 		if(column_index < first_table_end_index)
 		{
 			//materialize with left_indices
-			materialize_column(input.get_column(column_index),output,&left_indices);
+			err = materialize_column(input.get_column(column_index),output,&left_indices);
 		}else{
 			//materialize with right indices
-			materialize_column(input.get_column(column_index),output,&right_indices);
+			err = materialize_column(input.get_column(column_index),output,&right_indices);
+		}
+		if(err != GDF_SUCCESS){
+			//TODO: clean up all the resources
+			return err;
 		}
 		free_gdf_column(input.get_column(column_index));
 		new_columns[column_index] = output;
 	}
 	input.clear();
 	input.add_table(new_columns);
+	return GDF_SUCCESS;
 }
 
 gdf_error process_sort(blazing_frame & input, std::string query_part){
@@ -346,6 +362,10 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 //TODO: this does not compact the allocations which would be nice if it could
 gdf_error process_filter(blazing_frame & input, std::string query_part){
 	gdf_column stencil, temp;
+
+
+	size_t size = input.get_column(0)->size;
+
 	create_gdf_column(&stencil,GDF_INT8,input.get_column(0)->size,nullptr,1);
 	create_gdf_column(&temp,GDF_INT64,input.get_column(0)->size,nullptr,8);
 
@@ -419,11 +439,12 @@ blazing_frame evaluate_split_query(
 			return scan_frame;
 		}else{
 			//i dont think there are any other type of end nodes at the moment
+			std::cout<<"How the fuck did this happen"<<std::endl;
 		}
 	}
 	if(is_double_input(query[0])){
 		//process left
-		int other_depth_one_start = 2;
+		int other_depth_one_start = 1;
 		for(int i = 2; i < query.size(); i++){
 			int j = 0;
 			while(query[i][j] == ' '){
@@ -439,6 +460,7 @@ blazing_frame evaluate_split_query(
 		blazing_frame left_frame;
 		std::thread left_thread =
 				std::thread([&left_frame, &input_tables,&table_names,&column_names,&query,other_depth_one_start](){
+	/*
 			left_frame = evaluate_split_query(
 					input_tables,
 					table_names,
@@ -447,13 +469,17 @@ blazing_frame evaluate_split_query(
 							query.begin() + 1,
 							query.begin() + other_depth_one_start)
 			);
-
+*/
 		});
 
+
+
+		//TODO: moved here for debuggin
+		left_thread.join();
 		blazing_frame right_frame;
 		std::thread right_thread =
 				std::thread([&right_frame, &input_tables,&table_names,&column_names,&query,other_depth_one_start](){
-			right_frame = evaluate_split_query(
+	/*		right_frame = evaluate_split_query(
 					input_tables,
 					table_names,
 					column_names,
@@ -461,10 +487,17 @@ blazing_frame evaluate_split_query(
 							query.begin() + other_depth_one_start,
 							query.end())
 			);
-
+*/
 		});
 
-		left_thread.join();
+		right_frame = evaluate_split_query(
+							input_tables,
+							table_names,
+							column_names,
+							std::vector<std::string>(
+									query.begin() + other_depth_one_start,
+									query.end())
+					);
 		right_thread.join();
 
 

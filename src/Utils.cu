@@ -31,8 +31,8 @@ void print_column(gdf_column * column){
 void free_gdf_column(gdf_column * column){
 	cudaFree(column->data);
 	cudaFree(column->valid);
-	delete column;
-	column = nullptr;
+	//delete column;
+	//column = nullptr;
 }
 
 void create_gdf_column(gdf_column * column, gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value){

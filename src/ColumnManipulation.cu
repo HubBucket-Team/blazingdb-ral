@@ -16,12 +16,12 @@
 #include <thrust/iterator/transform_iterator.h>
 
 
-/*
-template <typename InputType,typename ResultType >
-struct negative_to_zero : public thrust::unary_function< InputType, ResultType>
+
+template <typename InputType>
+struct negative_to_zero : public thrust::unary_function< InputType, InputType>
 {
 	__host__ __device__
-	ResultType operator()(InputType x)
+	InputType operator()(InputType x)
 	{
 		return x < 0 ? 0 : x;
 	}
@@ -198,10 +198,11 @@ typedef struct packed_ints {
 
 //struct reorder_bitmask : public thrust::unary_function<packed_ints,
 
-
+/*
 template <typename ElementIterator, typename IndexIterator, typename OutputIterator>
 gdf_error materialize_templated_3(gdf_column * input, gdf_column * output, gdf_column * row_indeces){
 
+ * TODO: materialize bitmask
 	//we can use the output gdf as a space to process the bitmasks in
 	typedef thrust::tuple<gdf_valid_iterator, bit_position_iterator > mask_tuple;
 		typedef thrust::zip_iterator<mask_tuple> zipped_mask;
@@ -226,6 +227,8 @@ gdf_error materialize_templated_3(gdf_column * input, gdf_column * output, gdf_c
 
 	//any negative values could fuck this up so i gues we need a transformation to filter them out
 
+	//TODO: right now we expand this out to fucking 1 byte wide, gross
+
 	thrust::detail::normal_iterator<thrust::device_ptr<ElementIterator> > element_iter =
 			thrust::detail::make_normal_iterator(thrust::device_pointer_cast((ElementIterator *) input->data));
 
@@ -242,28 +245,37 @@ gdf_error materialize_templated_3(gdf_column * input, gdf_column * output, gdf_c
 
 	return GDF_SUCCESS;
 
-}
+}*/
 
-
+//input and output shoudl be the same time
 template <typename ElementIterator, typename IndexIterator>
 gdf_error materialize_templated_2(gdf_column * input, gdf_column * output, gdf_column * row_indeces){
-	int column_width;
-	get_column_byte_width(row_indeces, &column_width);
-	if(column_width == 1){
-		return materialize_templated_3<ElementIterator,IndexIterator,int8_t>(input,output,row_indeces);
-	}else if(column_width == 2){
-		return materialize_templated_3<ElementIterator,IndexIterator,int16_t>(input,output,row_indeces);
-	}else if(column_width == 4){
-		return materialize_templated_3<ElementIterator,IndexIterator,int32_t>(input,output,row_indeces);
-	}else if(column_width == 8){
-		return materialize_templated_3<ElementIterator,IndexIterator,int64_t>(input,output,row_indeces);
-	}
+	//TODO: handle the bitmasks
+
+	thrust::detail::normal_iterator<thrust::device_ptr<ElementIterator> > element_iter =
+				thrust::detail::make_normal_iterator(thrust::device_pointer_cast((ElementIterator *) input->data));
+
+	thrust::detail::normal_iterator<thrust::device_ptr<IndexIterator> > index_iter =
+					thrust::detail::make_normal_iterator(thrust::device_pointer_cast((IndexIterator *) row_indeces->data));
+
+	typedef thrust::detail::normal_iterator<thrust::device_ptr<IndexIterator> > IndexNormalIterator;
+
+	thrust::transform_iterator<negative_to_zero<IndexIterator>,IndexNormalIterator> transform_iter = thrust::make_transform_iterator(index_iter,negative_to_zero<IndexIterator>());
+
+
+		thrust::permutation_iterator<thrust::detail::normal_iterator<thrust::device_ptr<ElementIterator> >,thrust::transform_iterator<negative_to_zero<IndexIterator>,IndexNormalIterator> > iter(element_iter,transform_iter);
+
+		thrust::detail::normal_iterator<thrust::device_ptr<ElementIterator> > output_iter =
+				thrust::detail::make_normal_iterator(thrust::device_pointer_cast((ElementIterator *) output->data));;
+		thrust::copy(iter,iter + input->size,output_iter);
+
+		return GDF_SUCCESS;
 }
 
 template <typename ElementIterator>
 gdf_error materialize_templated_1(gdf_column * input, gdf_column * output, gdf_column * row_indeces){
 	int column_width;
-	get_column_byte_width(output, &column_width);
+	get_column_byte_width(row_indeces, &column_width);
 	if(column_width == 1){
 		return materialize_templated_2<ElementIterator,int8_t>(input,output,row_indeces);
 	}else if(column_width == 2){
@@ -292,4 +304,4 @@ gdf_error materialize_column(gdf_column * input, gdf_column * output, gdf_column
 
 
 }
-*/
+

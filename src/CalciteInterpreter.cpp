@@ -7,6 +7,7 @@
 #include "Utils.cuh"
 #include "LogicalFilter.h"
 #include "JoinProcessor.h"
+#include "ColumnManipulation.cuh"
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 const std::string LOGICAL_UNION_TEXT = "LogicalUnion";
@@ -199,11 +200,12 @@ std::string get_named_expression(std::string query_part, std::string expression_
 
 gdf_error process_join(blazing_frame & input, std::string query_part){
 
-	size_t size = input.get_size_column();
+	size_t size = 0; //libgdf will be handling the outputs for these
 
 	gdf_column left_indices, right_indices;
 	//right now it outputs int32
 	create_gdf_column(&left_indices,GDF_INT32,size,nullptr,sizeof(int));
+	create_gdf_column(&right_indices,GDF_INT32,size,nullptr,sizeof(int));
 
 	std::string condition = get_condition_expression(query_part);
 	std::string join_type = get_named_expression(query_part,"joinType");
@@ -215,6 +217,34 @@ gdf_error process_join(blazing_frame & input, std::string query_part){
 			&left_indices,
 			&right_indices
 	);
+
+	//the options get interesting here. So if the join nis smaller than the input
+	// you could write the output in place, saving time for allocations then shrink later on
+	// the simplest solution is to reallocate space and free up the old after copying it over
+
+	//a data frame should have two "tables"or groups of columns at this point
+	std::vector<gdf_column *> new_columns(input.get_width());
+	size_t first_table_end_index = input.get_size_column();
+	int column_width;
+	for(int column_index = 0; column_index < input.get_width(); column_index++){
+		gdf_column * output = new gdf_column;
+
+		get_column_byte_width(input.get_column(column_index), &column_width);
+		create_gdf_column(output,input.get_column(column_index)->dtype,left_indices.size,nullptr,column_width);
+
+		if(column_index < first_table_end_index)
+		{
+			//materialize with left_indices
+			materialize_column(input.get_column(column_index),output,&left_indices);
+		}else{
+			//materialize with right indices
+			materialize_column(input.get_column(column_index),output,&right_indices);
+		}
+		free_gdf_column(input.get_column(column_index));
+		new_columns[column_index] = output;
+	}
+	input.clear();
+	input.add_table(new_columns);
 }
 
 gdf_error process_sort(blazing_frame & input, std::string query_part){

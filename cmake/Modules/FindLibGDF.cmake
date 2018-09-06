@@ -24,6 +24,7 @@ set(LIBGDF_SEARCH_LIB_PATH
   ${LIBGDF_ROOT}/lib
   ${LIBGDF_ROOT}/lib/x86_64-linux-gnu
   ${LIBGDF_ROOT}/lib64
+  ${LIBGDF_ROOT}/build
 )
 
 set(LIBGDF_SEARCH_INCLUDE_DIR
@@ -58,7 +59,7 @@ if (NOT LIBGDF_LIBS)
     set(LIBGDF_FOUND FALSE)
 else()
     set(LIBGDF_INCLUDEDIR ${LIBGDF_ROOT}/include/)
-    set(LIBGDF_LIBDIR ${LIBGDF_ROOT}/lib/) # TODO percy make this part cross platform
+    set(LIBGDF_LIBDIR ${LIBGDF_ROOT}/build) # TODO percy make this part cross platform
     set(LIBGDF_FOUND TRUE)
     add_library(gdf STATIC IMPORTED)
     set_target_properties(gdf PROPERTIES IMPORTED_LOCATION "${LIBGDF_STATIC_LIB}")

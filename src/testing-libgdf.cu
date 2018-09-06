@@ -249,9 +249,9 @@ LogicalProject(join_x=[$5], join_x0=[$3])             				\n\
 
 int main(void)
 {
-	//runOriginalTest();
+	runOriginalTest();
 	//runInterpreterTest();
-	runCalciteTest();
+	//runCalciteTest();
 	//runCalciteClientTest("holas");
 
 	return 0;

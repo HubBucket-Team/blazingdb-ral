@@ -379,11 +379,46 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 	if(err == GDF_SUCCESS){
 		//apply filter to all the columns
 		for(int i = 0; i < input.get_width(); i++){
+			temp.dtype = input.get_column(i)->dtype;
+			cudaPointerAttributes attributes;
+			cudaError_t err2 = cudaPointerGetAttributes ( &attributes, (void *) temp.data );
+			err2 = cudaPointerGetAttributes ( &attributes, (void *) input.get_column(i)->data );
+			err2 = cudaPointerGetAttributes ( &attributes, (void *) stencil.data );
+
+
+			//just for testing
+			cudaMalloc((void **)&(temp.data),1000);
+			cudaMalloc((void **)&(temp.valid),1000);
+
 			err = gpu_apply_stencil(
 					input.get_column(i),
 					&stencil,
-					input.get_column(i)
+					&temp
 			);
+
+			//copy over from temp to input
+			//ironically we need to make yet ANOTHER allocation
+			//to compact the allocation
+
+			gdf_column empty;
+
+			int width;
+			get_column_byte_width(input.get_column(i), &width);
+			create_gdf_column(&empty,input.get_column(i)->dtype,0,nullptr,width);
+
+			realloc_gdf_column(input.get_column(i),temp.size,width);
+
+			gdf_error err = gpu_concat(&temp, &empty, input.get_column(i));
+			if(err != GDF_SUCCESS){
+				//TODO: clean up everything here so we dont run out of memory
+				free_gdf_column(&stencil);
+				free_gdf_column(&temp);
+				free_gdf_column(&empty);
+				return err;
+			}
+
+			free_gdf_column(&empty);
+
 			if(err != GDF_SUCCESS){
 				free_gdf_column(&stencil);
 				free_gdf_column(&temp);
@@ -419,7 +454,7 @@ blazing_frame evaluate_split_query(
 		std::vector<std::vector<gdf_column *> > input_tables,
 		std::vector<std::string> table_names,
 		std::vector<std::vector<std::string>> column_names,
-		std::vector<std::string> query){
+		std::vector<std::string> query, int call_depth = 0){
 		assert(input_tables.size() == table_names.size());
 
 	if(query.size() == 1){
@@ -439,27 +474,38 @@ blazing_frame evaluate_split_query(
 			return scan_frame;
 		}else{
 			//i dont think there are any other type of end nodes at the moment
-			std::cout<<"How the fuck did this happen"<<std::endl;
+
 		}
 	}
+	std::cout<<"query size ==>"<<query.size()<<std::endl;
 	if(is_double_input(query[0])){
 		//process left
-		int other_depth_one_start = 1;
+		int other_depth_one_start = 2;
 		for(int i = 2; i < query.size(); i++){
 			int j = 0;
 			while(query[i][j] == ' '){
 
 				j+=2;
 			}
-			int depth = j / 2;
+			int depth = (j / 2) - call_depth;
 			if(depth == 1){
 				other_depth_one_start = i;
 			}
 		}
 		//these shoudl be split up and run on different threads
 		blazing_frame left_frame;
-		std::thread left_thread =
-				std::thread([&left_frame, &input_tables,&table_names,&column_names,&query,other_depth_one_start](){
+		left_frame = evaluate_split_query(
+							input_tables,
+							table_names,
+							column_names,
+							std::vector<std::string>(
+									query.begin() + 1,
+									query.begin() + other_depth_one_start),
+									call_depth + 1
+					);
+
+	//	std::thread left_thread =
+	//			std::thread([&left_frame, &input_tables,&table_names,&column_names,&query,other_depth_one_start](){
 	/*
 			left_frame = evaluate_split_query(
 					input_tables,
@@ -470,15 +516,15 @@ blazing_frame evaluate_split_query(
 							query.begin() + other_depth_one_start)
 			);
 */
-		});
+//		});
 
 
 
 		//TODO: moved here for debuggin
-		left_thread.join();
+	//	left_thread.join();
 		blazing_frame right_frame;
-		std::thread right_thread =
-				std::thread([&right_frame, &input_tables,&table_names,&column_names,&query,other_depth_one_start](){
+	//	std::thread right_thread =
+	//			std::thread([&right_frame, &input_tables,&table_names,&column_names,&query,other_depth_one_start](){
 	/*		right_frame = evaluate_split_query(
 					input_tables,
 					table_names,
@@ -488,7 +534,7 @@ blazing_frame evaluate_split_query(
 							query.end())
 			);
 */
-		});
+	//	});
 
 		right_frame = evaluate_split_query(
 							input_tables,
@@ -496,17 +542,21 @@ blazing_frame evaluate_split_query(
 							column_names,
 							std::vector<std::string>(
 									query.begin() + other_depth_one_start,
-									query.end())
+									query.end()),
+									call_depth + 1
 					);
-		right_thread.join();
+		//right_thread.join();
 
 
 		if(is_join(query[0])){
 			//we know that left and right are dataframes we want to join together
+			left_frame.add_table(right_frame.get_columns()[0]);
+			left_frame.consolidate_tables();
 			return left_frame;//!!
 			//return process_join(left_frame,right_frame,query[0]);
 		}else if(is_union(query[0])){
-			return right_frame;//!!
+			//TODO: append the frames to each other
+			//return right_frame;//!!
 			//return process_union(left_frame,right_frame,query[0]);
 		}else{
 			//probably an error here
@@ -520,7 +570,8 @@ blazing_frame evaluate_split_query(
 				column_names,
 				std::vector<std::string>(
 						query.begin() + 1,
-						query.end())
+						query.end()),
+						call_depth + 1
 		);
 		//process self
 		if(is_project(query[0])){
@@ -542,33 +593,7 @@ blazing_frame evaluate_split_query(
 		//return frame
 	}
 
-	int max_depth = 0;
-	int count_depth_1 = 0; //should always be 1 or 2
 
-	//find max depth here
-
-	int * node_ends = new int[count_depth_1 + 1];
-	node_ends[0] = 0;
-	//so any node who has a max depth of 1 gets processed by this
-
-	if(max_depth == 1){
-		//process element children
-		//then self
-	}else{
-		//for each node where depth == 1
-		//get that node and its children nodes
-		//if I am not mistaken
-		blazing_frame * new_frames[count_depth_1];
-		for(int i = 0; i < count_depth_1; i++){
-			*new_frames[i] = evaluate_split_query(
-					input_tables,
-					table_names,
-					column_names,
-					std::vector<std::string>(query.begin() + node_ends[i], query.begin() + node_ends[i + 1]));
-		}
-		//get me my chidlren and do them instead
-		//then do myself
-	}
 }
 
 gdf_error evaluate_query(

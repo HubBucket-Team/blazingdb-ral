@@ -26,6 +26,9 @@ public:
 		return nullptr; //error
 	}
 
+	std::vector< std::vector<gdf_column * > > get_columns(){
+		return columns;
+	}
 	void add_table(std::vector<gdf_column * > columns_to_add){
 		columns.push_back(columns_to_add);
 		if(columns_to_add.size() > 0){
@@ -33,6 +36,16 @@ public:
 		}
 	}
 	
+	void consolidate_tables(){
+		std::vector<gdf_column *> new_tables;
+		for(int table_index = 0; table_index < columns.size(); table_index++){
+			new_tables.insert(new_tables.end(),columns[table_index].begin(),
+					columns[table_index].end());
+		}
+		this->columns.resize(1);
+		this->columns[0] = new_tables;
+	}
+
 	void add_column(gdf_column * column_to_add, int table_index=0){
 		columns[table_index].push_back(column_to_add);
 	}

@@ -15,4 +15,6 @@ void free_gdf_column(gdf_column * column);
 
 void create_gdf_column(gdf_column * column, gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value);
 
+void realloc_gdf_column(gdf_column * column, size_t size, size_t width);
+
 #endif /* UTILS_CUH_ */

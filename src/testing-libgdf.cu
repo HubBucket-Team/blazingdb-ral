@@ -16,6 +16,7 @@
 #include <cuda.h>
 
 #include "ipc/calcite_client.h"
+#include "gdf/gdf.h"
 
 #define BIT_FIVE 0x10
 #define BIT_SIX 0x20
@@ -282,12 +283,59 @@ LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$6=[+($0, $4)])
 		print_column(outputs[i]);
 	}
 }
+void testStencil(){
 
+
+	gdf_column * a = new gdf_column;
+	gdf_column * b = new gdf_column;
+	gdf_column * c = new gdf_column;
+
+	//gdf_column a,b,c;
+
+	int8_t a_data[8];// = { 1,2,3 };
+	int8_t b_data[8];// = { 1,1,0 };
+	//create_gdf_column(&a, GDF_INT8, 8, a_data, 1);
+	//create_gdf_column(&b, GDF_INT8, 8, b_data, 1);
+	//create_gdf_column(&c, GDF_INT8, 8, nullptr, 1);
+
+	create_gdf_column(a, GDF_INT8, 8, a_data, 1);
+	create_gdf_column(b, GDF_INT8, 8, b_data, 1);
+	create_gdf_column(c, GDF_INT8, 8, nullptr, 1);
+
+//	print_column(&a);
+//	print_column(&b);
+//	print_column(&c);
+
+	print_column(a);
+	print_column(b);
+	print_column(c);
+
+//	gpu_apply_stencil(
+//						&a,
+//						&b,
+//						&c
+//				);
+
+	gpu_apply_stencil(
+						a,
+						b,
+						c
+				);
+
+	//	print_column(&a);
+	//	print_column(&b);
+	//	print_column(&c);
+
+		print_column(a);
+		print_column(b);
+		print_column(c);
+}
 int main(void)
 {
 	//runOriginalTest();
 	//runInterpreterTest();
-	runCalciteTest();
+	//runCalciteTest();
+	testStencil();
 	//runCalciteClientTest("holas");
 
 	return 0;

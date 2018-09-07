@@ -35,6 +35,12 @@ void free_gdf_column(gdf_column * column){
 	//column = nullptr;
 }
 
+void realloc_gdf_column(gdf_column * column, size_t size, size_t width){
+	free_gdf_column(column);
+
+	create_gdf_column(column,column->dtype,size,nullptr,width);
+}
+
 void create_gdf_column(gdf_column * column, gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value){
 	char * data;
 	gdf_valid_type * valid_device;

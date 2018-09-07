@@ -3,6 +3,12 @@
 #     Copyright 2018 Percy Camilo Triveño Aucahuasi <percy@blazingdb.com>
 #=============================================================================
 
+if (DEFINED ENV{LIBGDF_HOME})
+    set(LIBGDF_HOME_HOME "$ENV{LIBGDF_HOME}")
+else()
+    message(FATAL_ERROR "LIBGDF_HOME Not defined")
+endif()
+
 # BEGIN macros
 
 macro(CONFIGURE_GPU_LIBGDF_EXTERNAL_PROJECT)
@@ -37,7 +43,12 @@ macro(CONFIGURE_LIBGDF_TRANSITIVE_DEPENDENCIES)
     #set(FLATBUFFERS_HOME ${FLATBUFFERS_ROOT})
 
     # Add transitive dependency: Flatbuffers
-    set(FLATBUFFERS_ROOT ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-build/${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-download/arrow-prefix/src/arrow-build/flatbuffers_ep-prefix/src/flatbuffers_ep-install/)
+    if (DEFINED ENV{LIBGDF_HOME})
+        set(FLATBUFFERS_ROOT ${LIBGDF_HOME_HOME}/build/${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-download/arrow-prefix/src/arrow-build/flatbuffers_ep-prefix/src/flatbuffers_ep-install/)
+    else()
+        set(FLATBUFFERS_ROOT ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-build/${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-download/arrow-prefix/src/arrow-build/flatbuffers_ep-prefix/src/flatbuffers_ep-install/)
+    endif()
+
     set(FLATBUFFERS_HOME ${FLATBUFFERS_ROOT})
 endmacro()
 
@@ -46,9 +57,6 @@ endmacro()
 # BEGIN MAIN #
 
 # TODO percy use vendored option too
-# if (DEFINED ENV{LIBGDF_HOME})
-#     set(LIBGDF_HOME_HOME "$ENV{LIBGDF_HOME}")
-# endif()
 #
 # if("${SNAPPY_HOME}" STREQUAL "")
 #     CONFIGURE_GPU_LIBGDF_EXTERNAL_PROJECT
@@ -56,10 +64,18 @@ endmacro()
 #     find_package(Snappy REQUIRED)
 # endif()
 
-configure_gpu_libgdf_external_project()
+if (NOT DEFINED ENV{LIBGDF_HOME})
+    configure_gpu_libgdf_external_project()
+endif()
+
 configure_libgdf_transitive_dependencies()
 
-set(LIBGDF_ROOT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-install/")
+if (DEFINED ENV{LIBGDF_HOME})
+    set(LIBGDF_ROOT "${LIBGDF_HOME_HOME}")
+else()
+    set(LIBGDF_ROOT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-install/")
+endif()
+
 find_package(LibGDF REQUIRED)
 set_package_properties(LibGDF PROPERTIES TYPE REQUIRED
     PURPOSE "libgdf is a C library for implementing common functionality for a GPU Data Frame."

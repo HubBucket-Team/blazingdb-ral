@@ -292,15 +292,15 @@ void testStencil(){
 
 	//gdf_column a,b,c;
 
-	int8_t a_data[8];// = { 1,2,3 };
-	int8_t b_data[8];// = { 1,1,0 };
+	int8_t a_data[3] = { 1,2,3 };
+	int8_t b_data[3] = { 1,1,0 };
 	//create_gdf_column(&a, GDF_INT8, 8, a_data, 1);
 	//create_gdf_column(&b, GDF_INT8, 8, b_data, 1);
 	//create_gdf_column(&c, GDF_INT8, 8, nullptr, 1);
 
-	create_gdf_column(a, GDF_INT8, 8, a_data, 1);
-	create_gdf_column(b, GDF_INT8, 8, b_data, 1);
-	create_gdf_column(c, GDF_INT8, 8, nullptr, 1);
+	create_gdf_column(a, GDF_INT8, 3, a_data, 1);
+	create_gdf_column(b, GDF_INT8, 3, b_data, 1);
+	create_gdf_column(c, GDF_INT8, 3, nullptr, 1);
 
 //	print_column(&a);
 //	print_column(&b);
@@ -332,10 +332,12 @@ void testStencil(){
 }
 int main(void)
 {
-	//runOriginalTest();
+//	runOriginalTest();
 	//runInterpreterTest();
 	//runCalciteTest();
+
 	testStencil();
+
 	//runCalciteClientTest("holas");
 
 	return 0;

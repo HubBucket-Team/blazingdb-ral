@@ -3,6 +3,7 @@
 #include "DataFrame.h"
 #include <algorithm>
 #include <thread>
+#include <regex>
 
 #include "Utils.cuh"
 #include "LogicalFilter.h"
@@ -127,17 +128,32 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 	);
 
 
-	std::vector<std::string> expressions = StringUtil::split(combined_expression,"], ");
+	std::regex pattern ("[\\w$_]+=\\[.*?\\]"); 
+	std::smatch matcher;
+	std::vector<std::string> expressions;
+
+	while (std::regex_search (combined_expression, matcher, pattern)) {
+ 		for (auto match:matcher)
+		 	expressions.push_back(match);
+ 		combined_expression = matcher.suffix().str();
+ 	}
+
+	//std::vector<std::string> expressions = StringUtil::split(combined_expression,"]");
 	//now we have a vector
 	//x=[$0
 	std::vector<bool> input_used_in_output(size,false);
 
 	std::vector<gdf_column * > columns(expressions.size());
-	for(int i = 0; i < expressions.size(); i++){
+	std::vector<std::string> names(expressions.size());
 
+	for(int i = 0; i < expressions.size(); i++){ //last not an expression
 		std::string expression = expressions[i].substr(
 				expressions[i].find("=[") + 2 ,
-				(expressions[i].size() - expressions[i].find("=[")) - 2
+				(expressions[i].size() - expressions[i].find("=[")) - 3
+		);
+
+		std::string name = expressions[i].substr(
+				0, expressions[i].find("=[")
 		);
 
 		if(contains_evaluation(expression)){
@@ -361,6 +377,9 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 
 //TODO: this does not compact the allocations which would be nice if it could
 gdf_error process_filter(blazing_frame & input, std::string query_part){
+
+	assert(input.get_column(0) != nullptr);
+
 	gdf_column stencil, temp;
 
 
@@ -380,15 +399,15 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 		//apply filter to all the columns
 		for(int i = 0; i < input.get_width(); i++){
 			temp.dtype = input.get_column(i)->dtype;
-			cudaPointerAttributes attributes;
-			cudaError_t err2 = cudaPointerGetAttributes ( &attributes, (void *) temp.data );
-			err2 = cudaPointerGetAttributes ( &attributes, (void *) input.get_column(i)->data );
-			err2 = cudaPointerGetAttributes ( &attributes, (void *) stencil.data );
+//			cudaPointerAttributes attributes;
+//			cudaError_t err2 = cudaPointerGetAttributes ( &attributes, (void *) temp.data );
+//			err2 = cudaPointerGetAttributes ( &attributes, (void *) input.get_column(i)->data );
+//			err2 = cudaPointerGetAttributes ( &attributes, (void *) stencil.data );
 
 
 			//just for testing
-			cudaMalloc((void **)&(temp.data),1000);
-			cudaMalloc((void **)&(temp.valid),1000);
+//			cudaMalloc((void **)&(temp.data),1000);
+//			cudaMalloc((void **)&(temp.valid),1000);
 
 			err = gpu_apply_stencil(
 					input.get_column(i),
@@ -583,8 +602,7 @@ blazing_frame evaluate_split_query(
 		}else if(is_sort(query[0])){
 			gdf_error err = process_sort(child_frame,query[0]);
 			return child_frame;
-		}else if(is_filter(query[0]))
-		{
+		}else if(is_filter(query[0])){
 			gdf_error err = process_filter(child_frame,query[0]);
 			return child_frame;
 		}else{
@@ -607,7 +625,9 @@ gdf_error evaluate_query(
 
 	std::vector<std::string> splitted = StringUtil::split(query, '\n');
 	/*for(auto str : splitted)
-		std::cout<<StringUtil::rtrim(str)<<"\n";*/
+		std::cout<<StringUtil::rtrim(str)<<"\n";
+	std::cout<<std::endl<<std::flush;*/
+
 	blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
 
 	size_t cur_count = 0;
@@ -617,4 +637,6 @@ gdf_error evaluate_query(
 			cur_count++;
 		}
 	}
+
+	return GDF_SUCCESS;
 }

@@ -47,10 +47,10 @@ TEST(calcite_interpreter_TEST, processing_queries) {
 	std::vector<std::vector<std::string>> column_names={{"x", "y", "z"},{"a", "b", "x"}};
 	void * temp_space;
 
-	{   //select * from hr.emps
+	/*{   //select * from hr.emps
 		std::string query = "\
 LogicalProject(x=[$0], y=[$1], z=[$2])\n\
-  LogicalScan(table=[[hr, emps]])";
+  EnumerableTableScan(table=[[hr, emps]])";
 
 		std::vector<gdf_column *> outputs;
 		std::vector<std::string> output_column_names;
@@ -64,7 +64,7 @@ LogicalProject(x=[$0], y=[$1], z=[$2])\n\
 	{   //select x from hr.emps
 		std::string query = "\
 LogicalProject(x=[$0])\n\
-  LogicalScan(table=[[hr, emps]])";
+  EnumerableTableScan(table=[[hr, emps]])";
 
 		std::vector<gdf_column *> outputs;
 		std::vector<std::string> output_column_names;
@@ -73,12 +73,12 @@ LogicalProject(x=[$0])\n\
 			query, outputs, output_column_names, temp_space);
 		EXPECT_TRUE(err == GDF_SUCCESS);
 		EXPECT_TRUE(outputs.size() == 1);
-	}
+	}*/
 
 	{ //select z > 5 from hr.emps
 		std::string query = "\
 LogicalProject(EXPR$0=[>($2, 5)])\n\
-  LogicalScan(table=[[hr, emps]])";
+  EnumerableTableScan(table=[[hr, emps]])";
 
 		std::vector<gdf_column *> outputs;
 		std::vector<std::string> output_column_names;
@@ -92,7 +92,7 @@ LogicalProject(EXPR$0=[>($2, 5)])\n\
 	{   //select x from hr.emps
 		std::string query = "\
 LogicalProject(x=[$0])\n\
-  LogicalScan(table=[[hr, emps]])";
+  EnumerableTableScan(table=[[hr, emps]])";
 
 		std::vector<gdf_column *> outputs;
 		std::vector<std::string> output_column_names;
@@ -106,7 +106,7 @@ LogicalProject(x=[$0])\n\
 	{   //select x + y, z from hr.emps
 		std::string query = "\
 LogicalProject(EXPR$0=[+($0, $1)], z=[$2])\n\
-  LogicalScan(table=[[hr, emps]])";
+  EnumerableTableScan(table=[[hr, emps]])";
 
 		std::vector<gdf_column *> outputs;
 		std::vector<std::string> output_column_names;
@@ -117,11 +117,11 @@ LogicalProject(EXPR$0=[+($0, $1)], z=[$2])\n\
 		EXPECT_TRUE(outputs.size() == 2);
 	}
 
-	{   //select x from hr.emps where y = z
+	/*{   //select x from hr.emps where y = z
 		std::string query = "\
 LogicalProject(x=[$0])\n\
   LogicalFilter(condition=[=($1, $2)])\n\
-    LogicalScan(table=[[hr, emps]])";
+    EnumerableTableScan(table=[[hr, emps]])";
 
 		std::vector<gdf_column *> outputs;
 		std::vector<std::string> output_column_names;
@@ -135,7 +135,7 @@ LogicalProject(x=[$0])\n\
 	{   //select x + y as S from hr.emps
 		std::string query = "\
 LogicalProject(S=[+($0, $1)])\n\
-  LogicalScan(table=[[hr, emps]])";
+  EnumerableTableScan(table=[[hr, emps]])";
 
 		std::vector<gdf_column *> outputs;
 		std::vector<std::string> output_column_names;
@@ -144,6 +144,6 @@ LogicalProject(S=[+($0, $1)])\n\
 			query, outputs, output_column_names, temp_space);
 		EXPECT_TRUE(err == GDF_SUCCESS);
 		EXPECT_TRUE(outputs.size() == 1);
-	}
+	}*/
 	
 }

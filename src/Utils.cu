@@ -64,6 +64,4 @@ void create_gdf_column(gdf_column * column, gdf_dtype type, size_t num_values, v
 	if(input_data != nullptr){
 		cudaMemcpy(data, input_data, num_values * width_per_value, cudaMemcpyHostToDevice);
 	}
-
-	column->null_count = 0;
 }

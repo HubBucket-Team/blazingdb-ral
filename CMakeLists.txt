@@ -37,6 +37,7 @@ set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/StringUtil.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/QueryState.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/Utils.cu
+              ${CMAKE_CURRENT_SOURCE_DIR}/src/GDFCounter.cu
               ${CMAKE_CURRENT_SOURCE_DIR}/src/testing-libgdf.cu
 
               ${CMAKE_CURRENT_SOURCE_DIR}/src/ipc/calcite_client.cpp

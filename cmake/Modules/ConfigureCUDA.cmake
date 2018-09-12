@@ -54,7 +54,13 @@ macro(CONFIGURE_CUDA_COMPILER compute_capability)
     # WARNING never add "-std=c++11" to APPEND CMAKE_CXX_FLAGS since it will be redundant and causes build issues
     #list(APPEND CMAKE_CXX_FLAGS "")
 
+    set(HOST_COMPILER_DEBUG_FLAGS "-g -O0")
+    list(APPEND CMAKE_CXX_FLAGS "${HOST_COMPILER_DEBUG_FLAGS}")
+
     # Device (GPU) compiler flags
+    set(DEVICE_COMPILER_DEBUG_FLAGS "-G")
+    list(APPEND CUDA_NVCC_FLAGS "${DEVICE_COMPILER_DEBUG_FLAGS}")
+
     list(APPEND CUDA_NVCC_FLAGS "-std=c++11")
     list(APPEND CUDA_NVCC_FLAGS "--expt-extended-lambda")
     list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_${compute_capability},code=compute_${compute_capability}") # virtual architecture (code=compute_X)

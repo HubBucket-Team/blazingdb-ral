@@ -334,9 +334,9 @@ int main(void)
 {
 //	runOriginalTest();
 	//runInterpreterTest();
-	//runCalciteTest();
+	runCalciteTest();
 
-	testStencil();
+	//testStencil();
 
 	//runCalciteClientTest("holas");
 

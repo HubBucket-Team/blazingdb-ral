@@ -476,6 +476,12 @@ blazing_frame evaluate_split_query(
 		std::vector<std::string> query, int call_depth = 0){
 		assert(input_tables.size() == table_names.size());
 
+	/*if(query.size() < 1)
+	{
+		blazing_frame empty_frame;
+		return empty_frame;
+	}*/
+
 	if(query.size() == 1){
 		//process yourself and return
 
@@ -621,7 +627,7 @@ gdf_error evaluate_query(
 		std::string query,
 		std::vector<gdf_column *> & outputs,
 		std::vector<std::string> & output_column_names,
-		void * temp_space){
+		void * temp_space){//?
 
 	std::vector<std::string> splitted = StringUtil::split(query, '\n');
 	/*for(auto str : splitted)

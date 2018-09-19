@@ -126,8 +126,10 @@ gdf_error evaluate_expression(
 		gdf_column * temp){
 	//make temp a column of size 8 bytes so it can accomodate the largest possible size
 
+	//std::cout<<"Evaluating: "<<expression<<std::endl;
 	std::string clean_expression = clean_calcite_expression(expression);
 	int position = clean_expression.size();
+	//std::cout<<"Position: "<<position<<std::endl;
 
 	std::stack<std::string> operand_stack;
 

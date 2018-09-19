@@ -116,10 +116,13 @@ bool contains_evaluation(std::string expression){
 }
 
 gdf_error process_project(blazing_frame & input, std::string query_part){
-	gdf_column temp;
-	size_t size = input.get_size_column();
+	gdf_col_pointer temp;
+	//gdf_column temp;
+	size_t size = input.get_column(0)->size;//size_t size = input.get_size_column();
+	//std::cout<<size<<"=="<<std::endl;
 
-	create_gdf_column(&temp,GDF_INT64,size,nullptr,8);
+	//create_gdf_column(&temp,GDF_INT64,size,nullptr,8);
+	temp = create_gdf_column(GDF_INT64,size,nullptr,8);
 
 	// LogicalProject(x=[$0], y=[$1], z=[$2], e=[$3], join_x=[$4], y0=[$5], EXPR$6=[+($0, $5)])
 	std::string combined_expression = query_part.substr(
@@ -157,16 +160,38 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 		);
 
 		if(contains_evaluation(expression)){
+			//std::cout<<"Eval\n";
 			//assumes worst possible case allocation for output
 			//TODO: find a way to know what our output size will be
+
 			gdf_column * output = new gdf_column;
-			create_gdf_column(output,output->dtype,size,nullptr,8);
+			create_gdf_column(output,GDF_INT8,size,nullptr,8);
+			/*gdf_col_shared_pointer output;
+			output = create_gdf_shared_column(GDF_INT8,size,nullptr,8);*/
+
+			/*std::cout<<"First\n";
+			print_column(input.get_column(0));
+			std::cout<<"EndFirst\n";
+
+			std::cout<<"Second\n";
+			print_column(input.get_column(1));
+			std::cout<<"EndSecond\n";*/
+
+			//std::cout<<"Expression: --"<<expression<<"--\n";
+
 			gdf_error err = evaluate_expression(
 					input,
 					expression,
 					output,
-					&temp);
+					//&temp);
+					//output.get(),
+					temp.get());
+			//columns[i] = output.get();
 			columns[i] = output;
+
+			/*std::cout<<"Out\n";
+			print_column(output);
+			std::cout<<"EndOut\n";*/
 			if(err != GDF_SUCCESS){
 				//TODO: clean up everything here so we dont run out of memory
 				return err;
@@ -191,7 +216,7 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 					//TODO: clean up everything here so we dont run out of memory
 					return err;
 				}
-				free_gdf_column(&empty);
+				//free_gdf_column(&empty);
 			}else{
 				input_used_in_output[i] = true;
 			}
@@ -201,8 +226,7 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 	for(int i = 0; i < expressions.size(); i++){
 		if(!input_used_in_output[i]){
 			//free up the space
-			free_gdf_column(input.get_column(i));
-
+			//free_gdf_column(input.get_column(i));
 		}
 	}
 
@@ -210,7 +234,7 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 	input.clear();
 	input.add_table(columns);
 
-	free_gdf_column(&temp);
+	//free_gdf_column(&temp);
 	return GDF_SUCCESS;
 }
 
@@ -380,25 +404,30 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 
 	assert(input.get_column(0) != nullptr);
 
-	gdf_column stencil, temp;
-
+	//gdf_column stencil, temp;
+	gdf_col_pointer stencil, temp;
 
 	size_t size = input.get_column(0)->size;
 
-	create_gdf_column(&stencil,GDF_INT8,input.get_column(0)->size,nullptr,1);
-	create_gdf_column(&temp,GDF_INT64,input.get_column(0)->size,nullptr,8);
+	/*create_gdf_column(&stencil,GDF_INT8,input.get_column(0)->size,nullptr,1);
+	create_gdf_column(&temp,GDF_INT64,input.get_column(0)->size,nullptr,8);*/
 
+	stencil = create_gdf_column(GDF_INT8,input.get_column(0)->size,nullptr,1);
+	temp = create_gdf_column(GDF_INT64,input.get_column(0)->size,nullptr,8);
 
 	gdf_error err = evaluate_expression(
 			input,
 			get_condition_expression(query_part),
-			&stencil,
-			&temp);
+			stencil.get(),
+			temp.get());
+			/*&stencil,
+			&temp);*/
 
 	if(err == GDF_SUCCESS){
 		//apply filter to all the columns
 		for(int i = 0; i < input.get_width(); i++){
-			temp.dtype = input.get_column(i)->dtype;
+			//temp.dtype = input.get_column(i)->dtype;
+			temp->dtype = input.get_column(i)->dtype;
 //			cudaPointerAttributes attributes;
 //			cudaError_t err2 = cudaPointerGetAttributes ( &attributes, (void *) temp.data );
 //			err2 = cudaPointerGetAttributes ( &attributes, (void *) input.get_column(i)->data );
@@ -411,8 +440,10 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 
 			err = gpu_apply_stencil(
 					input.get_column(i),
-					&stencil,
-					&temp
+					stencil.get(),
+					temp.get()
+					/*&stencil,
+					&temp*/
 			);
 
 			//copy over from temp to input
@@ -425,33 +456,35 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 			get_column_byte_width(input.get_column(i), &width);
 			create_gdf_column(&empty,input.get_column(i)->dtype,0,nullptr,width);
 
-			realloc_gdf_column(input.get_column(i),temp.size,width);
+			//realloc_gdf_column(input.get_column(i),temp.size,width);
+			realloc_gdf_column(input.get_column(i),temp->size,width);
 
-			gdf_error err = gpu_concat(&temp, &empty, input.get_column(i));
+			//gdf_error err = gpu_concat(&temp, &empty, input.get_column(i));
+			gdf_error err = gpu_concat(temp.get(), &empty, input.get_column(i));
 			if(err != GDF_SUCCESS){
 				//TODO: clean up everything here so we dont run out of memory
-				free_gdf_column(&stencil);
-				free_gdf_column(&temp);
-				free_gdf_column(&empty);
+				/*free_gdf_column(&stencil);
+				free_gdf_column(&temp);*/
+				//free_gdf_column(&empty);
 				return err;
 			}
 
 			free_gdf_column(&empty);
 
 			if(err != GDF_SUCCESS){
-				free_gdf_column(&stencil);
-				free_gdf_column(&temp);
+				/*free_gdf_column(&stencil);
+				free_gdf_column(&temp);*/
 				return err;
 			}
 		}
 
 	}else{
-		free_gdf_column(&stencil);
-		free_gdf_column(&temp);
+		/*free_gdf_column(&stencil);
+		free_gdf_column(&temp);*/
 		return err;
 	}
-	free_gdf_column(&stencil);
-	free_gdf_column(&temp);
+	/*free_gdf_column(&stencil);
+	free_gdf_column(&temp);*/
 	return GDF_SUCCESS;
 
 }
@@ -496,7 +529,7 @@ blazing_frame evaluate_split_query(
 
 		}
 	}
-	std::cout<<"query size ==>"<<query.size()<<std::endl;
+	//std::cout<<"query size ==>"<<query.size()<<std::endl;
 	if(is_double_input(query[0])){
 		//process left
 		int other_depth_one_start = 2;

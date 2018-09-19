@@ -117,11 +117,8 @@ bool contains_evaluation(std::string expression){
 
 gdf_error process_project(blazing_frame & input, std::string query_part){
 	gdf_col_pointer temp;
-	//gdf_column temp;
-	size_t size = input.get_column(0)->size;//size_t size = input.get_size_column();
-	//std::cout<<size<<"=="<<std::endl;
+	size_t size = input.get_column(0)->size;
 
-	//create_gdf_column(&temp,GDF_INT64,size,nullptr,8);
 	temp = create_gdf_column(GDF_INT64,size,nullptr,8);
 
 	// LogicalProject(x=[$0], y=[$1], z=[$2], e=[$3], join_x=[$4], y0=[$5], EXPR$6=[+($0, $5)])
@@ -129,7 +126,6 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 			query_part.find("(") + 1,
 			(query_part.rfind(")") - query_part.find("(")) - 1
 	);
-
 
 	std::regex pattern ("[\\w$_]+=\\[.*?\\]"); 
 	std::smatch matcher;
@@ -160,14 +156,11 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 		);
 
 		if(contains_evaluation(expression)){
-			//std::cout<<"Eval\n";
 			//assumes worst possible case allocation for output
 			//TODO: find a way to know what our output size will be
 
-			gdf_column * output = new gdf_column;
-			create_gdf_column(output,GDF_INT8,size,nullptr,8);
-			/*gdf_col_shared_pointer output;
-			output = create_gdf_shared_column(GDF_INT8,size,nullptr,8);*/
+			gdf_col_pointer output;
+			output = create_gdf_column(GDF_INT8,size,nullptr,8);
 
 			/*std::cout<<"First\n";
 			print_column(input.get_column(0));
@@ -177,17 +170,12 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 			print_column(input.get_column(1));
 			std::cout<<"EndSecond\n";*/
 
-			//std::cout<<"Expression: --"<<expression<<"--\n";
-
 			gdf_error err = evaluate_expression(
 					input,
 					expression,
-					output,
-					//&temp);
-					//output.get(),
+					output.get(),
 					temp.get());
-			//columns[i] = output.get();
-			columns[i] = output;
+			columns[i] = output.get();
 
 			/*std::cout<<"Out\n";
 			print_column(output);
@@ -202,21 +190,21 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 			if(input_used_in_output[index]){
 				//becuase we already used this we can't just 0 copy it
 				//we have to make a copy of it here
-				gdf_column * output = new gdf_column;
-				gdf_column empty;
+				gdf_col_pointer output;
+				gdf_col_pointer empty;
 
 				int width;
 				get_column_byte_width(input.get_column(index), &width);
-				create_gdf_column(&empty,input.get_column(index)->dtype,0,nullptr,width);
-				create_gdf_column(output,input.get_column(index)->dtype,size,nullptr,width);
+
+				output = create_gdf_column(input.get_column(index)->dtype,size,nullptr,width);
+				empty = create_gdf_column(input.get_column(index)->dtype,0,nullptr,width);
 				//TODO: verify that this works concat whoudl be able to take in an empty one
 				//even better would be if we could pass it in a  a null pointer and use it for copy
-				gdf_error err = gpu_concat(input.get_column(index), &empty, output);
+				gdf_error err = gpu_concat(input.get_column(index), empty.get(), output.get());
 				if(err != GDF_SUCCESS){
 					//TODO: clean up everything here so we dont run out of memory
 					return err;
 				}
-				//free_gdf_column(&empty);
 			}else{
 				input_used_in_output[i] = true;
 			}
@@ -234,7 +222,6 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 	input.clear();
 	input.add_table(columns);
 
-	//free_gdf_column(&temp);
 	return GDF_SUCCESS;
 }
 
@@ -450,17 +437,19 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 			//ironically we need to make yet ANOTHER allocation
 			//to compact the allocation
 
-			gdf_column empty;
+			//gdf_column empty;
+			gdf_col_pointer empty;
 
 			int width;
 			get_column_byte_width(input.get_column(i), &width);
-			create_gdf_column(&empty,input.get_column(i)->dtype,0,nullptr,width);
+			//create_gdf_column(&empty,input.get_column(i)->dtype,0,nullptr,width);
+			empty = create_gdf_column(input.get_column(i)->dtype,0,nullptr,width);
 
 			//realloc_gdf_column(input.get_column(i),temp.size,width);
 			realloc_gdf_column(input.get_column(i),temp->size,width);
 
 			//gdf_error err = gpu_concat(&temp, &empty, input.get_column(i));
-			gdf_error err = gpu_concat(temp.get(), &empty, input.get_column(i));
+			gdf_error err = gpu_concat(temp.get(), empty.get(), input.get_column(i));
 			if(err != GDF_SUCCESS){
 				//TODO: clean up everything here so we dont run out of memory
 				/*free_gdf_column(&stencil);
@@ -469,7 +458,7 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 				return err;
 			}
 
-			free_gdf_column(&empty);
+			//free_gdf_column(&empty);
 
 			if(err != GDF_SUCCESS){
 				/*free_gdf_column(&stencil);

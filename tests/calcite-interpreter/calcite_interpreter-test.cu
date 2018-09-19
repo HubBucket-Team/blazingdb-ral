@@ -23,9 +23,10 @@ public:
 struct calcite_interpreter_TEST : public ::testing::Test {
 
 	void SetUp(){
-		inputs.push_back(&left);
+
+		/*inputs.push_back(&left);
 		inputs.push_back(&right);
-		inputs.push_back(&third);
+		inputs.push_back(&third);*/
 
 		char * input1 = new char[num_values];
 		char * input2 = new char[num_values];
@@ -41,10 +42,22 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 			input3[i] = 1;
 		}
 
-		create_gdf_column(inputs[0], GDF_INT8, num_values, (void *) input1, 1);
+		/*create_gdf_column(inputs[0], GDF_INT8, num_values, (void *) input1, 1);
 		create_gdf_column(inputs[1], GDF_INT8, num_values, (void *) input2, 1);
-		create_gdf_column(inputs[2], GDF_INT8, num_values, (void *) input3, 1);
+		create_gdf_column(inputs[2], GDF_INT8, num_values, (void *) input3, 1);*/
 
+		inputs.resize(3);
+		inputs[0] = create_gdf_column(GDF_INT8, num_values, (void *) input1, 1);
+		inputs[1] = create_gdf_column(GDF_INT8, num_values, (void *) input2, 1);
+		inputs[2] = create_gdf_column(GDF_INT8, num_values, (void *) input3, 1);
+
+		raw_inputs.resize(3);
+		raw_inputs[0] = inputs[0].get();
+		raw_inputs[1] = inputs[1].get();
+		raw_inputs[2] = inputs[2].get();
+
+		input_tables.push_back(raw_inputs);
+		input_tables.push_back(raw_inputs);
 		/*std::cout<<"[0]\n";
 		print_column(&left);
 		std::cout<<"[1]\n";
@@ -64,13 +77,14 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 	gdf_column right;
 	gdf_column third;
 
-	std::vector<gdf_column *> inputs;
+	std::vector<gdf_col_pointer> inputs;
+	std::vector<gdf_column *> raw_inputs;
 
 	size_t num_values = 32;
 
 	void * temp_space;
 
-	std::vector<std::vector<gdf_column *> > input_tables = {{&left, &right, &third}, {&left, &right, &third}};
+	std::vector<std::vector<gdf_column *> > input_tables;// = {{&left, &right, &third}, {&left, &right, &third}};
 	std::vector<std::string> table_names={"hr.emps", "hr.sales"};
 	std::vector<std::vector<std::string>> column_names={{"x", "y", "z"},{"a", "b", "x"}};
 
@@ -79,7 +93,7 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 };
 
 
-/*TEST_F(calcite_interpreter_TEST, processing_project0) {
+TEST_F(calcite_interpreter_TEST, processing_project0) {
 
 	{   //select * from hr.emps
 		std::string query = "\
@@ -110,7 +124,7 @@ LogicalProject(x=[$0])\n\
 	}
 }
 
-TEST_F(calcite_interpreter_TEST, processing_project2) {
+/*TEST_F(calcite_interpreter_TEST, processing_project2) {
 
 	{ //select z > 5 from hr.emps
 		std::string query = "\
@@ -138,7 +152,7 @@ LogicalProject(a=[$0])\n\
 	}
 }*/
 
-TEST_F(calcite_interpreter_TEST, processing_project4) {
+/*TEST_F(calcite_interpreter_TEST, processing_project4) {
 
 	{ //select x + y, z from hr.emps
 		std::string query = "\
@@ -150,7 +164,7 @@ LogicalProject(EXPR$0=[+($0, $1)], z=[$2])\n\
 		EXPECT_TRUE(err == GDF_SUCCESS);
 		EXPECT_TRUE(outputs.size() == 2);
 	}
-}
+}*/
 
 /*TEST_F(calcite_interpreter_TEST, processing_project_filter) {
 

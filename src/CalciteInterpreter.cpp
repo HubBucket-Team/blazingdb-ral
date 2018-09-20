@@ -117,7 +117,7 @@ bool contains_evaluation(std::string expression){
 
 gdf_error process_project(blazing_frame & input, std::string query_part){
 	gdf_column_cpp temp;
-	size_t size = input.get_size_column();
+	size_t size = input.get_column(0).size();
 
 	temp.create_gdf_column(GDF_INT64,size,nullptr,8);
 
@@ -160,7 +160,9 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 			//assumes worst possible case allocation for output
 			//TODO: find a way to know what our output size will be
 			gdf_column_cpp output;
-			output.create_gdf_column(output.dtype(),size,nullptr,8);
+			output.create_gdf_column(GDF_INT8,size,nullptr,8);
+
+			std::cout<<"Evaluating..: "<<expression<<"\n";
 
 			gdf_error err = evaluate_expression(
 					input,
@@ -168,6 +170,10 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 					output,
 					temp);
 			columns[i] = output;
+
+			GDFRefCounter::getInstance()->deregister_column(output.get_gdf_column());
+			//print_column(output.get_gdf_column());
+
 			if(err != GDF_SUCCESS){
 				//TODO: clean up everything here so we dont run out of memory
 				return err;
@@ -617,8 +623,6 @@ blazing_frame evaluate_split_query(
 		}
 		//return frame
 	}
-
-
 }
 
 gdf_error evaluate_query(

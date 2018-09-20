@@ -52,8 +52,7 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
         cudaMemcpy(data, input_data, num_values * width_per_value, cudaMemcpyHostToDevice);
     }
 
-    //gc->increment(&this->column);
-    GDFRefCounter::getInstance()->increment(&this->column);
+    GDFRefCounter::getInstance()->register_column(&this->column);
 }
 
 gdf_error gdf_column_cpp::gdf_column_view(gdf_column *column, void *data, gdf_valid_type *valid, gdf_size_type size, gdf_dtype dtype)
@@ -68,7 +67,6 @@ gdf_error gdf_column_cpp::gdf_column_view(gdf_column *column, void *data, gdf_va
 
 gdf_column_cpp::~gdf_column_cpp()
 {
-    //gc->decrement(&this->column);
     GDFRefCounter::getInstance()->decrement(&this->column);
 }
 

@@ -10,12 +10,24 @@
 
 GDFRefCounter* GDFRefCounter::Instance=0;
 
-void GDFRefCounter::increment(gdf_column* key_ptr)
+void GDFRefCounter::register_column(gdf_column* key_ptr)
 {
     std::lock_guard<std::mutex> lock(gc_mutex);
     if(map.find(key_ptr)==map.end())
         map[key_ptr]=1;
-    else
+}
+
+void GDFRefCounter::deregister_column(gdf_column* key_ptr)
+{
+    std::lock_guard<std::mutex> lock(gc_mutex);
+    if(map.find(key_ptr)!=map.end())
+        map.erase(key_ptr);
+}
+
+void GDFRefCounter::increment(gdf_column* key_ptr)
+{
+    std::lock_guard<std::mutex> lock(gc_mutex);
+    if(map.find(key_ptr)!=map.end())
         map[key_ptr]++;
 }
 

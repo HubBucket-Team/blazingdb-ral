@@ -23,11 +23,11 @@ class GDFRefCounter
 		std::map<gdf_column*, size_t> map; // std::map<key_ptr, ref_counter>
 	
 	public:
-		void increment(gdf_column* key_ptr); //si no esta registrado, no hace nada  -- register()
-		void decrement(gdf_column* key_ptr); //deregister(): 
+		void increment(gdf_column* key_ptr);
+		void decrement(gdf_column* key_ptr);
 
-		/*void register(gdf_column* key_ptr);
-		void deregister(gdf_column* key_ptr);*/
+		void register_column(gdf_column* key_ptr);
+		void deregister_column(gdf_column* key_ptr);
 
 		static GDFRefCounter* getInstance();
 };

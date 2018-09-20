@@ -23,7 +23,7 @@
 
 
 
-void runOriginalTest(){
+/*void runOriginalTest(){
 	gdf_size_type num_elements = 8;
 
 		char * data_left;
@@ -105,9 +105,9 @@ void runOriginalTest(){
 		cudaFree(valid_out);
 
 		delete valid;
-}
+}*/
 
-void runInterpreterTest(){
+/*void runInterpreterTest(){
 	std::string expression = "AND(=(*($0, $0), 1), =($1, 2))";
 	expression = "=(=($1, $0), $0)";
 
@@ -184,9 +184,9 @@ void runInterpreterTest(){
 	delete output;
 	delete temp;
 	//needs to be able to call this with temp == null to indicate we need to know how much space to allocate for temp
-}
+}*/
 
-void runParquetTest(){
+/*void runParquetTest(){
 	gdf_column left;
 	gdf_column right;
 	gdf_column third;
@@ -223,9 +223,9 @@ void runParquetTest(){
 	size_t * size = new size_t;
 	*size = 100;
 	//gdf_error err = read_parquet("/home/felipe/parquet-test.parquet",nullptr,tester,columns,size);
-}
+}*/
 
-void runCalciteTest()
+/*void runCalciteTest()
 {
 
 	//lets make a simple test where we have three talbes that we join then filter then project
@@ -282,8 +282,9 @@ LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$6=[+($0, $4)])
 	for(int i = 0; i < outputs.size(); i++){
 		print_column(outputs[i]);
 	}
-}
-void testStencil(){
+}*/
+
+/*void testStencil(){
 
 
 	gdf_column * a = new gdf_column;
@@ -329,12 +330,13 @@ void testStencil(){
 		print_column(a);
 		print_column(b);
 		print_column(c);
-}
+}*/
+
 int main(void)
 {
-//	runOriginalTest();
+	//runOriginalTest();
 	//runInterpreterTest();
-	runCalciteTest();
+	//runCalciteTest();
 
 	//testStencil();
 

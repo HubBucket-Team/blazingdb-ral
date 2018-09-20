@@ -6,20 +6,21 @@
 #include <CalciteExpressionParsing.h>
 #include <CalciteInterpreter.h>
 #include <DataFrame.h>
+#include <GDFColumn.cuh>
 #include <Utils.cuh>
 
 #include <gdf/gdf.h>
 
 TEST(calcite_interpreter_TEST, processing_queries) {
 
-	gdf_column left;
-	gdf_column right;
-	gdf_column third;
+	gdf_column_cpp left;
+	gdf_column_cpp right;
+	gdf_column_cpp third;
 
-	std::vector<gdf_column *> inputs(3);
-	inputs[0] = &left;
-	inputs[1] = &right;
-	inputs[2] = &third;
+	std::vector<gdf_column_cpp> inputs(3);
+	inputs[0] = left;
+	inputs[1] = right;
+	inputs[2] = third;
 
 	size_t num_values = 32;
 
@@ -36,13 +37,13 @@ TEST(calcite_interpreter_TEST, processing_queries) {
 		input3[i] = 1;
 	}
 
-	create_gdf_column(inputs[0], GDF_INT8, num_values, (void *) input1, 1);
-	create_gdf_column(inputs[1], GDF_INT8, num_values, (void *) input2, 1);
-	create_gdf_column(inputs[2], GDF_INT8, num_values, (void *) input3, 1);
+	inputs[0].create_gdf_column(GDF_INT8, num_values, (void *) input1, 1);
+	inputs[1].create_gdf_column(GDF_INT8, num_values, (void *) input2, 1);
+	inputs[2].create_gdf_column(GDF_INT8, num_values, (void *) input3, 1);
 
 	// Initializating data
 
-	std::vector<std::vector<gdf_column *> > input_tables = {{&left, &right, &third}, {&left, &right, &third}};
+	std::vector<std::vector<gdf_column_cpp> > input_tables = {{left, right, third}, {left, right, third}};
 	std::vector<std::string> table_names={"hr.emps", "hr.sales"};
 	std::vector<std::vector<std::string>> column_names={{"x", "y", "z"},{"a", "b", "x"}};
 	void * temp_space;
@@ -80,7 +81,7 @@ LogicalProject(x=[$0])\n\
 LogicalProject(EXPR$0=[>($2, 5)])\n\
   EnumerableTableScan(table=[[hr, emps]])";
 
-		std::vector<gdf_column *> outputs;
+		std::vector<gdf_column_cpp> outputs;
 		std::vector<std::string> output_column_names;
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
@@ -94,7 +95,7 @@ LogicalProject(EXPR$0=[>($2, 5)])\n\
 LogicalProject(x=[$0])\n\
   EnumerableTableScan(table=[[hr, emps]])";
 
-		std::vector<gdf_column *> outputs;
+		std::vector<gdf_column_cpp> outputs;
 		std::vector<std::string> output_column_names;
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
@@ -108,7 +109,7 @@ LogicalProject(x=[$0])\n\
 LogicalProject(EXPR$0=[+($0, $1)], z=[$2])\n\
   EnumerableTableScan(table=[[hr, emps]])";
 
-		std::vector<gdf_column *> outputs;
+		std::vector<gdf_column_cpp> outputs;
 		std::vector<std::string> output_column_names;
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,

@@ -17,8 +17,8 @@
 gdf_error evaluate_expression(
 		blazing_frame inputs,
 		std::string expression,
-		gdf_column * output,
-		gdf_column * temp);
+		gdf_column_cpp output,
+		gdf_column_cpp temp);
 
 
 #endif /* LOGICALFILTER_H_ */

@@ -15,7 +15,7 @@ class gdf_column_cpp
 {
 	private:
 		gdf_column column;
-		GDFRefCounter* gc;
+		//GDFRefCounter* gc;
 
 	public:
 

@@ -128,8 +128,8 @@ gdf_error evaluate_join(std::string condition,
 		gdf_column * right_indices
 ){
 	//gdf_join_result_type * output;
-	gdf_column left_result;
-	gdf_column right_result;
+	/*gdf_column left_result;
+	gdf_column right_result;*/
 	//TODO: right now this only works for equijoins
 	// since this is all that is implemented at the time
 
@@ -169,7 +169,7 @@ gdf_error evaluate_join(std::string condition,
 		int left_index = get_index(operand.top());
 		operand.pop();
 		
-		/*Update to new API
+		/*Update to new API UPDATE!
 		if(join_type == INNER_JOIN){
 			err = gdf_inner_join_generic(data_frame.get_column(left_index), data_frame.get_column(right_index), &output);
 		}else if(join_type == LEFT_JOIN){
@@ -193,7 +193,7 @@ gdf_error evaluate_join(std::string condition,
 			right_columns[i] = data_frame.get_column(right_index);
 		}
 		err = gdf_left_join(operator_count, left_columns,
-				right_columns, &left_result, &right_result, &ctxt);
+				right_columns, left_indices, right_indices, &ctxt);
 		delete[] left_columns;
 		delete[] right_columns;
 

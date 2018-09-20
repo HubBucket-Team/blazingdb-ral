@@ -235,7 +235,7 @@ gdf_error process_join(blazing_frame & input, std::string query_part){
 	std::string join_type = get_named_expression(query_part,"joinType");
 
 	gdf_error err=GDF_SUCCESS;
-	/*UNCOMMENT WHEN JOIN IS UNDESTOOD gdf_error err = evaluate_join(
+	/*gdf_error err = evaluate_join(
 			condition,
 			join_type,
 			input,

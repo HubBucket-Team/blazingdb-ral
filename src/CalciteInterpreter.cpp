@@ -1,6 +1,6 @@
 #include "CalciteInterpreter.h"
 #include "StringUtil.h"
-#include "ResultSetRepository.h"
+
 #include "DataFrame.h"
 #include <algorithm>
 #include <thread>

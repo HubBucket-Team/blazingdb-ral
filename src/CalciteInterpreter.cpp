@@ -161,6 +161,9 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 			gdf_column_cpp output;
 			output.create_gdf_column(GDF_INT8,size,nullptr,8);
 
+			std::cout<<"Generating output, evaluating..: "<<expression<<"\n";
+			std::cout<<"Creating address ptr: "<<output.get_gdf_column()<<"\n";
+
 			gdf_error err = evaluate_expression(
 					input,
 					expression,
@@ -168,6 +171,7 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 					temp);
 			columns[i] = output;
 
+			std::cout<<"Before deregistering address ptr: "<<output.get_gdf_column()<<"\n";
 			GDFRefCounter::getInstance()->deregister_column(output.get_gdf_column());
 			//print_column(output.get_gdf_column());
 
@@ -179,6 +183,7 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 			int index = get_index(expression);
 			columns[i] = input.get_column(index);
 			if(input_used_in_output[index]){
+				std::cout<<"Not using input in output\n";
 				//becuase we already used this we can't just 0 copy it
 				//we have to make a copy of it here
 				gdf_column_cpp output;
@@ -198,6 +203,7 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 				}
 				//free_gdf_column(&empty);
 			}else{
+				std::cout<<"Using input in output\n";
 				input_used_in_output[i] = true;
 			}
 		}
@@ -640,7 +646,15 @@ gdf_error evaluate_query(
 	size_t cur_count = 0;
 	for(size_t i=0;i<output_frame.get_width();i++){
 		for(size_t j=0;j<output_frame.get_size_column(i);j++){
-			outputs.push_back(output_frame.get_column(cur_count));
+			std::cout<<"Outputting address ptr: "<<output_frame.get_column(cur_count).get_gdf_column()<<"\n";
+			std::cout<<"Outputting address ptr: "<<output_frame.get_column(cur_count).get_gdf_column()<<"\n";
+			std::cout<<outputs.size()<<"--\n";
+			//outputs.push_back(output_frame.get_column(cur_count));
+			outputs.resize(outputs.size()+1);
+			outputs[outputs.size()-1] = output_frame.get_column(cur_count);
+			std::cout<<outputs.size()<<"--\n";
+			std::cout<<"Outputting address2 ptr: "<<outputs[outputs.size()-1].get_gdf_column()<<"\n";
+			std::cout<<"Outputting address2 ptr: "<<outputs[outputs.size()-1].get_gdf_column()<<"\n";
 			cur_count++;
 		}
 	}

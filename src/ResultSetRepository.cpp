@@ -18,6 +18,7 @@ result_set_repository::~result_set_repository() {
 }
 
 void result_set_repository::add_token(query_token token, connection_id connection){
+	std::lock_guard<std::mutex> guard(this->repo_mutex);
 	blazing_frame temp;
 	this->result_sets[token] = std::make_tuple(false,temp);
 
@@ -43,6 +44,14 @@ query_token result_set_repository::register_query(connection_id connection){
 
 void write_response(blazing_frame frame,response_descriptor response_to_write){
 	//TODO: use flatbuffers here to convert the frame to the response message
+	//deregister output since we are going to ipc it
+	for(size_t i = 0; i < frame.get_width(); i++){
+		GDFRefCounter::getInstance()->deregister_column(frame.get_column(i).get_gdf_column());
+	}
+
+	std::lock_guard<std::mutex> guard(this->repo_mutex);
+	//TODO: pass in query token and connection id so we can remove these form the map
+
 }
 void result_set_repository::update_token(query_token token, blazing_frame frame){
 	if(this->result_sets.find(token) == this->result_sets.end()){
@@ -59,7 +68,7 @@ void result_set_repository::remove_all_connection_tokens(connection_id connectio
 	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
 		//TODO: throw some error we are clsoing a connectiont hat did not exist
 	}
-
+	std::lock_guard<std::mutex> guard(this->repo_mutex);
 	for(query_token token : this->connection_result_sets[connection]){
 		this->result_sets.erase(token);
 	}

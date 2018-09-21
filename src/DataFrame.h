@@ -11,7 +11,7 @@
 
 #include <gdf/gdf.h>
 #include <GDFColumn.cuh>
-
+#include <vector>
 typedef struct blazing_frame{
 
 public:

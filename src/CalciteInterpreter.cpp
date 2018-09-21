@@ -9,6 +9,7 @@
 #include "LogicalFilter.h"
 //#include "JoinProcessor.h"
 #include "ColumnManipulation.cuh"
+#include "ResultSetRepository.h"
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 const std::string LOGICAL_UNION_TEXT = "LogicalUnion";
@@ -630,9 +631,15 @@ gdf_error evaluate_query(
 		std::vector<std::string> table_names,
 		std::vector<std::vector<std::string>> column_names,
 		std::string query,
-		std::vector<gdf_column_cpp> & outputs,
-		std::vector<std::string> & output_column_names,
-		void * temp_space){//?
+	//	std::vector<gdf_column_cpp> & outputs,
+	//	std::vector<std::string> & output_column_names, //if we want column names lets just add tha to the frame
+		void * temp_space,
+		connection_id connection){//?
+
+	query_token token = result_set_repository::get_instance().register_query(connection); //register the query so we can receive result requests for it
+
+	//TODO: use flatbuffers to respond to the user with the token we generated
+
 
 	std::vector<std::string> splitted = StringUtil::split(query, '\n');
 	/*for(auto str : splitted)
@@ -641,6 +648,11 @@ gdf_error evaluate_query(
 
 	blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
 
+
+	result_set_repository::get_instance().update_token(token,output_frame);
+
+	//TODO: we no longer need outputs here actually, we are jsut goign to regsiter output_frame with our result_Set_repository
+/*
 	size_t cur_count = 0;
 	for(size_t i=0;i<output_frame.get_width();i++){
 		for(size_t j=0;j<output_frame.get_size_column(i);j++){
@@ -648,6 +660,6 @@ gdf_error evaluate_query(
 			cur_count++;
 		}
 	}
-
+*/
 	return GDF_SUCCESS;
 }

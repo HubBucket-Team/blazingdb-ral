@@ -8,6 +8,7 @@
 #include <DataFrame.h>
 #include <GDFColumn.cuh>
 #include <Utils.cuh>
+#include "GDFCounter.cuh"
 
 #include <gdf/gdf.h>
 
@@ -17,6 +18,7 @@ public:
 	virtual void SetUp() {}
 
 	void TearDown() {
+		std::cout<<"Map size: "<<GDFRefCounter::getInstance()->get_map_size()<<std::endl;
 		cudaDeviceReset();
 	}
 };
@@ -50,6 +52,13 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 	void TearDown(){
 		for(int i = 0; i < outputs.size(); i++){
 			print_column(outputs[i].get_gdf_column());
+
+			// Releasing allocated memory, here we are responsible for that
+			//std::cout<<"Trying to release address ptr: "<<outputs[i].get_gdf_column()<<"\n";
+			//GDFRefCounter::getInstance()->free_if_deregistered(outputs[i].get_gdf_column());
+			
+			/*cudaFree(outputs[i].data());
+			cudaFree(outputs[i].valid());*/
 		}
 	}
 
@@ -70,21 +79,21 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 	std::vector<std::string> output_column_names;
 };
 
-	/*{   //select * from hr.emps
+TEST_F(calcite_interpreter_TEST, processing_project0) {
+
+	{   //select * from hr.emps
 		std::string query = "\
 LogicalProject(x=[$0], y=[$1], z=[$2])\n\
   EnumerableTableScan(table=[[hr, emps]])";
-
-		std::vector<gdf_column *> outputs;
-		std::vector<std::string> output_column_names;
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 			query, outputs, output_column_names, temp_space);
 		EXPECT_TRUE(err == GDF_SUCCESS);
 		EXPECT_TRUE(outputs.size() == 3);
 	}
-*/
-/*TEST_F(calcite_interpreter_TEST, processing_project1) {
+}
+
+TEST_F(calcite_interpreter_TEST, processing_project1) {
 
 	{   //select x from hr.emps
 		std::string query = "\
@@ -96,7 +105,7 @@ LogicalProject(x=[$0])\n\
 		EXPECT_TRUE(err == GDF_SUCCESS);
 		EXPECT_TRUE(outputs.size() == 1);
 	}
-}*/
+}
 
 TEST_F(calcite_interpreter_TEST, processing_project2) {
 
@@ -111,62 +120,63 @@ LogicalProject(EXPR$0=[>($2, 5)])\n\
 		EXPECT_TRUE(outputs.size() == 1);
 	}
 }
-	/*{   //select x from hr.emps
+
+TEST_F(calcite_interpreter_TEST, processing_project3) {
+
+	{   //select x from hr.emps
 		std::string query = "\
 LogicalProject(x=[$0])\n\
   EnumerableTableScan(table=[[hr, emps]])";
-
-		std::vector<gdf_column_cpp> outputs;
-		std::vector<std::string> output_column_names;
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 			query, outputs, output_column_names, temp_space);
 		EXPECT_TRUE(err == GDF_SUCCESS);
 		EXPECT_TRUE(outputs.size() == 1);
 	}
+}
+
+TEST_F(calcite_interpreter_TEST, processing_project4) {
 
 	{   //select x + y, z from hr.emps
 		std::string query = "\
 LogicalProject(EXPR$0=[+($0, $1)], z=[$2])\n\
   EnumerableTableScan(table=[[hr, emps]])";
 
-		std::vector<gdf_column_cpp> outputs;
-		std::vector<std::string> output_column_names;
-
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 			query, outputs, output_column_names, temp_space);
 		EXPECT_TRUE(err == GDF_SUCCESS);
 		EXPECT_TRUE(outputs.size() == 2);
-	}*/
+	}
+}
 
-	/*{   //select x from hr.emps where y = z
+TEST_F(calcite_interpreter_TEST, processing_project5) {
+
+	{   //select x from hr.emps where y = z
 		std::string query = "\
 LogicalProject(x=[$0])\n\
   LogicalFilter(condition=[=($1, $2)])\n\
     EnumerableTableScan(table=[[hr, emps]])";
-
-		std::vector<gdf_column *> outputs;
-		std::vector<std::string> output_column_names;
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 			query, outputs, output_column_names, temp_space);
 		EXPECT_TRUE(err == GDF_SUCCESS);
 		EXPECT_TRUE(outputs.size() == 1);
 	}
+}
+
+TEST_F(calcite_interpreter_TEST, processing_project6) {
 
 	{   //select x + y as S from hr.emps
 		std::string query = "\
 LogicalProject(S=[+($0, $1)])\n\
   EnumerableTableScan(table=[[hr, emps]])";
 
-		std::vector<gdf_column *> outputs;
-		std::vector<std::string> output_column_names;
-
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 			query, outputs, output_column_names, temp_space);
 		EXPECT_TRUE(err == GDF_SUCCESS);
 		EXPECT_TRUE(outputs.size() == 1);
-	}*/
+	}
+}
 
 int main(int argc, char **argv){
 	::testing::InitGoogleTest(&argc, argv);

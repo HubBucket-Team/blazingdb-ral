@@ -16,6 +16,7 @@ public:
 	virtual void SetUp() {}
 
 	void TearDown() {
+		std::cout<<"Map size: "<<GDFRefCounter::getInstance()->get_map_size()<<std::endl;
 		cudaDeviceReset();
 	}
 };

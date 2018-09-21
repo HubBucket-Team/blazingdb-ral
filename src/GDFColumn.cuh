@@ -10,6 +10,7 @@
 
 #include <gdf/gdf.h>
 #include "GDFCounter.cuh"
+#include "Utils.cuh"
 
 class gdf_column_cpp
 {
@@ -31,10 +32,14 @@ class gdf_column_cpp
 	gdf_column_cpp(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value);
 
 	gdf_column_cpp(const gdf_column_cpp& col);
+	gdf_column_cpp(gdf_column_cpp& col);
+	void operator=(const gdf_column_cpp& col);
 
 	gdf_column* get_gdf_column();
 
 	void create_gdf_column(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value);
+
+	void realloc_gdf_column(gdf_dtype type, size_t size, size_t width);
 
 	gdf_error gdf_column_view(gdf_column *column, void *data, gdf_valid_type *valid, gdf_size_type size, gdf_dtype dtype);
 

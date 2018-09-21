@@ -14,7 +14,7 @@ void print_column(gdf_column * column){
 	cudaMemcpy(host_data_out,column->data,sizeof(int8_t) * column->size, cudaMemcpyDeviceToHost);
 	cudaMemcpy(host_valid_out,column->valid,sizeof(int8_t) * (column->size + GDF_VALID_BITSIZE - 1) / GDF_VALID_BITSIZE, cudaMemcpyDeviceToHost);
 
-	std::cout<<"Printing Column"<<std::endl;
+	std::cout<<"Printing Column address ptr: "<<column<<"\n";
 
 	for(int i = 0; i < column->size; i++){
 		int col_position = i / 8;
@@ -35,13 +35,13 @@ void free_gdf_column(gdf_column * column){
 	//column = nullptr;
 }
 
-void realloc_gdf_column(gdf_column * column, size_t size, size_t width){
+/*void realloc_gdf_column(gdf_column * column, size_t size, size_t width){
 	free_gdf_column(column);
 
 	create_gdf_column(column,column->dtype,size,nullptr,width);
-}
+}*/
 
-void create_gdf_column(gdf_column * column, gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value){
+/*void create_gdf_column(gdf_column * column, gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value){
 	char * data;
 	gdf_valid_type * valid_device;
 
@@ -64,4 +64,4 @@ void create_gdf_column(gdf_column * column, gdf_dtype type, size_t num_values, v
 	if(input_data != nullptr){
 		cudaMemcpy(data, input_data, num_values * width_per_value, cudaMemcpyHostToDevice);
 	}
-}
+}*/

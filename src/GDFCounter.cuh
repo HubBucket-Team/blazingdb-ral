@@ -28,6 +28,11 @@ class GDFRefCounter
 
 		void register_column(gdf_column* key_ptr);
 		void deregister_column(gdf_column* key_ptr);
+		void swap_key(gdf_column* key_ptr1, gdf_column* key_ptr2);
+
+		void free_if_deregistered(gdf_column* key_ptr);
+
+		size_t get_map_size();
 
 		static GDFRefCounter* getInstance();
 };

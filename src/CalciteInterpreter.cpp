@@ -127,7 +127,6 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 			(query_part.rfind(")") - query_part.find("(")) - 1
 	);
 
-
 	std::regex pattern ("[\\w$_]+=\\[.*?\\]"); 
 	std::smatch matcher;
 	std::vector<std::string> expressions;
@@ -161,8 +160,6 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 			//TODO: find a way to know what our output size will be
 			gdf_column_cpp output;
 			output.create_gdf_column(GDF_INT8,size,nullptr,8);
-
-			std::cout<<"Evaluating..: "<<expression<<"\n";
 
 			gdf_error err = evaluate_expression(
 					input,
@@ -213,7 +210,6 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 		}
 	}
 
-
 	input.clear();
 	input.add_table(columns);
 
@@ -232,10 +228,10 @@ gdf_error process_join(blazing_frame & input, std::string query_part){
 
 	size_t size = 0; //libgdf will be handling the outputs for these
 
-	gdf_column left_indices, right_indices;
+	gdf_column_cpp left_indices, right_indices;
 	//right now it outputs int32
-	create_gdf_column(&left_indices,GDF_INT32,size,nullptr,sizeof(int));
-	create_gdf_column(&right_indices,GDF_INT32,size,nullptr,sizeof(int));
+	left_indices.create_gdf_column(GDF_INT32,size,nullptr,sizeof(int));
+	right_indices.create_gdf_column(GDF_INT32,size,nullptr,sizeof(int));
 
 	std::string condition = get_condition_expression(query_part);
 	std::string join_type = get_named_expression(query_part,"joinType");
@@ -265,15 +261,15 @@ gdf_error process_join(blazing_frame & input, std::string query_part){
 		gdf_column_cpp output;
 
 		get_column_byte_width(input.get_column(column_index).get_gdf_column(), &column_width);
-		output.create_gdf_column(input.get_column(column_index).dtype(),left_indices.size,nullptr,column_width);
+		output.create_gdf_column(input.get_column(column_index).dtype(),left_indices.size(),nullptr,column_width);
 
 		if(column_index < first_table_end_index)
 		{
 			//materialize with left_indices
-			err = materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),&left_indices);
+			err = materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),left_indices.get_gdf_column());
 		}else{
 			//materialize with right indices
-			err = materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),&right_indices);
+			err = materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),right_indices.get_gdf_column());
 		}
 		if(err != GDF_SUCCESS){
 			//TODO: clean up all the resources
@@ -432,7 +428,7 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 			get_column_byte_width(input.get_column(i).get_gdf_column(), &width);
 			empty.create_gdf_column(input.get_column(i).dtype(),0,nullptr,width);
 
-			realloc_gdf_column(input.get_column(i).get_gdf_column(),temp.size(),width);
+			input.get_column(i).realloc_gdf_column(input.get_column(i).dtype(),temp.size(),width);
 
 			gdf_error err = gpu_concat(temp.get_gdf_column(), empty.get_gdf_column(), input.get_column(i).get_gdf_column());
 			if(err != GDF_SUCCESS){

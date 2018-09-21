@@ -1,5 +1,6 @@
 #include "CalciteInterpreter.h"
 #include "StringUtil.h"
+#include "ResultSetRepository.h"
 #include "DataFrame.h"
 #include <algorithm>
 #include <thread>
@@ -9,7 +10,7 @@
 #include "LogicalFilter.h"
 //#include "JoinProcessor.h"
 #include "ColumnManipulation.cuh"
-#include "ResultSetRepository.h"
+
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 const std::string LOGICAL_UNION_TEXT = "LogicalUnion";

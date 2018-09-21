@@ -21,12 +21,14 @@ typedef void * response_descriptor; //this shoudl be substituted for something t
 
 class result_set_repository {
 public:
+
+	virtual ~result_set_repository();
+	result_set_repository();
 	static result_set_repository & get_instance(){
 		  static result_set_repository instance;
 		  return instance;
 	}
-	virtual ~result_set_repository();
-	result_set_repository();
+
 	query_token register_query(connection_id connection);
 	void update_token(query_token token,blazing_frame frame);
 	void remove_all_connection_tokens(connection_id connection);

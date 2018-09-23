@@ -82,8 +82,7 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
 }
 
 void gdf_column_cpp::realloc_gdf_column(gdf_dtype type, size_t size, size_t width){
-	free_gdf_column(&this->column);
-    //GDFRefCounter::getInstance()->deregister_column(&this->column);
+    GDFRefCounter::getInstance()->decrement(&this->column); //decremeting reference, deallocating space
 
 	create_gdf_column(type, size, nullptr, width);
 }

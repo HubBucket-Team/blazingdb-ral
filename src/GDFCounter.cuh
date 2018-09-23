@@ -20,15 +20,18 @@ class GDFRefCounter
 		GDFRefCounter();
 
 		static GDFRefCounter* Instance;
+
 		std::mutex gc_mutex;
 
 		std::map<rc_key_t, size_t> map; // std::map<key_ptr, ref_counter>
-	
+
 	public:
 		void increment(gdf_column* col_ptr);
+
 		void decrement(gdf_column* col_ptr);
 
 		void register_column(gdf_column* col_ptr);
+
 		void deregister_column(gdf_column* col_ptr);
 
 		void free_if_deregistered(gdf_column* col_ptr);

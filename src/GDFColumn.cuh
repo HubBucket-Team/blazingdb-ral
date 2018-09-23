@@ -20,11 +20,17 @@ class gdf_column_cpp
 	public:
 
     void* data();
+
     gdf_valid_type* valid();
+
     gdf_size_type size();
+
     gdf_dtype dtype();
+
     gdf_size_type null_count();
+
     gdf_dtype_extra_info dtype_info();
+
 	void set_dtype(gdf_dtype dtype);
 
 	gdf_column_cpp();
@@ -32,7 +38,9 @@ class gdf_column_cpp
 	gdf_column_cpp(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value);
 
 	gdf_column_cpp(const gdf_column_cpp& col);
+
 	gdf_column_cpp(gdf_column_cpp& col);
+
 	void operator=(const gdf_column_cpp& col);
 
 	gdf_column* get_gdf_column();

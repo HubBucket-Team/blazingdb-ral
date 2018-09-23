@@ -29,7 +29,6 @@ void GDFRefCounter::deregister_column(gdf_column* col_ptr)
 
     if(map.find(map_key) != map.end()){
         map[map_key]=0; //deregistering
-        //map.erase(map_key);
     }
 }
 
@@ -53,7 +52,9 @@ void GDFRefCounter::increment(gdf_column* col_ptr)
     rc_key_t map_key = {col_ptr->data, col_ptr->valid};
 
     if(map.find(map_key)!=map.end()){
-        map[map_key]++;
+        if(map[map_key]!=0){ //is already deregistered
+            map[map_key]++;
+        }
     }
 }
 

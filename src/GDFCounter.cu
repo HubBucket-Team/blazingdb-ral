@@ -10,39 +10,68 @@
 
 GDFRefCounter* GDFRefCounter::Instance=0;
 
-void GDFRefCounter::register_column(gdf_column* key_ptr)
-{
-    std::lock_guard<std::mutex> lock(gc_mutex);
-    if(map.find(key_ptr)==map.end())
-        map[key_ptr]=1;
+void GDFRefCounter::register_column(gdf_column* col_ptr){
+
+    if(col_ptr != nullptr){
+        std::lock_guard<std::mutex> lock(gc_mutex);
+        rc_key_t map_key = {col_ptr->data, col_ptr->valid};
+        
+        if(map.find(map_key) == map.end()){
+            map[map_key]=1;
+        }
+    }
 }
 
-void GDFRefCounter::deregister_column(gdf_column* key_ptr)
+void GDFRefCounter::deregister_column(gdf_column* col_ptr)
 {
     std::lock_guard<std::mutex> lock(gc_mutex);
-    if(map.find(key_ptr)!=map.end())
-        map.erase(key_ptr);
+    rc_key_t map_key = {col_ptr->data, col_ptr->valid};
+
+    if(map.find(map_key) != map.end()){
+        map[map_key]=0; //deregistering
+    }
 }
 
-void GDFRefCounter::increment(gdf_column* key_ptr)
+void GDFRefCounter::free_if_deregistered(gdf_column* col_ptr)
 {
     std::lock_guard<std::mutex> lock(gc_mutex);
-    if(map.find(key_ptr)!=map.end())
-        map[key_ptr]++;
+    rc_key_t map_key = {col_ptr->data, col_ptr->valid};
+
+    if(map.find(map_key)!=map.end()){
+        if(map[map_key]==0){
+            map.erase(map_key);
+            cudaFree(map_key.first); //data
+            cudaFree(map_key.second); //valid
+        }
+    }
 }
 
-void GDFRefCounter::decrement(gdf_column* key_ptr)
+void GDFRefCounter::increment(gdf_column* col_ptr)
 {
     std::lock_guard<std::mutex> lock(gc_mutex);
-    if(map.find(key_ptr)!=map.end())
-    {
-        map[key_ptr]--;
+    rc_key_t map_key = {col_ptr->data, col_ptr->valid};
 
-        if(map[key_ptr]==0)
-        {
-            map.erase(key_ptr);
-            cudaFree(key_ptr->data);
-            cudaFree(key_ptr->valid);
+    if(map.find(map_key)!=map.end()){
+        if(map[map_key]!=0){ //is already deregistered
+            map[map_key]++;
+        }
+    }
+}
+
+void GDFRefCounter::decrement(gdf_column* col_ptr)
+{
+    std::lock_guard<std::mutex> lock(gc_mutex);
+    rc_key_t map_key = {col_ptr->data, col_ptr->valid};
+
+    if(map.find(map_key)!=map.end()){
+        if(map[map_key]>0){
+            map[map_key]--;
+
+            if(map[map_key]==0){
+                map.erase(map_key);
+                cudaFree(map_key.first); //data
+                cudaFree(map_key.second); //valid
+            }
         }
     }
 }
@@ -50,6 +79,12 @@ void GDFRefCounter::decrement(gdf_column* key_ptr)
 GDFRefCounter::GDFRefCounter()
 {
 
+}
+
+// Testing purposes
+size_t GDFRefCounter::get_map_size()
+{
+    return map.size();
 }
 
 GDFRefCounter* GDFRefCounter::getInstance()

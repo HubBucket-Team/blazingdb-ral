@@ -9,7 +9,11 @@
 
 gdf_column_cpp::gdf_column_cpp()
 {
-    //gc=GDFRefCounter::Init();
+    column.data = nullptr;
+    column.valid = nullptr;
+    column.size = 0;
+    column.dtype = GDF_invalid;
+    column.null_count = 0;
 }
 
 gdf_column_cpp::gdf_column_cpp(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value)
@@ -23,9 +27,31 @@ gdf_column_cpp::gdf_column_cpp(const gdf_column_cpp& col)
     column.valid = col.column.valid;
     column.size = col.column.size;
     column.dtype = col.column.dtype;
-    column.null_count = 0;
+    column.null_count = col.column.null_count;
 
-    //gc->increment(&col.column);
+    GDFRefCounter::getInstance()->increment(const_cast<gdf_column*>(&col.column));
+}
+
+gdf_column_cpp::gdf_column_cpp(gdf_column_cpp& col)
+{
+    column.data = col.column.data;
+    column.valid = col.column.valid;
+    column.size = col.column.size;
+    column.dtype = col.column.dtype;
+    column.null_count = col.column.null_count;
+
+    GDFRefCounter::getInstance()->increment(const_cast<gdf_column*>(&col.column));
+}
+
+void gdf_column_cpp::operator=(const gdf_column_cpp& col)
+{
+    column.data = col.column.data;
+    column.valid = col.column.valid;
+    column.size = col.column.size;
+    column.dtype = col.column.dtype;
+    column.null_count = col.column.null_count;
+
+    GDFRefCounter::getInstance()->increment(const_cast<gdf_column*>(&col.column));
 }
 
 gdf_column* gdf_column_cpp::get_gdf_column()
@@ -53,6 +79,12 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     }
 
     GDFRefCounter::getInstance()->register_column(&this->column);
+}
+
+void gdf_column_cpp::realloc_gdf_column(gdf_dtype type, size_t size, size_t width){
+    GDFRefCounter::getInstance()->decrement(&this->column); //decremeting reference, deallocating space
+
+	create_gdf_column(type, size, nullptr, width);
 }
 
 gdf_error gdf_column_cpp::gdf_column_view(gdf_column *column, void *data, gdf_valid_type *valid, gdf_size_type size, gdf_dtype dtype)

@@ -49,7 +49,7 @@ struct logical_filter_TEST : public ::testing::Test {
 		temp.create_gdf_column(GDF_INT8, num_values, nullptr, 1);
 	
 		host_output = new char[num_values];
-		device_output = new char[num_values];	
+		device_output = new char[num_values];
 	}
 
 	void TearDown() {
@@ -162,6 +162,23 @@ TEST_F(logical_filter_TEST, processing_expressions4) {
 
 		for(int i = 0; i < num_values; i++){
 			host_output[i] = ((input1[i] * input1[i]) == 1) ? 1 : 0;
+		}
+    }
+}
+
+TEST_F(logical_filter_TEST, processing_expressions5) {
+
+	{
+		std::string expression = "=($1, $2)";
+
+		evaluate_expression(
+				blzframe,
+				expression,
+				output,
+				temp);
+
+		for(int i = 0; i < num_values; i++){
+			host_output[i] = (input2[i] == input3[i]) ? 1 : 0;
 		}
     }
 }

@@ -6,7 +6,7 @@
 if (DEFINED ENV{LIBGDF_HOME})
     set(LIBGDF_HOME_HOME "$ENV{LIBGDF_HOME}")
 else()
-    message(FATAL_ERROR "LIBGDF_HOME Not defined")
+    message(STATUS "LIBGDF_HOME not defined, it will be built from sources")
 endif()
 
 # BEGIN macros

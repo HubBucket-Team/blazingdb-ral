@@ -93,7 +93,7 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 	const int WIDTH_PER_VALUE = 1;
 };
 
-TEST_F(calcite_interpreter_TEST, processing_project0) {
+/*TEST_F(calcite_interpreter_TEST, processing_project0) {
 
 	{   //select * from hr.emps
 		std::string query = "\
@@ -208,7 +208,7 @@ LogicalProject(x=[$0])\n\
 			}
 		}
 
-		Check(outputs[0], host_output);*/
+		Check(outputs[0], host_output);/
 	}
 }
 
@@ -230,6 +230,64 @@ LogicalProject(S=[-($0, $1)])\n\
 		}
 
 		Check(outputs[0], host_output);
+	}
+}*/
+
+TEST(calcite_interpreter_join_TEST, processing_join0) {
+
+	{
+		//lets make a simple test where we have three talbes that we join then filter then project
+		//this mimics our java code
+		std::vector<std::vector<gdf_column_cpp> > input_tables(2);
+
+		std::vector<gdf_column_cpp> hr_emps(3);
+		std::vector<gdf_column_cpp> hr_joiner_1(2);
+		//std::vector<gdf_column * > hr_joiner_2(2);
+
+		int emps_x[3] = { 1, 2, 3};
+		int emps_y[3] = { 4, 5,6};
+		int emps_z[3] = { 10, 10, 10};
+
+		hr_emps[0].create_gdf_column(GDF_INT32, 3, (void *) emps_x, 4);
+		hr_emps[1].create_gdf_column(GDF_INT32, 3, (void *) emps_y, 4);
+		hr_emps[2].create_gdf_column(GDF_INT32, 3, (void *) emps_z, 4);
+
+		int joiner_join_x[6] = { 1, 1, 1, 2, 2, 3};
+		int joiner_y[6] = { 1, 2, 3, 4 ,5 ,6};
+
+		hr_joiner_1[0].create_gdf_column(GDF_INT32, 6, (void *) joiner_join_x, 4);
+		hr_joiner_1[1].create_gdf_column(GDF_INT32, 6, (void *) joiner_y, 4);
+
+		input_tables[0] = hr_emps;
+		input_tables[1] = hr_joiner_1;
+		std::vector<std::string> table_names = { "hr.emps" , "hr.joiner"};
+		std::vector<std::vector<std::string>> column_names = {{"x","y","z"},{"join_x","join_y"}};
+
+		std::vector<gdf_column_cpp> outputs;
+		std::vector<std::string> output_column_names;
+		void * temp_space = nullptr; //we arent really using this it seems
+
+		/*std::string query = "\
+	LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$6=[+($0, $4)])\n\
+	LogicalFilter(condition=[OR(<($0, 5), >($3, 3))])\n\
+		LogicalJoin(condition=[OR(=($3, $0), =($3, $1))], joinType=[inner])\n\
+		EnumerableTableScan(table=[[hr, emps]])\n\
+		EnumerableTableScan(table=[[hr, joiner]]) ";*/
+
+std::string query = "\
+LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$5=[+($0, $4)])\n\
+  LogicalJoin(condition=[=($3, $0)], joinType=[inner])\n\
+    EnumerableTableScan(table=[[hr, emps]])\n\
+    EnumerableTableScan(table=[[hr, joiner]])";
+
+		gdf_error err = evaluate_query(input_tables, table_names, column_names,
+			query, outputs, output_column_names, temp_space);
+
+		for(int i = 0; i < outputs.size(); i++){
+			print_column(outputs[i].get_gdf_column());
+		}
+
+		EXPECT_TRUE(err == GDF_SUCCESS);
 	}
 }
 

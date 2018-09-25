@@ -127,9 +127,9 @@ gdf_error evaluate_join(std::string condition,
 		gdf_column * left_indices,
 		gdf_column * right_indices
 ){
-	//gdf_join_result_type * output;
-	/*gdf_column left_result;
-	gdf_column right_result;*/
+	
+	gdf_column left_result;
+	gdf_column right_result;
 	//TODO: right now this only works for equijoins
 	// since this is all that is implemented at the time
 
@@ -164,19 +164,28 @@ gdf_error evaluate_join(std::string condition,
 	}
 	gdf_error err;
 	if(operator_count == 1){
+		gdf_column ** left_columns = new gdf_column*[operator_count];
+		gdf_column ** right_columns = new gdf_column*[operator_count];
+		gdf_context ctxt{0, GDF_HASH, 0};
+
 		int right_index = get_index(operand.top());
 		operand.pop();
 		int left_index = get_index(operand.top());
 		operand.pop();
-		
-		/*Update to new API UPDATE!
+
+		left_columns[0] = data_frame.get_column(left_index).get_gdf_column();
+		right_columns[0] = data_frame.get_column(right_index).get_gdf_column();
+
 		if(join_type == INNER_JOIN){
-			err = gdf_inner_join_generic(data_frame.get_column(left_index), data_frame.get_column(right_index), &output);
+			err = gdf_inner_join(operator_count, left_columns, right_columns, &left_result, &right_result, &ctxt);
 		}else if(join_type == LEFT_JOIN){
-			err = gdf_left_join_generic(data_frame.get_column(left_index), data_frame.get_column(right_index), &output);
+			err = gdf_left_join(operator_count, left_columns, right_columns, &left_result, &right_result, &ctxt);
 		}else if(join_type == OUTER_JOIN){
-			err = gdf_outer_join_generic(data_frame.get_column(left_index), data_frame.get_column(right_index), &output);
-		}*/
+			err = gdf_outer_join_generic(left_columns[0], right_columns[0], &left_result, &right_result);
+		}
+
+		delete[] left_columns;
+		delete[] right_columns;
 	}else{
 		if(operator_count > 3 || join_type == OUTER_JOIN){
 			return GDF_JOIN_TOO_MANY_COLUMNS;
@@ -189,8 +198,8 @@ gdf_error evaluate_join(std::string condition,
 			operand.pop();
 			int left_index = get_index(operand.top());
 			operand.pop();
-			left_columns[i] = data_frame.get_column(left_index);
-			right_columns[i] = data_frame.get_column(right_index);
+			left_columns[i] = data_frame.get_column(left_index).get_gdf_column();
+			right_columns[i] = data_frame.get_column(right_index).get_gdf_column();
 		}
 		err = gdf_left_join(operator_count, left_columns,
 				right_columns, left_indices, right_indices, &ctxt);

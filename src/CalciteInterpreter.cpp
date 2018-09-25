@@ -7,7 +7,7 @@
 
 #include "Utils.cuh"
 #include "LogicalFilter.h"
-//#include "JoinProcessor.h"
+#include "JoinProcessor.h"
 #include "ColumnManipulation.cuh"
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
@@ -233,14 +233,13 @@ gdf_error process_join(blazing_frame & input, std::string query_part){
 	std::string condition = get_condition_expression(query_part);
 	std::string join_type = get_named_expression(query_part,"joinType");
 
-	gdf_error err=GDF_SUCCESS;
-	/*gdf_error err = evaluate_join(
+	gdf_error err = evaluate_join(
 			condition,
 			join_type,
 			input,
-			&left_indices,
-			&right_indices
-	);*/
+			left_indices.get_gdf_column(),
+			right_indices.get_gdf_column()
+	);
 
 	if(err != GDF_SUCCESS){
 		//TODO: clean up everything here so we dont run out of memory

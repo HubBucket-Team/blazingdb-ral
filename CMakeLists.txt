@@ -33,6 +33,7 @@ set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteInterpreter.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/ColumnManipulation.cu
 #              ${CMAKE_CURRENT_SOURCE_DIR}/src/JoinProcessor.cpp
+              ${CMAKE_CURRENT_SOURCE_DIR}/src/ResultSetRepository.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/LogicalFilter.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/StringUtil.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/QueryState.cpp

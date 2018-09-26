@@ -18,10 +18,20 @@
 #include "ipc/calcite_client.h"
 #include "gdf/gdf.h"
 
+#include <blazingdb/protocol/api.h>
+
 #define BIT_FIVE 0x10
 #define BIT_SIX 0x20
 
+struct DMLRequest
+{
+  char query[1024]; //logicalPlan
+};
 
+struct DMLResponse
+{
+  uint64_t query_token; //token
+};
 
 /*void runOriginalTest(){
 	gdf_size_type num_elements = 8;
@@ -332,15 +342,32 @@ LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$6=[+($0, $4)])
 		print_column(c);
 }*/
 
+static std::uint8_t data[4096];
+
 int main(void)
 {
+	blazingdb::protocol::UnixSocketConnection connection("/tmp/socket");
+	blazingdb::protocol::Server server(connection);
+
+	auto controller = [](const blazingdb::protocol::Buffer &requestBuffer)
+		-> blazingdb::protocol::Buffer {
+		const DMLRequest *lp = reinterpret_cast<const DMLRequest *>(requestBuffer.data());
+
+		std::cout << lp->query << std::endl;
+
+		DMLResponse resp{123};
+		std::memcpy(data, &resp, sizeof(DMLResponse));
+
+		return blazingdb::protocol::Buffer(data, sizeof(DMLResponse));
+	};
+
+	server.handle(controller);
+
 	//runOriginalTest();
 	//runInterpreterTest();
 	//runCalciteTest();
 
 	//testStencil();
-
-	//runCalciteClientTest("holas");
 
 	return 0;
 }

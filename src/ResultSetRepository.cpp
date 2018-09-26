@@ -49,7 +49,7 @@ void write_response(blazing_frame frame,response_descriptor response_to_write){
 		GDFRefCounter::getInstance()->deregister_column(frame.get_column(i).get_gdf_column());
 	}
 
-	std::lock_guard<std::mutex> guard(this->repo_mutex);
+	//std::lock_guard<std::mutex> guard(this->repo_mutex);
 	//TODO: pass in query token and connection id so we can remove these form the map
 
 }

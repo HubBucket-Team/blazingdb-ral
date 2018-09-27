@@ -53,7 +53,7 @@ __global__ void gather_bits(
 				if(permute_index >=  0){
 					//this next line is failing
 					is_bit_set = bit_data[permute_index / NUM_ELEMENTS_PER_THREAD_GATHER_BITS] & (1u << (permute_index % NUM_ELEMENTS_PER_THREAD_GATHER_BITS));
-					//					is_bit_set = true;
+					//is_bit_set = true;
 				}else{
 					is_bit_set = false;
 				}
@@ -84,7 +84,7 @@ gdf_error materialize_valid_ptrs(gdf_column * input, gdf_column * output, gdf_co
 		std::cout<<"Could not get grid and block size!!"<<std::endl;
 	}
 
-	gather_bits<<<grid_size, block_size>>>((int *) row_indices->data,(int *) input->valid,(int *) output->valid,row_indices->size);
+	gather_bits<<<grid_size, block_size>>>((int *) row_indices->data,(int *) input->valid,(int *) output->valid, row_indices->size);
 	cuda_error = cudaGetLastError();
 	if(cuda_error != cudaSuccess){
 		return GDF_CUDA_ERROR;
@@ -112,7 +112,7 @@ gdf_error materialize_templated_2(gdf_column * input, gdf_column * output, gdf_c
 
 	thrust::detail::normal_iterator<thrust::device_ptr<ElementIterator> > output_iter =
 			thrust::detail::make_normal_iterator(thrust::device_pointer_cast((ElementIterator *) output->data));;
-	thrust::copy(iter,iter + input->size,output_iter);
+	thrust::copy(iter,iter + row_indices->size,output_iter);
 
 	return GDF_SUCCESS;
 }
@@ -130,7 +130,7 @@ gdf_error materialize_templated_1(gdf_column * input, gdf_column * output, gdf_c
 	}else if(column_width == 8){
 		return materialize_templated_2<ElementIterator,int64_t>(input,output,row_indices);
 	}
-
+	return GDF_UNSUPPORTED_DTYPE;
 }
 
 
@@ -146,7 +146,6 @@ gdf_error materialize_column(gdf_column * input, gdf_column * output, gdf_column
 	}else if(column_width == 8){
 		return materialize_templated_1<int64_t>(input,output,row_indices);
 	}
-
-
+	return GDF_UNSUPPORTED_DTYPE;
 }
 

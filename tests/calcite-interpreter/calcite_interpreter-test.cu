@@ -245,7 +245,7 @@ TEST(calcite_interpreter_join_TEST, processing_join0) {
 		//std::vector<gdf_column * > hr_joiner_2(2);
 
 		int emps_x[3] = { 1, 2, 3};
-		int emps_y[3] = { 4, 5,6};
+		int emps_y[3] = { 4, 5, 6};
 		int emps_z[3] = { 10, 10, 10};
 
 		hr_emps[0].create_gdf_column(GDF_INT32, 3, (void *) emps_x, 4);
@@ -257,6 +257,15 @@ TEST(calcite_interpreter_join_TEST, processing_join0) {
 
 		hr_joiner_1[0].create_gdf_column(GDF_INT32, 6, (void *) joiner_join_x, 4);
 		hr_joiner_1[1].create_gdf_column(GDF_INT32, 6, (void *) joiner_y, 4);
+
+		std::cout<<"Initial Input: "<<std::endl;
+		print_column<int32_t>(hr_emps[0].get_gdf_column());
+		print_column<int32_t>(hr_emps[1].get_gdf_column());
+		print_column<int32_t>(hr_emps[2].get_gdf_column());
+		std::cout<<"---"<<std::endl;
+		print_column<int32_t>(hr_joiner_1[0].get_gdf_column());
+		print_column<int32_t>(hr_joiner_1[1].get_gdf_column());
+		std::cout<<"End Initial Input: "<<std::endl;
 
 		input_tables[0] = hr_emps;
 		input_tables[1] = hr_joiner_1;
@@ -283,8 +292,13 @@ LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$5=[+($0, $4)])
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 			query, outputs, output_column_names, temp_space);
 
+		std::cout<<"Output columns: "<<outputs.size()<<std::endl<<std::flush;
 		for(int i = 0; i < outputs.size(); i++){
-			print_column(outputs[i].get_gdf_column());
+			print_column<int32_t>(outputs[i].get_gdf_column());
+		}
+
+		for(int i = 0; i < outputs.size(); i++){
+			GDFRefCounter::getInstance()->free_if_deregistered(outputs[i].get_gdf_column());
 		}
 
 		EXPECT_TRUE(err == GDF_SUCCESS);

@@ -9,6 +9,7 @@
 #define DATAFRAME_H_
 
 
+#include "Utils.cuh"
 #include <gdf/gdf.h>
 #include <GDFColumn.cuh>
 
@@ -64,12 +65,33 @@ public:
 	}
 	
 	size_t get_width(){
-		return this->columns.size(); //ToDo check correctness
+		return this->columns.size();
+	}
+
+	size_t get_size_columns(){
+		size_t size_columns = 0;
+		for(int i = 0; i < columns.size(); i++){
+			size_columns += columns[i].size();
+		}
+
+		return size_columns;
 	}
 
 	void clear(){
 		this->columns.resize(0);
 	}
+
+	void print(std::string title)
+	{
+		std::cout<<"---> "<<title<<std::endl;
+		for(int table_index = 0; table_index < columns.size(); table_index++)
+		{
+			std::cout<<"Table: "<<table_index<<"\n";
+			for(int column_index = 0; column_index < columns[table_index].size(); column_index++)
+				print_column<int32_t>(columns[table_index][column_index].get_gdf_column());
+		}
+	}
+
 private:
 	std::vector<std::vector<gdf_column_cpp> > columns;
 	//std::vector<gdf_column *> row_indeces; //per table row indexes used for materializing

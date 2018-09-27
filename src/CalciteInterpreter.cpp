@@ -159,13 +159,14 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 			//assumes worst possible case allocation for output
 			//TODO: find a way to know what our output size will be
 			gdf_column_cpp output;
-			output.create_gdf_column(GDF_INT8,size,nullptr,8);
+			output.create_gdf_column(GDF_INT32,size,nullptr,8);
 
 			gdf_error err = evaluate_expression(
 					input,
 					expression,
 					output,
 					temp);
+
 			columns[i] = output;
 
 			if(err != GDF_SUCCESS){
@@ -221,7 +222,7 @@ std::string get_named_expression(std::string query_part, std::string expression_
 }
 
 
-gdf_error process_join(blazing_frame & input, std::string query_part){
+blazing_frame process_join(blazing_frame input, std::string query_part){
 
 	size_t size = 0; //libgdf will be handling the outputs for these
 
@@ -241,19 +242,26 @@ gdf_error process_join(blazing_frame & input, std::string query_part){
 			right_indices.get_gdf_column()
 	);
 
+	size_t allocation_size_valid = ((((left_indices.get_gdf_column()->size + 7 ) / 8) + 63 ) / 64) * 64; //so allocations are supposed to be 64byte aligned
+
+	cudaMalloc((void **) &left_indices.get_gdf_column()->valid, allocation_size_valid);
+	cudaMalloc((void **) &right_indices.get_gdf_column()->valid, allocation_size_valid);
+	cudaMemset(left_indices.get_gdf_column()->valid, (gdf_valid_type) 255, allocation_size_valid);
+	cudaMemset(right_indices.get_gdf_column()->valid, (gdf_valid_type) 255, allocation_size_valid);
+
 	if(err != GDF_SUCCESS){
 		//TODO: clean up everything here so we dont run out of memory
-		return err;
+		//return err;
 	}
 	//the options get interesting here. So if the join nis smaller than the input
 	// you could write the output in place, saving time for allocations then shrink later on
 	// the simplest solution is to reallocate space and free up the old after copying it over
 
 	//a data frame should have two "tables"or groups of columns at this point
-	std::vector<gdf_column_cpp> new_columns(input.get_width());
+	std::vector<gdf_column_cpp> new_columns(input.get_size_columns());
 	size_t first_table_end_index = input.get_size_column();
 	int column_width;
-	for(int column_index = 0; column_index < input.get_width(); column_index++){
+	for(int column_index = 0; column_index < input.get_size_columns(); column_index++){
 		gdf_column_cpp output;
 
 		get_column_byte_width(input.get_column(column_index).get_gdf_column(), &column_width);
@@ -269,14 +277,14 @@ gdf_error process_join(blazing_frame & input, std::string query_part){
 		}
 		if(err != GDF_SUCCESS){
 			//TODO: clean up all the resources
-			return err;
+			//return err;
 		}
 		//free_gdf_column(input.get_column(column_index));
 		new_columns[column_index] = output;
 	}
 	input.clear();
 	input.add_table(new_columns);
-	return GDF_SUCCESS;
+	return input;
 }
 
 gdf_error process_sort(blazing_frame & input, std::string query_part){
@@ -475,12 +483,6 @@ blazing_frame evaluate_split_query(
 		std::vector<std::string> query, int call_depth = 0){
 		assert(input_tables.size() == table_names.size());
 
-	/*if(query.size() < 1)
-	{
-		blazing_frame empty_frame;
-		return empty_frame;
-	}*/
-
 	if(query.size() == 1){
 		//process yourself and return
 
@@ -498,12 +500,11 @@ blazing_frame evaluate_split_query(
 			return scan_frame;
 		}else{
 			//i dont think there are any other type of end nodes at the moment
-
 		}
 	}
-	//std::cout<<"query size ==>"<<query.size()<<std::endl;
+
 	if(is_double_input(query[0])){
-		//process left
+
 		int other_depth_one_start = 2;
 		for(int i = 2; i < query.size(); i++){
 			int j = 0;
@@ -528,38 +529,7 @@ blazing_frame evaluate_split_query(
 									call_depth + 1
 					);
 
-	//	std::thread left_thread =
-	//			std::thread([&left_frame, &input_tables,&table_names,&column_names,&query,other_depth_one_start](){
-	/*
-			left_frame = evaluate_split_query(
-					input_tables,
-					table_names,
-					column_names,
-					std::vector<std::string>(
-							query.begin() + 1,
-							query.begin() + other_depth_one_start)
-			);
-*/
-//		});
-
-
-
-		//TODO: moved here for debuggin
-	//	left_thread.join();
 		blazing_frame right_frame;
-	//	std::thread right_thread =
-	//			std::thread([&right_frame, &input_tables,&table_names,&column_names,&query,other_depth_one_start](){
-	/*		right_frame = evaluate_split_query(
-					input_tables,
-					table_names,
-					column_names,
-					std::vector<std::string>(
-							query.begin() + other_depth_one_start,
-							query.end())
-			);
-*/
-	//	});
-
 		right_frame = evaluate_split_query(
 							input_tables,
 							table_names,
@@ -569,15 +539,12 @@ blazing_frame evaluate_split_query(
 									query.end()),
 									call_depth + 1
 					);
-		//right_thread.join();
-
 
 		if(is_join(query[0])){
 			//we know that left and right are dataframes we want to join together
 			left_frame.add_table(right_frame.get_columns()[0]);
-			left_frame.consolidate_tables();
-			return left_frame;//!!
-			//return process_join(left_frame,right_frame,query[0]);
+			///left_frame.consolidate_tables();
+			return process_join(left_frame,query[0]);
 		}else if(is_union(query[0])){
 			//TODO: append the frames to each other
 			//return right_frame;//!!
@@ -627,9 +594,6 @@ gdf_error evaluate_query(
 		void * temp_space){//?
 
 	std::vector<std::string> splitted = StringUtil::split(query, '\n');
-	/*for(auto str : splitted)
-		std::cout<<StringUtil::rtrim(str)<<"\n";
-	std::cout<<std::endl<<std::flush;*/
 
 	blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
 

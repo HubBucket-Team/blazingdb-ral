@@ -55,7 +55,7 @@ void write_response(blazing_frame frame,response_descriptor response_to_write){
 }
 void result_set_repository::update_token(query_token token, blazing_frame frame){
 	if(this->result_sets.find(token) == this->result_sets.end()){
-		//TODO: throw an error here
+		throw std::runtime_error{"Token does not exist"};
 	}
 	std::lock_guard<std::mutex> guard(this->repo_mutex);
 	this->result_sets[token] = std::make_tuple(true,frame);
@@ -66,7 +66,7 @@ void result_set_repository::update_token(query_token token, blazing_frame frame)
 
 void result_set_repository::remove_all_connection_tokens(connection_id connection){
 	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
-		//TODO: throw some error we are clsoing a connectiont hat did not exist
+		throw std::runtime_error{"Closing a connectiont that did not exist"};
 	}
 	std::lock_guard<std::mutex> guard(this->repo_mutex);
 	for(query_token token : this->connection_result_sets[connection]){
@@ -77,7 +77,7 @@ void result_set_repository::remove_all_connection_tokens(connection_id connectio
 
 void result_set_repository::get_result(query_token token, response_descriptor response_to_write){
 	if(this->result_sets.find(token) == this->result_sets.end()){
-		//TODO: throw some error you wanta result set that doesnt exist
+		throw std::runtime_error{"Result set does not exist"};
 	}
 	{
 		//scope the lockguard here

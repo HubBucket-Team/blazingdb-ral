@@ -342,6 +342,30 @@ LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$6=[+($0, $4)])
 		print_column(c);
 }*/
 
+typedef uint64_t connection_id;
+
+enum action_t{
+  OPEN_CONNECTION,
+  CLOSE_CONNECTION
+};
+
+enum status_t{
+  SUCCESS,
+  FAILED
+};
+
+struct ConnectionRequest
+{
+  connection_id connection;
+  action_t action;
+};
+
+struct ConnectionResponse
+{
+  status_t action;
+  char msg[128];
+};
+
 static std::uint8_t data[4096];
 
 int main(void)
@@ -351,14 +375,23 @@ int main(void)
 
 	auto controller = [](const blazingdb::protocol::Buffer &requestBuffer)
 		-> blazingdb::protocol::Buffer {
-		const DMLRequest *lp = reinterpret_cast<const DMLRequest *>(requestBuffer.data());
+		const ConnectionRequest *cr = reinterpret_cast<const ConnectionRequest *>(requestBuffer.data());
 
-		std::cout << lp->query << std::endl;
+		ConnectionResponse resp;
 
-		DMLResponse resp{123};
-		std::memcpy(data, &resp, sizeof(DMLResponse));
+		try {
+			result_set_repository::get_instance().remove_all_connection_tokens(cr->connection);
+			resp.action = SUCCESS;
+		}
+		catch(const std::runtime_error& e) {
+			std::cout<<"Error: "<<e.what()<<std::endl;
+			resp.action = FAILED;
+			strcpy(resp.msg, e.what());
+		}
 
-		return blazingdb::protocol::Buffer(data, sizeof(DMLResponse));
+		std::memcpy(data, &resp, sizeof(ConnectionResponse));
+
+		return blazingdb::protocol::Buffer(data, sizeof(ConnectionResponse));
 	};
 
 	server.handle(controller);

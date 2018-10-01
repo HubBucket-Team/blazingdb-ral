@@ -19,19 +19,7 @@
 #include "gdf/gdf.h"
 
 #include <blazingdb/protocol/api.h>
-
-#define BIT_FIVE 0x10
-#define BIT_SIX 0x20
-
-struct DMLRequest
-{
-  char query[1024]; //logicalPlan
-};
-
-struct DMLResponse
-{
-  uint64_t query_token; //token
-};
+#include <blazingdb/protocol/interpreter/messages.h>
 
 /*void runOriginalTest(){
 	gdf_size_type num_elements = 8;
@@ -342,35 +330,42 @@ LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$6=[+($0, $4)])
 		print_column(c);
 }*/
 
-typedef uint64_t connection_id;
-
-enum action_t{
-  OPEN_CONNECTION,
-  CLOSE_CONNECTION
-};
-
-enum status_t{
-  SUCCESS,
-  FAILED
-};
-
-struct ConnectionRequest
-{
-  connection_id connection;
-  action_t action;
-};
-
-struct ConnectionResponse
-{
-  status_t action;
-  char msg[128];
-};
-
-static std::uint8_t data[4096];
+namespace blazingdb {
+	namespace protocol {
+  
+	  namespace interpreter {
+  
+		auto InterpreterService(const blazingdb::protocol::Buffer &requestBuffer) -> blazingdb::protocol::Buffer {
+		  RequestMessage request{requestBuffer.data()};
+		  DMLRequestMessage requestPayload(request.getPayloadBuffer());
+  
+		  std::cout << "header: " << request.header() << std::endl;
+		  std::cout << "query: " << requestPayload.getLogicalPlan() << std::endl;
+  
+		  std::string token = "JIFY*DSA%^F*(*(S)DIKFJLNDVOYD(";
+  
+		  DMLResponseMessage responsePayload{token};
+		  ResponseMessage responseObject{Status_Success, responsePayload};
+		  auto bufferedData = responseObject.getBufferData();
+		  Buffer buffer{bufferedData->data(),
+						bufferedData->size()};
+		  return buffer;
+		}
+  
+	  }
+	}
+  }
 
 int main(void)
 {
-	blazingdb::protocol::UnixSocketConnection connection("/tmp/socket");
+	using namespace blazingdb::protocol::interpreter;
+
+	blazingdb::protocol::UnixSocketConnection connection({"/tmp/ral.socket", std::allocator<char>()});
+	blazingdb::protocol::Server server(connection);
+
+	server.handle(InterpreterService);
+
+	/*blazingdb::protocol::UnixSocketConnection connection("/tmp/socket");
 	blazingdb::protocol::Server server(connection);
 
 	auto controller = [](const blazingdb::protocol::Buffer &requestBuffer)
@@ -394,7 +389,7 @@ int main(void)
 		return blazingdb::protocol::Buffer(data, sizeof(ConnectionResponse));
 	};
 
-	server.handle(controller);
+	server.handle(controller);*/
 
 	//runOriginalTest();
 	//runInterpreterTest();

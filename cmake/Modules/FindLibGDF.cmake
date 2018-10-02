@@ -49,7 +49,7 @@ find_library(LIBGDF_STATIC_LIB NAMES libgdf.a
     DOC "Path to libgdf static library"
 )
 
-if (NOT LIBGDF_LIBS AND NOT LIBGDF_STATIC_LIB)
+if (NOT LIBGDF_STATIC_LIB)
     message(FATAL_ERROR "libgdf includes and libraries NOT found. "
       "Looked for headers in ${LIBGDF_SEARCH_INCLUDE_DIR}, "
       "and for libs in ${LIBGDF_SEARCH_LIB_PATH}")

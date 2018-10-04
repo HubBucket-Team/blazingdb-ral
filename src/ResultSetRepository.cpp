@@ -17,29 +17,33 @@ result_set_repository::~result_set_repository() {
 	//nothing needs to be destroyed
 }
 
-void result_set_repository::add_token(query_token token, connection_id connection){
+void result_set_repository::add_token(query_token_t token, connection_id_t connection){
 	std::lock_guard<std::mutex> guard(this->repo_mutex);
 	blazing_frame temp;
 	this->result_sets[token] = std::make_tuple(false,temp);
 
 	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
-		std::vector<query_token> empty_tokens;
+		std::vector<query_token_t> empty_tokens;
 		this->connection_result_sets[connection] = empty_tokens;
 	}
 
 	this->connection_result_sets[connection].push_back(token);
 }
 
-query_token result_set_repository::register_query(connection_id connection){
-	  std::random_device rd;
-	  std::mt19937 gen(rd());
-	  std::uniform_int_distribution<query_token> dis(
-			  std::numeric_limits<query_token>::min(),
-			  std::numeric_limits<query_token>::max());
+query_token_t result_set_repository::register_query(connection_id_t connection){
+	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
+		throw std::runtime_error{"Connection does not exist"};
+	}
 
-	  query_token token = dis(gen);
-	  this->add_token(token,connection);
-	  return token;
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<query_token_t> dis(
+			std::numeric_limits<query_token_t>::min(),
+			std::numeric_limits<query_token_t>::max());
+
+	query_token_t token = dis(gen);
+	this->add_token(token,connection);
+	return token;
 }
 
 void write_response(blazing_frame frame,response_descriptor response_to_write){
@@ -53,10 +57,11 @@ void write_response(blazing_frame frame,response_descriptor response_to_write){
 	//TODO: pass in query token and connection id so we can remove these form the map
 
 }
-void result_set_repository::update_token(query_token token, blazing_frame frame){
+void result_set_repository::update_token(query_token_t token, blazing_frame frame){
 	if(this->result_sets.find(token) == this->result_sets.end()){
 		throw std::runtime_error{"Token does not exist"};
 	}
+
 	std::lock_guard<std::mutex> guard(this->repo_mutex);
 	this->result_sets[token] = std::make_tuple(true,frame);
 	if(this->requested_responses.find(token) != this->requested_responses.end()){
@@ -64,18 +69,39 @@ void result_set_repository::update_token(query_token token, blazing_frame frame)
 	}
 }
 
-void result_set_repository::remove_all_connection_tokens(connection_id connection){
-	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
-		throw std::runtime_error{"Closing a connectiont that did not exist"};
+//ToDo uuid instead dummy random
+connection_id_t result_set_repository::init_session(){
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<connection_id_t> dis(
+			std::numeric_limits<connection_id_t>::min(),
+			std::numeric_limits<connection_id_t>::max());
+
+	connection_id_t session = dis(gen);
+
+	if(this->connection_result_sets.find(session) != this->connection_result_sets.end()){
+		throw std::runtime_error{"Connection already exists"};
 	}
+
 	std::lock_guard<std::mutex> guard(this->repo_mutex);
-	for(query_token token : this->connection_result_sets[connection]){
+	std::vector<query_token_t> empty_tokens;
+	this->connection_result_sets[session] = empty_tokens;
+	return session;
+}
+
+void result_set_repository::remove_all_connection_tokens(connection_id_t connection){
+	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
+		throw std::runtime_error{"Closing a connection that did not exist"};
+	}
+
+	std::lock_guard<std::mutex> guard(this->repo_mutex);
+	for(query_token_t token : this->connection_result_sets[connection]){
 		this->result_sets.erase(token);
 	}
 	this->connection_result_sets.erase(connection);
 }
 
-void result_set_repository::get_result(query_token token, response_descriptor response_to_write){
+void result_set_repository::get_result(query_token_t token, response_descriptor response_to_write){
 	if(this->result_sets.find(token) == this->result_sets.end()){
 		throw std::runtime_error{"Result set does not exist"};
 	}
@@ -88,6 +114,5 @@ void result_set_repository::get_result(query_token token, response_descriptor re
 			this->requested_responses[token] = response_to_write;
 		}
 	}
-
 }
 

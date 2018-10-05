@@ -1,12 +1,29 @@
-# testing-libgdf
+# blazingdb-ral
+BlazingDB Relational Algebra Interpreter
 
-## ToDo Readme
+# Dependencies
+- C++11 compiler
+- CMake 3.11+
+- LibGDF (branch: binary-operators-draft)
+- FlatBuffers
+- BlazingDB Procotol
+- Google Test
+
+Except for the compiler and CMake, all the dependencies will be downloaded and configured automatically.
 
 # Building
 
 ```bash
 mkdir build
 cd build
+cmake ..
+make -j8
+```
+
+To avoid the libgdf building, make sure to set the LIBGDF_HOME environment variable to wherever you have statically built the libgdf repository in the branch binary-operators-draft. For example:
+
+```bash
+export LIBGDF_HOME="/path/to/libgdf"
 cmake ..
 make -j8
 ```

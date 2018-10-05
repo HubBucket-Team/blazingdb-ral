@@ -631,7 +631,7 @@ query_token_t evaluate_query(
 
 	std::vector<std::string> splitted = StringUtil::split(logicalPlan, '\n');
 
-	blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted); //Use flatbuffers to respond to the user with the token we generated
+	blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
 
 	result_set_repository::get_instance().update_token(token, output_frame);
 

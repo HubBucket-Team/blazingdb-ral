@@ -24,9 +24,9 @@
 using namespace blazingdb::protocol;
 
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
-using FunctionType = result_pair (*)(uint64_t, const uint8_t* buffer);
+using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);
 
-static result_pair closeConnectionService(uint64_t accessToken, const uint8_t* requestPayloadBuffer) {
+static result_pair closeConnectionService(uint64_t accessToken, Buffer&& requestPayloadBuffer) {
   std::cout << "accessToken: " << accessToken << std::endl;
 
   try {
@@ -41,69 +41,73 @@ static result_pair closeConnectionService(uint64_t accessToken, const uint8_t* r
   return std::make_pair(Status_Success, response.getBufferData());
 }
 
-static result_pair getResultService(uint64_t accessToken, const uint8_t* requestPayloadBuffer) {
-   std::cout << "accessToken: " << accessToken << std::endl;
+static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloadBuffer) {
+std::cout << "accessToken: " << accessToken << std::endl;
 
-  interpreter::GetResultRequestMessage requestPayload(requestPayloadBuffer);
-  std::cout << "resultToken: " << requestPayload.getResultToken() << std::endl;
+interpreter::GetResultRequestMessage requestPayload(requestPayloadBuffer.data());
+std::cout << "resultToken: " << requestPayload.getResultToken() << std::endl;
 
-  // remove from repository using accessToken and resultToken
+// remove from repository using accessToken and resultToken
 
-  ZeroMessage response{}; // @todo: GetResultResponseMessage
-  return std::make_pair(Status_Success, response.getBufferData());
+flatbuffers::FlatBufferBuilder builder;
+auto metadata =
+    interpreter::CreateBlazingMetadata(builder, builder.CreateString("OK"),
+                          builder.CreateString("Nothing"), 0.9, 2);
+std::vector<std::string> names{"iron", "man"};
+auto vectorOfNames = builder.CreateVectorOfStrings(names);
+std::vector<flatbuffers::Offset<gdf::gdf_column_handler>> values{
+    gdf::Creategdf_column_handler(builder, 0, 0, 12),
+    gdf::Creategdf_column_handler(builder, 0, 0, 14)};
+auto vectorOfValues = builder.CreateVector(values);
+builder.Finish(CreateGetResultResponse(builder, metadata, vectorOfNames,
+                                      vectorOfValues));
+std::shared_ptr<flatbuffers::DetachedBuffer> payload =
+    std::make_shared<flatbuffers::DetachedBuffer>(builder.Release());
+return std::make_pair(Status_Success, payload);
 }
 
+static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayloadBuffer)   {
+  interpreter::ExecutePlanRequestMessage requestPayload(requestPayloadBuffer.data());
 
-static result_pair executePlanService(uint64_t accessToken, const uint8_t* requestPayloadBuffer)   {
-  interpreter::DMLRequestMessage requestPayload(requestPayloadBuffer);
-
+  // ExecutePlan
   std::cout << "accessToken: " << accessToken << std::endl;
   std::cout << "query: " << requestPayload.getLogicalPlan() << std::endl;
+  std::cout << "tableGroup: " << requestPayload.getTableGroup().name << std::endl;
 
-  query_token_t resultToken;
-
-  try {
-
-	std::vector<std::vector<gdf_column_cpp> > input_tables;
-	std::vector<std::string> table_names;
-	std::vector<std::vector<std::string>> column_names;
-	std::string logicalPlan = requestPayload.getLogicalPlan();
-
-	resultToken = evaluate_query(input_tables, table_names, column_names,
-									logicalPlan, accessToken);
-
-  } catch (std::runtime_error &error) {
-     std::cout << error.what() << std::endl;
-     ResponseErrorMessage errorMessage{ std::string{error.what()} };
-     return std::make_pair(Status_Error, errorMessage.getBufferData());
-  }
-
-  interpreter::DMLResponseMessage responsePayload{resultToken};
+  //uint64_t resultToken = evaluate_query(input_tables, table_names, column_names,
+  //								logicalPlan, accessToken);
+  
+  uint64_t resultToken = 543210L;
+  interpreter::NodeConnectionInformationDTO nodeInfo {
+      .path = "/tmp/ral.socket",
+      .type = interpreter::NodeConnectionType {interpreter::NodeConnectionType_IPC}
+  };
+  interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
   return std::make_pair(Status_Success, responsePayload.getBufferData());
 }
 
 int main(void)
 { 
-	blazingdb::protocol::UnixSocketConnection connection({"/tmp/ral.socket", std::allocator<char>()});
-  	blazingdb::protocol::Server server(connection);
+  blazingdb::protocol::UnixSocketConnection connection({"/tmp/ral.socket", std::allocator<char>()});
+  blazingdb::protocol::Server server(connection);
 
-	std::map<int8_t, FunctionType> services;
-	services.insert(std::make_pair(interpreter::MessageType_ExecutePlan, &executePlanService));
-	services.insert(std::make_pair(interpreter::MessageType_CloseConnection, &closeConnectionService));
-	services.insert(std::make_pair(interpreter::MessageType_GetResult, &getResultService));
-  
-	auto interpreterServices = [&services](const blazingdb::protocol::Buffer &requestPayloadBuffer) -> blazingdb::protocol::Buffer {
-	  RequestMessage request{requestPayloadBuffer.data()};
-	  std::cout << "header: " << (int)request.messageType() << std::endl;
-  
-	  auto result = services[request.messageType()] ( request.accessToken(),  request.getPayloadBuffer() );
-	  ResponseMessage responseObject{result.first, result.second};
-	  auto bufferedData = responseObject.getBufferData();
-	  Buffer buffer{bufferedData->data(),
-					bufferedData->size()};
-	  return buffer;
-	};
-	server.handle(interpreterServices);
+  std::map<int8_t, FunctionType> services;
+  services.insert(std::make_pair(interpreter::MessageType_ExecutePlan, &executePlanService));
+  services.insert(std::make_pair(interpreter::MessageType_CloseConnection, &closeConnectionService));
+  services.insert(std::make_pair(interpreter::MessageType_GetResult, &getResultService));
+
+  auto interpreterServices = [&services](const blazingdb::protocol::Buffer &requestPayloadBuffer) -> blazingdb::protocol::Buffer {
+    RequestMessage request{requestPayloadBuffer.data()};
+    std::cout << "header: " << (int)request.messageType() << std::endl;
+
+    auto result = services[request.messageType()] ( request.accessToken(),  request.getPayloadBuffer() );
+    ResponseMessage responseObject{result.first, result.second};
+    auto bufferedData = responseObject.getBufferData();
+    Buffer buffer{bufferedData->data(),
+                  bufferedData->size()};
+    return buffer;
+  };
+  server.handle(interpreterServices);
 
 	return 0;
 }

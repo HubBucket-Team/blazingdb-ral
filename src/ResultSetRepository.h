@@ -29,16 +29,15 @@ public:
 	}
 
 	query_token_t register_query(connection_id_t connection);
-	void update_token(query_token_t token,blazing_frame frame);
+	void update_token(query_token_t token, blazing_frame frame);
 	connection_id_t init_session();
 	void remove_all_connection_tokens(connection_id_t connection);
-	void get_result(query_token_t token, response_descriptor response_to_write); //this last param is a dummy one that will take the infromation we need
-																	// in order to write out this response back to the requester
+	blazing_frame get_result(connection_id_t connection, query_token_t token);
 
 	result_set_repository(result_set_repository const&)	= delete;
 	void operator=(result_set_repository const&)		= delete;
 private:
-	std::map<query_token_t,std::tuple<bool,blazing_frame> > result_sets;
+	std::map<query_token_t,std::tuple<bool, blazing_frame> > result_sets;
 	std::map<connection_id_t,std::vector<query_token_t> > connection_result_sets;
 
 	void add_token(query_token_t token, connection_id_t connection);

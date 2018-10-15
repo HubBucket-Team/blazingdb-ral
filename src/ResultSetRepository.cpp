@@ -46,7 +46,7 @@ query_token_t result_set_repository::register_query(connection_id_t connection){
 	return token;
 }
 
-void write_response(blazing_frame frame,response_descriptor response_to_write){
+/*void write_response(blazing_frame frame,response_descriptor response_to_write){
 	//TODO: use flatbuffers here to convert the frame to the response message
 	//deregister output since we are going to ipc it
 	for(size_t i = 0; i < frame.get_width(); i++){
@@ -56,7 +56,8 @@ void write_response(blazing_frame frame,response_descriptor response_to_write){
 	//std::lock_guard<std::mutex> guard(this->repo_mutex);
 	//TODO: pass in query token and connection id so we can remove these form the map
 
-}
+}*/
+
 void result_set_repository::update_token(query_token_t token, blazing_frame frame){
 	if(this->result_sets.find(token) == this->result_sets.end()){
 		throw std::runtime_error{"Token does not exist"};
@@ -64,9 +65,9 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 
 	std::lock_guard<std::mutex> guard(this->repo_mutex);
 	this->result_sets[token] = std::make_tuple(true,frame);
-	if(this->requested_responses.find(token) != this->requested_responses.end()){
+	/*if(this->requested_responses.find(token) != this->requested_responses.end()){
 		write_response(std::get<1>(this->result_sets[token]),this->requested_responses[token]);
-	}
+	}*/
 }
 
 //ToDo uuid instead dummy random
@@ -101,7 +102,11 @@ void result_set_repository::remove_all_connection_tokens(connection_id_t connect
 	this->connection_result_sets.erase(connection);
 }
 
-void result_set_repository::get_result(query_token_t token, response_descriptor response_to_write){
+blazing_frame result_set_repository::get_result(connection_id_t connection, query_token_t token){
+	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
+		throw std::runtime_error{"Connection does not exist"};
+	}
+
 	if(this->result_sets.find(token) == this->result_sets.end()){
 		throw std::runtime_error{"Result set does not exist"};
 	}
@@ -109,9 +114,14 @@ void result_set_repository::get_result(query_token_t token, response_descriptor 
 		//scope the lockguard here
 		std::lock_guard<std::mutex> guard(this->repo_mutex);
 		if(std::get<0>(this->result_sets[token])){
-			write_response(std::get<1>(this->result_sets[token]),response_to_write);
-		}else{
-			this->requested_responses[token] = response_to_write;
+			blazing_frame output_frame = std::get<1>(this->result_sets[token]);
+
+			for(size_t i = 0; i < output_frame.get_width(); i++){
+				GDFRefCounter::getInstance()->deregister_column(output_frame.get_column(i).get_gdf_column());
+			}
+			//@todo remove from map
+
+			return output_frame;
 		}
 	}
 }

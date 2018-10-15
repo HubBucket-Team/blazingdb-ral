@@ -16,6 +16,15 @@ gdf_column_cpp::gdf_column_cpp()
     column.null_count = 0;
 }
 
+gdf_column_cpp::gdf_column_cpp(void* _data, gdf_valid_type* _valid, gdf_dtype _dtype, size_t _size, gdf_size_type _null_count)
+{
+    column.data = _data;
+    column.valid = _valid;
+    column.size = _size;
+    column.dtype = _dtype;
+    column.null_count = _null_count;
+}
+
 gdf_column_cpp::gdf_column_cpp(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value)
 {
     create_gdf_column(type, num_values, input_data, width_per_value);

@@ -18,8 +18,10 @@
 #include "ipc/calcite_client.h"
 #include "gdf/gdf.h"
 
+#include <tuple>
 #include <blazingdb/protocol/api.h>
 #include <blazingdb/protocol/interpreter/messages.h>
+#include "ral-message.cuh"
 
 using namespace blazingdb::protocol;
 
@@ -42,28 +44,52 @@ static result_pair closeConnectionService(uint64_t accessToken, Buffer&& request
 }
 
 static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloadBuffer) {
-std::cout << "accessToken: " << accessToken << std::endl;
+  std::cout << "accessToken: " << accessToken << std::endl;
 
-interpreter::GetResultRequestMessage requestPayload(requestPayloadBuffer.data());
-std::cout << "resultToken: " << requestPayload.getResultToken() << std::endl;
+  interpreter::GetResultRequestMessage requestPayload(requestPayloadBuffer.data());
+  std::cout << "resultToken: " << requestPayload.getResultToken() << std::endl;
 
-// remove from repository using accessToken and resultToken
+  // remove from repository using accessToken and resultToken
 
-flatbuffers::FlatBufferBuilder builder;
-auto metadata =
-    interpreter::CreateBlazingMetadata(builder, builder.CreateString("OK"),
-                          builder.CreateString("Nothing"), 0.9, 2);
-std::vector<std::string> names{"iron", "man"};
-auto vectorOfNames = builder.CreateVectorOfStrings(names);
-std::vector<flatbuffers::Offset<gdf::gdf_column_handler>> values{
-    gdf::Creategdf_column_handler(builder, 0, 0, 12),
-    gdf::Creategdf_column_handler(builder, 0, 0, 14)};
-auto vectorOfValues = builder.CreateVector(values);
-builder.Finish(CreateGetResultResponse(builder, metadata, vectorOfNames,
-                                      vectorOfValues));
-std::shared_ptr<flatbuffers::DetachedBuffer> payload =
-    std::make_shared<flatbuffers::DetachedBuffer>(builder.Release());
-return std::make_pair(Status_Success, payload);
+  blazing_frame result = result_set_repository::get_instance().get_result(accessToken, requestPayload.getResultToken());
+
+  flatbuffers::FlatBufferBuilder builder;
+  auto metadata =
+      interpreter::CreateBlazingMetadata(builder, builder.CreateString("OK"),
+                            builder.CreateString("Nothing"), 0.9, 2);
+  std::vector<std::string> names{"iron", "man"};
+  auto vectorOfNames = builder.CreateVectorOfStrings(names);
+  std::vector<flatbuffers::Offset<gdf::gdf_column_handler>> values{
+      gdf::Creategdf_column_handler(builder, 0, 0, 12),
+      gdf::Creategdf_column_handler(builder, 0, 0, 14)};
+  auto vectorOfValues = builder.CreateVector(values);
+  builder.Finish(CreateGetResultResponse(builder, metadata, vectorOfNames,
+                                        vectorOfValues));
+  std::shared_ptr<flatbuffers::DetachedBuffer> payload =
+      std::make_shared<flatbuffers::DetachedBuffer>(builder.Release());
+  return std::make_pair(Status_Success, payload);
+}
+
+std::tuple<std::vector<std::vector<gdf_column_cpp>>, 
+           std::vector<std::string>,
+           std::vector<std::vector<std::string>>> toBlazingDataframe(TableGroupDTO request)
+{
+  std::vector<std::vector<gdf_column_cpp>> input_tables;
+  std::vector<std::string> table_names;
+  std::vector<std::vector<std::string>> column_names;
+
+  for(auto table : request.tables) {
+    table_names.push_back(table.name);
+    column_names.push_back(table.columnNames);
+
+    std::vector<gdf_column_cpp> input_table;
+    for(auto column : table.columns) {
+      input_table.push_back(gdf_column_cpp((void*)column.data, (gdf_valid_type*)column.valid, (::gdf_dtype)column.dtype, (size_t)column.size, (gdf_size_type)column.null_count));
+    }
+    input_tables.push_back(input_table);
+  }
+
+  return std::make_tuple(input_tables, table_names, column_names);
 }
 
 static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayloadBuffer)   {
@@ -74,10 +100,12 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
   std::cout << "query: " << requestPayload.getLogicalPlan() << std::endl;
   std::cout << "tableGroup: " << requestPayload.getTableGroup().name << std::endl;
 
-  //uint64_t resultToken = evaluate_query(input_tables, table_names, column_names,
-  //								logicalPlan, accessToken);
+  std::tuple<std::vector<std::vector<gdf_column_cpp>>, std::vector<std::string>, std::vector<std::vector<std::string>>> request = toBlazingDataframe(requestPayload.getTableGroup());
+
+  uint64_t resultToken = evaluate_query(std::get<0>(request), std::get<1>(request), std::get<2>(request),
+                                        requestPayload.getLogicalPlan(), accessToken);
   
-  uint64_t resultToken = 543210L;
+  //uint64_t resultToken = 543210L;
   interpreter::NodeConnectionInformationDTO nodeInfo {
       .path = "/tmp/ral.socket",
       .type = interpreter::NodeConnectionType {interpreter::NodeConnectionType_IPC}

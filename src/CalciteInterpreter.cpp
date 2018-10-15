@@ -464,7 +464,7 @@ size_t get_table_index(std::vector<std::string> table_names, std::string table_n
 	if(it != table_names.end()){
 		return std::distance(table_names.begin(), it);
 	}else{
-		throw std::invalid_argument( "index does not exists" );
+		throw std::invalid_argument( "table name does not exists" );
 	}
 }
 
@@ -627,13 +627,15 @@ query_token_t evaluate_query(
 		std::string logicalPlan,
 		connection_id_t connection){
 
+	//print_column(input_tables[0][0].get_gdf_column());
+	
 	query_token_t token = result_set_repository::get_instance().register_query(connection); //register the query so we can receive result requests for it
 
 	std::vector<std::string> splitted = StringUtil::split(logicalPlan, '\n');
-
 	blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
-
 	result_set_repository::get_instance().update_token(token, output_frame);
+
+	print_column(output_frame.get_columns()[0][0].get_gdf_column());
 
 	return token;
 

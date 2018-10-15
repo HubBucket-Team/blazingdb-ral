@@ -43,6 +43,27 @@ static result_pair closeConnectionService(uint64_t accessToken, Buffer&& request
   return std::make_pair(Status_Success, response.getBufferData());
 }
 
+/*std::shared_ptr<flatbuffers::DetachedBuffer> toBlazingGetResultResponse(blazing_frame result)
+{
+  flatbuffers::FlatBufferBuilder builder;
+  auto metadata =
+      interpreter::CreateBlazingMetadata(builder, builder.CreateString("OK"),
+                            builder.CreateString("Nothing"), 0.9, 2);
+  std::vector<std::string> names{"iron", "man"};
+  auto vectorOfNames = builder.CreateVectorOfStrings(names);
+  
+  std::vector<flatbuffers::Offset<gdf::gdf_column_handler>> values;
+  for(auto column : result.get_columns()[0]) {
+    gdf::Creategdf_column_handler(builder, column.data(), column.valid(), column.size(), (blazingdb::protocol::gdf::gdf_dtype)column.dtype());
+  }
+
+  auto vectorOfValues = builder.CreateVector(values);
+  builder.Finish(CreateGetResultResponse(builder, metadata, vectorOfNames,
+                                        vectorOfValues));
+  std::shared_ptr<flatbuffers::DetachedBuffer> payload =
+      std::make_shared<flatbuffers::DetachedBuffer>(builder.Release());
+}*/
+
 static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloadBuffer) {
   std::cout << "accessToken: " << accessToken << std::endl;
 
@@ -50,24 +71,8 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
   std::cout << "resultToken: " << requestPayload.getResultToken() << std::endl;
 
   // remove from repository using accessToken and resultToken
-
   blazing_frame result = result_set_repository::get_instance().get_result(accessToken, requestPayload.getResultToken());
-
-  flatbuffers::FlatBufferBuilder builder;
-  auto metadata =
-      interpreter::CreateBlazingMetadata(builder, builder.CreateString("OK"),
-                            builder.CreateString("Nothing"), 0.9, 2);
-  std::vector<std::string> names{"iron", "man"};
-  auto vectorOfNames = builder.CreateVectorOfStrings(names);
-  std::vector<flatbuffers::Offset<gdf::gdf_column_handler>> values{
-      gdf::Creategdf_column_handler(builder, 0, 0, 12),
-      gdf::Creategdf_column_handler(builder, 0, 0, 14)};
-  auto vectorOfValues = builder.CreateVector(values);
-  builder.Finish(CreateGetResultResponse(builder, metadata, vectorOfNames,
-                                        vectorOfValues));
-  std::shared_ptr<flatbuffers::DetachedBuffer> payload =
-      std::make_shared<flatbuffers::DetachedBuffer>(builder.Release());
-  return std::make_pair(Status_Success, payload);
+  //return std::make_pair(Status_Success, toBlazingGetResultResponse(result));
 }
 
 std::tuple<std::vector<std::vector<gdf_column_cpp>>, 
@@ -92,13 +97,15 @@ std::tuple<std::vector<std::vector<gdf_column_cpp>>,
   return std::make_tuple(input_tables, table_names, column_names);
 }
 
-static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayloadBuffer)   {
-  interpreter::ExecutePlanRequestMessage requestPayload(requestPayloadBuffer.data());
+static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayloadBuffer) {
+  ::RalRequestMessage requestPayload(requestPayloadBuffer.data());
 
   // ExecutePlan
   std::cout << "accessToken: " << accessToken << std::endl;
   std::cout << "query: " << requestPayload.getLogicalPlan() << std::endl;
   std::cout << "tableGroup: " << requestPayload.getTableGroup().name << std::endl;
+  std::cout << "tables: " << requestPayload.getTableGroup().tables.size() << std::endl;
+  std::cout << "tableSize: " << requestPayload.getTableGroup().tables[0].columns[0].size << std::endl;
 
   std::tuple<std::vector<std::vector<gdf_column_cpp>>, std::vector<std::string>, std::vector<std::vector<std::string>>> request = toBlazingDataframe(requestPayload.getTableGroup());
 

@@ -31,9 +31,9 @@ void result_set_repository::add_token(query_token_t token, connection_id_t conne
 }
 
 query_token_t result_set_repository::register_query(connection_id_t connection){
-	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
+	/*if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
 		throw std::runtime_error{"Connection does not exist"};
-	}
+	}*/
 
 	std::random_device rd;
 	std::mt19937 gen(rd());

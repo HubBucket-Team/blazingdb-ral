@@ -638,15 +638,26 @@ query_token_t evaluate_query(
 	print_column(output_frame.get_columns()[0][0].get_gdf_column());
 
 	return token;
+}
 
-	/*
-		size_t cur_count = 0;
-		for(size_t i=0;i<output_frame.get_width();i++){
-			for(size_t j=0;j<output_frame.get_size_column(i);j++){
-				GDFRefCounter::getInstance()->deregister_column(output_frame.get_column(cur_count).get_gdf_column());
-				outputs.push_back(output_frame.get_column(cur_count));
-				cur_count++;
-			}
+gdf_error evaluate_query(
+	std::vector<std::vector<gdf_column_cpp> > input_tables,
+	std::vector<std::string> table_names,
+	std::vector<std::vector<std::string>> column_names,
+	std::string logicalPlan,
+	std::vector<gdf_column_cpp> & outputs){
+
+	std::vector<std::string> splitted = StringUtil::split(logicalPlan, '\n');
+	blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
+
+	size_t cur_count = 0;
+	for(size_t i=0;i<output_frame.get_width();i++){
+		for(size_t j=0;j<output_frame.get_size_column(i);j++){
+			GDFRefCounter::getInstance()->deregister_column(output_frame.get_column(cur_count).get_gdf_column());
+			outputs.push_back(output_frame.get_column(cur_count));
+			cur_count++;
 		}
-	*/
+	}
+
+	return GDF_SUCCESS;
 }

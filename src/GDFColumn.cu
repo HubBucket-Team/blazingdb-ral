@@ -70,12 +70,14 @@ gdf_column* gdf_column_cpp::get_gdf_column()
 
 void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value)
 {
+    assert(type != GDF_invalid);
+
     char * data;
     gdf_valid_type * valid_device;
 
     size_t allocation_size_valid = ((((num_values + 7 ) / 8) + 63 ) / 64) * 64; //so allocations are supposed to be 64byte aligned
 
-    cudaMalloc((void **) &valid_device, allocation_size_valid);	
+    cudaMalloc((void **) &valid_device, allocation_size_valid);
 
     cudaMemset(valid_device, (gdf_valid_type)255, allocation_size_valid); //assume all relevant bits are set to on
 

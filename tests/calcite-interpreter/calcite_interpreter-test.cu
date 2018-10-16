@@ -294,6 +294,7 @@ struct calcite_interpreter_join_TEST : public ::testing::Test {
 TEST_F(calcite_interpreter_join_TEST, processing_join0) {
 
 	{
+		// select *, x +joiner.y from hr.emps inner join hr.joiner on hr.joiner.join_x = hr.emps.x
 		std::string query = "\
 LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$5=[+($0, $4)])\n\
   LogicalJoin(condition=[=($3, $0)], joinType=[inner])\n\
@@ -307,7 +308,7 @@ LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$5=[+($0, $4)])
 	}
 }
 
-TEST_F(calcite_interpreter_join_TEST, processing_join1) {
+/*TEST_F(calcite_interpreter_join_TEST, processing_join1) {
 
 	{
 		std::string query = "\
@@ -322,7 +323,7 @@ LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$5=[+($0, $4)])
 
 		EXPECT_TRUE(err == GDF_SUCCESS);
 	}
-}
+}*/
 
 int main(int argc, char **argv){
 	::testing::InitGoogleTest(&argc, argv);

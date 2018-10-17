@@ -3,7 +3,7 @@
 #     Copyright 2018 Percy Camilo Triveño Aucahuasi <percy@blazingdb.com>
 #=============================================================================
 
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.11)
 project(testing-cmake-libgdf)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -25,6 +25,7 @@ include(ConfigureLibGDF)
 #include(ConfigureArrow)
 include(ConfigureFlatBuffers)
 include(ConfigureGoogleTest)
+include(ConfigureBlazingDBProcotol)
 
 # BEGIN MAIN #
 include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -47,7 +48,7 @@ set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
 )
 
 cuda_add_executable(testing-libgdf ${SRC_FILES})
-target_link_libraries(testing-libgdf ${LIBGDF_STATIC_LIB} ${CUDA_CUDA_LIBRARY} ${CUDA_NVRTC_LIBRARY})
+target_link_libraries(testing-libgdf ${LIBGDF_STATIC_LIB} BlazingDB::Protocol ${CUDA_CUDA_LIBRARY} ${CUDA_NVRTC_LIBRARY} ${CUDA_NVTX_LIBRARY})
 
 # NOTE Each time we build the target testing-libgdf we will compile the flatbuffer schemas
 add_dependencies(testing-libgdf FlatBuffersSchemas)

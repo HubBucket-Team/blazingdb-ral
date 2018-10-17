@@ -1,14 +1,16 @@
 #include <cstdlib>
 #include <iostream>
 #include <vector>
+#include <string>
 
 #include "gtest/gtest.h"
 #include <CalciteExpressionParsing.h>
 #include <CalciteInterpreter.h>
+#include <StringUtil.h>
 #include <DataFrame.h>
 #include <GDFColumn.cuh>
+#include <GDFCounter.cuh>
 #include <Utils.cuh>
-#include "GDFCounter.cuh"
 
 #include <gdf/gdf.h>
 
@@ -18,12 +20,11 @@ public:
 	virtual void SetUp() {}
 
 	void TearDown() {
-		cudaDeviceReset();
+		cudaDeviceReset(); //for cuda-memchecking
 	}
 };
 
-// ToDO Update tests
-/*struct calcite_interpreter_TEST : public ::testing::Test {
+struct calcite_interpreter_TEST : public ::testing::Test {
 
 	void SetUp(){
 
@@ -46,6 +47,10 @@ public:
 		inputs[1].create_gdf_column(GDF_INT8, num_values, (void *) input2, 1);
 		inputs[2].create_gdf_column(GDF_INT8, num_values, (void *) input3, 1);
 
+		/*print_column(inputs[0].get_gdf_column());
+		print_column(inputs[1].get_gdf_column());
+		print_column(inputs[2].get_gdf_column());*/
+
 		input_tables.push_back(inputs); //columns for emps
 		input_tables.push_back(inputs); //columns for sales
 	}
@@ -53,7 +58,7 @@ public:
 	void TearDown(){
 
 		for(int i = 0; i < outputs.size(); i++){
-			//print_column(outputs[i].get_gdf_column());
+			print_column<int8_t>(outputs[i].get_gdf_column());
 
 			// Releasing allocated memory, here we are responsible for that
 			GDFRefCounter::getInstance()->free_if_deregistered(outputs[i].get_gdf_column());
@@ -67,6 +72,7 @@ public:
 		cudaMemcpy(device_output, out_col.data(), out_col.size() * WIDTH_PER_VALUE, cudaMemcpyDeviceToHost);
 
 		for(int i = 0; i < out_col.size(); i++){
+			//std::cout<<(int)host_output[i]<<" =?= "<<(int)device_output[i]<<std::endl<<std::flush;
 			EXPECT_TRUE(host_output[i] == device_output[i]);
 		}
 	}
@@ -86,10 +92,8 @@ public:
 	std::vector<std::vector<gdf_column_cpp> > input_tables;
 	std::vector<std::string> table_names={"hr.emps", "hr.sales"};
 	std::vector<std::vector<std::string>> column_names={{"x", "y", "z"},{"a", "b", "x"}};
-	void * temp_space;
 
 	std::vector<gdf_column_cpp> outputs;
-	std::vector<std::string> output_column_names;
 
 	const int WIDTH_PER_VALUE = 1;
 };
@@ -102,7 +106,7 @@ LogicalProject(x=[$0], y=[$1], z=[$2])\n\
   EnumerableTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
-			query, outputs, output_column_names, temp_space);
+			query, outputs);
 		EXPECT_TRUE(err == GDF_SUCCESS);
 		EXPECT_TRUE(outputs.size() == 3);
 
@@ -120,7 +124,7 @@ LogicalProject(x=[$0])\n\
   EnumerableTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
-			query, outputs, output_column_names, temp_space);
+			query, outputs);
 		EXPECT_TRUE(err == GDF_SUCCESS);
 		EXPECT_TRUE(outputs.size() == 1);
 
@@ -135,10 +139,9 @@ TEST_F(calcite_interpreter_TEST, processing_project2) {
 LogicalProject(EXPR$0=[>($2, 5)])\n\
   EnumerableTableScan(table=[[hr, emps]])";
 
-		//TODO: I commneted this out becuase the test does very little and the signature changed
-		//gdf_error err = evaluate_query(input_tables, table_names, column_names,
-		//	query, outputs, output_column_names, temp_space);
-		//EXPECT_TRUE(err == GDF_SUCCESS);
+		gdf_error err = evaluate_query(input_tables, table_names, column_names,
+			query, outputs);
+		EXPECT_TRUE(err == GDF_SUCCESS);
 		EXPECT_TRUE(outputs.size() == 1);
 
 		char * host_output = new char[num_values];
@@ -158,7 +161,7 @@ LogicalProject(a=[$0])\n\
   EnumerableTableScan(table=[[hr, sales]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
-			query, outputs, output_column_names, temp_space);
+			query, outputs);
 		EXPECT_TRUE(err == GDF_SUCCESS);
 		EXPECT_TRUE(outputs.size() == 1);
 
@@ -174,7 +177,7 @@ LogicalProject(EXPR$0=[+($0, $1)], z=[$2])\n\
   EnumerableTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
-			query, outputs, output_column_names, temp_space);
+			query, outputs);
 		EXPECT_TRUE(err == GDF_SUCCESS);
 		EXPECT_TRUE(outputs.size() == 2);
 
@@ -186,35 +189,35 @@ LogicalProject(EXPR$0=[+($0, $1)], z=[$2])\n\
 		Check(outputs[0], host_output);
 		Check(outputs[1], input3);
 	}
-}*/
+}
 
 /*TEST_F(calcite_interpreter_TEST, processing_project5) {
 
-	{   //select x from hr.emps where y = z
+	{   //select z from hr.emps where x = y
 		std::string query = "\
-LogicalProject(x=[$0])\n\
-  LogicalFilter(condition=[=($1, $2)])\n\
+LogicalProject(z=[$2])\n\
+  LogicalFilter(condition=[=($0, $1)])\n\
     EnumerableTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
-			query, outputs, output_column_names, temp_space);
+			query, outputs);
 		EXPECT_TRUE(err == GDF_SUCCESS);
 		EXPECT_TRUE(outputs.size() == 1);
 
-		/*int cur = 0;
+		int cur = 0;
 		char * host_output = new char[num_values];
 		for(int i = 0; i < num_values; i++){
-			if(input2[i] == input3[i]){
-				host_output[cur] = input1[i];
+			if(input1[i] == input2[i]){
+				host_output[cur] = input3[i];
 				cur++;
 			}
 		}
 
-		Check(outputs[0], host_output);/
+		Check(outputs[0], host_output);
 	}
 }*/
 
-/*TEST_F(calcite_interpreter_TEST, processing_project6) {
+TEST_F(calcite_interpreter_TEST, processing_project6) {
 
 	{   //select x - y as S from hr.emps
 		std::string query = "\
@@ -222,7 +225,7 @@ LogicalProject(S=[-($0, $1)])\n\
   EnumerableTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
-			query, outputs, output_column_names, temp_space);
+			query, outputs);
 		EXPECT_TRUE(err == GDF_SUCCESS);
 		EXPECT_TRUE(outputs.size() == 1);
 
@@ -233,7 +236,7 @@ LogicalProject(S=[-($0, $1)])\n\
 
 		Check(outputs[0], host_output);
 	}
-}*/
+}
 
 int main(int argc, char **argv){
 	::testing::InitGoogleTest(&argc, argv);

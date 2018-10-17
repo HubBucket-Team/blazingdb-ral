@@ -1,9 +1,8 @@
 #pragma once
 
 #include <cuda_runtime.h>
-#include <blazingdb/protocol/messages.h>
-
-using namespace libgdf;
+#include <blazingdb/protocol/message/messages.h>
+#include <blazingdb/protocol/message/interpreter/messages.h>
 
 #define cudaCheckErrors(msg) \
     do { \
@@ -17,140 +16,50 @@ using namespace libgdf;
         } \
     } while (0)
 
-namespace blazingdb {
-namespace protocol {
+namespace libgdf {
 
-static flatbuffers::Offset<flatbuffers::Vector<int8_t>> _BuildCudaIpcMemHandler (flatbuffers::FlatBufferBuilder &builder, void *data) {
-  flatbuffers::Offset<flatbuffers::Vector<int8_t>> offsets;
+static std::basic_string<int8_t> BuildCudaIpcMemHandler (void *data) {
   cudaIpcMemHandle_t ipc_memhandle;
   cudaIpcGetMemHandle( &ipc_memhandle, (void*)data );
-  cudaCheckErrors("IPC handle fail");
+  cudaCheckErrors("Build IPC handle fail");
 
-  int8_t* bytes = new int8_t[sizeof(cudaIpcMemHandle_t)];
-  memcpy(bytes, (int8_t*)(&ipc_memhandle), sizeof(cudaIpcMemHandle_t));
-
-  return builder.CreateVector(bytes, sizeof(cudaIpcMemHandle_t));
+  std::basic_string<int8_t> bytes;
+  bytes.resize(sizeof(cudaIpcMemHandle_t));
+  memcpy((void*)bytes.data(), (int8_t*)(&ipc_memhandle), sizeof(cudaIpcMemHandle_t));
+  return bytes;
 }
 
-static void* _CudaIpcMemHandlerFrom (const gdf::cudaIpcMemHandle_t *handler) {
+static void* CudaIpcMemHandlerFrom (const std::basic_string<int8_t>& handler) {
   void * response = nullptr;
   cudaIpcMemHandle_t ipc_memhandle;
 
-  auto bytes = handler->reserved();
-  memcpy((int8_t*)&ipc_memhandle, bytes->data(), sizeof(ipc_memhandle));
+  memcpy((int8_t*)&ipc_memhandle, handler.data(), sizeof(ipc_memhandle));
   cudaIpcOpenMemHandle((void **)&response, ipc_memhandle, cudaIpcMemLazyEnablePeerAccess);
-  cudaCheckErrors("IPC handle fail");
+  cudaCheckErrors("From IPC handle fail");
 
   return response;
 }
 
+std::tuple<std::vector<std::vector<gdf_column_cpp>>,
+           std::vector<std::string>,
+           std::vector<std::vector<std::string>>> toBlazingDataframe(const ::blazingdb::protocol::TableGroupDTO& request)
+{
+  std::vector<std::vector<gdf_column_cpp>> input_tables;
+  std::vector<std::string> table_names;
+  std::vector<std::vector<std::string>> column_names;
 
-static TableGroupDTO _TableGroupDTOFrom(const blazingdb::protocol::TableGroup * tableGroup) {
-  std::string name = std::string{tableGroup->name()->c_str()};
-  std::vector<BlazingTableDTO> tables;
+  for(auto table : request.tables) {
+    table_names.push_back(table.name);
+    column_names.push_back(table.columnNames);
 
-  auto rawTables = tableGroup->tables();
-  for (const auto& table : *rawTables) {
-    std::vector<::libgdf::gdf_column>  columns;
-    std::vector<std::string>  columnNames;
-
-    for (const auto& c : *table->columns()){
-      ::libgdf::gdf_column column = {
-          .data = _CudaIpcMemHandlerFrom(c->data()),
-          .valid = (unsigned char *)_CudaIpcMemHandlerFrom(c->valid()),
-          .size = c->size(),
-          .dtype = (libgdf::gdf_dtype)c->dtype(),
-          .null_count = c->null_count(),
-          .dtype_info = libgdf::gdf_dtype_extra_info {
-             .time_unit = (libgdf::gdf_time_unit) c->dtype_info()->time_unit()
-          },
-      };
-      columns.push_back(column);
+    std::vector<gdf_column_cpp> input_table;
+    for(auto column : table.columns) {
+      input_table.push_back(gdf_column_cpp(libgdf::CudaIpcMemHandlerFrom(column.data), (gdf_valid_type*)libgdf::CudaIpcMemHandlerFrom(column.valid), (::gdf_dtype)column.dtype, (size_t)column.size, (gdf_size_type)column.null_count));
     }
-
-    tables.push_back(BlazingTableDTO{
-        .name = std::string{table->name()->c_str()},
-        .columns = columns,
-        .columnNames = columnNames,
-    });
+    input_tables.push_back(input_table);
   }
 
-  return TableGroupDTO {
-    .tables = tables,
-    .name = name,
-  };
+  return std::make_tuple(input_tables, table_names, column_names);
 }
 
-static flatbuffers::Offset<TableGroup> _BuildTableGroup(flatbuffers::FlatBufferBuilder &builder,
-                                                       const TableGroupDTO &tableGroup) {
-  auto tableNameOffset = builder.CreateString(tableGroup.name);
-  std::vector<flatbuffers::Offset<BlazingTable>> tablesOffset;
-
-  auto _createColumns = [] (flatbuffers::FlatBufferBuilder &builder, std::vector<::libgdf::gdf_column> &columns) -> std::vector<flatbuffers::Offset<gdf::gdf_column_handler>> {
-    std::vector<flatbuffers::Offset<gdf::gdf_column_handler>> offsets;
-    for (auto & c: columns) {
-      auto dtype_extra_info = gdf::Creategdf_dtype_extra_info (builder, (gdf::gdf_time_unit)c.dtype_info.time_unit );
-      auto data_offset = gdf::CreatecudaIpcMemHandle_t(builder, _BuildCudaIpcMemHandler (builder, c.data) );
-      auto valid_offset = gdf::CreatecudaIpcMemHandle_t(builder, _BuildCudaIpcMemHandler(builder, c.valid) );
-      auto column_offset = ::blazingdb::protocol::gdf::Creategdf_column_handler(builder, data_offset, valid_offset, c.size, (gdf::gdf_dtype)c.dtype, dtype_extra_info);
-      offsets.push_back(column_offset);
-    }
-    return offsets;
-  };
-  auto _createColumnNames  = [] (flatbuffers::FlatBufferBuilder &builder, std::vector<std::string> &columnNames) -> std::vector<flatbuffers::Offset<flatbuffers::String>> {
-    std::vector<flatbuffers::Offset<flatbuffers::String>> offsets;
-    for (auto & name: columnNames) {
-      offsets.push_back( builder.CreateString(name.data()));
-    }
-    return offsets;
-  };
-  for (auto table : tableGroup.tables) {
-    auto columns = _createColumns(builder, table.columns);
-    auto columnNames = _createColumnNames(builder, table.columnNames);
-    tablesOffset.push_back( CreateBlazingTable(builder, builder.CreateString(table.name), builder.CreateVector(columns), builder.CreateVector(columnNames)));
-  }
-
-  auto tables = builder.CreateVector(tablesOffset);
-  return CreateTableGroup(builder, tables, tableNameOffset);
-}
- 
-
-class RalRequestMessage  : public IMessage {
-public:
-
-  RalRequestMessage(const std::string &logicalPlan, const  ::blazingdb::protocol::TableGroupDTO &tableGroup)
-      : IMessage(), logicalPlan{logicalPlan}, tableGroup{tableGroup}
-  {
-
-  }
-  RalRequestMessage (const uint8_t* buffer)
-      : IMessage()
-  {
-    auto pointer = flatbuffers::GetRoot<blazingdb::protocol::interpreter::DMLRequest>(buffer);
-    logicalPlan = std::string{pointer->logicalPlan()->c_str()};
-    tableGroup =  _TableGroupDTOFrom(pointer->tableGroup());
-  }
-
-  std::shared_ptr<flatbuffers::DetachedBuffer> getBufferData( ) const override  {
-    flatbuffers::FlatBufferBuilder builder;
-    auto logicalPlan_offset = builder.CreateString(logicalPlan);
-    auto tableGroupOffset = _BuildTableGroup(builder, tableGroup);
-    builder.Finish(interpreter::CreateDMLRequest(builder, logicalPlan_offset, tableGroupOffset));
-    return std::make_shared<flatbuffers::DetachedBuffer>(builder.Release());
-  }
-
-  std::string getLogicalPlan() {
-    return logicalPlan;
-  }
-
-  ::blazingdb::protocol::TableGroupDTO getTableGroup() {
-    return tableGroup;
-  }
-
-private:
-  std::string logicalPlan;
-  ::blazingdb::protocol::TableGroupDTO tableGroup;
-};
-
-}
-}
+} //namespace libgdf

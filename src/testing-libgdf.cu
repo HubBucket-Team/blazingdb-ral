@@ -20,7 +20,8 @@
 
 #include <tuple>
 #include <blazingdb/protocol/api.h>
-#include <blazingdb/protocol/interpreter/messages.h>
+#include <blazingdb/protocol/message/messages.h>
+#include <blazingdb/protocol/message/interpreter/messages.h>
 #include "ral-message.cuh"
 
 using namespace blazingdb::protocol;
@@ -43,76 +44,70 @@ static result_pair closeConnectionService(uint64_t accessToken, Buffer&& request
   return std::make_pair(Status_Success, response.getBufferData());
 }
 
-/*std::shared_ptr<flatbuffers::DetachedBuffer> toBlazingGetResultResponse(blazing_frame result)
-{
-  flatbuffers::FlatBufferBuilder builder;
-  auto metadata =
-      interpreter::CreateBlazingMetadata(builder, builder.CreateString("OK"),
-                            builder.CreateString("Nothing"), 0.9, 2);
-  std::vector<std::string> names{"iron", "man"};
-  auto vectorOfNames = builder.CreateVectorOfStrings(names);
-  
-  std::vector<flatbuffers::Offset<gdf::gdf_column_handler>> values;
-  for(auto column : result.get_columns()[0]) {
-    gdf::Creategdf_column_handler(builder, column.data(), column.valid(), column.size(), (blazingdb::protocol::gdf::gdf_dtype)column.dtype());
-  }
-
-  auto vectorOfValues = builder.CreateVector(values);
-  builder.Finish(CreateGetResultResponse(builder, metadata, vectorOfNames,
-                                        vectorOfValues));
-  std::shared_ptr<flatbuffers::DetachedBuffer> payload =
-      std::make_shared<flatbuffers::DetachedBuffer>(builder.Release());
-}*/
-
 static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloadBuffer) {
   std::cout << "accessToken: " << accessToken << std::endl;
 
-  interpreter::GetResultRequestMessage requestPayload(requestPayloadBuffer.data());
-  std::cout << "resultToken: " << requestPayload.getResultToken() << std::endl;
+  interpreter::GetResultRequestMessage request(requestPayloadBuffer.data());
+  std::cout << "resultToken: " << request.getResultToken() << std::endl;
+
+  interpreter::BlazingMetadataDTO  metadata = {
+    .status = "OK",
+    .message = "metadata message",
+    .time = 0.1f,
+    .rows = 1
+  }; 
+  std::vector<std::string> fieldNames = {"id", "age"};
 
   // remove from repository using accessToken and resultToken
-  blazing_frame result = result_set_repository::get_instance().get_result(accessToken, requestPayload.getResultToken());
-  //return std::make_pair(Status_Success, toBlazingGetResultResponse(result));
-}
+  blazing_frame result = result_set_repository::get_instance().get_result(accessToken, request.getResultToken());
 
-std::tuple<std::vector<std::vector<gdf_column_cpp>>, 
-           std::vector<std::string>,
-           std::vector<std::vector<std::string>>> toBlazingDataframe(TableGroupDTO request)
-{
-  std::vector<std::vector<gdf_column_cpp>> input_tables;
-  std::vector<std::string> table_names;
-  std::vector<std::vector<std::string>> column_names;
+  // todo: remove hardcode by creating the resulset vector
+  gdf_column_cpp column = result.get_columns()[0][0];
 
-  for(auto table : request.tables) {
-    table_names.push_back(table.name);
-    column_names.push_back(table.columnNames);
-
-    std::vector<gdf_column_cpp> input_table;
-    for(auto column : table.columns) {
-      input_table.push_back(gdf_column_cpp((void*)column.data, (gdf_valid_type*)column.valid, (::gdf_dtype)column.dtype, (size_t)column.size, (gdf_size_type)column.null_count));
+  std::vector<::gdf_dto::gdf_column> values = {
+    ::gdf_dto::gdf_column {
+        .data = libgdf::BuildCudaIpcMemHandler(column.data()),
+        .valid = libgdf::BuildCudaIpcMemHandler(column.valid()),
+        .size = column.size(),
+        .dtype = (gdf_dto::gdf_dtype)column.dtype(),
+        .null_count = column.null_count(),
+        .dtype_info = gdf_dto::gdf_dtype_extra_info {
+          .time_unit = (gdf_dto::gdf_time_unit)0,
+        }
     }
-    input_tables.push_back(input_table);
-  }
+  };
 
-  return std::make_tuple(input_tables, table_names, column_names);
+  interpreter::GetResultResponseMessage responsePayload(metadata, fieldNames, values);
+  return std::make_pair(Status_Success, responsePayload.getBufferData());
 }
 
-static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayloadBuffer) {
-  ::RalRequestMessage requestPayload(requestPayloadBuffer.data());
+static result_pair freeResultService(uint64_t accessToken, Buffer&& requestPayloadBuffer) {
+   std::cout << "freeResultService: " << accessToken << std::endl;
+
+  interpreter::GetResultRequestMessage request(requestPayloadBuffer.data());
+  std::cout << "resultToken: " << request.getResultToken() << std::endl;
+  
+  ZeroMessage response{};
+  return std::make_pair(Status_Success, response.getBufferData());
+}
+
+static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayloadBuffer)   {
+  interpreter::ExecutePlanRequestMessage requestPayload(requestPayloadBuffer.data());
 
   // ExecutePlan
   std::cout << "accessToken: " << accessToken << std::endl;
   std::cout << "query: " << requestPayload.getLogicalPlan() << std::endl;
   std::cout << "tableGroup: " << requestPayload.getTableGroup().name << std::endl;
-  std::cout << "tables: " << requestPayload.getTableGroup().tables.size() << std::endl;
-  std::cout << "tableSize: " << requestPayload.getTableGroup().tables[0].columns[0].size << std::endl;
-
-  std::tuple<std::vector<std::vector<gdf_column_cpp>>, std::vector<std::string>, std::vector<std::vector<std::string>>> request = toBlazingDataframe(requestPayload.getTableGroup());
+ 	std::cout << "tables: " << requestPayload.getTableGroup().tables.size() << std::endl;
+  std::cout << "tableSize: " << requestPayload.getTableGroup().tables.size() << std::endl;
+	std::cout << "FirstColumnSize: "
+			<< requestPayload.getTableGroup().tables[0].columns[0].size
+			<< std::endl;
+  std::tuple<std::vector<std::vector<gdf_column_cpp>>, std::vector<std::string>, std::vector<std::vector<std::string>>> request = libgdf::toBlazingDataframe(requestPayload.getTableGroup());
 
   uint64_t resultToken = evaluate_query(std::get<0>(request), std::get<1>(request), std::get<2>(request),
                                         requestPayload.getLogicalPlan(), accessToken);
   
-  //uint64_t resultToken = 543210L;
   interpreter::NodeConnectionInformationDTO nodeInfo {
       .path = "/tmp/ral.socket",
       .type = interpreter::NodeConnectionType {interpreter::NodeConnectionType_IPC}
@@ -130,6 +125,7 @@ int main(void)
   services.insert(std::make_pair(interpreter::MessageType_ExecutePlan, &executePlanService));
   services.insert(std::make_pair(interpreter::MessageType_CloseConnection, &closeConnectionService));
   services.insert(std::make_pair(interpreter::MessageType_GetResult, &getResultService));
+  services.insert(std::make_pair(interpreter::MessageType_FreeResult, &freeResultService));
 
   auto interpreterServices = [&services](const blazingdb::protocol::Buffer &requestPayloadBuffer) -> blazingdb::protocol::Buffer {
     RequestMessage request{requestPayloadBuffer.data()};
@@ -137,10 +133,7 @@ int main(void)
 
     auto result = services[request.messageType()] ( request.accessToken(),  request.getPayloadBuffer() );
     ResponseMessage responseObject{result.first, result.second};
-    auto bufferedData = responseObject.getBufferData();
-    Buffer buffer{bufferedData->data(),
-                  bufferedData->size()};
-    return buffer;
+    return Buffer{responseObject.getBufferData()};
   };
   server.handle(interpreterServices);
 

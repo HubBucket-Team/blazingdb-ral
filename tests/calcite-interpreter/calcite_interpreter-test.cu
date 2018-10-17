@@ -58,7 +58,7 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 	void TearDown(){
 
 		for(int i = 0; i < outputs.size(); i++){
-			//print_column(outputs[i].get_gdf_column());
+			print_column<int8_t>(outputs[i].get_gdf_column());
 
 			// Releasing allocated memory, here we are responsible for that
 			GDFRefCounter::getInstance()->free_if_deregistered(outputs[i].get_gdf_column());

@@ -16,6 +16,9 @@ class gdf_column_cpp
 {
 	private:
 		gdf_column column;
+		size_t allocated_size_data;
+		size_t allocated_size_valid;
+		bool arrived_via_ipc;
 
 	public:
 
@@ -54,6 +57,8 @@ class gdf_column_cpp
 	gdf_error gdf_column_view(gdf_column *column, void *data, gdf_valid_type *valid, gdf_size_type size, gdf_dtype dtype);
 
 	~gdf_column_cpp();
+
+	gdf_error compact();
 };
 
 #endif /* GDFCOLUMN_H_ */

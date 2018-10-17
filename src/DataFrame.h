@@ -65,7 +65,7 @@ public:
 	}
 	
 	size_t get_width(){
-		return this->columns.size();
+		return get_size_columns();
 	}
 
 	size_t get_size_columns(){

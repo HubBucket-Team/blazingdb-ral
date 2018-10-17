@@ -118,10 +118,8 @@ bool contains_evaluation(std::string expression){
 }
 
 gdf_error process_project(blazing_frame & input, std::string query_part){
-	gdf_column_cpp temp;
 	size_t size = input.get_column(0).size();
 
-	temp.create_gdf_column(GDF_INT64,size,nullptr,8);
 
 	// LogicalProject(x=[$0], y=[$1], z=[$2], e=[$3], join_x=[$4], y0=[$5], EXPR$6=[+($0, $5)])
 	std::string combined_expression = query_part.substr(
@@ -147,6 +145,32 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 	std::vector<gdf_column_cpp> columns(expressions.size());
 	std::vector<std::string> names(expressions.size());
 
+
+	gdf_dtype max_temp_type = GDF_invalid;
+	std::vector<gdf_dtype> output_type_expressions(expressions.size()); //contains output types for columns that are expressions, if they are not expressions we skip over it
+
+	for(int i = 0; i < expressions.size(); i++){ //last not an expression
+		std::string expression = expressions[i].substr(
+				expressions[i].find("=[") + 2 ,
+				(expressions[i].size() - expressions[i].find("=[")) - 3
+		);
+
+		std::string name = expressions[i].substr(
+				0, expressions[i].find("=[")
+		);
+
+		if(contains_evaluation(expression)){
+			gdf_error err = get_output_type_expression(input, &output_type_expressions[i], &max_temp_type, expression);
+			if(err != GDF_SUCCESS){
+				//lets do something some day!!!
+			}
+		}
+	}
+
+	gdf_column_cpp temp;
+	temp.create_gdf_column(max_temp_type,size,nullptr,get_width_dtype(max_temp_type));
+
+
 	for(int i = 0; i < expressions.size(); i++){ //last not an expression
 		std::string expression = expressions[i].substr(
 				expressions[i].find("=[") + 2 ,
@@ -161,7 +185,7 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 			//assumes worst possible case allocation for output
 			//TODO: find a way to know what our output size will be
 			gdf_column_cpp output;
-			output.create_gdf_column(GDF_INT32,size,nullptr,8);
+			output.create_gdf_column(output_type_expressions[i],size,nullptr,get_width_dtype(output_type_expressions[i]));
 
 			gdf_error err = evaluate_expression(
 					input,
@@ -218,6 +242,9 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 }
 
 std::string get_named_expression(std::string query_part, std::string expression_name){
+	if(query_part.find(expression_name + "=[") == query_part.npos){
+		return ""; //expression not found
+	}
 	int start_position =( query_part.find(expression_name + "=["))+ 2 + expression_name.length();
 	int end_position = (query_part.find("]",start_position));
 	return query_part.substr(start_position,end_position - start_position);
@@ -288,6 +315,109 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 	input.add_table(new_columns);
 	return input;
 }
+
+std::vector<size_t> get_group_columns(std::string query_part){
+
+	std::string temp_column_string = get_named_expression(query_part,"group");
+	//now you have somethig like {0, 1}
+	temp_column_string = temp_column_string.substr(1,temp_column_string.length() - 2);
+	std::vector<std::string> column_numbers_string = StringUtil::split(temp_column_string,",");
+	std::vector<size_t> group_columns(column_numbers_string.size());
+	for(int i = 0; i < column_numbers_string;i++){
+		group_columns[i] = std::stoull (column_numbers_string[i],0);
+	}
+	return group_columns;
+}
+
+
+
+gdf_error process_aggregate(blazing_frame & input, std::string query_part){
+/*
+ * 			String sql = "select sum(e), sum(z), x, y from hr.emps group by x , y";
+ * 			generates the following calcite relational algebra
+ * 			LogicalProject(EXPR$0=[$2], EXPR$1=[$3], x=[$0], y=[$1])
+ * 	  	  		LogicalAggregate(group=[{0, 1}], EXPR$0=[SUM($2)], EXPR$1=[SUM($3)])
+ *   				LogicalProject(x=[$0], y=[$1], e=[$3], z=[$2])
+ *     					EnumerableTableScan(table=[[hr, emps]])
+ *
+ * 			As you can see the project following aggregate expects the columns to be grouped by to appear BEFORE the expressions
+ */
+
+
+
+	//get groups
+	std::vector<size_t> group_columns = get_group_columns(query_part);
+
+	//get aggregations
+	std::vector<gdf_agg_op> aggregation_types;
+	std::vector<std::string>  aggregation_input_expressions;
+
+	bool expressionFound = true;
+
+	size_t expression_index = 0;
+	while(expressionFound){
+
+		std::string expression = get_named_expression(query_part,"EXPR$" + std::to_string(expression_index));
+
+		if("" == expression){
+			expressionFound = false;
+		}else{
+			aggregation_types.push_back(get_aggregation_op(expression));
+			aggregation_input_expressions.push_back(get_string_between_outer_parentheses(expression));
+		}
+
+		expression_index++;
+	}
+
+	gdf_column_cpp temp;
+	size_t size = input.get_column(0).size();
+
+//initialize temp space if we will use it, dont if we wont
+	for(int i = 0; i < aggregation_types.size(); i++){
+		if(contains_evaluation(expression)){
+			temp.create_gdf_column(GDF_INT64,size,nullptr,8);
+			break;
+		}
+	}
+	for(int i = 0; i < aggregation_types.size(); i++){
+		std::string expression = aggregation_input_expressions[i];
+		gdf_column_cpp aggregation_input;
+		if(contains_evaluation(expression)){
+
+			//we dont knwo what the size of this input will be so allcoate max size
+			aggregation_input.create_gdf_column(GDF_INT64,size,nullptr,8);
+
+			gdf_error err = evaluate_expression(
+					input,
+					expression,
+					aggregation_input,
+					temp);
+
+			columns[i] = output;
+
+			if(err != GDF_SUCCESS){
+				//TODO: clean up everything here so we dont run out of memory
+				return err;
+			}
+		}else{
+			aggregation_input = inputs[get_index(expression)];
+		}
+
+		gdf_column
+		//perform aggregation now
+
+		//catpure asize for next iteration
+
+	}
+
+	//TODO: this is pretty crappy because its recalcluating the groups each time, this is becuase the libgdf api can
+	//only process one aggregate at a time while it calculates the group,
+	//these steps would have to be divided up in order to really work
+
+	//TODO: consider compacting columns here before moving on
+
+}
+
 
 gdf_error process_sort(blazing_frame & input, std::string query_part){
 
@@ -395,9 +525,23 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 	size_t size = input.get_column(0).size();
 
 	stencil.create_gdf_column(GDF_INT8,input.get_column(0).size(),nullptr,1);
-	temp.create_gdf_column(GDF_INT64,input.get_column(0).size(),nullptr,8);
 
-	gdf_error err = evaluate_expression(
+	gdf_dtype output_type_junk; //just gets thrown away
+	gdf_dtype max_temp_type = GDF_INT8;
+	for(int i = 0; i < input.get_width(); i++){
+		if(get_width_dtype(input.get_column(i).dtype()) > get_width_dtype(max_temp_type)){
+			max_temp_type = input.get_column(i).dtype();
+		}
+	}
+	gdf_error err = get_output_type_expression(input, &output_type, &max_temp_type, get_condition_expression(query_part));
+	if(err != GDF_SUCCESS){
+		//panic then do wonderful things here to fix everything
+		//im really liking Andrescus talk on control flow blah blah something i forget his name
+	}
+
+	temp.create_gdf_column(max_temp_type,input.get_column(0).size(),nullptr,get_width_dtype(max_temp_type));
+
+	err = evaluate_expression(
 			input,
 			get_condition_expression(query_part),
 			stencil,
@@ -433,7 +577,13 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 			get_column_byte_width(input.get_column(i).get_gdf_column(), &width);
 			empty.create_gdf_column(input.get_column(i).dtype(),0,nullptr,width);
 
-			input.get_column(i).realloc_gdf_column(input.get_column(i).dtype(),temp.size(),width);
+			//
+			if(input.get_column(i).is_ipc()){
+				//make a copy
+			}else{
+				input.get_column(i).realloc_gdf_column(input.get_column(i).dtype(),temp.size(),width);
+
+			}
 
 			gdf_error err = gpu_concat(temp.get_gdf_column(), empty.get_gdf_column(), input.get_column(i).get_gdf_column());
 
@@ -571,7 +721,7 @@ blazing_frame evaluate_split_query(
 			gdf_error err = process_project(child_frame,query[0]);
 			return child_frame;
 		}else if(is_aggregate(query[0])){
-			//gdf_error err = process_aggregate(child_frame,query[0]);
+			gdf_error err = process_aggregate(child_frame,query[0]);
 			return child_frame;
 		}else if(is_sort(query[0])){
 			gdf_error err = process_sort(child_frame,query[0]);
@@ -616,13 +766,11 @@ gdf_error evaluate_query(
 	std::vector<std::string> splitted = StringUtil::split(logicalPlan, '\n');
 	blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
 
-	size_t cur_count = 0;
 	for(size_t i=0;i<output_frame.get_width();i++){
-		for(size_t j=0;j<output_frame.get_size_column(i);j++){
-			GDFRefCounter::getInstance()->deregister_column(output_frame.get_column(cur_count).get_gdf_column());
+
+			GDFRefCounter::getInstance()->deregister_column(output_frame.get_column(i).get_gdf_column());
 			outputs.push_back(output_frame.get_column(cur_count));
-			cur_count++;
-		}
+
 	}
 
 	return GDF_SUCCESS;

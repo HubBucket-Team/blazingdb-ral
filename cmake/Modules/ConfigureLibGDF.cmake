@@ -26,7 +26,7 @@ macro(CONFIGURE_GPU_LIBGDF_EXTERNAL_PROJECT)
     endif()
 
     execute_process(
-        COMMAND ${CMAKE_COMMAND} --build .
+        COMMAND ${CMAKE_COMMAND} --build . -- -j8
         RESULT_VARIABLE result
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-download/
     )

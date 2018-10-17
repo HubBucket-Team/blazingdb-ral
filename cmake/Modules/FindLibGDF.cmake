@@ -37,22 +37,19 @@ find_path(LIBGDF_INCLUDE_DIR gdf.h
     DOC "Path to libgdf headers"
 )
 
-find_library(LIBGDF_LIBS NAMES gdf
-    PATHS ${LIBGDF_SEARCH_LIB_PATH}
-    NO_DEFAULT_PATH
-    DOC "Path to libgdf library"
-)
-
-# TODO percy uncomment this when libgdf can be built as static lib too
-#find_library(LIBGDF_STATIC_LIB NAMES libgdf.a
+#find_library(LIBGDF_LIBS NAMES gdf
 #    PATHS ${LIBGDF_SEARCH_LIB_PATH}
 #    NO_DEFAULT_PATH
-#    DOC "Path to libgdf static library"
+#    DOC "Path to libgdf library"
 #)
 
-# TODO percy uncomment this when libgdf can be built as static lib too
-#if (NOT LIBGDF_LIBS OR NOT LIBGDF_STATIC_LIB)
-if (NOT LIBGDF_LIBS)
+find_library(LIBGDF_STATIC_LIB NAMES libgdf.a
+    PATHS ${LIBGDF_SEARCH_LIB_PATH}
+    NO_DEFAULT_PATH
+    DOC "Path to libgdf static library"
+)
+
+if (NOT LIBGDF_STATIC_LIB)
     message(FATAL_ERROR "libgdf includes and libraries NOT found. "
       "Looked for headers in ${LIBGDF_SEARCH_INCLUDE_DIR}, "
       "and for libs in ${LIBGDF_SEARCH_LIB_PATH}")

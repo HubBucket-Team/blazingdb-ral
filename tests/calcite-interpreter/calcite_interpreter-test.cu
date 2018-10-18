@@ -307,7 +307,7 @@ LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$5=[+($0, $4)])
     EnumerableTableScan(table=[[hr, joiner]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
-			query, outputs, output_column_names, temp_space);
+			query, outputs);
 
 		EXPECT_TRUE(err == GDF_SUCCESS);
 	}
@@ -324,7 +324,7 @@ LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$5=[+($0, $4)])
       EnumerableTableScan(table=[[hr, joiner]]) ";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
-			query, outputs, output_column_names, temp_space);
+			query, outputs);
 
 		EXPECT_TRUE(err == GDF_SUCCESS);
 	}

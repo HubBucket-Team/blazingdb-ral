@@ -20,10 +20,22 @@ cmake ..
 make -j8
 ```
 
-To avoid the libgdf building, make sure to set the LIBGDF_HOME environment variable to wherever you have statically built the libgdf repository in the branch binary-operators-draft. For example:
+To avoid the libgdf building, make sure to set the LIBGDF_HOME environment variable to wherever you have statically built the libgdf repository in the branch binary-operators-draft. 
 
+To build LIBGDF statically:
+```bash
+cmake -DCMAKE_BUILD_TYPE=Release -DLIBGDF_STATIC_LIB=ON ..
+```
+
+Then, build the RAL with:
 ```bash
 export LIBGDF_HOME="/path/to/libgdf"
 cmake ..
+make -j8
+```
+
+or with:
+```bash
+LIBGDF_HOME="/path/to/libgdf" cmake ..
 make -j8
 ```

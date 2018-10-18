@@ -18,7 +18,7 @@ class gdf_column_cpp
 		gdf_column column;
 		size_t allocated_size_data;
 		size_t allocated_size_valid;
-		bool arrived_via_ipc;
+
 
 	public:
 
@@ -35,6 +35,7 @@ class gdf_column_cpp
     gdf_dtype_extra_info dtype_info();
 
 	void set_dtype(gdf_dtype dtype);
+	bool is_ipc();
 
 	gdf_column_cpp();
 

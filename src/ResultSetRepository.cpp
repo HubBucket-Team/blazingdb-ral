@@ -31,7 +31,7 @@ void result_set_repository::add_token(query_token_t token, connection_id_t conne
 }
 
 query_token_t result_set_repository::register_query(connection_id_t connection){
-	/*if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
+	/*enable this when sessions works! if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
 		throw std::runtime_error{"Connection does not exist"};
 	}*/
 
@@ -61,6 +61,11 @@ query_token_t result_set_repository::register_query(connection_id_t connection){
 void result_set_repository::update_token(query_token_t token, blazing_frame frame){
 	if(this->result_sets.find(token) == this->result_sets.end()){
 		throw std::runtime_error{"Token does not exist"};
+	}
+
+	//deregister output since we are going to ipc it
+	for(size_t i = 0; i < frame.get_width(); i++){
+		GDFRefCounter::getInstance()->deregister_column(frame.get_column(i).get_gdf_column());
 	}
 
 	std::lock_guard<std::mutex> guard(this->repo_mutex);

@@ -38,6 +38,7 @@ class GDFRefCounter
 
 		size_t get_map_size();
 
+		bool contains_column(void * ptr);
 		static GDFRefCounter* getInstance();
 };
 

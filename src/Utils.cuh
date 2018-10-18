@@ -9,6 +9,7 @@
 #include <thrust/iterator/constant_iterator.h>
 #include <thrust/iterator/discard_iterator.h>
 
+
 template <typename HostDataType>
 void print_column(gdf_column * column){
 

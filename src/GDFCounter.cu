@@ -76,6 +76,13 @@ void GDFRefCounter::decrement(gdf_column* col_ptr)
     }
 }
 
+bool GDFRefCounter::contains_column(void * ptr){
+	if(this->map.find(ptr) == this->map.end()){
+		return false;
+	}
+	return true;
+}
+
 GDFRefCounter::GDFRefCounter()
 {
 

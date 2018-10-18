@@ -16,7 +16,7 @@ gdf_column_cpp::gdf_column_cpp()
     column.null_count = 0;
     this->allocated_size_data = 0;
     this->allocated_size_valid = 0;
-    this->arrived_via_ipc = false;
+
 }
 
 gdf_column_cpp::gdf_column_cpp(void* _data, gdf_valid_type* _valid, gdf_dtype _dtype, size_t _size, gdf_size_type _null_count)
@@ -30,13 +30,13 @@ gdf_column_cpp::gdf_column_cpp(void* _data, gdf_valid_type* _valid, gdf_dtype _d
     get_column_byte_width(this,&byte_width);
     this->allocated_size_data = size * byte_width;
     this->allocated_size_valid = (((((this->size()+ 7 ) / 8) + 63 ) / 64) * 64);
-    this->arrived_via_ipc = false;
+
 }
 
 gdf_column_cpp::gdf_column_cpp(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value)
 {
     create_gdf_column(type, num_values, input_data, width_per_value);
-    this->arrived_via_ipc = false;
+
 }
 
 gdf_column_cpp::gdf_column_cpp(const gdf_column_cpp& col)
@@ -49,7 +49,7 @@ gdf_column_cpp::gdf_column_cpp(const gdf_column_cpp& col)
     this->allocated_size_data = col.allocated_size_data;
     this->allocated_size_valid = col.allocated_size_valid;
     GDFRefCounter::getInstance()->increment(const_cast<gdf_column*>(&col.column));
-    this->arrived_via_ipc = col.arrived_via_ipc;
+
 }
 
 gdf_column_cpp::gdf_column_cpp(gdf_column_cpp& col)
@@ -62,7 +62,7 @@ gdf_column_cpp::gdf_column_cpp(gdf_column_cpp& col)
     this->allocated_size_data = col.allocated_size_data;
     this->allocated_size_valid = col.allocated_size_valid;
     GDFRefCounter::getInstance()->increment(const_cast<gdf_column*>(&col.column));
-    this->arrived_via_ipc = col.arrived_via_ipc;
+
 }
 
 void gdf_column_cpp::operator=(const gdf_column_cpp& col)
@@ -75,7 +75,7 @@ void gdf_column_cpp::operator=(const gdf_column_cpp& col)
     this->allocated_size_data = col.allocated_size_data;
     this->allocated_size_valid = col.allocated_size_valid;
     GDFRefCounter::getInstance()->increment(const_cast<gdf_column*>(&col.column));
-    this->arrived_via_ipc = col.arrived_via_ipc;
+
 }
 
 gdf_column* gdf_column_cpp::get_gdf_column()
@@ -118,7 +118,7 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     if(input_data != nullptr){
         cudaMemcpy(data, input_data, num_values * width_per_value, cudaMemcpyHostToDevice);
     }
-    this->arrived_via_ipc = false;
+
 
     GDFRefCounter::getInstance()->register_column(&this->column);
 
@@ -144,7 +144,9 @@ gdf_column_cpp::~gdf_column_cpp()
 {
     GDFRefCounter::getInstance()->decrement(&this->column);
 }
-
+bool gdf_column_cpp::is_ipc(){
+	return GDFRefCounter::getInstance()->contains_column(this->data());
+}
 void* gdf_column_cpp::data(){
     return column.data;
 }

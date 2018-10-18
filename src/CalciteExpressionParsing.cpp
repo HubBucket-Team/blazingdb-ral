@@ -1,7 +1,8 @@
 
 #include "CalciteExpressionParsing.h"
 #include "DataFrame.h"
-
+#include <stack>
+#include "StringUtil.h"
 
 
 bool is_type_signed(gdf_dtype type){
@@ -165,7 +166,7 @@ gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type,
 		if(is_type_float(input_left_type) || is_type_float(input_right_type) ){
 			//the output shoudl be ther largest float type
 			if(is_type_float(input_left_type) && is_type_float(input_right_type) ){
-				return (get_width_type(input_left_type) >= get_width_type(input_right_type)) ? input_left_type : input_right_type;
+				return (get_width_dtype(input_left_type) >= get_width_dtype(input_right_type)) ? input_left_type : input_right_type;
 			}else if(is_type_float(input_left_type)){
 				return input_left_type;
 			}else{
@@ -177,16 +178,16 @@ gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type,
 		//so only things to worry about now are
 		//if both are signed or unsigned, use largest type
 
-		if((is_type_signed(input_left) && is_signed(input_right)) || (!is_type_signed(input_left) && !is_signed(input_right)) ){
-			return (get_width_type(input_left_type) >= get_width_type(input_right_type)) ? input_left_type : input_right_type;
+		if((is_type_signed(input_left_type) && is_type_signed(input_right_type)) || (!is_type_signed(input_left_type) && !is_type_signed(input_right_type)) ){
+			return (get_width_dtype(input_left_type) >= get_width_dtype(input_right_type)) ? input_left_type : input_right_type;
 		}
 
 		//now we know one is signed and the other isnt signed, if signed is larger we can just use signed version, if unsigned is larger we have to use the signed version one step up
 		//e.g. an unsigned int32 requires and int64 to represent all its numbers, unsigned int64 we are just screwed :)
-		if(is_type_signed(input_left)){
+		if(is_type_signed(input_left_type)){
 			//left signed
 			//right unsigned
-			if(get_width_type(input_left_type) > get_width_type(input_right_type)){
+			if(get_width_dtype(input_left_type) > get_width_dtype(input_right_type)){
 				//great the left can represent the right
 				return input_left_type;
 			}else{
@@ -196,7 +197,7 @@ gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type,
 		}else{
 			//right signed
 			//left unsigned
-			if(get_width_type(input_left_type) < get_width_type(input_right_type)){
+			if(get_width_dtype(input_left_type) < get_width_dtype(input_right_type)){
 
 				return input_right_type;
 			}else{
@@ -215,7 +216,7 @@ gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type,
 
 		if(is_type_float(input_left_type) || is_type_float(input_right_type) ){
 			return GDF_FLOAT64;
-		}else if(is_type_signed(input_left)){
+		}else if(is_type_signed(input_left_type)){
 			return GDF_INT64;
 		}else{
 			return GDF_UINT64;
@@ -244,7 +245,7 @@ int64_t get_timestamp_from_string(std::string scalar_string){
 
 }
 
-gdf_scalar get_scalar_from_string(std::string scalar_string, gdf_type type){
+gdf_scalar get_scalar_from_string(std::string scalar_string, gdf_dtype type){
 	/*
 	 * void*    invd;
 int8_t   si08;
@@ -321,7 +322,7 @@ int64_t  tmst;  // GDF_TIMESTAMP
 }
 
 //must pass in temp type as invalid if you are not setting it to something to begin with
-gdf_error get_output_type_expression(blazing_frame & input, gdf_dtype * output_type, gdf_dtype * max_temp_type, std::string expression){
+gdf_error get_output_type_expression(blazing_frame * input, gdf_dtype * output_type, gdf_dtype * max_temp_type, std::string expression){
 	std::string clean_expression = clean_calcite_expression(expression);
 	int position = clean_expression.size();
 	if(*max_temp_type == GDF_invalid){
@@ -355,7 +356,9 @@ gdf_error get_output_type_expression(blazing_frame & input, gdf_dtype * output_t
 						right_operand = left_operand;
 					}
 				}
-				operands.push(get_output_type(left_operand,right_operand,get_operation(token)));
+				gdf_binary_operator operation;
+				gdf_error err = get_operation(token,&operation);
+				operands.push(get_output_type(left_operand,right_operand,operation));
 				if(position > 0 && get_width_dtype(operands.top()) > get_width_dtype(*max_temp_type)){
 					*max_temp_type = operands.top();
 				}
@@ -363,7 +366,7 @@ gdf_error get_output_type_expression(blazing_frame & input, gdf_dtype * output_t
 			if(is_literal(token)){
 				operands.push(GDF_invalid);
 			}else{
-				operands.push(input.get_column(get_index(token)).dtype() );
+				operands.push(input->get_column(get_index(token)).dtype() );
 			}
 
 		}
@@ -391,7 +394,7 @@ gdf_error get_aggregation_operation(std::string operator_string, gdf_agg_op * op
 	}else if(operator_string == "COUNT_DISTINCT"){
 		*operation = GDF_COUNT_DISTINCT;
 	}else{
-		return GDF_UNSUPPORTED_TYPE;
+		return GDF_UNSUPPORTED_DTYPE;
 	}
 	return GDF_SUCCESS;
 }
@@ -483,7 +486,7 @@ std::string clean_calcite_expression(std::string expression){
 }
 
 std::string get_string_between_outer_parentheses(std::string input_string){
-	int start_post, end_pos;
+	int start_pos, end_pos;
 	start_pos = input_string.find("(");
 	end_pos = input_string.rfind(")");
 	if(start_pos == input_string.npos || end_pos == input_string.npos || end_pos < start_pos){

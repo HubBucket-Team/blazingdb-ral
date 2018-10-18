@@ -160,7 +160,7 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 		);
 
 		if(contains_evaluation(expression)){
-			gdf_error err = get_output_type_expression(input, &output_type_expressions[i], &max_temp_type, expression);
+			gdf_error err = get_output_type_expression(&input, &output_type_expressions[i], &max_temp_type, expression);
 			if(err != GDF_SUCCESS){
 				//lets do something some day!!!
 			}
@@ -322,7 +322,7 @@ std::vector<size_t> get_group_columns(std::string query_part){
 	temp_column_string = temp_column_string.substr(1,temp_column_string.length() - 2);
 	std::vector<std::string> column_numbers_string = StringUtil::split(temp_column_string,",");
 	std::vector<size_t> group_columns(column_numbers_string.size());
-	for(int i = 0; i < column_numbers_string;i++){
+	for(int i = 0; i < column_numbers_string.size();i++){
 		group_columns[i] = std::stoull (column_numbers_string[i],0);
 	}
 	return group_columns;
@@ -361,7 +361,9 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		if("" == expression){
 			expressionFound = false;
 		}else{
-			aggregation_types.push_back(get_aggregation_op(expression));
+			gdf_agg_op operation;
+			gdf_error err = get_aggregation_operation(expression,&operation);
+			aggregation_types.push_back(operation);
 			aggregation_input_expressions.push_back(get_string_between_outer_parentheses(expression));
 		}
 
@@ -376,9 +378,9 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 	size_t aggregation_size = size;
 
 	for(int i = 0; i < aggregation_types.size(); i++){
-		if(contains_evaluation(expression)){
+		if(contains_evaluation(aggregation_input_expressions[i])){
 
-			gdf_error err = get_output_type_expression(input, &aggregation_input_types[i], &max_temp_type, expression);
+			gdf_error err = get_output_type_expression(&input, &aggregation_input_types[i], &max_temp_type, aggregation_input_expressions[i]);
 			if(get_width_dtype(max_temp_type) < get_width_dtype(aggregation_input_types[i])){
 				max_temp_type = aggregation_input_types[i];
 				//by doing this we can now use the temp space as where we put our reductions then output our reductions right back into the input
@@ -421,14 +423,12 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 					aggregation_input,
 					temp);
 
-			columns[i] = output;
-
 			if(err != GDF_SUCCESS){
 				//TODO: clean up everything here so we dont run out of memory
 				return err;
 			}
 		}else{
-			aggregation_input = inputs[get_index(expression)];
+			aggregation_input = input.get_column(get_index(expression));
 		}
 
 
@@ -498,10 +498,8 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 				//be just as responsible as all the other times we didn't do anything when we got an error bback!
 			}
 			break;
-		default:
-			//do something specatucular here to deal with this very weird situation
 
-		};
+		}
 
 		/*
 		 * GDF_SUM = 0,
@@ -670,7 +668,8 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 			max_temp_type = input.get_column(i).dtype();
 		}
 	}
-	gdf_error err = get_output_type_expression(input, &output_type, &max_temp_type, get_condition_expression(query_part));
+	gdf_dtype output_type; // this is junk since we know the output types here
+	gdf_error err = get_output_type_expression(&input, &output_type, &max_temp_type, get_condition_expression(query_part));
 	if(err != GDF_SUCCESS){
 		//panic then do wonderful things here to fix everything
 		//im really liking Andrescus talk on control flow blah blah something i forget his name
@@ -887,8 +886,8 @@ query_token_t evaluate_query(
 
 	query_token_t token = result_set_repository::get_instance().register_query(connection); //register the query so we can receive result requests for it
 
-	std::thread t = std::thread([&result_set_repository,logicalPlan, &input_tables, table_names, column_names,token]{
-		std::vector<std::string> splitted = StringUtil::split(logicalPlan, '\n');
+	std::thread t = std::thread([&handles,logicalPlan, &input_tables, table_names, column_names,token]{
+		std::vector<std::string> splitted = StringUtil::split(logicalPlan, "\n");
 		blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
 		result_set_repository::get_instance().update_token(token, output_frame);
 
@@ -917,7 +916,7 @@ gdf_error evaluate_query(
 	for(size_t i=0;i<output_frame.get_width();i++){
 
 		GDFRefCounter::getInstance()->deregister_column(output_frame.get_column(i).get_gdf_column());
-		outputs.push_back(output_frame.get_column(cur_count));
+		outputs.push_back(output_frame.get_column(i));
 
 	}
 

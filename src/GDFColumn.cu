@@ -27,15 +27,15 @@ gdf_column_cpp::gdf_column_cpp(void* _data, gdf_valid_type* _valid, gdf_dtype _d
     column.dtype = _dtype;
     column.null_count = _null_count;
     int byte_width;
-    get_column_byte_width(this,&byte_width);
-    this->allocated_size_data = size * byte_width;
-    this->allocated_size_valid = (((((this->size()+ 7 ) / 8) + 63 ) / 64) * 64);
+    get_column_byte_width(&column,&byte_width);
+    this->allocated_size_data = _size * byte_width;
+    this->allocated_size_valid = (((((_size+ 7 ) / 8) + 63 ) / 64) * 64);
 
 }
 
 gdf_column_cpp::gdf_column_cpp(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value)
 {
-    create_gdf_column(type, num_values, input_data, width_per_value);
+    this->create_gdf_column(type, num_values, input_data, width_per_value);
 
 }
 
@@ -84,14 +84,14 @@ gdf_column* gdf_column_cpp::get_gdf_column()
 }
 
 //TODO: needs to be implemented for efficiency though not strictly necessary
-void gdf_column_cpp::compact(){
-    if( this->allocation_size_valid != (((((this->size()+ 7 ) / 8) + 63 ) / 64) * 64)){
+gdf_error gdf_column_cpp::compact(){
+    if( this->allocated_size_valid != (((((this->size()+ 7 ) / 8) + 63 ) / 64) * 64)){
     	//compact valid allcoation
 
     }
 
     int byte_width;
-    get_column_byte_width(this,&byte_width);
+    get_column_byte_width(this->get_gdf_column(),&byte_width);
     if(this->allocated_size_data != (this->size() * byte_width)){
     	//compact data allocation
     }
@@ -104,11 +104,11 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     char * data;
     gdf_valid_type * valid_device;
 
-    this->allocation_size_valid = ((((num_values + 7 ) / 8) + 63 ) / 64) * 64; //so allocations are supposed to be 64byte aligned
+    this->allocated_size_valid = ((((num_values + 7 ) / 8) + 63 ) / 64) * 64; //so allocations are supposed to be 64byte aligned
 
-    cudaMalloc((void **) &valid_device, allocation_size_valid);
+    cudaMalloc((void **) &valid_device, allocated_size_valid);
 
-    cudaMemset(valid_device, (gdf_valid_type)255, allocation_size_valid); //assume all relevant bits are set to on
+    cudaMemset(valid_device, (gdf_valid_type)255, allocated_size_valid); //assume all relevant bits are set to on
 
     this->allocated_size_data = width_per_value * num_values;
     cudaMalloc((void **) &data, this->allocated_size_data);
@@ -127,7 +127,7 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
 void gdf_column_cpp::realloc_gdf_column(gdf_dtype type, size_t size, size_t width){
     GDFRefCounter::getInstance()->decrement(&this->column); //decremeting reference, deallocating space
 
-	create_gdf_column(type, size, nullptr, width);
+	this->create_gdf_column(type, size, nullptr, width);
 }
 
 gdf_error gdf_column_cpp::gdf_column_view(gdf_column *column, void *data, gdf_valid_type *valid, gdf_size_type size, gdf_dtype dtype)
@@ -145,7 +145,7 @@ gdf_column_cpp::~gdf_column_cpp()
     GDFRefCounter::getInstance()->decrement(&this->column);
 }
 bool gdf_column_cpp::is_ipc(){
-	return GDFRefCounter::getInstance()->contains_column(this->data());
+	return GDFRefCounter::getInstance()->contains_column(std::make_pair(this->data(),this->valid()));
 }
 void* gdf_column_cpp::data(){
     return column.data;

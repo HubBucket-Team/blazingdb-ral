@@ -38,7 +38,7 @@ public:
 		}
 	}
 
-	void set_column(size_t index, gdf_column_cpp column){
+	void set_column(size_t column_index, gdf_column_cpp column){
 		size_t cur_count = 0;
 		for(int i = 0; i < columns.size(); i++){
 			if(column_index < cur_count + columns[i].size()){

@@ -569,9 +569,9 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 	void** d_cols;
 
 
-	cudaMalloc((void **) &d_cols,sizeof(void*) * num_sort_columns);
+	cudaMalloc((void **) &d_cols,sizeof(void*) * num_sort_columns*64);
 	int * d_types;
-	cudaMalloc((void **)&d_types,sizeof(int) * num_sort_columns);
+	cudaMalloc((void **)&d_types,sizeof(int) * num_sort_columns*64);
 	gdf_column * cols = new gdf_column[num_sort_columns];
 	std::vector<size_t> sort_column_indices(num_sort_columns);
 
@@ -583,18 +583,20 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 				)
 		);
 
+		cols[i] = *input.get_column(sort_column_index).get_gdf_column();
 		//TODO: get ascending or descending but right now thats not being used
+		/*
 		gdf_column_cpp other_column = input.get_column(sort_column_index);
-		cols[i].data = other_column.data();
+		cols[i].data = input.get_column(sort_column_index).data();
 		cols[i].dtype = other_column.dtype();
 		cols[i].dtype_info = other_column.dtype_info();
 		cols[i].null_count = other_column.null_count();
 		cols[i].size = other_column.size();
-		cols[i].valid = other_column.valid();
+		cols[i].valid = other_column.valid();*/
 	}
 
 	size_t * indices;
-	cudaMalloc((void**)&indices,sizeof(size_t) * input.get_column(0).size() + 64);
+	cudaMalloc((void**)&indices,sizeof(size_t) * input.get_column(0).size());
 	gdf_error err = gdf_order_by(
 			input.get_column(0).size(),
 			cols,

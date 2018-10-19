@@ -87,7 +87,7 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 	char * input2;
 	char * input3;
 
-	size_t num_values = 32000;
+	size_t num_values = 32;
 
 	std::vector<std::vector<gdf_column_cpp> > input_tables;
 	std::vector<std::string> table_names={"hr.emps", "hr.sales"};
@@ -235,6 +235,63 @@ LogicalProject(S=[-($0, $1)])\n\
 		}
 
 		Check(outputs[0], host_output);
+	}
+}
+
+TEST_F(calcite_interpreter_TEST, order_by) {
+
+	{
+		//very hacky ik now, its late im just trying to figure out whats up
+
+		int* data = new int[num_values];
+		for(int i = 0; i < num_values; i++){
+			data[i] = num_values - i;
+		}
+		gdf_column_cpp column;
+		column.create_gdf_column(GDF_INT32, num_values, (void *) data, 4);
+
+		print_column<int32_t>(column.get_gdf_column());
+
+/*
+ * gdf_error gdf_order_by(size_t nrows,     //in: # rows
+		       gdf_column* cols, //in: host-side array of gdf_columns
+		       size_t ncols,     //in: # cols
+		       void** d_cols,    //out: pre-allocated device-side array to be filled with gdf_column::data for each column; slicing of gdf_column array (host)
+		       int* d_types,     //out: pre-allocated device-side array to be filled with gdf_colum::dtype for each column; slicing of gdf_column array (host)
+		       size_t* d_indx);  //out: device-side array of re-rdered row indices
+ */
+
+		gdf_column col;
+
+
+		void * col_data;
+		cudaMalloc((void **) &col_data,num_values * sizeof(int32_t));
+		gdf_error err_create = gdf_column_view(&col, col_data, nullptr, num_values, GDF_INT32);
+		void** d_cols;
+		cudaMalloc((void **) &d_cols,sizeof(void*) * 1);
+		int * d_types;
+		cudaMalloc((void **)&d_types,sizeof(int) * 1);
+		gdf_column * cols = new gdf_column[1];
+		cols[0] = col;
+
+//		gdf_column_cpp indices;
+//		indices.create_gdf_column(GDF_UINT64, num_values, nullptr, 8);
+		size_t * indices;
+		cudaMalloc((void**)&indices,sizeof(size_t) * num_values);
+		gdf_error err = gdf_order_by(num_values,
+				cols,
+				1,
+				d_cols,
+				d_types,
+				indices);
+//				(size_t *) indices.data());
+
+		if(err != GDF_SUCCESS){
+			std::cout<<"We had an issue!!!"<<std::endl;
+		}
+
+		EXPECT_TRUE(err == GDF_SUCCESS);
+
 	}
 }
 

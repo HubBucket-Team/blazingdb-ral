@@ -67,7 +67,7 @@ gdf_error process__binary_operation_column_column(
 			gdf_scalar right = get_scalar_from_string(right_operand,inputs.get_column(left_index).dtype());
 
 
-			gdf_error err = gdf_binary_operation_v_s_v(output.get_gdf_column(),&right,inputs.get_column(left_index).get_gdf_column(),operation);
+			gdf_error err = gdf_binary_operation_v_v_s(output.get_gdf_column(),inputs.get_column(left_index).get_gdf_column(),&right,operation);
 			if(err == GDF_SUCCESS){
 				inputs.add_column(temp);
 				operands.push("$" + std::to_string(inputs.get_size_column()-1));

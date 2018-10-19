@@ -110,7 +110,7 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
 
     cudaMemset(valid_device, (gdf_valid_type)255, allocated_size_valid); //assume all relevant bits are set to on
 
-    this->allocated_size_data = width_per_value * num_values;
+    this->allocated_size_data = ((width_per_value * num_values) + 63 /64) * 64;
     cudaMalloc((void **) &data, this->allocated_size_data);
 
     gdf_column_view(&this->column, (void *) data, valid_device, num_values, type);

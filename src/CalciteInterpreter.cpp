@@ -168,7 +168,9 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 	}
 
 	gdf_column_cpp temp;
-	temp.create_gdf_column(max_temp_type,size,nullptr,get_width_dtype(max_temp_type));
+	if(max_temp_type != GDF_invalid){
+		temp.create_gdf_column(max_temp_type,size,nullptr,get_width_dtype(max_temp_type));
+	}
 
 
 	for(int i = 0; i < expressions.size(); i++){ //last not an expression
@@ -556,7 +558,7 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 		       void** d_cols,    //out: pre-allocated device-side array to be filled with gdf_column::data for each column; slicing of gdf_column array (host)
 		       int* d_types,     //out: pre-allocated device-side array to be filled with gdf_colum::dtype for each column; slicing of gdf_column array (host)
 		       size_t* d_indx);*/
-
+	std::cout<<"about to process sort"<<std::endl;
 	std::string combined_expression = query_part.substr(
 			query_part.find("("),
 			(query_part.rfind(")") - query_part.find("(")) - 1
@@ -565,9 +567,11 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 	size_t num_sort_columns = count_string_occurrence(combined_expression,"sort");
 
 	void** d_cols;
-	cudaMalloc(d_cols,sizeof(void*) * input.get_width());
+
+
+	cudaMalloc((void **) &d_cols,sizeof(void*) * num_sort_columns);
 	int * d_types;
-	cudaMalloc(d_cols,sizeof(int) * input.get_width());
+	cudaMalloc((void **)&d_types,sizeof(int) * num_sort_columns);
 	gdf_column * cols = new gdf_column[num_sort_columns];
 	std::vector<size_t> sort_column_indices(num_sort_columns);
 
@@ -590,11 +594,11 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 	}
 
 	size_t * indices;
-	cudaMalloc((void**)&indices,sizeof(size_t) * input.get_column(0).size());
+	cudaMalloc((void**)&indices,sizeof(size_t) * input.get_column(0).size() + 64);
 	gdf_error err = gdf_order_by(
 			input.get_column(0).size(),
 			cols,
-			1, //?
+			num_sort_columns,
 			d_cols,
 			d_types,
 			indices

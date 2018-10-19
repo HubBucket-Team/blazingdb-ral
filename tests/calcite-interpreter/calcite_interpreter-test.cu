@@ -87,7 +87,7 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 	char * input2;
 	char * input3;
 
-	size_t num_values = 32;
+	size_t num_values = 32000;
 
 	std::vector<std::vector<gdf_column_cpp> > input_tables;
 	std::vector<std::string> table_names={"hr.emps", "hr.sales"};
@@ -229,6 +229,31 @@ LogicalProject(S=[-($0, $1)])\n\
 		EXPECT_TRUE(err == GDF_SUCCESS);
 		EXPECT_TRUE(outputs.size() == 1);
 
+		char * host_output = new char[num_values];
+		for(int i = 0; i < num_values; i++){
+			host_output[i] = input1[i] - input2[i];
+		}
+
+		Check(outputs[0], host_output);
+	}
+}
+
+TEST_F(calcite_interpreter_TEST, processing_sort) {
+
+	{   //select x - y as S from hr.emps
+		std::string query = "LogicalSort(sort0=[$0], dir0=[ASC])\n\
+  LogicalProject(x=[$0])\n\
+    EnumerableTableScan(table=[[hr, emps]])";
+		std::cout<<"about to evalute"<<std::endl;
+		gdf_error err = evaluate_query(input_tables, table_names, column_names,
+			query, outputs);
+		std::cout<<"evaluated"<<std::endl;
+		EXPECT_TRUE(err == GDF_SUCCESS);
+		EXPECT_TRUE(outputs.size() == 1);
+
+		for(int i = 0; i < outputs.size(); i++){
+			print_column<int8_t>(outputs[i].get_gdf_column());
+		}
 		char * host_output = new char[num_values];
 		for(int i = 0; i < num_values; i++){
 			host_output[i] = input1[i] - input2[i];

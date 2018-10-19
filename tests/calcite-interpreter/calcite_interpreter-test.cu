@@ -87,7 +87,7 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 	char * input2;
 	char * input3;
 
-	size_t num_values = 32;
+	size_t num_values = 32*32*32;
 
 	std::vector<std::vector<gdf_column_cpp> > input_tables;
 	std::vector<std::string> table_names={"hr.emps", "hr.sales"};
@@ -247,10 +247,6 @@ TEST_F(calcite_interpreter_TEST, order_by) {
 		for(int i = 0; i < num_values; i++){
 			data[i] = num_values - i;
 		}
-		gdf_column_cpp column;
-		column.create_gdf_column(GDF_INT32, num_values, (void *) data, 4);
-
-		print_column<int32_t>(column.get_gdf_column());
 
 /*
  * gdf_error gdf_order_by(size_t nrows,     //in: # rows
@@ -261,23 +257,25 @@ TEST_F(calcite_interpreter_TEST, order_by) {
 		       size_t* d_indx);  //out: device-side array of re-rdered row indices
  */
 
+		 // thrust::device_vector<void*> d_cols(1, nullptr);
+		 // thrust::device_vector<int>   d_types(1, 0);
+
+
 		gdf_column col;
 
 
 		void * col_data;
-		cudaMalloc((void **) &col_data,num_values * sizeof(int32_t));
+		cudaMalloc(&col_data,num_values * sizeof(int32_t));
 		gdf_error err_create = gdf_column_view(&col, col_data, nullptr, num_values, GDF_INT32);
-		void** d_cols;
-		cudaMalloc((void **) &d_cols,sizeof(void*) * 1);
+		void ** d_cols;
+		cudaMalloc( &d_cols,sizeof(void*) * 1);
 		int * d_types;
-		cudaMalloc((void **)&d_types,sizeof(int) * 1);
+		cudaMalloc(&d_types,sizeof(int) * 1);
 		gdf_column * cols = new gdf_column[1];
 		cols[0] = col;
-
-//		gdf_column_cpp indices;
-//		indices.create_gdf_column(GDF_UINT64, num_values, nullptr, 8);
+		std::cout<<"yes this one!"<<std::endl;
 		size_t * indices;
-		cudaMalloc((void**)&indices,sizeof(size_t) * num_values);
+		cudaMalloc(&indices,sizeof(size_t) * num_values);
 		gdf_error err = gdf_order_by(num_values,
 				cols,
 				1,
@@ -289,12 +287,18 @@ TEST_F(calcite_interpreter_TEST, order_by) {
 		if(err != GDF_SUCCESS){
 			std::cout<<"We had an issue!!!"<<std::endl;
 		}
+		cudaFree(d_cols);
+		cudaFree(col_data);
+		cudaFree(d_types);
+//		gdf_column indices_col;
+//		gdf_column_view(&indices_col, indices, nullptr, num_values, GDF_UINT64);
 
+		//print_column(indices_col);
 		EXPECT_TRUE(err == GDF_SUCCESS);
 
 	}
 }
-
+/*
 TEST_F(calcite_interpreter_TEST, processing_sort) {
 
 	{   //select x - y as S from hr.emps
@@ -318,7 +322,7 @@ TEST_F(calcite_interpreter_TEST, processing_sort) {
 
 		Check(outputs[0], host_output);
 	}
-}
+}*/
 
 struct calcite_interpreter_join_TEST : public ::testing::Test {
 

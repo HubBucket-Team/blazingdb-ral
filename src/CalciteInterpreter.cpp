@@ -568,10 +568,12 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 
 	void** d_cols;
 
+	std::vector<gdf_column_cpp> output_columns;
 
-	cudaMalloc((void **) &d_cols,sizeof(void*) * num_sort_columns*64);
+
+	cudaMalloc((void **) &d_cols,sizeof(void*) * num_sort_columns);
 	int * d_types;
-	cudaMalloc((void **)&d_types,sizeof(int) * num_sort_columns*64);
+	cudaMalloc((void **)&d_types,sizeof(int) * num_sort_columns);
 	gdf_column * cols = new gdf_column[num_sort_columns];
 	std::vector<size_t> sort_column_indices(num_sort_columns);
 
@@ -595,15 +597,17 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 		cols[i].valid = other_column.valid();*/
 	}
 
-	size_t * indices;
-	cudaMalloc((void**)&indices,sizeof(size_t) * input.get_column(0).size());
+	gdf_column_cpp indices;
+	indices.create_gdf_column(GDF_UINT64,input.get_column(0).size(),nullptr,sizeof(size_t));
+
+
 	gdf_error err = gdf_order_by(
 			input.get_column(0).size(),
 			cols,
 			num_sort_columns,
 			d_cols,
 			d_types,
-			indices
+			(size_t *) indices.get_gdf_column()->data
 	);
 
 	cudaFree(d_cols);
@@ -626,11 +630,14 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 	//i dont think we can do that in place since we are writing and reading out of order
 	for(int i = 0; i < input.get_width();i++){
 		temp_output.set_dtype(input.get_column(i).dtype());
-		/*gdf_error err = materialize_column_size_t(
-				input.get_column(i),
-				&temp_output,
-				indices
-		);*/
+
+
+
+		gdf_error err = materialize_column(
+				input.get_column(i).get_gdf_column(),
+				temp_output.get_gdf_column(),
+				indices.get_gdf_column()
+		);
 
 		gdf_column_cpp empty;
 
@@ -643,14 +650,16 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 		gdf_column_cpp new_output;
 		if(input.get_column(i).is_ipc()){
 			new_output.create_gdf_column(input.get_column(i).dtype(), input.get_column(i).size(),nullptr,get_width_dtype(input.get_column(i).dtype()));
+			input.set_column(i,new_output);
 		}else{
 			new_output = input.get_column(i);
 		}
 		err = gpu_concat(temp_output.get_gdf_column(), empty.get_gdf_column(), new_output.get_gdf_column());
+
 		//free_gdf_column(&empty);
 	}
 	//TODO: handle errors
-	cudaFree(indices);
+
 	delete[] cols;
 	//free_gdf_column(&temp_output);
 	return GDF_SUCCESS;

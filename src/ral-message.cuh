@@ -29,14 +29,16 @@ static std::basic_string<int8_t> BuildCudaIpcMemHandler (void *data) {
   return bytes;
 }
 
+
 static void* CudaIpcMemHandlerFrom (const std::basic_string<int8_t>& handler) {
   void * response = nullptr;
-  cudaIpcMemHandle_t ipc_memhandle;
-
-  memcpy((int8_t*)&ipc_memhandle, handler.data(), sizeof(ipc_memhandle));
-  cudaIpcOpenMemHandle((void **)&response, ipc_memhandle, cudaIpcMemLazyEnablePeerAccess);
-  cudaCheckErrors("From IPC handle fail");
-
+  std::cout << "handler-content: " <<  handler.size() <<  std::endl;
+  if (handler.size() == 64) {
+    cudaIpcMemHandle_t ipc_memhandle;
+    memcpy((int8_t*)&ipc_memhandle, handler.data(), sizeof(ipc_memhandle));
+    cudaIpcOpenMemHandle((void **)&response, ipc_memhandle, cudaIpcMemLazyEnablePeerAccess);
+    cudaCheckErrors("From IPC handle fail");       
+  }
   return response;
 }
 

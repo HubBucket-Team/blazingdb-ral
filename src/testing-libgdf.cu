@@ -106,7 +106,7 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
 	  std::vector<void *> handles;
 	std::tuple<std::vector<std::vector<gdf_column_cpp>>, std::vector<std::string>, std::vector<std::vector<std::string>>> request = libgdf::toBlazingDataframe(requestPayload.getTableGroup(),handles);
 
-
+  
   uint64_t resultToken = evaluate_query(std::get<0>(request), std::get<1>(request), std::get<2>(request),
                                         requestPayload.getLogicalPlan(), accessToken,handles);
   

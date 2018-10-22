@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 
@@ -10,13 +11,17 @@ def main():
   parser = argparse.ArgumentParser(description='Generate RAL test data.')
   parser.add_argument('filename', type=str,
                       help='Fixture JSON file name')
+  parser.add_argument('calcite_jar', type=str,
+                      help='Calcite CLI Jar')
+  parser.add_argument('h2_path', type=str,
+                      help='Path with H2 database folder')
   parser.add_argument('-O', '--output', type=str, default='-',
                       help='Output file path or - for stdout')
   args = parser.parse_args()
 
   items = make_items(args.filename)
 
-  plans = make_plans(items)
+  plans = make_plans(items, args.calcite_jar, args.h2_path)
 
   strings_classes = (Φ(item, plan) for item, plan in zip(items, plans))
 
@@ -30,15 +35,19 @@ def make_items(filename):
     return [item_from(dct) for dct in json.load(jsonfile)]
 
 
-def make_plans(items):
-  return (subprocess.check_output(('python',
-                                   'calcite_fake.py',
-                                   item.query,
-                                   item.schema.dbName,
-                                   item.schema.tableName,
-                                   ','.join(item.schema.columnNames),
-                                   ','.join(item.schema.columnTypes)))
-          for item in items)
+def make_plans(items, calcite_jar, h2_path):
+  inputjson = lambda item: re.findall('non optimized\\n(.*)\\n\\noptimized',
+      subprocess.Popen(('java', '-jar', calcite_jar),
+                       cwd=h2_path,
+                       stdin=subprocess.PIPE,
+                       stdout=subprocess.PIPE).communicate(json.dumps({
+                         'columnNames': item.schema.columnNames,
+                         'types': item.schema.columnTypes,
+                         'name': item.schema.tableName,
+                         'dbName': item.schema.dbName,
+                         'query': item.query,
+                       }).encode())[0].decode('utf-8'), re.M|re.S)[0]
+  return (inputjson(item) for item in items)
 
 
 def item_from(dct):
@@ -51,7 +60,7 @@ def Φ(item, plan):
   return ('Item{"%(query)s", "%(plan)s", %(dataTypes)s,'
           ' %(resultTypes)s, %(data)s, %(result)s},') % {
   'query': item.query,
-  'plan': '\\n'.join(line.decode() for line in plan.split(b'\n'))[2:-2],
+  'plan': '\\n'.join(line for line in plan.split('\n')),
   'dataTypes': '{%s}' % ','.join('"%s"' % str(columnType)
                                  for columnType in item.schema.columnTypes),
   'resultTypes': '{%s}' % ','.join('"%s"' % str(resultType)

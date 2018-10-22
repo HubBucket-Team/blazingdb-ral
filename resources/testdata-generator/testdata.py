@@ -5,8 +5,6 @@ import json
 import subprocess
 import sys
 
-from pprint import pprint
-
 
 def main():
   parser = argparse.ArgumentParser(description='Generate RAL test data.')
@@ -16,8 +14,7 @@ def main():
                       help='Output file path or - for stdout')
   args = parser.parse_args()
 
-  with open(args.filename) as jsonfile:
-    items = [item_from(dct) for dct in json.load(jsonfile)]
+  items = make_items(args.filename)
 
   plans = make_plans(items)
 
@@ -25,7 +22,12 @@ def main():
 
   header_text = '\n'.join(strings_classes)
 
-  print(HEADER_DEFINITIONS, header_text)
+  write(header_text).to(args.output)
+
+
+def make_items(filename):
+  with sys.stdin if '-' == filename else open(filename) as jsonfile:
+    return [item_from(dct) for dct in json.load(jsonfile)]
 
 
 def make_plans(items):
@@ -65,6 +67,13 @@ def make_str(collections):
   return ('{%s},' % ','.join('{%s}' % ','.join(('"%s"' % str(value)
                                                 for value in collection))
                              for collection in collections))
+
+
+def write(header_text):
+  def to(filename):
+    with sys.stdout if '-' == filename else open(filename, 'w') as output:
+      output.write('\n'.join((HEADER_DEFINITIONS, header_text, '')))
+  return type('writer', (), dict(to=to))
 
 
 HEADER_DEFINITIONS = '''

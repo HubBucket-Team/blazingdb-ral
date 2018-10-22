@@ -106,10 +106,15 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
 	  std::vector<void *> handles;
 	std::tuple<std::vector<std::vector<gdf_column_cpp>>, std::vector<std::string>, std::vector<std::vector<std::string>>> request = libgdf::toBlazingDataframe(requestPayload.getTableGroup(),handles);
 
-  
-  uint64_t resultToken = evaluate_query(std::get<0>(request), std::get<1>(request), std::get<2>(request),
+  uint64_t resultToken = 0L;
+  try {
+    resultToken = evaluate_query(std::get<0>(request), std::get<1>(request), std::get<2>(request),
                                         requestPayload.getLogicalPlan(), accessToken,handles);
-  
+  } catch (std::exception& error) {
+     std::cout << error.what() << std::endl;
+     ResponseErrorMessage errorMessage{ std::string{error.what()} };
+     return std::make_pair(Status_Error, errorMessage.getBufferData());
+  }
   interpreter::NodeConnectionInformationDTO nodeInfo {
       .path = "/tmp/ral.socket",
       .type = interpreter::NodeConnectionType {interpreter::NodeConnectionType_IPC}

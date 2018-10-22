@@ -901,8 +901,10 @@ query_token_t evaluate_query(
 	query_token_t token = result_set_repository::get_instance().register_query(connection); //register the query so we can receive result requests for it
 
 	// std::thread t = std::thread([&handles,logicalPlan, &input_tables, table_names, column_names,token]{
-		
 		std::vector<std::string> splitted = StringUtil::split(logicalPlan, "\n");
+		if (splitted[splitted.size() - 1].length() == 0) {
+			splitted.erase(splitted.end() -1);
+		}
 		blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
 		result_set_repository::get_instance().update_token(token, output_frame);
 		

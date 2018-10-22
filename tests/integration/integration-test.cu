@@ -26,27 +26,11 @@ public:
 	}
 };
 
-struct RalItem {
-    std::string logicalPlan;
-    std::vector<std::vector<gdf_column_cpp> > input_tables;
-    std::vector<std::string> table_names;
-    std::vector<std::vector<std::string>> column_names;
-    std::vector<gdf_column_cpp> outputs;
-};
-
-RalItem fromItem(Item item)
+// ROMEL 
+// ral_resolution, reference_solution
+void CHECK_RESULTS(std::vector<gdf_column_cpp> ral_solution, std::vector<std::string> reference_solution, std::vector<std::string> resultTypes)
 {
-    RalItem ralItem;
-    //ralItem.input_tables = 
-    ralItem.table_names = std::vector<std::string> ( item.dataTypes.size() );
-    ralItem.column_names = { std::vector<std::string> ( item.dataTypes.size() ) };
-    ralItem.logicalPlan = item.logicalPlan;
-    return ralItem;
-}
-
-void CHECK_RESULTS(std::vector<gdf_column_cpp> outputs, Item referenceOutput)
-{
-    EXPECT_TRUE( outputs.size() == referenceOutput.result.size() );
+    EXPECT_TRUE(ral_solution.size() == reference_solution.size() );
 
     /*for(int I=0; I<column.size(); I++)
     {
@@ -58,27 +42,41 @@ void CHECK_RESULTS(std::vector<gdf_column_cpp> outputs, Item referenceOutput)
     }*/
 }
 
+// ALEX
+ std::vector<std::vector<gdf_column_cpp>> InputTablesFrom(
+    std::vector<std::string> dataTypes, 
+    std::vector<std::vector<std::string> > data) 
+{
+    std::vector<std::vector<gdf_column_cpp>> input_tables;
+    return input_tables;    
+}
 class GeneratedTest : public testing::TestWithParam<Item> {};
 
 TEST_P(GeneratedTest, RalOutputAsExpected) {
-    {
-        std::cout<<GetParam().logicalPlan<<std::endl;
 
-        EXPECT_TRUE(true);
+    std::cout<< GetParam().query << "|" << GetParam().logicalPlan<<std::endl;
 
-        //auto ralItem = fromItem();
+    auto input_tables = InputTablesFrom(GetParam().data, GetParam().dataTypes);
 
-        //gdf_error err = evaluate_query(ralItem.input_tables, ralItem.table_names, ralItem.column_names, ralItem.logicalPlan, ralItem.outputs);
-        //EXPECT_TRUE(err == GDF_SUCCESS);
+    std::vector<gdf_column_cpp> outputs;
+    // @todo: std::vector<std::string> tableNames{GetParam().tableName};
+    std::vector<std::string> tableNames{};
+    std::vector<std::vector<std::string>> columnNames = {};
 
-        //CHECK_RESULTS(outputs, ralItem);
-    }
-}
+    gdf_error err = evaluate_query(input_tables,
+        tableNames,
+        columnNames,
+        GetParam().logicalPlan,
+        outputs);
+    EXPECT_TRUE(err == GDF_SUCCESS);
+    CHECK_RESULTS(outputs, GetParam().result, GetParam().resultTypes);
+
+}i
 
 INSTANTIATE_TEST_CASE_P(
     TestsFromDisk,
     GeneratedTest,
-    testing::ValuesIn( inputSet ) 
+    testing::ValuesIn( inputSet )
 );
 
 int main(int argc, char **argv){

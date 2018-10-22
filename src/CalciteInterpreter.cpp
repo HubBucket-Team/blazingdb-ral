@@ -127,7 +127,7 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 			(query_part.rfind(")") - query_part.find("(")) - 1
 	);
 
-	std::regex pattern ("[\\w$_]+=\\[.*?\\]"); 
+	std::regex pattern ("[\\w$_]+=\\[.*?\\]");
 	std::smatch matcher;
 	std::vector<std::string> expressions;
 

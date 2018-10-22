@@ -48,10 +48,8 @@ def item_from(dct):
 
 
 def Φ(item, plan):
-  return ('Item %(objectName)s'
-          '{"%(query)s", "%(plan)s", %(dataTypes)s,'
-          ' %(resultTypes)s, %(data)s, %(result)s};') % {
-  'objectName': item.objectName,
+  return ('Item{"%(query)s", "%(plan)s", %(dataTypes)s,'
+          ' %(resultTypes)s, %(data)s, %(result)s},') % {
   'query': item.query,
   'plan': '\\n'.join(line.decode() for line in plan.split(b'\n'))[2:-2],
   'dataTypes': '{%s}' % ','.join('"%s"' % str(columnType)
@@ -59,24 +57,26 @@ def Φ(item, plan):
   'resultTypes': '{%s}' % ','.join('"%s"' % str(resultType)
                                    for resultType in item.resultTypes),
   'data': make_str(item.data),
-  'result': make_str(item.result)[:-1]
+  'result': make_str(item.result)
   }
 
 
 def make_str(collections):
   return ('{%s},' % ','.join('{%s}' % ','.join(('"%s"' % str(value)
                                                 for value in collection))
-                             for collection in collections))
+                             for collection in collections))[:-1]
 
 
 def write(header_text):
   def to(filename):
     with sys.stdout if '-' == filename else open(filename, 'w') as output:
-      output.write('\n'.join((HEADER_DEFINITIONS, header_text, '')))
+      output.write(HEADER_DEFINITIONS % header_text)
   return type('writer', (), dict(to=to))
 
 
 HEADER_DEFINITIONS = '''
+#pragma once
+
 #include <string>
 #include <vector>
 
@@ -87,6 +87,10 @@ struct Item {
   std::vector<std::string> resultTypes;
   std::vector<std::vector<std::string> > data;
   std::vector<std::vector<std::string> > result;
+};
+
+std::vector<Item> inputSet{
+%s
 };
 
 '''

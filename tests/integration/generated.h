@@ -4,7 +4,6 @@
 #include <vector>
 
 struct Item {
-<<<<<<< HEAD
     std::string query;
     std::string logicalPlan;
     std::vector<std::string> dataTypes;

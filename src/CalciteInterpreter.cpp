@@ -900,19 +900,22 @@ query_token_t evaluate_query(
 
 	query_token_t token = result_set_repository::get_instance().register_query(connection); //register the query so we can receive result requests for it
 
-	std::thread t = std::thread([&handles,logicalPlan, &input_tables, table_names, column_names,token]{
+	// std::thread t = std::thread([&handles,logicalPlan, &input_tables, table_names, column_names,token]{
+		
 		std::vector<std::string> splitted = StringUtil::split(logicalPlan, "\n");
 		blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
 		result_set_repository::get_instance().update_token(token, output_frame);
-		//
+		
+		//@todo: hablar con felipe sobre cudaIpcCloseMemHandle
 		// for(int i = 0; i < handles.size(); i++){
 			// cudaIpcCloseMemHandle (handles[i]);
 		// }
 		//			std::cout<<"Result\n";
 		//			print_column<int8_t>(output_frame.get_columns()[0][0].get_gdf_column());
-	});;
+	// });;
 
-	t.detach();
+	//@todo: hablar con felipe sobre detach
+	// t.detach();
 
 	return token;
 }

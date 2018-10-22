@@ -597,17 +597,15 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 		cols[i].valid = other_column.valid();*/
 	}
 
-	gdf_column_cpp indices;
-	indices.create_gdf_column(GDF_UINT64,input.get_column(0).size(),nullptr,sizeof(size_t));
-
-
+	size_t * indices;
+	cudaMalloc((void **)&indices,sizeof(size_t) * input.get_column(0).size());
 	gdf_error err = gdf_order_by(
 			input.get_column(0).size(),
 			cols,
 			num_sort_columns,
 			d_cols,
 			d_types,
-			(size_t *) indices.get_gdf_column()->data
+			indices
 	);
 
 	cudaFree(d_cols);
@@ -632,11 +630,12 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 		temp_output.set_dtype(input.get_column(i).dtype());
 
 
+		gdf_column_cpp indices_column((void *)indices,nullptr,GDF_UINT64,input.get_column(i).size(),0);
 
 		gdf_error err = materialize_column(
 				input.get_column(i).get_gdf_column(),
 				temp_output.get_gdf_column(),
-				indices.get_gdf_column()
+				indices_column.get_gdf_column()
 		);
 
 		gdf_column_cpp empty;
@@ -659,7 +658,7 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 		//free_gdf_column(&empty);
 	}
 	//TODO: handle errors
-
+	cudaFree(indices);
 	delete[] cols;
 	//free_gdf_column(&temp_output);
 	return GDF_SUCCESS;

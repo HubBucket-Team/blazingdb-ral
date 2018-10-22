@@ -36,7 +36,7 @@ void print_column(gdf_column * column){
 	for(int i = 0; i < column->size; i++){
 		int col_position = i / GDF_VALID_BITSIZE;
 		int bit_offset = GDF_VALID_BITSIZE - (i % GDF_VALID_BITSIZE);
-		std::cout<<"host_data_out["<<i<<"] = "<<((int)host_data_out[i])<<" valid="<<((host_valid_out[col_position] >> bit_offset ) & 1)<<std::endl;
+		std::cout<<"host_data_out["<<i<<"] = "<<(host_data_out[i])<<" valid="<<((host_valid_out[col_position] >> bit_offset ) & 1)<<std::endl;
 	}
 
 	delete[] host_data_out;

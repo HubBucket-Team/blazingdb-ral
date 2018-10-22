@@ -13,6 +13,7 @@
 #include <Utils.cuh>
 
 #include <gdf/gdf.h>
+#include <sqls_rtti_comp.hpp>
 
 class TestEnvironment : public testing::Environment {
 public:
@@ -82,12 +83,12 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 	gdf_column_cpp third;
 
 	std::vector<gdf_column_cpp> inputs;
-	
+
 	char * input1;
 	char * input2;
 	char * input3;
 
-	size_t num_values = 32*32*32;
+	size_t num_values = 32;
 
 	std::vector<std::vector<gdf_column_cpp> > input_tables;
 	std::vector<std::string> table_names={"hr.emps", "hr.sales"};
@@ -225,7 +226,7 @@ LogicalProject(S=[-($0, $1)])\n\
   EnumerableTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
-			query, outputs);
+				query, outputs);
 		EXPECT_TRUE(err == GDF_SUCCESS);
 		EXPECT_TRUE(outputs.size() == 1);
 
@@ -248,20 +249,52 @@ TEST_F(calcite_interpreter_TEST, order_by) {
 			data[i] = num_values - i;
 		}
 
-/*
- * gdf_error gdf_order_by(size_t nrows,     //in: # rows
-		       gdf_column* cols, //in: host-side array of gdf_columns
-		       size_t ncols,     //in: # cols
-		       void** d_cols,    //out: pre-allocated device-side array to be filled with gdf_column::data for each column; slicing of gdf_column array (host)
-		       int* d_types,     //out: pre-allocated device-side array to be filled with gdf_colum::dtype for each column; slicing of gdf_column array (host)
-		       size_t* d_indx);  //out: device-side array of re-rdered row indices
- */
+		gdf_column_cpp input_column;
+		input_column.create_gdf_column(GDF_INT32,num_values,(void *) data,4);
 
-		 // thrust::device_vector<void*> d_cols(1, nullptr);
-		 // thrust::device_vector<int>   d_types(1, 0);
+		gdf_column_cpp indices_col;
+		indices_col.create_gdf_column(GDF_UINT64,num_values,nullptr,8);
+		print_column<uint64_t>(indices_col.get_gdf_column());
+		gdf_valid_type asc_desc_bitmask = 255;
+		gdf_valid_type* asc_desc_bitmask_dev;
+
+		cudaMalloc((void **) &asc_desc_bitmask_dev,1);
+
+		cudaError_t err2 = cudaMemcpy(asc_desc_bitmask_dev,&asc_desc_bitmask,1,cudaMemcpyHostToDevice);
 
 
-		gdf_column col;
+		 std::vector<gdf_column> v_cols(1);
+		      for(auto i = 0; i < 1; ++i)
+		        {
+		          v_cols[i] = *(input_column.get_gdf_column());
+		        }
+
+		      gdf_column* input_columns = &v_cols[0];
+
+
+		print_column<int32_t>(input_column.get_gdf_column());
+		try{
+			gdf_error err = gdf_order_by_asc_desc(
+					input_columns,
+					1,
+					indices_col.get_gdf_column(),
+					asc_desc_bitmask_dev);
+			EXPECT_TRUE(err == GDF_SUCCESS);
+
+		}catch(std::exception e){
+
+			std::cout<<"We caught an exception running order by!"<<e.what()<<std::endl;
+		}
+
+		print_column<uint64_t>(indices_col.get_gdf_column());
+		delete[] data;
+		cudaFree(asc_desc_bitmask_dev);
+
+		// thrust::device_vector<void*> d_cols(1, nullptr);
+		// thrust::device_vector<int>   d_types(1, 0);
+
+
+		/*gdf_column col;
 
 
 		void * col_data;
@@ -282,7 +315,7 @@ TEST_F(calcite_interpreter_TEST, order_by) {
 				d_cols,
 				d_types,
 				indices);
-//				(size_t *) indices.data());
+		//				(size_t *) indices.data());
 
 		if(err != GDF_SUCCESS){
 			std::cout<<"We had an issue!!!"<<std::endl;
@@ -290,11 +323,11 @@ TEST_F(calcite_interpreter_TEST, order_by) {
 		cudaFree(d_cols);
 		cudaFree(col_data);
 		cudaFree(d_types);
-//		gdf_column indices_col;
-//		gdf_column_view(&indices_col, indices, nullptr, num_values, GDF_UINT64);
+		//		gdf_column indices_col;
+		//		gdf_column_view(&indices_col, indices, nullptr, num_values, GDF_UINT64);
 
 		//print_column(indices_col);
-		EXPECT_TRUE(err == GDF_SUCCESS);
+		EXPECT_TRUE(err == GDF_SUCCESS);*/
 
 	}
 }
@@ -307,7 +340,7 @@ TEST_F(calcite_interpreter_TEST, processing_sort) {
     EnumerableTableScan(table=[[hr, emps]])";
 		std::cout<<"about to evalute"<<std::endl;
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
-			query, outputs);
+				query, outputs);
 		std::cout<<"evaluated"<<std::endl;
 		EXPECT_TRUE(err == GDF_SUCCESS);
 		EXPECT_TRUE(outputs.size() == 1);
@@ -320,10 +353,10 @@ TEST_F(calcite_interpreter_TEST, processing_sort) {
 			host_output[i] = input1[i] - input2[i];
 		}
 
-		Check(outputs[0], host_output);
+		//		Check(outputs[0], host_output);
 	}
-}*/
-
+}
+*/
 struct calcite_interpreter_join_TEST : public ::testing::Test {
 
 	void SetUp(){
@@ -393,7 +426,7 @@ LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$5=[+($0, $4)])
     EnumerableTableScan(table=[[hr, joiner]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
-			query, outputs);
+				query, outputs);
 
 		EXPECT_TRUE(err == GDF_SUCCESS);
 	}

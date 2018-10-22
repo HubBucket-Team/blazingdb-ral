@@ -1,0 +1,37 @@
+[{
+	"objectName": "withMana",
+	"query": "select (manaLevel / 2) from heros",
+	"schema": {
+		"dbName": "marvel",
+		"tableName": "heros",
+		"columnNames": ["heroId", "manaLevel"],
+		"columnTypes": ["gdf_INT32", "gdf_FLOAT"]
+	},
+	"data": [
+		[1, 0.3],
+		[2, 0.2]
+	],
+	"result": [
+		[0.15],
+		[0.1]
+	],
+	"resultTypes": ["gdf_DOUBLE"]
+}, {
+	"objectName": "withPower",
+	"query": "select (heroNumber * power) from heros",
+	"schema": {
+		"dbName": "dc",
+		"tableName": "heros",
+		"columnNames": ["heroNumber", "power"],
+		"columnTypes": ["gdf_DOUBLE", "gdf_INT64"]
+	},
+	"data": [
+		[0.111, 1],
+		[0.222, 2]
+	],
+	"result": [
+		[0.111],
+		[0.444]
+	],
+	"resultTypes": ["gdf_DOUBLE"]
+}]

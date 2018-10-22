@@ -59,14 +59,14 @@ def Φ(item, plan):
   'resultTypes': '{%s}' % ','.join('"%s"' % str(resultType)
                                    for resultType in item.resultTypes),
   'data': make_str(item.data),
-  'result': make_str(item.result)[:-1]
+  'result': make_str(item.result)
   }
 
 
 def make_str(collections):
   return ('{%s},' % ','.join('{%s}' % ','.join(('"%s"' % str(value)
                                                 for value in collection))
-                             for collection in collections))
+                             for collection in collections))[:-1]
 
 
 def write(header_text):

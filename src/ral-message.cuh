@@ -318,7 +318,6 @@ static std::basic_string<int8_t> BuildCudaIpcMemHandler (void *data) {
     cudaIpcMemHandle_t ipc_memhandle;
     CheckCudaErrors(cudaIpcGetMemHandle((cudaIpcMemHandle_t *) &ipc_memhandle, (void *) data));
 
-    std::basic_string<int8_t> bytes;
     bytes.resize(sizeof(cudaIpcMemHandle_t));
     memcpy((void*)bytes.data(), (int8_t*)(&ipc_memhandle), sizeof(cudaIpcMemHandle_t));
   

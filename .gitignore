@@ -57,3 +57,6 @@ Makefile
 cmake_install.cmake
 
 \.vscode/
+
+#generated folders (in source)
+blazingdb-protocol_ep-prefix

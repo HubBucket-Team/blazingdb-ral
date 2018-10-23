@@ -49,6 +49,8 @@ class gdf_column_cpp
 
 	void operator=(const gdf_column_cpp& col);
 
+	gdf_column_cpp clone();
+
 	gdf_column* get_gdf_column();
 
 	void create_gdf_column(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value);

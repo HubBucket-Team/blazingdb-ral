@@ -29,6 +29,7 @@ gdf_column_cpp::gdf_column_cpp(void* _data, gdf_valid_type* _valid, gdf_dtype _d
     int byte_width;
     get_column_byte_width(&column,&byte_width);
     this->allocated_size_data = _size * byte_width;
+    //Todo: To validate valid_size
     this->allocated_size_valid = (((((_size+ 7 ) / 8) + 63 ) / 64) * 64);
 
 }
@@ -63,6 +64,29 @@ gdf_column_cpp::gdf_column_cpp(gdf_column_cpp& col)
     this->allocated_size_valid = col.allocated_size_valid;
     GDFRefCounter::getInstance()->increment(const_cast<gdf_column*>(&col.column));
 
+}
+
+gdf_column_cpp gdf_column_cpp::clone()
+{
+	void* data_dev = nullptr;
+	void* valid_dev = nullptr;
+
+	CheckCudaErrors(cudaMalloc(&data_dev, this->allocated_size_data));
+	CheckCudaErrors(cudaMemcpy(&data_dev, this->column.data, this->allocated_size_data, cudaMemcpyDeviceToDevice));
+
+	print_gdf_column(this->get_gdf_column());
+
+	CheckCudaErrors(cudaMalloc(&valid_dev, this->allocated_size_valid));
+	CheckCudaErrors(cudaMemcpy(&valid_dev, this->column.valid, this->allocated_size_valid, cudaMemcpyDeviceToDevice));
+
+	gdf_column_cpp col1(data_dev,
+						(gdf_valid_type*) valid_dev,
+						this->column.dtype,
+						this->column.size,
+						this->column.null_count);
+
+	print_gdf_column(col1.get_gdf_column());
+	return col1;
 }
 
 void gdf_column_cpp::operator=(const gdf_column_cpp& col)

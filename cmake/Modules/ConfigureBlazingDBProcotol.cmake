@@ -2,7 +2,7 @@ include(ExternalProject)
 
 ExternalProject_Add(blazingdb-protocol_ep
 	CMAKE_ARGS
-		-DCMAKE_BUILD_TYPE=RELEASE
+		-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
 		-DCMAKE_INSTALL_PREFIX=blazingdb-protocol_prefix
 	GIT_REPOSITORY git@github.com:BlazingDB/blazingdb-protocol.git
     GIT_TAG master
@@ -16,7 +16,7 @@ file(MAKE_DIRECTORY ${BLAZINGDB_PROTOCOL_ROOT}/lib)
 
 add_library(BlazingDB::Protocol INTERFACE IMPORTED)
 add_dependencies(BlazingDB::Protocol blazingdb-protocol_ep)
-target_include_directories(BlazingDB::Protocol 
+target_include_directories(BlazingDB::Protocol
     INTERFACE ${BLAZINGDB_PROTOCOL_ROOT}/include)
 target_link_libraries(BlazingDB::Protocol
     INTERFACE ${BLAZINGDB_PROTOCOL_ROOT}/lib/libblazingdb-protocol.a)

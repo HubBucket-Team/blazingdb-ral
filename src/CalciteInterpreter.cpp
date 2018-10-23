@@ -906,6 +906,10 @@ query_token_t evaluate_query(
 			splitted.erase(splitted.end() -1);
 		}
 		blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
+		std::cout<<"Result\n";
+		print_gdf_column(output_frame.get_columns()[0][0].get_gdf_column());
+		std::cout<<"end:Result\n";
+		
 		result_set_repository::get_instance().update_token(token, output_frame);
 		
 		//@todo: hablar con felipe sobre cudaIpcCloseMemHandle

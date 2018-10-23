@@ -16,6 +16,34 @@
 typedef struct blazing_frame{
 
 public:
+	// @todo: constructor copia, operator = 
+	blazing_frame() 
+		: 	columns {}
+	{
+	}
+
+	blazing_frame(const blazing_frame& other) 
+		: 	columns {other.columns}
+	{
+	}
+
+	blazing_frame (blazing_frame&& other) 
+		: columns { std::move (other.columns) }
+	{
+
+	}
+
+	blazing_frame& operator = (const blazing_frame& other) {
+		this->columns = other.columns;
+		return *this;
+	}
+
+	blazing_frame& operator = (blazing_frame&& other) {
+		this->columns = std::move(other.columns);
+		return *this;
+	}
+
+
 	gdf_column_cpp get_column(int column_index){
 		size_t cur_count = 0;
 		for(int i = 0; i < columns.size(); i++){

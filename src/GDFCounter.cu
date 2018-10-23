@@ -40,8 +40,9 @@ void GDFRefCounter::free_if_deregistered(gdf_column* col_ptr)
     if(map.find(map_key)!=map.end()){
         if(map[map_key]==0){
             map.erase(map_key);
-            cudaFree(map_key.first); //data
-            cudaFree(map_key.second); //valid
+            //@todo: memory leak
+            // cudaFree(map_key.first); //data
+            // cudaFree(map_key.second); //valid
         }
     }
 }
@@ -69,8 +70,9 @@ void GDFRefCounter::decrement(gdf_column* col_ptr)
 
             if(map[map_key]==0){
                 map.erase(map_key);
-                cudaFree(map_key.first); //data
-                cudaFree(map_key.second); //valid
+                //@todo: memory leak
+                // cudaFree(map_key.first); //data
+                // cudaFree(map_key.second); //valid
             }
         }
     }

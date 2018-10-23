@@ -4,10 +4,126 @@
 #include <gdf/gdf.h>
 #include <gdf/cffi/functions.h>
 #include <iostream>
+#include <vector>
 #include <thrust/functional.h>
 #include <thrust/execution_policy.h>
 #include <thrust/iterator/constant_iterator.h>
 #include <thrust/iterator/discard_iterator.h>
+
+
+static constexpr int ValidSize = 32;
+using ValidType = uint32_t;
+
+static size_t  valid_size(size_t column_length)
+{
+  const size_t n_ints = (column_length / ValidSize) + ((column_length % ValidSize) ? 1 : 0);
+  return n_ints * sizeof(ValidType);
+}
+
+
+
+static bool get_bit(const gdf_valid_type* const bits, size_t i)
+{
+  return  bits == nullptr? true :  bits[i >> size_t(3)] & (1 << (i & size_t(7)));
+}
+
+
+// Type for a unique_ptr to a gdf_column with a custom deleter
+// Custom deleter is defined at construction
+using gdf_col_pointer = typename std::unique_ptr<gdf_column, 
+                                                 std::function<void(gdf_column*)>>;
+
+template <typename col_type>
+void print_typed_column(col_type * col_data, 
+                        gdf_valid_type * validity_mask, 
+                        const size_t num_rows)
+{
+
+  std::vector<col_type> h_data(num_rows);
+  cudaMemcpy(h_data.data(), col_data, num_rows * sizeof(col_type), cudaMemcpyDeviceToHost);
+
+
+  const size_t num_masks = valid_size(num_rows);
+  std::vector<gdf_valid_type> h_mask(num_masks);
+  if(nullptr != validity_mask)
+  {
+    cudaMemcpy(h_mask.data(), validity_mask, num_masks * sizeof(gdf_valid_type), cudaMemcpyDeviceToHost);
+  }
+  std::cout << "column :\n";
+
+  if (validity_mask == nullptr) {
+    for(size_t i = 0; i < num_rows; ++i)
+    {
+      if (sizeof(col_type) == 1)
+        std::cout << (int)h_data[i] << " ";
+      else
+        std::cout << h_data[i] << " ";
+    }
+  } 
+  else {
+    for(size_t i = 0; i < num_rows; ++i)
+    {
+        std::cout << "(" << std::to_string(h_data[i]) << "|" << get_bit(h_mask.data(), i) << "), ";
+    }
+  }
+  std::cout << std::endl;
+}
+
+static void print_gdf_column(gdf_column const * the_column)
+{
+  const size_t num_rows = the_column->size;
+
+  const gdf_dtype gdf_col_type = the_column->dtype;
+  switch(gdf_col_type)
+  {
+    case GDF_INT8:
+      {
+        using col_type = int8_t;
+        col_type * col_data = static_cast<col_type*>(the_column->data);
+        print_typed_column<col_type>(col_data, the_column->valid, num_rows);
+        break;
+      }
+    case GDF_INT16:
+      {
+        using col_type = int16_t;
+        col_type * col_data = static_cast<col_type*>(the_column->data);
+        print_typed_column<col_type>(col_data, the_column->valid, num_rows);
+        break;
+      }
+    case GDF_INT32:
+      {
+        using col_type = int32_t;
+        col_type * col_data = static_cast<col_type*>(the_column->data);
+        print_typed_column<col_type>(col_data, the_column->valid, num_rows);
+        break;
+      }
+    case GDF_INT64:
+      {
+        using col_type = int64_t;
+        col_type * col_data = static_cast<col_type*>(the_column->data);
+        print_typed_column<col_type>(col_data, the_column->valid, num_rows);
+        break;
+      }
+    case GDF_FLOAT32:
+      {
+        using col_type = float;
+        col_type * col_data = static_cast<col_type*>(the_column->data);
+        print_typed_column<col_type>(col_data, the_column->valid, num_rows);
+        break;
+      }
+    case GDF_FLOAT64:
+      {
+        using col_type = double;
+        col_type * col_data = static_cast<col_type*>(the_column->data);
+        print_typed_column<col_type>(col_data, the_column->valid, num_rows);
+        break;
+      }
+    default:
+      {
+        std::cout << "Attempted to print unsupported type.\n";
+      }
+  }
+}
 
 
 template <typename HostDataType>

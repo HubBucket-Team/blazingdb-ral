@@ -14,6 +14,7 @@
 #include "DataFrame.h"
 #include "Utils.cuh"
 #include "Types.h"
+#include <cuda_runtime.h>
 
 #include "ipc/calcite_client.h"
 #include "gdf/gdf.h"
@@ -63,11 +64,17 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
 
   // todo: remove hardcode by creating the resulset vector
   gdf_column_cpp column = result.get_columns()[0][0];
+	std::cout<<"getResultService\n";
+  print_gdf_column(column.get_gdf_column());
+  std::cout<<"end:getResultService\n";
+
+  auto data = libgdf::BuildCudaIpcMemHandler(column.get_gdf_column()->data);
+  auto valid = libgdf::BuildCudaIpcMemHandler(column.get_gdf_column()->valid);
 
   std::vector<::gdf_dto::gdf_column> values = {
     ::gdf_dto::gdf_column {
-        .data = libgdf::BuildCudaIpcMemHandler(column.data()),
-        .valid = libgdf::BuildCudaIpcMemHandler(column.valid()),
+        .data = data,
+        .valid = valid,
         .size = column.size(),
         .dtype = (gdf_dto::gdf_dtype)column.dtype(),
         .null_count = column.null_count(),
@@ -78,6 +85,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
   };
 
   interpreter::GetResultResponseMessage responsePayload(metadata, fieldNames, values);
+  std::cout << "**before return data frame\n" << std::flush;
   return std::make_pair(Status_Success, responsePayload.getBufferData());
 }
 
@@ -139,7 +147,7 @@ int main(void)
     std::cout << "header: " << (int)request.messageType() << std::endl;
 
     auto result = services[request.messageType()] ( request.accessToken(),  request.getPayloadBuffer() );
-    ResponseMessage responseObject{result.first, result.second};
+    ResponseMessage responseObject{result.first, result.second};    
     return Buffer{responseObject.getBufferData()};
   };
   server.handle(interpreterServices);

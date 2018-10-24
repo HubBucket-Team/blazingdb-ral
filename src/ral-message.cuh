@@ -50,10 +50,10 @@ std::tuple<std::vector<std::vector<gdf_column_cpp>>,
 
     	gdf_column_cpp col = gdf_column_cpp(libgdf::CudaIpcMemHandlerFrom(column.data), (gdf_valid_type*)libgdf::CudaIpcMemHandlerFrom(column.valid), (::gdf_dtype)column.dtype, (size_t)column.size, (gdf_size_type)column.null_count);
 
-    	gdf_column_cpp col1 = col.clone();
+    	// gdf_column_cpp col1 = col.clone();
     	handles.push_back( col.data());
     	handles.push_back((void *) col.valid());
-    	input_table.push_back(col1);
+    	input_table.push_back(col);
     }
     input_tables.push_back(input_table);
   }

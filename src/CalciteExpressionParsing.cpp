@@ -156,7 +156,7 @@ gdf_dtype get_signed_type_from_unsigned(gdf_dtype type){
 gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type, gdf_binary_operator operation){
 
 	//we are only considering binary ops between numbers for now
-	if(!is_numeric_type(input_left_type) || !is_numeric_type(input_left_type)){
+	if(!is_numeric_type(input_left_type) || !is_numeric_type(input_right_type)){
 		return GDF_invalid;
 	}
 

@@ -1,3 +1,5 @@
+#include <type_traits>
+
 #include <gtest/gtest.h>
 
 #include <CalciteInterpreter.h>
@@ -55,6 +57,13 @@ using DTypesTestTypes = ::testing::Types<std::int8_t,
                                          double>;
 TYPED_TEST_CASE(DTypesTest, DTypesTestTypes);
 
+template <class T = void>
+class floating : public std::false_type {};
+template <>
+class floating<float> : public std::true_type {};
+template <>
+class floating<double> : public std::true_type {};
+
 TYPED_TEST(DTypesTest, withGdfDType) {
   const std::size_t num_values = 100;
 
@@ -66,9 +75,11 @@ TYPED_TEST(DTypesTest, withGdfDType) {
     if (i % 2 == 0) {
       input1[i] = 1;
     } else {
-      input1[i] = i;
+      input1[i] =
+        floating<TypeParam>::value ? static_cast<TypeParam>(i) / 1000 : i;
     }
-    input2[i] = i;
+    input2[i] =
+      floating<TypeParam>::value ? static_cast<TypeParam>(i) / 100000 : i;
     input3[i] = 1;
   }
 

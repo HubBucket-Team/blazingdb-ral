@@ -432,6 +432,26 @@ LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$5=[+($0, $4)])
 	}
 }
 
+TEST_F(calcite_interpreter_join_TEST, processing_left) {
+  std::string query = "\
+LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$5=[+($0, $4)])\n\
+  LogicalJoin(condition=[=($3, $0)], joinType=[left])\n\
+    EnumerableTableScan(table=[[hr, emps]])\n\
+    EnumerableTableScan(table=[[hr, joiner]])";
+
+  gdf_error err =
+    evaluate_query(input_tables, table_names, column_names, query, outputs);
+
+  EXPECT_TRUE(err == GDF_SUCCESS);
+  gdf_column_cpp &output = outputs[0];
+  EXPECT_EQ(6, output.size());
+  std::int32_t host[6];
+  cudaMemcpy(
+    host, output.data(), 6 * sizeof(std::int32_t), cudaMemcpyDeviceToHost);
+  std::vector<std::int32_t> expected{1, 2, 3, 2, 1, 1};
+  for (std::size_t i = 0; i < 6; i++) { EXPECT_EQ(expected[i], host[i]); }
+}
+
 /*TEST_F(calcite_interpreter_join_TEST, processing_join1) {
 
 	{

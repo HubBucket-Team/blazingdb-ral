@@ -33,5 +33,6 @@ add_subdirectory(foo-sample)
 add_subdirectory(logical-filter)
 add_subdirectory(calcite-interpreter)
 add_subdirectory(integration)
+add_subdirectory(dtypes)
 
 message(STATUS "******** Tests are ready ********")

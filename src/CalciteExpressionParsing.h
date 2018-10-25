@@ -24,6 +24,8 @@ bool is_digits(const std::string &str);
 
 bool is_operator_token(std::string operand);
 
+bool is_date(const std::string &str);
+
 size_t get_index(std::string operand_string);
 
 std::string clean_calcite_expression(std::string expression);

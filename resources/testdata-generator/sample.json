@@ -1,0 +1,174 @@
+[{
+		"objectName": "test1",
+		"query": "select * from main.emps",
+		"schema": {
+			"dbName": "main",
+			"tableName": "emps",
+			"columnNames": ["id", "age"],
+			"columnTypes": ["GDF_INT8", "GDF_INT8"]
+		},
+		"data": [
+			[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+			[10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+		],
+		"result": [
+			[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+			[10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+		],
+		"resultTypes": ["GDF_INT8", "GDF_INT8"]
+	},
+	{
+		"objectName": "test2",
+		"query": "select id > 3 from main.emps",
+		"schema": {
+			"dbName": "main",
+			"tableName": "emps",
+			"columnNames": ["id", "age"],
+			"columnTypes": ["GDF_INT8", "GDF_INT8"]
+		},
+		"data": [
+			[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+			[10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+		],
+		"result": [
+			[4, 5, 6, 7, 8, 9, 10]
+		],
+		"resultTypes": ["GDF_INT8"]
+	},
+	{
+		"objectName": "test3",
+		"query": "select id from main.emps where age > 30",
+		"schema": {
+			"dbName": "main",
+			"tableName": "emps",
+			"columnNames": ["id", "age"],
+			"columnTypes": ["GDF_INT8", "GDF_INT8"]
+		},
+		"data": [
+			[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+			[10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+		],
+		"result": [
+			[4, 5, 6, 7, 8, 9, 10]
+		],
+		"resultTypes": ["GDF_INT8"]
+	},
+	{
+		"objectName": "test4",
+		"query": "select age + salary from main.emps",
+		"schema": {
+			"dbName": "main",
+			"tableName": "emps",
+			"columnNames": ["id", "age", "salary"],
+			"columnTypes": ["GDF_INT8", "GDF_INT8", "GDF_INT8"]
+		},
+		"data": [
+			[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+			[10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+			[90, 80, 70, 60, 50, 40, 30, 20, 10, 0]
+		],
+		"result": [
+			[100, 100, 100, 100, 100, 100, 100, 100, 100, 100]
+		],
+		"resultTypes": ["GDF_INT8"]
+	},
+	{
+		"objectName": "test5",
+		"query": "select salary from main.emps where age > 80",
+		"schema": {
+			"dbName": "main",
+			"tableName": "emps",
+			"columnNames": ["id", "age", "salary"],
+			"columnTypes": ["GDF_INT8", "GDF_INT8", "GDF_INT8"]
+		},
+		"data": [
+			[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+			[10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+			[90, 80, 70, 60, 50, 40, 30, 20, 10, 0]
+		],
+		"result": [
+			[10, 0]
+		],
+		"resultTypes": ["GDF_INT8"]
+	},
+	{
+		"objectName": "test6",
+		"query": "select * from main.emps where age = 10",
+		"schema": {
+			"dbName": "main",
+			"tableName": "emps",
+			"columnNames": ["id", "age", "salary"],
+			"columnTypes": ["GDF_INT8", "GDF_INT8", "GDF_INT8"]
+		},
+		"data": [
+			[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+			[10, 20, 10, 20, 10, 20, 10, 20, 10, 20],
+			[90, 80, 70, 60, 50, 40, 30, 20, 10, 0]
+		],
+		"result": [
+			[1, 3, 5, 7, 9],
+			[10, 10, 10, 10, 10],
+			[90, 70, 50, 30, 10]
+		],
+		"resultTypes": ["GDF_INT8", "GDF_INT8", "GDF_INT8"]
+	},
+	{
+		"objectName": "test7",
+		"query": "select * from main.emps where age = 10 and salary > 4999",
+		"schema": {
+			"dbName": "main",
+			"tableName": "emps",
+			"columnNames": ["id", "age", "salary"],
+			"columnTypes": ["GDF_INT32", "GDF_INT32", "GDF_INT32"]
+		},
+		"data": [
+			[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+			[10, 20, 10, 20, 10, 20, 10, 20, 10, 20],
+			[9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000, 0]
+		],
+		"result": [
+			[1, 3, 5],
+			[10, 10, 10],
+			[9000, 7000, 5000]
+		],
+		"resultTypes": ["GDF_INT32", "GDF_INT32", "GDF_INT32"]
+	},
+	{
+		"objectName": "test8",
+		"query": "select id + salary from main.emps",
+		"schema": {
+			"dbName": "main",
+			"tableName": "emps",
+			"columnNames": ["id", "age", "salary"],
+			"columnTypes": ["GDF_INT32", "GDF_INT32", "GDF_INT32"]
+		},
+		"data": [
+			[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+			[10, 20, 10, 20, 10, 20, 10, 20, 10, 20],
+			[9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000, 0]
+		],
+		"result": [
+			[9001, 8002, 7003, 6004, 5005, 4006, 3007, 2008, 1009, 10]
+		],
+		"resultTypes": ["GDF_INT32"]
+	},
+	{
+		"objectName": "test9",
+		"query": "select age * salary from main.emps where id < 5 and age = 10",
+		"schema": {
+			"dbName": "main",
+			"tableName": "emps",
+			"columnNames": ["id", "age", "salary"],
+			"columnTypes": ["GDF_INT32", "GDF_INT32", "GDF_INT32"]
+		},
+		"data": [
+			[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+			[10, 20, 10, 20, 10, 20, 10, 20, 10, 20],
+			[9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000, 0]
+		],
+		"result": [
+			[90000, 70000]
+		],
+		"resultTypes": ["GDF_INT32"]
+	}
+]

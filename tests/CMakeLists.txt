@@ -12,7 +12,8 @@ function(configure_test TEST_NAME Tests_SRCS)
 
     cuda_add_executable(${TEST_NAME} ${Tests_SRCS})
 
-    target_link_libraries(${TEST_NAME} gmock_main gmock GTest::GTest ${LIBGDF_STATIC_LIB} ${CUDA_CUDA_LIBRARY} ${CUDA_NVRTC_LIBRARY})
+    # TODO percy do not use libgdf.so here and use gdf (the static lib) instead
+    target_link_libraries(${TEST_NAME} gmock_main gmock GTest::GTest ${LIBGDF_STATIC_LIB} ${CUDA_CUDA_LIBRARY} ${CUDA_NVRTC_LIBRARY} ${CUDA_NVTX_LIBRARY})
     set_target_properties(${TEST_NAME} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/gtests/")
 
@@ -31,5 +32,7 @@ message(STATUS "******** Configuring tests ********")
 add_subdirectory(foo-sample)
 add_subdirectory(logical-filter)
 add_subdirectory(calcite-interpreter)
+add_subdirectory(integration)
+add_subdirectory(dtypes)
 
 message(STATUS "******** Tests are ready ********")

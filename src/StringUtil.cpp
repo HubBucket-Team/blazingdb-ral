@@ -17,6 +17,19 @@ StringUtil::~StringUtil() {
 	// TODO Auto-generated destructor stub
 }
 
+std::string StringUtil::replace(std::string containingString,const std::string toReplace,const std::string replacement)
+{
+
+	std::string::size_type n = 0;
+	while ( ( n = containingString.find( toReplace, n ) ) != std::string::npos )
+	{
+	    containingString.replace( n, toReplace.size(), replacement );
+	    n += replacement.size();
+	}
+
+	return containingString;
+
+}
 std::vector<std::string> StringUtil::split(std::string &s, char delim) {
   std::vector<std::string> elems;
   split(s, delim, elems);

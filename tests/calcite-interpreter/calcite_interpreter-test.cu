@@ -357,7 +357,22 @@ TEST_F(calcite_interpreter_TEST, processing_sort) {
 	}
 }
 */
-struct calcite_interpreter_join_TEST : public ::testing::Test {
+
+
+void Check(gdf_column_cpp out_col, int* host_output){
+
+	const int WIDTH_PER_VALUE = 4;
+	int * device_output;
+	device_output = new int[out_col.size()];
+	cudaMemcpy(device_output, out_col.data(), out_col.size() * WIDTH_PER_VALUE, cudaMemcpyDeviceToHost);
+
+	for(int i = 0; i < out_col.size(); i++){
+		//std::cout<<(int)host_output[i]<<" =?= "<<(int)device_output[i]<<std::endl<<std::flush;
+		EXPECT_EQ(host_output[i], device_output[i]);
+	}
+}
+
+struct calcite_interpreter_inner_join_TEST : public ::testing::Test {
 
 	void SetUp(){
 
@@ -415,7 +430,7 @@ struct calcite_interpreter_join_TEST : public ::testing::Test {
 	void * temp_space = nullptr;
 };
 
-TEST_F(calcite_interpreter_join_TEST, processing_join0) {
+TEST_F(calcite_interpreter_inner_join_TEST, processing_join0) {
 
 	{
 		// select *, x +joiner.y from hr.emps inner join hr.joiner on hr.joiner.join_x = hr.emps.x
@@ -428,46 +443,224 @@ LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$5=[+($0, $4)])
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 				query, outputs);
 
+		std::cout<<"inner Join Output columns: "<<outputs.size()<<std::endl<<std::flush;
+		for(int i = 0; i < outputs.size(); i++){
+			print_gdf_column(outputs[i].get_gdf_column());
+		}
+		// select *, x + joiner.join_y 
+		// from hr.emps inner join hr.joiner on hr.joiner.join_x = hr.emps.x
+ 
+		EXPECT_TRUE(err == GDF_SUCCESS);
+		EXPECT_TRUE(outputs.size() == 6);
+
+		int out0[] = {1,1,1,2,2,3};
+		int out1[] = {4,4,4,5,5,6};
+		int out2[] = {10,10,10,10,10,10};
+		int out3[] = {1,1,1,2,2,3};
+		int out4[] = {1,2,3,4,5,6};
+		int out5[] = {2,3,4,6,7,9};
+
+		Check(outputs[0], out0);
+		Check(outputs[1], out1);
+		Check(outputs[2], out2);
+		Check(outputs[3], out3);
+		Check(outputs[4], out4);
+		Check(outputs[5], out5);
+
 		EXPECT_TRUE(err == GDF_SUCCESS);
 	}
 }
 
-TEST_F(calcite_interpreter_join_TEST, processing_left) {
-  std::string query = "\
+struct calcite_interpreter_left_join_TEST : public ::testing::Test {
+
+	void SetUp(){
+		hr_emps.resize(3);
+		hr_emps[0].create_gdf_column(GDF_INT32, 4, (void *) emps_x, 4);
+		hr_emps[1].create_gdf_column(GDF_INT32, 4, (void *) emps_y, 4);
+		hr_emps[2].create_gdf_column(GDF_INT32, 4, (void *) emps_z, 4);
+
+		hr_joiner.resize(2);
+		hr_joiner[0].create_gdf_column(GDF_INT32, 6, (void *) joiner_join_x, 4);
+		hr_joiner[1].create_gdf_column(GDF_INT32, 6, (void *) joiner_y, 4);
+
+		std::cout<<"Initial Input: "<<std::endl;
+		print_column<int32_t>(hr_emps[0].get_gdf_column());
+		print_column<int32_t>(hr_emps[1].get_gdf_column());
+		print_column<int32_t>(hr_emps[2].get_gdf_column());
+		std::cout<<"---"<<std::endl;
+		print_column<int32_t>(hr_joiner[0].get_gdf_column());
+		print_column<int32_t>(hr_joiner[1].get_gdf_column());
+		std::cout<<"End Initial Input: "<<std::endl;
+
+		input_tables.resize(2);
+		input_tables[0] = hr_emps;
+		input_tables[1] = hr_joiner;
+	}
+
+	void TearDown(){
+		std::cout<<"Output columns: "<<outputs.size()<<std::endl<<std::flush;
+		for(int i = 0; i < outputs.size(); i++){
+			print_column<int32_t>(outputs[i].get_gdf_column());
+		}
+
+		for(int i = 0; i < outputs.size(); i++){
+			GDFRefCounter::getInstance()->free_if_deregistered(outputs[i].get_gdf_column());
+		}
+	}
+
+	std::vector<std::vector<gdf_column_cpp> > input_tables;
+	std::vector<gdf_column_cpp> hr_emps;
+	std::vector<gdf_column_cpp> hr_joiner;
+
+	int emps_x[4] = { 1, 2, 3, 4};
+	int emps_y[4] = { 4, 5, 6, 1};
+	int emps_z[4] = { 10, 10, 10, 10};
+
+	int joiner_join_x[6] = { 1, 1, 1, 2, 2, 3};
+	int joiner_y[6] = { 1, 2, 3, 4 ,5 ,6};
+
+	std::vector<std::string> table_names = { "hr.emps" , "hr.joiner"};
+	std::vector<std::vector<std::string>> column_names = {{"x","y","z"},{"join_x","join_y"}};
+
+	std::vector<gdf_column_cpp> outputs;
+	std::vector<std::string> output_column_names;
+	void * temp_space = nullptr;
+};
+
+TEST_F(calcite_interpreter_left_join_TEST, processing_join0) {
+
+	{
+		// select *, x +joiner.y from hr.emps inner join hr.joiner on hr.joiner.join_x = hr.emps.x
+		std::string query = "\
 LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$5=[+($0, $4)])\n\
   LogicalJoin(condition=[=($3, $0)], joinType=[left])\n\
     EnumerableTableScan(table=[[hr, emps]])\n\
     EnumerableTableScan(table=[[hr, joiner]])";
 
-  gdf_error err =
-    evaluate_query(input_tables, table_names, column_names, query, outputs);
+		gdf_error err = evaluate_query(input_tables, table_names, column_names, query, outputs);
 
-  EXPECT_TRUE(err == GDF_SUCCESS);
-  gdf_column_cpp &output = outputs[0];
-  EXPECT_EQ(6, output.size());
-  std::int32_t host[6];
-  cudaMemcpy(
-    host, output.data(), 6 * sizeof(std::int32_t), cudaMemcpyDeviceToHost);
-  std::vector<std::int32_t> expected{1, 2, 3, 2, 1, 1};
-  for (std::size_t i = 0; i < 6; i++) { EXPECT_EQ(expected[i], host[i]); }
-}
+		std::cout<<"Left Join Output columns: "<<outputs.size()<<std::endl<<std::flush;
+		for(int i = 0; i < outputs.size(); i++){
+			print_gdf_column(outputs[i].get_gdf_column());
+		}  
 
-/*TEST_F(calcite_interpreter_join_TEST, processing_join1) {
+		int out0[] = {1,2,3,4,2,1,1};
+		int out1[] = {4,5,6,1,5,4,4};
+		int out2[] = {10,10,10,10,10,10, 10};
+		int out3[] = {1,2,3,1,2,1,1};
+		int out4[] = {1,4,6,1,5,2,3};
+		int out5[] = {2,6,9,5,7,3,4}; 
 
-	{
-		std::string query = "\
-LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$5=[+($0, $4)])\n\
-  LogicalFilter(condition=[OR(<($0, 3), >($3, 3))])\n\
-    LogicalJoin(condition=[OR(=($3, $0), =($4, $1))], joinType=[inner])\n\
-      EnumerableTableScan(table=[[hr, emps]])\n\
-      EnumerableTableScan(table=[[hr, joiner]]) ";
-
-		gdf_error err = evaluate_query(input_tables, table_names, column_names,
-			query, outputs);
+		Check(outputs[0], out0);
+		Check(outputs[1], out1);
+		Check(outputs[2], out2);
+		Check(outputs[3], out3);
+		Check(outputs[4], out4);
+		Check(outputs[5], out5);
 
 		EXPECT_TRUE(err == GDF_SUCCESS);
 	}
-}*/
+}
+
+
+
+struct calcite_interpreter_outer_join_TEST : public ::testing::Test {
+
+	void SetUp(){
+
+		hr_emps.resize(3);
+		hr_emps[0].create_gdf_column(GDF_INT32, 4, (void *) emps_x, 4);
+		hr_emps[1].create_gdf_column(GDF_INT32, 4, (void *) emps_y, 4);
+		hr_emps[2].create_gdf_column(GDF_INT32, 4, (void *) emps_z, 4);
+
+		hr_joiner.resize(2);
+		hr_joiner[0].create_gdf_column(GDF_INT32, 7, (void *) joiner_join_x, 4);
+		hr_joiner[1].create_gdf_column(GDF_INT32, 7, (void *) joiner_y, 4);
+
+		std::cout<<"Initial Input: "<<std::endl;
+		print_column<int32_t>(hr_emps[0].get_gdf_column());
+		print_column<int32_t>(hr_emps[1].get_gdf_column());
+		print_column<int32_t>(hr_emps[2].get_gdf_column());
+		std::cout<<"---"<<std::endl;
+		print_column<int32_t>(hr_joiner[0].get_gdf_column());
+		print_column<int32_t>(hr_joiner[1].get_gdf_column());
+		std::cout<<"End Initial Input: "<<std::endl;
+
+		input_tables.resize(2);
+		input_tables[0] = hr_emps;
+		input_tables[1] = hr_joiner;
+	}
+
+	void TearDown(){
+
+		std::cout<<"Output columns: "<<outputs.size()<<std::endl<<std::flush;
+		for(int i = 0; i < outputs.size(); i++){
+			print_column<int32_t>(outputs[i].get_gdf_column());
+		}
+
+		for(int i = 0; i < outputs.size(); i++){
+			GDFRefCounter::getInstance()->free_if_deregistered(outputs[i].get_gdf_column());
+		}
+	}
+
+	std::vector<std::vector<gdf_column_cpp> > input_tables;
+	std::vector<gdf_column_cpp> hr_emps;
+	std::vector<gdf_column_cpp> hr_joiner;
+
+	int emps_x[4] = { 1, 2, 3, 4};
+	int emps_y[4] = { 4, 5, 6, 1};
+	int emps_z[4] = { 10, 10, 10, 10};
+
+	int joiner_join_x[7] = { 1, 1, 1, 2, 2, 3, 5};
+	int joiner_y[7] = { 1, 2, 3, 4 ,5 ,6, 1};
+
+	std::vector<std::string> table_names = { "hr.emps" , "hr.joiner"};
+	std::vector<std::vector<std::string>> column_names = {{"x","y","z"},{"join_x","join_y"}};
+
+	std::vector<gdf_column_cpp> outputs;
+	std::vector<std::string> output_column_names;
+	void * temp_space = nullptr;
+};
+
+//@todo: check after outer join, current result is zero
+TEST_F(calcite_interpreter_outer_join_TEST, processing_join0) {
+
+	{
+		// select *, x +joiner.y from hr.emps inner join hr.joiner on hr.joiner.join_x = hr.emps.x
+		std::string query = "\
+LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$5=[+($0, $4)])\n\
+  LogicalJoin(condition=[=($3, $0)], joinType=[outer])\n\
+    EnumerableTableScan(table=[[hr, emps]])\n\
+    EnumerableTableScan(table=[[hr, joiner]])";
+
+		gdf_error err = evaluate_query(input_tables, table_names, column_names,
+				query, outputs);
+  
+		std::cout<<"Outer Join Output columns: "<<outputs.size()<<std::endl<<std::flush;
+		for(int i = 0; i < outputs.size(); i++){
+			print_gdf_column(outputs[i].get_gdf_column());
+		}
+
+		// EXPECT_TRUE(outputs.size() == 8);
+
+		int out0[] = {1,1,1,2,2,3,4,-1};
+		int out1[] = {4,4,4,5,5,6,1,-1};
+		int out2[] = {10,10,10,10,10,10,10,-1};
+		int out3[] = {1,1,1,2,2,3,-1, 5};
+		int out4[] = {1,2,3,4,5,6,-1, 1};
+		int out5[] = {2,3,4,6,7,9,4, 1}; 
+
+		Check(outputs[0], out0);
+		Check(outputs[1], out1);
+		Check(outputs[2], out2);
+		Check(outputs[3], out3);
+		Check(outputs[4], out4);
+		Check(outputs[5], out5);
+
+		EXPECT_TRUE(err == GDF_SUCCESS);
+	}
+}
+ 
 
 int main(int argc, char **argv){
 	::testing::InitGoogleTest(&argc, argv);

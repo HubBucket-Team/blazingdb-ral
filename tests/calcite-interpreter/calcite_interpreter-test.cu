@@ -239,7 +239,7 @@ LogicalProject(S=[-($0, $1)])\n\
 	}
 }
 
-TEST_F(calcite_interpreter_TEST, order_by) {
+TEST_F(calcite_interpreter_TEST, DISABLED_order_by) {
 
 	{
 		//very hacky ik now, its late im just trying to figure out whats up

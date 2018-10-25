@@ -5,14 +5,18 @@
 #include "StringUtil.h"
 #include <sstream>
 #include <iomanip>
+#include <regex>
 
 bool is_type_signed(gdf_dtype type){
 	return (GDF_INT8 == type ||
 			GDF_INT16 == type ||
 			GDF_INT32 == type ||
 			GDF_INT64 == type ||
-			GDF_FLOAT32 ||
-			GDF_FLOAT64);
+			GDF_FLOAT32 == type ||
+			GDF_FLOAT64 == type
+			GDF_DATE32 == type ||
+			GDF_DATE64 == type ||
+			GDF_TIMESTAMP == type);
 }
 
 bool is_type_unsigned_numeric(gdf_dtype type){
@@ -225,6 +229,12 @@ gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type,
 	}else{
 		return GDF_invalid;
 	}
+}
+
+bool is_date(const std::string &str){
+
+	static const std::regex re{R"([12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01]))"};
+	return std::regex_match(str, re);
 }
 
 //Todo: unit tests
@@ -485,7 +495,7 @@ std::string get_last_token(std::string expression, int * position){
 
 bool is_operator_token(std::string operand){
 
-	return (operand[0] != '$' && ! is_digits(operand));
+	return (operand[0] != '$' && ! is_digits(operand) && ! is_date(operand));
 
 }
 

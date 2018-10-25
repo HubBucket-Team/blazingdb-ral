@@ -3,7 +3,8 @@
 #include "DataFrame.h"
 #include <stack>
 #include "StringUtil.h"
-
+#include <sstream>
+#include <iomanip>
 
 bool is_type_signed(gdf_dtype type){
 	return (GDF_INT8 == type ||
@@ -226,23 +227,48 @@ gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type,
 	}
 }
 
-//TODO: implement these!!!!
+//Todo: unit tests
 int32_t get_date_32_from_string(std::string scalar_string){
-	//32 bit int which stores number of days since
-	//you can use soething like this
-	//https://en.cppreference.com/w/cpp/io/manip/get_time
-	//the begingin of the strig will be yyyy-mm-dd HH:MM:ss
-	//so 1969-07-21 10:15:34 with or without the timestamp
+	std::tm t = {};
+	std::istringstream ss(scalar_string);
 
-
+	if (ss >> std::get_time(&t, "%Y-%m-%d")){
+		int32_t tr = std::mktime(&t);
+		int32_t seconds_in_a_day = 60*60*24;
+		return tr / seconds_in_a_day;
+	}
+	else{
+		throw std::invalid_argument("Invalid datetime format");
+	}
 }
 
 int64_t get_date_64_from_string(std::string scalar_string){
 
+	std::tm t = {};
+	std::istringstream ss(scalar_string);
+
+	if (ss >> std::get_time(&t, "%Y-%m-%d %H:%M:%S")){
+		int64_t tr = std::mktime(&t);
+		return tr;
+	}
+	else{
+		throw std::invalid_argument("Invalid datetime format");
+	}
 }
 
+//Todo: Consider cases with different unit: ms, us, or ns
 int64_t get_timestamp_from_string(std::string scalar_string){
 
+	std::tm t = {};
+	std::istringstream ss(scalar_string);
+
+	if (ss >> std::get_time(&t, "%Y-%m-%d %H:%M:%S")){
+		int64_t tr = std::mktime(&t);
+		return tr;
+	}
+	else{
+		throw std::invalid_argument("Invalid timestamp format");
+	}
 }
 
 gdf_scalar get_scalar_from_string(std::string scalar_string, gdf_dtype type){
@@ -312,12 +338,12 @@ int64_t  tmst;  // GDF_TIMESTAMP
 	}else if(type == GDF_DATE64){
 		gdf_data data;
 		data.dt64 = get_date_64_from_string(scalar_string);
-
 		return {data, GDF_DATE64};
 	}else if(type == GDF_TIMESTAMP){
+		//Todo: specific the unit
 		gdf_data data;
 		data.tmst = get_timestamp_from_string(scalar_string);
-		return {data, GDF_INT8};
+		return {data, GDF_TIMESTAMP};
 	}
 }
 

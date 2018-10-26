@@ -184,6 +184,39 @@ void tuple_each(Tuple& t, Func&& f)
 // end helper function
 
 
+struct _GetValuesLambda
+{
+  size_t &i;
+  size_t &j;
+  std::vector<std::vector<linb::any>> &values;
+
+  template <typename T>
+  void operator()(T&& value) const { 
+      values[j][i] = value;
+      j++;
+  }
+};
+
+struct _FillColumnLambda
+{
+  std::vector<std::vector<linb::any>> &values;
+  std::vector<ColumnFiller> &builders;
+  std::vector<std::string>  &headers;
+  size_t &i;
+  
+  template <typename T>
+  void operator()(T&& value) const { 
+      auto name = headers[i];
+      std::vector< decltype(value) >  column_values;
+      for (auto &&any_val : values[i]) {
+        column_values.push_back( linb::any_cast<decltype(value)>(any_val) );
+      }
+      ColumnFiller b(name, column_values);
+      builders.push_back(b);
+      i++;
+  }
+};
+
 
 template <class...Ts>
 class TableRowBuilder {
@@ -201,32 +234,20 @@ public:
     size_t i = 0;
     std::vector< std::vector< linb::any > > values(ncols_, std::vector< linb::any >(nrows_));
     for (DataTuple row : rows_) {
-      int j = 0;
-      tuple_each(row, [&values, &i, &j](auto &value) {
-        values[j][i] = value;
-        j++;
-      });
+      size_t j = 0;
+      tuple_each(row, _GetValuesLambda{i, j, values});
       i++;
     }
-    std::vector<ColumnFiller> builders;
+    std::vector<ColumnFiller> builders; 
     i = 0;
-    tuple_each(rows_[0], [this, &values, &builders, &i](auto value) {
-      auto name = headers_[i];
-      std::vector< decltype(value) >  column_values;
-      for (auto &&any_val : values[i]) {
-        column_values.push_back( linb::any_cast<decltype(value)>(any_val) );
-      }
-      ColumnFiller b(name, column_values);
-      builders.push_back(b);
-      i++;
-    });
+    tuple_each(rows_[0], _FillColumnLambda{values, builders, this->headers_, i});
 
     std::vector<std::shared_ptr<Column> > columns;
     columns.resize(builders.size());
     std::transform(std::begin(builders),
                    std::end(builders),
                    columns.begin(),
-                   [](auto &&builder) {
+                   [](ColumnFiller &&builder) {
                      return std::move(builder.Build());
                    });
     return Table(name_, std::move(columns));

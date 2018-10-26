@@ -46,15 +46,18 @@ std::tuple<std::vector<std::vector<gdf_column_cpp>>,
     column_names.push_back(table.columnNames);
 
     std::vector<gdf_column_cpp> input_table;
+    int column_index = 0;
     for(auto column : table.columns) {
-
-    	gdf_column_cpp col = gdf_column_cpp(libgdf::CudaIpcMemHandlerFrom(column.data), (gdf_valid_type*)libgdf::CudaIpcMemHandlerFrom(column.valid), (::gdf_dtype)column.dtype, (size_t)column.size, (gdf_size_type)column.null_count);
+    	const std::string column_name = table.columnNames.at(column_index);
+    	gdf_column_cpp col = gdf_column_cpp(libgdf::CudaIpcMemHandlerFrom(column.data), (gdf_valid_type*)libgdf::CudaIpcMemHandlerFrom(column.valid), (::gdf_dtype)column.dtype, (size_t)column.size, (gdf_size_type)column.null_count, column_name);
 
     	gdf_column_cpp clone_gdf = col.clone();
 
     	handles.push_back( clone_gdf.data());
     	handles.push_back((void *) clone_gdf.valid());
     	input_table.push_back(clone_gdf);
+
+    	++column_index;
     }
     input_tables.push_back(input_table);
   }

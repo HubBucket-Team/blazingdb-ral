@@ -57,32 +57,55 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
     .time = 0.1f,
     .rows = 1
   }; 
-  std::vector<std::string> fieldNames = {"id", "age"};
 
   // remove from repository using accessToken and resultToken
   blazing_frame result = result_set_repository::get_instance().get_result(accessToken, request.getResultToken());
 
-  // todo: remove hardcode by creating the resulset vector
-  gdf_column_cpp column = result.get_columns()[0][0];
-	std::cout<<"getResultService\n";
-  print_gdf_column(column.get_gdf_column());
-  std::cout<<"end:getResultService\n";
+  std::vector<std::string> fieldNames;
+  std::vector<::gdf_dto::gdf_column> values;
 
-  auto data = libgdf::BuildCudaIpcMemHandler(column.get_gdf_column()->data);
-  auto valid = libgdf::BuildCudaIpcMemHandler(column.get_gdf_column()->valid);
+  //TODO WARNING why 0 why multitables?
+  for(int i = 0; i < result.get_columns()[0].size(); ++i) {
+	  fieldNames.push_back(result.get_columns()[0][i].column_name);
 
-  std::vector<::gdf_dto::gdf_column> values = {
-    ::gdf_dto::gdf_column {
-        .data = data,
-        .valid = valid,
-        .size = column.size(),
-        .dtype = (gdf_dto::gdf_dtype)column.dtype(),
-        .null_count = column.null_count(),
-        .dtype_info = gdf_dto::gdf_dtype_extra_info {
-          .time_unit = (gdf_dto::gdf_time_unit)0,
-        }
-    }
-  };
+	  auto data = libgdf::BuildCudaIpcMemHandler(result.get_columns()[0][i].get_gdf_column()->data);
+	  auto valid = libgdf::BuildCudaIpcMemHandler(result.get_columns()[0][i].get_gdf_column()->valid);
+
+	  auto col = ::gdf_dto::gdf_column {
+	        .data = data,
+	        .valid = valid,
+	        .size = result.get_columns()[0][i].size(),
+	        .dtype = (gdf_dto::gdf_dtype)result.get_columns()[0][i].dtype(),
+	        .null_count = result.get_columns()[0][i].null_count(),
+	        .dtype_info = gdf_dto::gdf_dtype_extra_info {
+	          .time_unit = (gdf_dto::gdf_time_unit)0,
+	        }
+	    };
+
+	  values.push_back(col);
+  }
+
+//  // todo: remove hardcode by creating the resulset vector
+//  gdf_column_cpp column = result.get_columns()[0][0];
+//	std::cout<<"getResultService\n";
+//  print_gdf_column(column.get_gdf_column());
+//  std::cout<<"end:getResultService\n";
+//
+//  auto data = libgdf::BuildCudaIpcMemHandler(column.get_gdf_column()->data);
+//  auto valid = libgdf::BuildCudaIpcMemHandler(column.get_gdf_column()->valid);
+//
+//  std::vector<::gdf_dto::gdf_column> values = {
+//    ::gdf_dto::gdf_column {
+//        .data = data,
+//        .valid = valid,
+//        .size = column.size(),
+//        .dtype = (gdf_dto::gdf_dtype)column.dtype(),
+//        .null_count = column.null_count(),
+//        .dtype_info = gdf_dto::gdf_dtype_extra_info {
+//          .time_unit = (gdf_dto::gdf_time_unit)0,
+//        }
+//    }
+//  };
 
   interpreter::GetResultResponseMessage responsePayload(metadata, fieldNames, values);
   std::cout << "**before return data frame\n" << std::flush;

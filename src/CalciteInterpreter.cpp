@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <thread>
 #include <regex>
+#include <string>
 
 #include "Utils.cuh"
 #include "LogicalFilter.h"
@@ -169,7 +170,8 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 
 	gdf_column_cpp temp;
 	if(max_temp_type != GDF_invalid){
-		temp.create_gdf_column(max_temp_type,size,nullptr,get_width_dtype(max_temp_type));
+		//TODO de donde saco el nombre de la columna aqui???
+		temp.create_gdf_column(max_temp_type,size,nullptr,get_width_dtype(max_temp_type), "");
 	}
 
 
@@ -187,7 +189,8 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 			//assumes worst possible case allocation for output
 			//TODO: find a way to know what our output size will be
 			gdf_column_cpp output;
-			output.create_gdf_column(output_type_expressions[i],size,nullptr,get_width_dtype(output_type_expressions[i]));
+			//TODO de donde saco el nombre de la columna aqui???
+			output.create_gdf_column(output_type_expressions[i],size,nullptr,get_width_dtype(output_type_expressions[i]), "");
 
 			gdf_error err = evaluate_expression(
 					input,
@@ -217,8 +220,9 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 				int width;
 				get_column_byte_width(input.get_column(index).get_gdf_column(), &width);
 
-				empty.create_gdf_column(input.get_column(index).dtype(),0,nullptr,width);
-				output.create_gdf_column(input.get_column(index).dtype(),size,nullptr,width);
+				//TODO de donde saco el nombre de la columna aqui???
+				empty.create_gdf_column(input.get_column(index).dtype(),0,nullptr,width, "");
+				output.create_gdf_column(input.get_column(index).dtype(),size,nullptr,width, "");
 				//TODO: verify that this works concat whoudl be able to take in an empty one
 				//even better would be if we could pass it in a  a null pointer and use it for copy
 				gdf_error err = gpu_concat(input.get_column(index).get_gdf_column(), empty.get_gdf_column(), output.get_gdf_column());
@@ -258,8 +262,9 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 
 	gdf_column_cpp left_indices, right_indices;
 	//right now it outputs int32
-	left_indices.create_gdf_column(GDF_INT32,size,nullptr,sizeof(int));
-	right_indices.create_gdf_column(GDF_INT32,size,nullptr,sizeof(int));
+	//TODO de donde saco el nombre de la columna aqui???
+	left_indices.create_gdf_column(GDF_INT32,size,nullptr,sizeof(int), "");
+	right_indices.create_gdf_column(GDF_INT32,size,nullptr,sizeof(int), "");
 
 	std::string condition = get_condition_expression(query_part);
 	std::string join_type = get_named_expression(query_part,"joinType");
@@ -295,7 +300,9 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 		gdf_column_cpp output;
 
 		get_column_byte_width(input.get_column(column_index).get_gdf_column(), &column_width);
-		output.create_gdf_column(input.get_column(column_index).dtype(),left_indices.size(),nullptr,column_width);
+
+		//TODO de donde saco el nombre de la columna aqui???
+		output.create_gdf_column(input.get_column(column_index).dtype(),left_indices.size(),nullptr,column_width, "");
 
 		if(column_index < first_table_end_index)
 		{
@@ -392,7 +399,9 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 			//break;
 		}
 	}
-	temp.create_gdf_column(max_temp_type,size,nullptr,get_width_dtype(max_temp_type));
+
+	//TODO de donde saco el nombre de la columna aqui???
+	temp.create_gdf_column(max_temp_type,size,nullptr,get_width_dtype(max_temp_type), "");
 
 	gdf_column ** group_by_columns_ptr = new gdf_column *[group_columns.size()];
 	gdf_column ** group_by_columns_ptr_out = new gdf_column *[group_columns.size()];
@@ -405,7 +414,9 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		gdf_column_cpp input_column = input.get_column(group_columns[group_columns_index]);
 		group_by_columns_ptr[group_columns_index] = input_column.get_gdf_column();
 		gdf_column_cpp output_group;
-		output_group.create_gdf_column(input_column.dtype(),size,nullptr,get_width_dtype(input_column.dtype()));
+
+		//TODO de donde saco el nombre de la columna aqui???
+		output_group.create_gdf_column(input_column.dtype(),size,nullptr,get_width_dtype(input_column.dtype()), "");
 		output_columns_group.push_back(output_group);
 		group_by_columns_ptr_out[group_columns_index] = output_group.get_gdf_column();
 	}
@@ -417,7 +428,8 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		if(contains_evaluation(expression)){
 
 			//we dont knwo what the size of this input will be so allcoate max size
-			aggregation_input.create_gdf_column(aggregation_input_types[i],size,nullptr,get_width_dtype(aggregation_input_types[i]));
+			//TODO de donde saco el nombre de la columna aqui???
+			aggregation_input.create_gdf_column(aggregation_input_types[i],size,nullptr,get_width_dtype(aggregation_input_types[i]),"");
 
 			gdf_error err = evaluate_expression(
 					input,
@@ -437,7 +449,8 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		gdf_error err;
 		gdf_dtype output_type = get_aggregation_output_type(aggregation_input.dtype(),aggregation_types[i]);
 		gdf_column_cpp output_column;
-		output_column.create_gdf_column(output_type,aggregation_size,nullptr,get_width_dtype(output_type));
+		//TODO de donde saco el nombre de la columna aqui???
+		output_column.create_gdf_column(output_type,aggregation_size,nullptr,get_width_dtype(output_type), "");
 		output_columns_aggregations.push_back(output_column);
 
 		if(i > 0){
@@ -623,14 +636,16 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 	//find the widest possible column
 
 	gdf_column_cpp temp_output;
-	temp_output.create_gdf_column(input.get_column(0).dtype(),input.get_column(0).size(),nullptr,widest_column);
+	//TODO de donde saco el nombre de la columna aqui???
+	temp_output.create_gdf_column(input.get_column(0).dtype(),input.get_column(0).size(),nullptr,widest_column, "");
 	//now we need to materialize
 	//i dont think we can do that in place since we are writing and reading out of order
 	for(int i = 0; i < input.get_width();i++){
 		temp_output.set_dtype(input.get_column(i).dtype());
 
 
-		gdf_column_cpp indices_column((void *)indices,nullptr,GDF_UINT64,input.get_column(i).size(),0);
+		//TODO de donde saco el nombre de la columna aqui???
+		gdf_column_cpp indices_column((void *)indices,nullptr,GDF_UINT64,input.get_column(i).size(),0, "");
 
 		gdf_error err = materialize_column(
 				input.get_column(i).get_gdf_column(),
@@ -642,13 +657,16 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 
 		int width;
 		get_column_byte_width(input.get_column(i).get_gdf_column(), &width);
-		empty.create_gdf_column(input.get_column(i).dtype(),0,nullptr,width);
+
+		//TODO de donde saco el nombre de la columna aqui???
+		empty.create_gdf_column(input.get_column(i).dtype(),0,nullptr,width, "");
 
 		//copy output back to dat aframe
 
 		gdf_column_cpp new_output;
 		if(input.get_column(i).is_ipc()){
-			new_output.create_gdf_column(input.get_column(i).dtype(), input.get_column(i).size(),nullptr,get_width_dtype(input.get_column(i).dtype()));
+			//TODO de donde saco el nombre de la columna aqui???
+			new_output.create_gdf_column(input.get_column(i).dtype(), input.get_column(i).size(),nullptr,get_width_dtype(input.get_column(i).dtype()), "");
 			input.set_column(i,new_output);
 		}else{
 			new_output = input.get_column(i);
@@ -673,7 +691,8 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 
 	size_t size = input.get_column(0).size();
 
-	stencil.create_gdf_column(GDF_INT8,input.get_column(0).size(),nullptr,1);
+	//TODO de donde saco el nombre de la columna aqui???
+	stencil.create_gdf_column(GDF_INT8,input.get_column(0).size(),nullptr,1, "");
 
 	gdf_dtype output_type_junk; //just gets thrown away
 	gdf_dtype max_temp_type = GDF_INT8;
@@ -689,7 +708,8 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 		//im really liking Andrescus talk on control flow blah blah something i forget his name
 	}
 
-	temp.create_gdf_column(max_temp_type,input.get_column(0).size(),nullptr,get_width_dtype(max_temp_type));
+	//TODO de donde saco el nombre de la columna aqui???
+	temp.create_gdf_column(max_temp_type,input.get_column(0).size(),nullptr,get_width_dtype(max_temp_type), "");
 
 	err = evaluate_expression(
 			input,
@@ -726,13 +746,16 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 
 			int width;
 			get_column_byte_width(input.get_column(i).get_gdf_column(), &width);
-			empty.create_gdf_column(input.get_column(i).dtype(),0,nullptr,width);
+
+			//TODO de donde saco el nombre de la columna aqui???
+			empty.create_gdf_column(input.get_column(i).dtype(),0,nullptr,width, "");
 
 
 			if(input.get_column(i).is_ipc()){
 				//make a copy
 
-				new_output.create_gdf_column(input.get_column(i).dtype(),input.get_column(i).size(),nullptr,get_width_dtype(input.get_column(i).dtype()));
+				std::string col_name = input.get_column(i).column_name;
+				new_output.create_gdf_column(input.get_column(i).dtype(),input.get_column(i).size(),nullptr,get_width_dtype(input.get_column(i).dtype()), col_name);
 
 
 				if(err != GDF_SUCCESS){

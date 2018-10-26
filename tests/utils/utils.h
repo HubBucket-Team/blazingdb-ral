@@ -14,6 +14,8 @@ namespace ral {
 namespace test {
 namespace utils {
 
+using Index = const std::size_t;
+
 template <gdf_dtype DTYPE>
 struct DTypeTraits {};
 
@@ -197,6 +199,12 @@ public:
     return impl_->Build(length);
   }
 
+  template <gdf_dtype DT>
+  static ColumnsBuilder
+  Make(std::initializer_list<typename DType<DT>::value_type> values) {
+    return ColumnsBuilder([](Index i) { return *(std::begin(values));});
+  }
+
 private:
   class ImplBase {
   public:
@@ -249,6 +257,16 @@ public:
     return Table(name_, std::move(columns));
   }
 
+  // class ColumnBuilder {
+  // public:
+  // template <gdf_dtype dt>
+  // void column(const std::string &                                   name,
+  // std::initializer_list<typename DType<dt>::value_type> values) {
+  //}
+  //};
+
+  // static ColumnsBuilder Make(const std::string &name, ) {}
+
 private:
   const std::string                    name_;
   std::initializer_list<ColumnBuilder> builders_;
@@ -288,8 +306,6 @@ public:
 private:
   std::initializer_list<TableBuilder> builders_;
 };
-
-using Index = const std::size_t;
 
 template <gdf_dtype U>
 std::vector<typename DType<U>::value_type>

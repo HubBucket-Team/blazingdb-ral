@@ -1,23 +1,23 @@
-#pragma once 
+#pragma once
 
 #include <cassert>
 #include <functional>
 #include <initializer_list>
-#include <string>
-#include <vector>
 #include <iostream>
+#include <string>
 #include <type_traits>
-
-#include <gdf/gdf.h>
+#include <vector>
 
 #include <GDFColumn.cuh>
+#include <gdf/gdf.h>
+
+#include "any.h"
+#include "definitions.h"
 #include "types.h"
 #include "vector.h"
-#include "any.h"
 
 namespace gdf {
 namespace library {
-
 
 template <gdf_dtype DTYPE>
 struct DTypeTraits {};
@@ -44,18 +44,15 @@ DTYPE_FACTORY(TIMESTAMP, std::int64_t);
 
 #undef DTYPE_FACTORY
 
-
 class Column {
 public:
-  Column(const std::string &name)
-    : name_{name}
-    {}
+  Column(const std::string &name) : name_{name} {}
 
   ~Column();
 
   virtual gdf_column_cpp ToGdfColumnCpp() const = 0;
 
-  virtual const void *   get(const std::size_t i) const = 0;
+  virtual const void *get(const std::size_t i) const = 0;
 
   class Wrapper {
   public:
@@ -74,12 +71,12 @@ public:
   };
 
   Wrapper operator[](const std::size_t i) const { return Wrapper{i, this}; }
- 
-  virtual size_t   size() const   = 0;
-  virtual size_t   print(std::ostream &stream) const   = 0;
-  virtual std::string get_as_str(int index) const = 0;
-  
-  std::string   name() const { return name_; }
+
+  virtual size_t      size() const                      = 0;
+  virtual size_t      print(std::ostream &stream) const = 0;
+  virtual std::string get_as_str(int index) const       = 0;
+
+  std::string name() const { return name_; }
 
 protected:
   static gdf_column_cpp Create(const gdf_dtype   dtype,
@@ -88,9 +85,8 @@ protected:
                                const std::size_t size);
 
 protected:
-  const std::string name_; 
+  const std::string name_;
 };
-
 
 Column::~Column() {}
 
@@ -102,7 +98,6 @@ gdf_column_cpp Column::Create(const gdf_dtype   dtype,
   column_cpp.create_gdf_column(dtype, length, const_cast<void *>(data), size);
   return column_cpp;
 }
-
 
 template <gdf_dtype GDF_DType>
 class DType {
@@ -120,10 +115,9 @@ public:
 private:
   const value_type value_;
 };
- 
+
 template <gdf_dtype value>
 using Ret = DType<value>;  //! \deprecated
-
 
 template <gdf_dtype DType>
 class TypedColumn : public Column {
@@ -150,39 +144,34 @@ public:
     return Create(DType, this->size(), values_.data(), sizeof(value_type));
   }
 
-  value_type  operator[](const std::size_t i) const { return values_[i]; }
+  value_type operator[](const std::size_t i) const { return values_[i]; }
 
   const void *get(const std::size_t i) const final { return &values_[i]; }
 
-  void FillData (std::vector< value_type > values) {
+  void FillData(std::vector<value_type> values) {
     for (std::size_t i = 0; i < values.size(); i++) {
       values_.push_back(values.at(i));
     }
   }
 
-  size_t  size() const final {
-    return values_.size();
-  }
+  size_t size() const final { return values_.size(); }
 
-  size_t   print(std::ostream &stream) const   final  {
+  size_t print(std::ostream &stream) const final {
     for (std::size_t i = 0; i < values_.size(); i++) {
-      stream << values_.at(i) << " | " ;
+      stream << values_.at(i) << " | ";
     }
   }
 
-  std::string get_as_str(int index) const  final  {
+  std::string get_as_str(int index) const final {
     std::ostringstream out;
-    if (std::is_floating_point<value_type>::value) { 
-      out.precision(1);
-    }
+    if (std::is_floating_point<value_type>::value) { out.precision(1); }
     out << std::fixed << values_.at(index);
-    return out.str(); 
+    return out.str();
   }
 
 private:
   std::basic_string<value_type> values_;
 };
- 
 
 template <class T>
 class RangeTraits
@@ -195,13 +184,18 @@ public:
   typedef R r_type;
 };
 
-
 class ColumnBuilder {
 public:
   template <class Callback>
   ColumnBuilder(const std::string &name, Callback &&callback)
     : impl_{std::make_shared<Impl<Callback> >(
         std::move(name), std::forward<Callback>(callback))} {}
+
+  ColumnBuilder() {}
+  ColumnBuilder &operator=(const ColumnBuilder &other) {
+    impl_ = other.impl_;
+    return *this;
+  }
 
   std::unique_ptr<Column> Build(const std::size_t length) const {
     return impl_->Build(length);
@@ -236,6 +230,69 @@ private:
 };
 
 inline ColumnBuilder::ImplBase::~ImplBase() = default;
- 
-} // namespace library
-} // namesapce gdf
+
+template <gdf_dtype id>
+class Literals {
+public:
+  using value_type       = typename DType<id>::value_type;
+  using initializer_list = std::initializer_list<value_type>;
+
+  Literals(initializer_list values) : values_{values} {}
+
+  initializer_list values() const { return values_; }
+
+  std::size_t size() const { return values_.size(); }
+
+private:
+  std::initializer_list<typename DType<id>::value_type> values_;
+};
+
+class LiteralColumnBuilder {
+public:
+  template <gdf_dtype id>
+  LiteralColumnBuilder(const std::string &name, Literals<id> values)
+    : impl_{std::make_shared<Impl<id> >(name, values)} {}
+
+  std::unique_ptr<Column> Build() const { return impl_->Build(); }
+
+  operator ColumnBuilder() const { return *impl_; }
+
+  std::size_t length() const { return impl_->length(); }
+
+private:
+  class ImplBase {
+  public:
+    inline virtual ~ImplBase();
+    virtual std::unique_ptr<Column> Build()                        = 0;
+    virtual                         operator ColumnBuilder() const = 0;
+    virtual std::size_t             length() const                 = 0;
+  };
+
+  template <gdf_dtype id>
+  class Impl : public ImplBase {
+  public:
+    Impl(const std::string &name, Literals<id> literals)
+      : name_{name}, literals_{literals},
+        builder_{ColumnBuilder(name_, [this](Index i) -> DType<id> {
+          return *(literals_.values().begin() + static_cast<std::ptrdiff_t>(i));
+        })} {}
+
+    std::unique_ptr<Column> Build() { return builder_.Build(literals_.size()); }
+
+    operator ColumnBuilder() const { return builder_; }
+
+    virtual std::size_t length() const { return literals_.size(); }
+
+  private:
+    const std::string name_;
+    Literals<id>      literals_;
+    ColumnBuilder     builder_;
+  };
+
+  std::shared_ptr<ImplBase> impl_;
+};
+
+inline LiteralColumnBuilder::ImplBase::~ImplBase() = default;
+
+}  // namespace library
+}  // namespace gdf

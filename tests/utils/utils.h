@@ -1,9 +1,9 @@
 #ifndef RAL_TEST_UTILS_H_
 #define RAL_TEST_UTILS_H_
 
+#include <algorithm>
 #include <cassert>
 #include <functional>
-#include <initializer_list>
 #include <string>
 #include <vector>
 
@@ -130,7 +130,9 @@ private:
 };
 
 template <class T>
-class RangeTraits : public RangeTraits<decltype(&T::operator())> {};
+class RangeTraits
+  : public RangeTraits<decltype(&std::remove_reference<T>::type::operator())> {
+};
 
 template <class C, class R, class... A>
 class RangeTraits<R (C::*)(A...) const> {
@@ -156,27 +158,65 @@ private:
 
 class ColumnBuilder {
 public:
+  class ImplBase {
+  public:
+    inline virtual ~ImplBase();
+    virtual std::unique_ptr<Column> Build(const std::size_t length) = 0;
+  };
+
+  template <class Callable>
+  class Impl : public ImplBase {
+  public:
+    Impl(const std::string &&name, Callable &&callback)
+      : name_{std::move(name)}, callback_{std::forward<Callable>(callback)} {}
+
+    std::unique_ptr<Column> Build(const std::size_t length) final {
+      auto *column =
+        new TypedColumn<RangeTraits<decltype(callback_)>::r_type::dtype>(name_);
+      column->range(length, callback_);
+      return std::unique_ptr<Column>(column);
+    }
+
+  private:
+    const std::string name_;
+    Callable          callback_;
+  };
+
   template <class Callback>
-  ColumnBuilder(const std::string &name, Callback callback) {
-    auto *column =
-      new TypedColumn<RangeTraits<decltype(callback)>::r_type::dtype>(name);
-    column->range(100, callback);
-    column_.reset(column);
+  ColumnBuilder(const std::string &name, Callback &&callback)
+    : impl_{std::make_shared<Impl<Callback> >(
+        std::move(name), std::forward<Callback>(callback))} {}
+
+  std::unique_ptr<Column> Build(const std::size_t length) {
+    return impl_->Build(length);
   }
 
-  std::shared_ptr<Column> column_;
+private:
+  std::shared_ptr<ImplBase> impl_;
 };
+
+inline ColumnBuilder::ImplBase::~ImplBase() = default;
 
 class TableBuilder {
 public:
-  TableBuilder(const std::string &                  name,
+  TableBuilder(const std::string &&                 name,
                std::initializer_list<ColumnBuilder> builders)
-    : name_{name}, builders_{builders} {}
+    : name_{std::move(name)}, builders_{builders} {}
 
-  Table build(const std::size_t length) {
-    std::vector<std::shared_ptr<Column> > v;
-    for (auto b : builders_) v.emplace_back(b.column_);
-    return Table(name_, std::move(v));
+  Table build(const std::size_t length) {  //! \deprecated
+    return Build(length);
+  }
+
+  Table Build(const std::size_t length) {
+    std::vector<std::shared_ptr<Column> > columns;
+    columns.reserve(builders_.size());
+    std::transform(builders_.begin(),
+                   builders_.end(),
+                   columns.begin(),
+                   [length](ColumnBuilder &builder) {
+                     return std::move(builder.Build(length));
+                   });
+    return Table(name_, std::move(columns));
   }
 
 private:

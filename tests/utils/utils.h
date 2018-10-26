@@ -118,9 +118,6 @@ public:
     for (Table table : tables) { tables_.push_back(table); }
   }
 
-  TableGroup(std::initializer_list<std::initializer_list<gdf_dtype> > dtypess) {
-  }
-
   BlazingFrame ToBlazingFrame() const;
 
   const Table &operator[](const std::size_t i) const { return tables_[i]; }
@@ -140,15 +137,15 @@ public:
   typedef R r_type;
 };
 
-template <gdf_dtype DType>
-class Ret {
+template <gdf_dtype GDF_DType>
+class DType {
 public:
-  static constexpr gdf_dtype dtype = DType;
+  static constexpr gdf_dtype value = GDF_DType;
 
-  using value_type = typename DTypeTraits<DType>::value_type;
+  using value_type = typename DTypeTraits<GDF_DType>::value_type;
 
   template <class T>
-  Ret(const T value) : value_{value} {}
+  DType(const T value) : value_{value} {}
 
   operator value_type() const { return value_; }
 
@@ -156,8 +153,21 @@ private:
   const value_type value_;
 };
 
+template <gdf_dtype value>
+using Ret = DType<value>;  //! \deprecated
+
 class ColumnBuilder {
 public:
+  template <class Callback>
+  ColumnBuilder(const std::string &name, Callback &&callback)
+    : impl_{std::make_shared<Impl<Callback> >(
+        std::move(name), std::forward<Callback>(callback))} {}
+
+  std::unique_ptr<Column> Build(const std::size_t length) const {
+    return impl_->Build(length);
+  }
+
+private:
   class ImplBase {
   public:
     inline virtual ~ImplBase();
@@ -172,7 +182,7 @@ public:
 
     std::unique_ptr<Column> Build(const std::size_t length) final {
       auto *column =
-        new TypedColumn<RangeTraits<decltype(callback_)>::r_type::dtype>(name_);
+        new TypedColumn<RangeTraits<decltype(callback_)>::r_type::value>(name_);
       column->range(length, callback_);
       return std::unique_ptr<Column>(column);
     }
@@ -182,16 +192,6 @@ public:
     Callable          callback_;
   };
 
-  template <class Callback>
-  ColumnBuilder(const std::string &name, Callback &&callback)
-    : impl_{std::make_shared<Impl<Callback> >(
-        std::move(name), std::forward<Callback>(callback))} {}
-
-  std::unique_ptr<Column> Build(const std::size_t length) {
-    return impl_->Build(length);
-  }
-
-private:
   std::shared_ptr<ImplBase> impl_;
 };
 
@@ -210,18 +210,18 @@ public:
   Table Build(const std::size_t length) {
     std::vector<std::shared_ptr<Column> > columns;
     columns.reserve(builders_.size());
-    std::transform(builders_.begin(),
-                   builders_.end(),
+    std::transform(std::begin(builders_),
+                   std::end(builders_),
                    columns.begin(),
-                   [length](ColumnBuilder &builder) {
+                   [length](const ColumnBuilder &builder) {
                      return std::move(builder.Build(length));
                    });
     return Table(name_, std::move(columns));
   }
 
 private:
-  const std::string          name_;
-  std::vector<ColumnBuilder> builders_;
+  const std::string                    name_;
+  std::initializer_list<ColumnBuilder> builders_;
 };
 
 }  // namespace utils

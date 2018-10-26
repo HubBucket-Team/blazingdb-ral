@@ -9,8 +9,8 @@ TEST(UtilsTest, InitData) {
     TableBuilder{
       "emps",
       {
-        {"x", [](const std::size_t) -> Ret<GDF_FLOAT64> { return .1; }},
-        {"y", [](const std::size_t i) -> Ret<GDF_UINT64> { return i; }},
+        {"x", [](const std::size_t) -> DType<GDF_FLOAT64> { return .1; }},
+        {"y", [](const std::size_t i) -> DType<GDF_UINT64> { return i; }},
       }}
       .Build(10);
 

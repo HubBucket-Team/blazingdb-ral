@@ -77,10 +77,30 @@ protected:
                                const std::size_t size);
 };
 
-template <gdf_dtype DType>
+template <gdf_dtype GDF_DType>
+class DType {
+public:
+  using value_type = typename DTypeTraits<GDF_DType>::value_type;
+
+  static constexpr gdf_dtype value  = GDF_DType;
+  static constexpr std::size_t size = sizeof(value_type);
+
+  template <class T>
+  DType(const T value) : value_{value} {}
+
+  operator value_type() const { return value_; }
+
+private:
+  const value_type value_;
+};
+
+template <gdf_dtype value>
+using Ret = DType<value>;  //! \deprecated
+
+template <gdf_dtype dType>
 class TypedColumn : public Column {
 public:
-  using value_type = typename DTypeTraits<DType>::value_type;
+  using value_type = typename DTypeTraits<dType>::value_type;
   using Callback   = std::function<value_type(const std::size_t)>;
 
   TypedColumn(const std::string &name) : name_{name} {}
@@ -99,7 +119,8 @@ public:
   }
 
   gdf_column_cpp ToGdfColumnCpp() const final {
-    return Create(DType, length_, values_.data(), sizeof(value_type));
+    using DT = DType<dType>;
+    return Create(DT::value, values_.length(), values_.data(), DT::size);
   }
 
   value_type  operator[](const std::size_t i) const { return values_[i]; }
@@ -108,7 +129,6 @@ public:
 private:
   const std::string name_;
 
-  std::size_t                   length_;
   std::basic_string<value_type> values_;
 };
 
@@ -118,15 +138,19 @@ public:
         std::vector<std::shared_ptr<Column> > &&columns)
     : name_{name}, columns_{std::move(columns)} {}
 
-  Table() {}                        //! \deprecated
-  void operator=(const Table &) {}  //! \deprecated
+  Table() {}                              //! \deprecated
+  Table &operator=(const Table &other) {  //! \deprecated
+    name_        = other.name_;
+    columns_     = other.columns_;
+    return *this;
+  }
 
   const Column &operator[](const std::size_t i) const { return *columns_[i]; }
 
   std::vector<gdf_column_cpp> ToGdfColumnCpps() const;
 
 private:
-  const std::string name_;
+  std::string name_;
 
   std::vector<std::shared_ptr<Column> > columns_;
 };
@@ -139,7 +163,9 @@ public:
     for (Table table : tables) { tables_.push_back(table); }
   }
 
-  TableGroup(const std::vector<Table> &tables) : tables_{tables} {}
+  TableGroup(const std::vector<Table> &tables) {
+    for (Table table : tables) { tables_.push_back(table); }
+  }
 
   BlazingFrame ToBlazingFrame() const;
 
@@ -159,25 +185,6 @@ class RangeTraits<R (C::*)(A...) const> {
 public:
   typedef R r_type;
 };
-
-template <gdf_dtype GDF_DType>
-class DType {
-public:
-  static constexpr gdf_dtype value = GDF_DType;
-
-  using value_type = typename DTypeTraits<GDF_DType>::value_type;
-
-  template <class T>
-  DType(const T value) : value_{value} {}
-
-  operator value_type() const { return value_; }
-
-private:
-  const value_type value_;
-};
-
-template <gdf_dtype value>
-using Ret = DType<value>;  //! \deprecated
 
 class ColumnBuilder {
 public:
@@ -269,17 +276,32 @@ public:
   TableGroup Build(const std::size_t length) {
     std::vector<Table> tables;
     tables.resize(builders_.size());
-    std::transform(
-      std::begin(builders_),
-      std::end(builders_),
-      tables.begin(),
-      [length](const TableBuilder &builder) { return builder.Build(length); });
+    std::transform(std::begin(builders_),
+                   std::end(builders_),
+                   tables.begin(),
+                   [length](const TableBuilder &builder) -> Table {
+                     return builder.Build(length);
+                   });
     return TableGroup{tables};
   }
 
 private:
   std::initializer_list<TableBuilder> builders_;
 };
+
+using Index = const std::size_t;
+
+template <gdf_dtype U>
+std::vector<typename DType<U>::value_type>
+HostVectorFrom(gdf_column_cpp &column) {
+  std::vector<typename DType<U>::value_type> vector;
+  vector.reserve(column.size());
+  cudaMemcpy(vector.data(),
+             column.data(),
+             column.size() * DType<U>::size,
+             cudaMemcpyDeviceToHost);
+  return vector;
+}
 
 }  // namespace utils
 }  // namespace test

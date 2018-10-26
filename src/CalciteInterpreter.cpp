@@ -768,6 +768,14 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 
 //Returns the index from table if exists
 size_t get_table_index(std::vector<std::string> table_names, std::string table_name){
+	std::cout << "---> BEGIN: get_table_index\n";
+	std::cout << "Table: "<< table_name << "\n";
+	std::cout << "Catalog of tables\n";
+
+	for (auto tb : table_names) {
+		std::cout << tb << "\n";
+	}
+
 	auto it = std::find(table_names.begin(), table_names.end(), table_name);
 	if(it != table_names.end()){
 		return std::distance(table_names.begin(), it);

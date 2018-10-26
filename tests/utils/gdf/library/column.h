@@ -156,7 +156,7 @@ public:
 
   size_t size() const final { return values_.size(); }
 
-  size_t print(std::ostream &stream) const final {
+  size_t print(std::ostream &stream) const {
     for (std::size_t i = 0; i < values_.size(); i++) {
       stream << values_.at(i) << " | ";
     }

@@ -93,3 +93,33 @@ TEST(UtilsTest, TableFromLiterals) {
 
   table.print(std::cout);
 }
+
+TEST(UtilsTest, FrameFromGdfColumnsCpps) {
+  auto t =
+    LiteralTableBuilder{.name = "emps",
+                        .columns =
+                          {
+                            {
+                              .name   = "x",
+                              .values = Literals<GDF_FLOAT64>{1, 3, 5, 7, 9},
+                            },
+                            {
+                              .name   = "y",
+                              .values = Literals<GDF_INT64>{0, 2, 4, 6, 8},
+                            },
+                          }}
+      .Build();
+
+  auto g = t.ToGdfColumnCpps();
+  //std::cout << g.size() << std::endl;
+  //for (std::size_t i = 0; i < 5; i++) {
+    //auto v = HostVectorFrom<GDF_INT64>(g[1]);
+    //std::cout << v[i] << std::endl;
+  //}
+
+  auto u = GdfColumnCppsTableBuilder{t.ToGdfColumnCpps()}.Build();
+
+  for (std::size_t i = 0; i < 5; i++) {
+    std::cout << u[1][i].get<GDF_INT64>() << std::endl;
+  }
+}

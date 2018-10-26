@@ -13,6 +13,7 @@
 #include "any.h"
 #include "column.h"
 #include "gdf/gdf.h"
+#include "hd.h"
 #include "vector.h"
 
 namespace gdf {
@@ -162,10 +163,11 @@ private:
 
 class LiteralTableBuilder : public TableBuilder {
 public:
-  LiteralTableBuilder(const std::string &&                        name,
-                      std::initializer_list<LiteralColumnBuilder> builders)
-    : builders_{builders}, TableBuilder{std::forward<const std::string>(name),
-                                        ColumnBuildersFrom(builders)} {
+  LiteralTableBuilder(const std::string &&              name,
+                      std::vector<LiteralColumnBuilder> builders)
+    : TableBuilder{std::forward<const std::string>(name),
+                   ColumnBuildersFrom(builders)},
+      builders_{builders} {
     lengths_.resize(builders.size());
     std::transform(builders.begin(),
                    builders.end(),
@@ -178,8 +180,8 @@ public:
   Table Build() const { return TableBuilder::Build(lengths_); }
 
 private:
-  static std::vector<ColumnBuilder> ColumnBuildersFrom(
-    std::initializer_list<LiteralColumnBuilder> &literalBuilders) {
+  static std::vector<ColumnBuilder>
+  ColumnBuildersFrom(std::vector<LiteralColumnBuilder> &literalBuilders) {
     std::vector<ColumnBuilder> builders;
     builders.resize(literalBuilders.size());
     std::transform(literalBuilders.begin(),
@@ -191,8 +193,51 @@ private:
     return builders;
   }
 
-  std::initializer_list<LiteralColumnBuilder> builders_;
-  std::vector<std::size_t>                    lengths_;
+  std::vector<LiteralColumnBuilder> builders_;
+  std::vector<std::size_t>          lengths_;
+};
+
+class GdfColumnCppsTableBuilder : public LiteralTableBuilder {
+public:
+  GdfColumnCppsTableBuilder(const std::vector<gdf_column_cpp> column_cpps)
+    : LiteralTableBuilder{"", ColumnBuildersFrom(column_cpps)} {}
+
+  Table Build() const {
+    return LiteralTableBuilder::Build();
+  }
+
+private:
+  std::vector<LiteralColumnBuilder>
+  ColumnBuildersFrom(const std::vector<gdf_column_cpp> column_cpps) {
+    std::vector<LiteralColumnBuilder> builders;
+    builders.reserve(column_cpps.size());
+    for (auto column_cpp : column_cpps) {
+      switch (column_cpp.dtype()) {
+#define CASE(D)                                                                \
+  case GDF_##D: {                                                              \
+    builders.push_back(LiteralColumnBuilder(                                   \
+      "", Literals<GDF_##D>{HostVectorFrom<GDF_##D>(column_cpp)}));            \
+    break;                                                                     \
+  }
+        CASE(INT8);
+        CASE(INT16);
+        CASE(INT32);
+        CASE(INT64);
+        CASE(UINT8);
+        CASE(UINT16);
+        CASE(UINT32);
+        CASE(UINT64);
+        CASE(FLOAT32);
+        CASE(FLOAT64);
+        CASE(DATE32);
+        CASE(DATE64);
+        CASE(TIMESTAMP);
+#undef CASE
+      default: throw std::runtime_error("Bad DType");
+      }
+    }
+    return builders;
+  }
 };
 
 // helper function to tuple_each a tuple of any size

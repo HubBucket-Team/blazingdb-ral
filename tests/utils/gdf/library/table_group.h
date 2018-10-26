@@ -1,7 +1,7 @@
 #pragma once
 #include "column.h"
 #include "table.h"
- 
+
 namespace gdf {
 namespace library {
 
@@ -23,7 +23,6 @@ private:
   std::vector<Table> tables_;
 };
 
-
 BlazingFrame TableGroup::ToBlazingFrame() const {
   BlazingFrame frame;
   frame.resize(tables_.size());
@@ -33,7 +32,6 @@ BlazingFrame TableGroup::ToBlazingFrame() const {
                  [](const Table &table) { return table.ToGdfColumnCpps(); });
   return frame;
 }
-
 
 class TableGroupBuilder {
 public:
@@ -71,17 +69,5 @@ private:
 
 using Index = const std::size_t;
 
-template <gdf_dtype U>
-std::vector<typename DType<U>::value_type>
-HostVectorFrom(gdf_column_cpp &column) {
-  std::vector<typename DType<U>::value_type> vector;
-  vector.reserve(column.size());
-  cudaMemcpy(vector.data(),
-             column.data(),
-             column.size() * DType<U>::size,
-             cudaMemcpyDeviceToHost);
-  return vector;
-} 
-
-}//container
-}//gdf
+}  // namespace library
+}  // namespace gdf

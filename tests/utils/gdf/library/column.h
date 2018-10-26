@@ -73,7 +73,7 @@ public:
   Wrapper operator[](const std::size_t i) const { return Wrapper{i, this}; }
 
   virtual size_t      size() const                      = 0;
-  virtual size_t      print(std::ostream &stream) const = 0;
+  //virtual size_t      print(std::ostream &stream) const = 0;
   virtual std::string get_as_str(int index) const       = 0;
 
   const std::string &name() const { return name_; }
@@ -129,7 +129,7 @@ public:
 
   void
   range(const std::size_t begin, const std::size_t end, Callback callback) {
-    assert(end > begin);
+    // assert(end > begin);  // TODO(gcca): bug with gdf_column_cpps
     values_.reserve(end - begin);
     for (std::size_t i = begin; i < end; i++) {
       values_.push_back(callback(i));
@@ -236,15 +236,17 @@ class Literals {
 public:
   using value_type       = typename DType<id>::value_type;
   using initializer_list = std::initializer_list<value_type>;
+  using vector           = std::vector<value_type>;
 
+  Literals(vector values) : values_{values} {}
   Literals(initializer_list values) : values_{values} {}
 
-  initializer_list values() const { return values_; }
+  vector values() const { return values_; }
 
   std::size_t size() const { return values_.size(); }
 
 private:
-  std::initializer_list<typename DType<id>::value_type> values_;
+  vector values_;
 };
 
 class LiteralColumnBuilder {
@@ -252,6 +254,12 @@ public:
   template <gdf_dtype id>
   LiteralColumnBuilder(const std::string &name, Literals<id> values)
     : impl_{std::make_shared<Impl<id> >(name, values)} {}
+
+  LiteralColumnBuilder() {}
+  LiteralColumnBuilder &operator=(const LiteralColumnBuilder &other) {
+    impl_ = other.impl_;
+    return *this;
+  }
 
   std::unique_ptr<Column> Build() const { return impl_->Build(); }
 

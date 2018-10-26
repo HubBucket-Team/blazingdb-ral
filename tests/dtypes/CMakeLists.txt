@@ -10,3 +10,4 @@ set(dtypes-test_SRCS
   ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
   dtypes-test.cu)
 configure_test(dtypes-test "${dtypes-test_SRCS}")
+target_link_libraries(dtypes-test ral-test-utils)

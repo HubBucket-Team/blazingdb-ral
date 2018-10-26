@@ -51,15 +51,19 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
   interpreter::GetResultRequestMessage request(requestPayloadBuffer.data());
   std::cout << "resultToken: " << request.getResultToken() << std::endl;
 
+
+  // remove from repository using accessToken and resultToken
+  blazing_frame result = result_set_repository::get_instance().get_result(accessToken, request.getResultToken());
+
+  //TODO ojo el result siempre es una sola tabla por eso indice 0
+  const int rows = result.get_columns()[0][0].size();
+
   interpreter::BlazingMetadataDTO  metadata = {
     .status = "OK",
     .message = "metadata message",
     .time = 0.1f,
-    .rows = 1
+    .rows = rows
   }; 
-
-  // remove from repository using accessToken and resultToken
-  blazing_frame result = result_set_repository::get_instance().get_result(accessToken, request.getResultToken());
 
   std::vector<std::string> fieldNames;
   std::vector<::gdf_dto::gdf_column> values;

@@ -41,17 +41,34 @@ DTYPE_FACTORY(TIMESTAMP, std::int64_t);
 
 class Column {
 public:
-  ~Column();
+  virtual ~Column();
 
-  virtual gdf_column_cpp ToGdfColumnCpp() const = 0;
-  virtual const void *   get_values() const     = 0;
+  virtual gdf_column_cpp ToGdfColumnCpp() const         = 0;
+  virtual const void *   get(const std::size_t i) const = 0;
+
+  class Wrapper {
+  public:
+    template <class T>
+    operator T() const {
+      return *static_cast<const T *>(column->get(i));
+    }
+
+    template <gdf_dtype DType>
+    typename DTypeTraits<DType>::value_type get() const {
+      return static_cast<typename DTypeTraits<DType>::value_type>(*this);
+    }
+
+    const std::size_t i;
+    const Column *    column;
+  };
 
   template <gdf_dtype DType>
-  typename DTypeTraits<DType>::value_type get(const std::size_t i) const {
-    return (*reinterpret_cast<
-            const std::basic_string<typename DTypeTraits<DType>::value_type> *>(
-      get_values()))[i];
+  typename DTypeTraits<DType>::value_type
+  get(const std::size_t i) const {  //! \deprecated
+    return Wrapper{i, this}.get<DType>();
   }
+
+  Wrapper operator[](const std::size_t i) const { return Wrapper{i, this}; }
 
 protected:
   static gdf_column_cpp Create(const gdf_dtype   dtype,
@@ -85,7 +102,8 @@ public:
     return Create(DType, length_, values_.data(), sizeof(value_type));
   }
 
-  const void *get_values() const final { return &values_; }
+  value_type  operator[](const std::size_t i) const { return values_[i]; }
+  const void *get(const std::size_t i) const final { return &values_[i]; }
 
 private:
   const std::string name_;

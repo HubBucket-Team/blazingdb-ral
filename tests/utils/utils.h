@@ -98,15 +98,16 @@ class Table {
 public:
   Table(const std::string &name) : name_{name} {}
 
-  Table(const std::string &name, std::vector<Column *> &columns)
-    : name_{name}, columns_{columns} {}
+  Table(const std::string &                     name,
+        std::vector<std::shared_ptr<Column> > &&columns)
+    : name_{name}, columns_{std::move(columns)} {}
 
   const Column &operator[](const std::size_t i) const { return *columns_[i]; }
 
 private:
   const std::string name_;
 
-  std::vector<Column *> columns_;
+  std::vector<std::shared_ptr<Column> > columns_;
 };
 
 using BlazingFrame = std::vector<std::vector<gdf_column> >;
@@ -155,18 +156,15 @@ private:
 
 class ColumnBuilder {
 public:
-  template <class C>
-  ColumnBuilder(const std::string &name, C callback) {
-    typedef RangeTraits<decltype(callback)> a;
-    auto *column = new TypedColumn<a::r_type::dtype>(name);
+  template <class Callback>
+  ColumnBuilder(const std::string &name, Callback callback) {
+    auto *column =
+      new TypedColumn<RangeTraits<decltype(callback)>::r_type::dtype>(name);
     column->range(100, callback);
-    column_ = column;
+    column_.reset(column);
   }
 
-  Column *column_ptr() const { return column_; }
-
-private:
-  Column *column_;
+  std::shared_ptr<Column> column_;
 };
 
 class TableBuilder {
@@ -176,9 +174,9 @@ public:
     : name_{name}, builders_{builders} {}
 
   Table build(const std::size_t length) {
-    std::vector<Column *> v;
-    for (auto b : builders_) v.push_back(b.column_ptr());
-    return Table(name_, v);
+    std::vector<std::shared_ptr<Column> > v;
+    for (auto b : builders_) v.emplace_back(b.column_);
+    return Table(name_, std::move(v));
   }
 
 private:

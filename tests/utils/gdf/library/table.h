@@ -234,17 +234,23 @@ struct _FillColumnLambda
   std::vector<std::vector<linb::any>> &values;
   std::vector<ColumnFiller> &builders;
   std::vector<std::string>  &headers;
-  size_t &i;
-  
+  mutable size_t i;
+
+  _FillColumnLambda(std::vector<std::vector<linb::any>> &values,
+                    std::vector<ColumnFiller> &builders,
+                    std::vector<std::string>  &headers)
+                    : values{values}, builders{builders}, headers{headers}, i{0}
+  {
+  }
+
   template <typename T>
-  void operator()(T&& value) const { 
+  void operator()(T value) const { 
       auto name = headers[i];
       std::vector< decltype(value) >  column_values;
       for (auto &&any_val : values[i]) {
         column_values.push_back( linb::any_cast<decltype(value)>(any_val) );
       }
-      ColumnFiller b(name, column_values);
-      builders.push_back(b);
+      builders.push_back( ColumnFiller {name, column_values} );
       i++;
   }
 };
@@ -271,15 +277,14 @@ public:
       i++;
     }
     std::vector<ColumnFiller> builders; 
-    i = 0;
-    tuple_each(rows_[0], _FillColumnLambda{values, builders, this->headers_, i});
+    tuple_each(rows_[0], _FillColumnLambda{values, builders, this->headers_});
 
     std::vector<std::shared_ptr<Column> > columns;
     columns.resize(builders.size());
     std::transform(std::begin(builders),
                    std::end(builders),
                    columns.begin(),
-                   [](ColumnFiller &&builder) {
+                   [](ColumnFiller &builder) {
                      return std::move(builder.Build());
                    });
     return Table(name_, std::move(columns));

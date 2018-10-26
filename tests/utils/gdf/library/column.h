@@ -302,6 +302,9 @@ public:
     pointer->FillData(values);
     column_ = std::shared_ptr<Column>(pointer);
   }
+  ColumnFiller() = default;
+  ColumnFiller(const ColumnFiller &other) = default;
+  ColumnFiller &operator=(const ColumnFiller &other) = default;
 
   std::shared_ptr<Column> Build() const { return column_; }
 

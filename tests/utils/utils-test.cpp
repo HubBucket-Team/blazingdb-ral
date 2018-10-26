@@ -1,9 +1,10 @@
 #include <gtest/gtest.h>
 
-#include "utils.h"
+#include "gdf/library/table.h"
+#include "gdf/library/table_group.h"
 
 TEST(UtilsTest, InitData) {
-  using namespace ral::test::utils;
+  using namespace gdf::library;
 
   Table t =
     TableBuilder{
@@ -21,6 +22,7 @@ TEST(UtilsTest, InitData) {
   for (std::size_t i = 0; i < 10; i++) {
     EXPECT_EQ(i / 10.0, t[0][i].get<GDF_FLOAT64>());
   }
+  t.print(std::cout);
 
   auto g =
     TableGroupBuilder{
@@ -36,8 +38,11 @@ TEST(UtilsTest, InitData) {
        }}}
       .Build({10, 20});
 
+  g[0].print(std::cout);
+  g[1].print(std::cout);
+  
   BlazingFrame frame = g.ToBlazingFrame();
-
+  
   auto hostVector = HostVectorFrom<GDF_UINT64>(frame[1][1]);
 
   for (std::size_t i = 0; i < 20; i++) {

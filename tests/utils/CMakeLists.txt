@@ -1,7 +1,6 @@
 cuda_add_library(ral-test-utils
   ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
   ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
-  utils.cu
 )
 target_link_libraries(ral-test-utils
   ${LIBGDF_STATIC_LIB}

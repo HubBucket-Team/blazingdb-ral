@@ -3,9 +3,9 @@
 #include "gdf/library/table.h"
 #include "gdf/library/table_group.h"
 
-TEST(UtilsTest, InitData) {
-  using namespace gdf::library;
+using namespace gdf::library;
 
+TEST(UtilsTest, TableBuilder) {
   Table t =
     TableBuilder{
       "emps",
@@ -23,7 +23,9 @@ TEST(UtilsTest, InitData) {
     EXPECT_EQ(i / 10.0, t[0][i].get<GDF_FLOAT64>());
   }
   t.print(std::cout);
+}
 
+TEST(UtilsTest, FrameFromTableGroup) {
   auto g =
     TableGroupBuilder{
       {"emps",
@@ -40,32 +42,54 @@ TEST(UtilsTest, InitData) {
 
   g[0].print(std::cout);
   g[1].print(std::cout);
-  
+
   BlazingFrame frame = g.ToBlazingFrame();
-  
+
   auto hostVector = HostVectorFrom<GDF_UINT64>(frame[1][1]);
 
-  for (std::size_t i = 0; i < 20; i++) {
-    EXPECT_EQ(i * 10000, hostVector[i]);
+  for (std::size_t i = 0; i < 20; i++) { EXPECT_EQ(i * 10000, hostVector[i]); }
+}
+
+TEST(UtilsTest, TableFromLiterals) {
+  auto t =
+    LiteralTableBuilder{.name = "emps",
+                        .columns =
+                          {
+                            {
+                              .name   = "x",
+                              .values = Literals<GDF_FLOAT64>{1, 3, 5, 7, 9},
+                            },
+                            {
+                              .name   = "y",
+                              .values = Literals<GDF_INT64>{0, 2, 4, 6, 8},
+                            },
+                          }}
+      .Build();
+
+  for (std::size_t i = 0; i < 5; i++) {
+    EXPECT_EQ(2 * i, t[1][i].get<GDF_INT64>());
   }
 
+  for (std::size_t i = 0; i < 5; i++) {
+    EXPECT_EQ(2 * i + 1.0, t[0][i].get<GDF_FLOAT64>());
+  }
 
-  using VTableBuilder = gdf::library::TableRowBuilder<int8_t, double, int32_t, int64_t>;
+  using VTableBuilder =
+    gdf::library::TableRowBuilder<int8_t, double, int32_t, int64_t>;
   using DataTuple = VTableBuilder::DataTuple;
 
-  gdf::library::Table table = 
-      VTableBuilder {
-        .name = "emps",
-        .headers = {"Id", "Weight", "Age", "Name"},
-        .rows = {
+  gdf::library::Table table =
+    VTableBuilder{
+      .name    = "emps",
+      .headers = {"Id", "Weight", "Age", "Name"},
+      .rows =
+        {
           DataTuple{'a', 180.2, 40, 100L},
           DataTuple{'b', 175.3, 38, 200L},
           DataTuple{'c', 140.3, 27, 300L},
         },
-      }
+    }
       .Build();
 
   table.print(std::cout);
-
-  
 }

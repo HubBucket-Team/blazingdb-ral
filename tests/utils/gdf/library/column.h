@@ -48,7 +48,7 @@ class Column {
 public:
   Column(const std::string &name) : name_{name} {}
 
-  ~Column();
+  virtual ~Column();
 
   virtual gdf_column_cpp ToGdfColumnCpp() const = 0;
 
@@ -76,7 +76,7 @@ public:
   virtual size_t      print(std::ostream &stream) const = 0;
   virtual std::string get_as_str(int index) const       = 0;
 
-  std::string name() const { return name_; }
+  const std::string &name() const { return name_; }
 
 protected:
   static gdf_column_cpp Create(const gdf_dtype   dtype,
@@ -293,6 +293,21 @@ private:
 };
 
 inline LiteralColumnBuilder::ImplBase::~ImplBase() = default;
+
+class ColumnFiller {
+public:
+  template <class Type>
+  ColumnFiller(const std::string &name, const std::vector<Type> &values) {
+    auto *pointer = new TypedColumn<GdfDataType<Type>::Value>(name);
+    pointer->FillData(values);
+    column_ = std::shared_ptr<Column>(pointer);
+  }
+
+  std::shared_ptr<Column> Build() const { return column_; }
+
+private:
+  std::shared_ptr<Column> column_;
+};
 
 }  // namespace library
 }  // namespace gdf

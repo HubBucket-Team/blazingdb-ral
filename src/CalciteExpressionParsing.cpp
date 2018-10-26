@@ -13,7 +13,7 @@ bool is_type_signed(gdf_dtype type){
 			GDF_INT32 == type ||
 			GDF_INT64 == type ||
 			GDF_FLOAT32 == type ||
-			GDF_FLOAT64 == type
+			GDF_FLOAT64 == type ||
 			GDF_DATE32 == type ||
 			GDF_DATE64 == type ||
 			GDF_TIMESTAMP == type);

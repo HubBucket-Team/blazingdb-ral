@@ -195,7 +195,6 @@ public:
   typedef R r_type;
 };
 
-
 class ColumnBuilder {
 public:
   template <class Callback>
@@ -237,5 +236,24 @@ private:
 
 inline ColumnBuilder::ImplBase::~ImplBase() = default;
  
+
+class ColumnFiller{
+public:
+  template <class Type>
+  ColumnFiller(const std::string &name, const std::vector<Type>& values) 
+  {
+    auto * pointer = new TypedColumn< GdfDataType<Type>::Value >(name); 
+    pointer->FillData(values);
+    column_ = std::shared_ptr<Column>(pointer); 
+  }
+
+  std::shared_ptr<Column> Build() const {
+    return column_;
+  }
+
+private: 
+  std::shared_ptr<Column> column_;
+};
+
 } // namespace library
 } // namesapce gdf

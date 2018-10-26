@@ -157,6 +157,88 @@ private:
   std::initializer_list<ColumnBuilder> builders_;
 };
 
- 
+
+// helper function to tuple_each a tuple of any size
+template<class Tuple, typename Func, std::size_t N>
+struct TupleEach {
+	static void tuple_each(Tuple& t, Func& f)
+	{
+		TupleEach<Tuple, Func, N - 1>::tuple_each(t, f);
+		f(std::get<N - 1>(t));
+	}
+};
+
+template<class Tuple, typename Func>
+struct TupleEach<Tuple, Func, 1> {
+	static void tuple_each(Tuple& t, Func& f)
+	{
+		f(std::get<0>(t));
+	}
+};
+
+template<typename Tuple, typename Func>
+void tuple_each(Tuple& t, Func&& f)
+{
+	TupleEach<Tuple, Func, std::tuple_size<Tuple>::value>::tuple_each(t, f);
+}
+// end helper function
+
+
+
+template <class...Ts>
+class TableRowBuilder {
+public:
+  typedef std::tuple<Ts...> DataTuple;
+
+  TableRowBuilder(const std::string &     name,
+                  std::vector<std::string> headers,
+                  std::initializer_list<DataTuple> rows)
+    : name_{name}, headers_(headers), rows_{rows}, ncols_{std::tuple_size<DataTuple>::value}, nrows_{rows.size()}
+  {
+  }
+
+  Table Build() {
+    size_t i = 0;
+    std::vector< std::vector< linb::any > > values(ncols_, std::vector< linb::any >(nrows_));
+    for (DataTuple row : rows_) {
+      int j = 0;
+      tuple_each(row, [&values, &i, &j](auto &value) {
+        values[j][i] = value;
+        j++;
+      });
+      i++;
+    }
+    std::vector<ColumnFiller> builders;
+    i = 0;
+    tuple_each(rows_[0], [this, &values, &builders, &i](auto value) {
+      auto name = headers_[i];
+      std::vector< decltype(value) >  column_values;
+      for (auto &&any_val : values[i]) {
+        column_values.push_back( linb::any_cast<decltype(value)>(any_val) );
+      }
+      ColumnFiller b(name, column_values);
+      builders.push_back(b);
+      i++;
+    });
+
+    std::vector<std::shared_ptr<Column> > columns;
+    columns.resize(builders.size());
+    std::transform(std::begin(builders),
+                   std::end(builders),
+                   columns.begin(),
+                   [](auto &&builder) {
+                     return std::move(builder.Build());
+                   });
+    return Table(name_, std::move(columns));
+  }
+
+private:
+  const std::string           name_; 
+  const size_t                nrows_;
+  const size_t                ncols_;
+  std::vector<std::string>    headers_;
+  std::vector<DataTuple>      rows_;
+};
+
 }//container
 }//gdf

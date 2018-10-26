@@ -48,4 +48,24 @@ TEST(UtilsTest, InitData) {
   for (std::size_t i = 0; i < 20; i++) {
     EXPECT_EQ(i * 10000, hostVector[i]);
   }
+
+
+  using VTableBuilder = gdf::library::TableRowBuilder<int8_t, double, int32_t, int64_t>;
+  using DataTuple = VTableBuilder::DataTuple;
+
+  gdf::library::Table table = 
+      VTableBuilder {
+        .name = "emps",
+        .headers = {"Id", "Weight", "Age", "Name"},
+        .rows = {
+          DataTuple{'a', 180.2, 40, 100L},
+          DataTuple{'b', 175.3, 38, 200L},
+          DataTuple{'c', 140.3, 27, 300L},
+        },
+      }
+      .Build();
+
+  table.print(std::cout);
+
+  
 }

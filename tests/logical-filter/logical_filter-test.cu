@@ -185,6 +185,7 @@ TEST_F(logical_filter_TEST, processing_expressions5) {
     }
 }
 
+//AND could process only logical operands
 /*TEST_F(logical_filter_TEST, processing_logical_expressions0) {
 
 	{
@@ -200,7 +201,7 @@ TEST_F(logical_filter_TEST, processing_expressions5) {
 			host_output[i] = (input1[i] && input2[i]) ? 1 : 0;
 		}
     }
-}
+}*/
 
 TEST_F(logical_filter_TEST, processing_logical_expressions1) {
 
@@ -217,7 +218,7 @@ TEST_F(logical_filter_TEST, processing_logical_expressions1) {
 			host_output[i] = ((input1[i] * input1[i]) == 1) && (input2[i] == 2) ? 1 : 0;
 		}
 	}
-}*/
+}
 
 int main(int argc, char **argv){
 	::testing::InitGoogleTest(&argc, argv);

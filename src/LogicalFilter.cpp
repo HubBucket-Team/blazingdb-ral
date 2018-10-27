@@ -55,7 +55,7 @@ gdf_error process__binary_operation_column_column(
 			gdf_scalar left = get_scalar_from_string(left_operand,inputs.get_column(right_index).dtype());
 			gdf_error err = gdf_binary_operation_v_s_v(output.get_gdf_column(),&left,inputs.get_column(right_index).get_gdf_column(),operation);
 			if(err == GDF_SUCCESS){
-				inputs.add_column(temp);
+				inputs.add_column(temp.clone());
 				operands.push("$" + std::to_string(inputs.get_size_column()-1));
 			}
 			return err;
@@ -69,7 +69,7 @@ gdf_error process__binary_operation_column_column(
 
 			gdf_error err = gdf_binary_operation_v_v_s(output.get_gdf_column(),inputs.get_column(left_index).get_gdf_column(),&right,operation);
 			if(err == GDF_SUCCESS){
-				inputs.add_column(temp);
+				inputs.add_column(temp.clone());
 				operands.push("$" + std::to_string(inputs.get_size_column()-1));
 			}
 			return err;
@@ -80,7 +80,7 @@ gdf_error process__binary_operation_column_column(
 			gdf_error err = gdf_binary_operation_v_v_v(output.get_gdf_column(),inputs.get_column(left_index).get_gdf_column(),inputs.get_column(right_index).get_gdf_column(),
 					operation);
 			if(err == GDF_SUCCESS){
-				inputs.add_column(temp);
+				inputs.add_column(temp.clone());
 				operands.push("$" + std::to_string(inputs.get_size_column()-1));
 			}
 			return err;
@@ -131,6 +131,22 @@ gdf_error evaluate_expression(
 		//std::cout<<"Token is ==> "<<token<<"\n";
 
 		if(is_operator_token(token)){
+
+			//Todo: Check correctness
+			/*if (token == "OR") {
+				auto op1 = operand_stack.top();
+				operand_stack.pop();
+				auto op2 = operand_stack.top();
+				operand_stack.pop();
+
+				std::string equal = { "MOD + " };
+				equal.append(op1 + " " + op2 + " 2");
+				clean_expression.erase(position, 2);
+				clean_expression.insert(position, equal);
+				position += equal.length();
+				continue;
+			}*/
+
 			process__binary_operation_column_column(
 					token,
 					operand_stack,

@@ -691,16 +691,19 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 
 	temp.create_gdf_column(max_temp_type,input.get_column(0).size(),nullptr,get_width_dtype(max_temp_type));
 
+	std::string conditional_expression = get_condition_expression(query_part);
 	err = evaluate_expression(
 			input,
-			get_condition_expression(query_part),
+			conditional_expression,
 			stencil,
 			temp);
 
 	if(err == GDF_SUCCESS){
 		//apply filter to all the columns
 		for(int i = 0; i < input.get_width(); i++){
-			temp.set_dtype(input.get_column(i).dtype());
+			temp.create_gdf_column(input.get_column(i).dtype(), input.get_column(i).size(), nullptr, get_width_dtype(input.get_column(i).dtype()));
+			//temp.set_dtype(input.get_column(i).dtype());
+
 			//			cudaPointerAttributes attributes;
 			//			cudaError_t err2 = cudaPointerGetAttributes ( &attributes, (void *) temp.data );
 			//			err2 = cudaPointerGetAttributes ( &attributes, (void *) input.get_column(i)->data );
@@ -716,39 +719,45 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 					stencil.get_gdf_column(),
 					temp.get_gdf_column()
 			);
+			if(err != GDF_SUCCESS){
+				return err;
+			}
 
 
 
-
-			//
 			gdf_column_cpp new_output;
 			gdf_column_cpp empty;
 
 			int width;
 			get_column_byte_width(input.get_column(i).get_gdf_column(), &width);
-			empty.create_gdf_column(input.get_column(i).dtype(),0,nullptr,width);
 
+			int empty_size = input.get_column(i).size() - temp.size();
+			int empty_byte_size = empty_size * get_width_dtype(input.get_column(i).dtype());
+
+			char* zeroes = new char[empty_byte_size];
+			memset(zeroes, 0, empty_byte_size);
+
+			empty.create_gdf_column(input.get_column(i).dtype(), empty_size, zeroes, width);
+			delete[] zeroes;
 
 			if(input.get_column(i).is_ipc()){
 				//make a copy
-
 				new_output.create_gdf_column(input.get_column(i).dtype(),input.get_column(i).size(),nullptr,get_width_dtype(input.get_column(i).dtype()));
-
 
 				if(err != GDF_SUCCESS){
 					return err;
 				}
-
-
 			}else{
-
 
 				input.get_column(i).realloc_gdf_column(input.get_column(i).dtype(),temp.size(),width);
 				new_output = input.get_column(i);
-
 			}
 
 			gdf_error err = gpu_concat(temp.get_gdf_column(), empty.get_gdf_column(), new_output.get_gdf_column());
+
+			if(input.get_column(i).is_ipc()){
+				input.set_column(i, new_output);
+			}
 
 			if(err != GDF_SUCCESS){
 				return err;
@@ -879,6 +888,11 @@ blazing_frame evaluate_split_query(
 			return child_frame;
 		}else if(is_filter(query[0])){
 			gdf_error err = process_filter(child_frame,query[0]);
+
+			if(err != GDF_SUCCESS){
+				std::cout<<"Error in filter: "<<err<<std::endl;
+			}
+
 			return child_frame;
 		}else{
 			//some error

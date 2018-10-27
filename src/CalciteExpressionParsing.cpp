@@ -301,59 +301,59 @@ int64_t  tmst;  // GDF_TIMESTAMP
 	if(type == GDF_INT8){
 		gdf_data data;
 		data.si08 = stoi(scalar_string);
-		return {data, GDF_INT8};
+		return {data, GDF_INT8, true};
 
 	}else if(type == GDF_INT16){
 		gdf_data data;
 		data.si16 = stoi(scalar_string);
-		return {data, GDF_INT16};
+		return {data, GDF_INT16, true};
 	}else if(type == GDF_INT32){
 		gdf_data data;
 		data.si32 = stoi(scalar_string);
-		return {data, GDF_INT32};
+		return {data, GDF_INT32, true};
 	}else if(type == GDF_INT64){
 		gdf_data data;
 		data.si64 = stoll(scalar_string);
-		return {data, GDF_INT64};
+		return {data, GDF_INT64, true};
 	}else if(type == GDF_UINT8){
 		gdf_data data;
 		data.ui08 = stoull(scalar_string);
-		return {data, GDF_UINT8};
+		return {data, GDF_UINT8, true};
 	}else if(type == GDF_UINT16){
 		gdf_data data;
 		data.ui16 = stoull(scalar_string);
-		return {data, GDF_UINT16};
+		return {data, GDF_UINT16, true};
 	}else if(type == GDF_UINT32){
 		gdf_data data;
 		data.ui32 = stoull(scalar_string);
-		return {data, GDF_UINT32};
+		return {data, GDF_UINT32, true};
 	}else if(type == GDF_UINT64){
 		gdf_data data;
 		data.ui64 = stoull(scalar_string);
-		return {data, GDF_UINT64};
+		return {data, GDF_UINT64, true};
 	}else if(type == GDF_FLOAT32){
 		gdf_data data;
 		data.fp32 = stof(scalar_string);
-		return {data, GDF_FLOAT32};
+		return {data, GDF_FLOAT32, true};
 	}else if(type == GDF_FLOAT64){
 		gdf_data data;
 		data.fp64 = stod(scalar_string);
-		return {data, GDF_FLOAT64};
+		return {data, GDF_FLOAT64, true};
 	}else if(type == GDF_DATE32){
 		//TODO: convert date literals!!!!
 		gdf_data data;
 		//string format o
 		data.dt32 = get_date_32_from_string(scalar_string);
-		return {data, GDF_DATE32};
+		return {data, GDF_DATE32, true};
 	}else if(type == GDF_DATE64){
 		gdf_data data;
 		data.dt64 = get_date_64_from_string(scalar_string);
-		return {data, GDF_DATE64};
+		return {data, GDF_DATE64, true};
 	}else if(type == GDF_TIMESTAMP){
 		//Todo: specific the unit
 		gdf_data data;
 		data.tmst = get_timestamp_from_string(scalar_string);
-		return {data, GDF_TIMESTAMP};
+		return {data, GDF_TIMESTAMP, true};
 	}
 }
 
@@ -464,6 +464,8 @@ gdf_error get_operation(
 		*operation = GDF_POW;
 	}else if(operator_string == "MOD"){
 		*operation = GDF_MOD;
+	}else if(operator_string == "AND"){
+		*operation = GDF_MUL;
 	}
 	else{
 		return GDF_UNSUPPORTED_DTYPE;

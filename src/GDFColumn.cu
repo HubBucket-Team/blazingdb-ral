@@ -21,7 +21,7 @@ gdf_column_cpp::gdf_column_cpp()
 
 }
 
-gdf_column_cpp::gdf_column_cpp(void* _data, gdf_valid_type* _valid, gdf_dtype _dtype, size_t _size, gdf_size_type _null_count)
+gdf_column_cpp::gdf_column_cpp(void* _data, gdf_valid_type* _valid, gdf_dtype _dtype, size_t _size, gdf_size_type _null_count, const std::string &column_name)
 {
     column.data = _data;
     column.valid = _valid;
@@ -33,12 +33,13 @@ gdf_column_cpp::gdf_column_cpp(void* _data, gdf_valid_type* _valid, gdf_dtype _d
     this->allocated_size_data = _size * byte_width;
     //Todo: To validate valid_size
     this->allocated_size_valid = gdf_get_num_chars_bitmask(_size);
+    this->column_name = column_name;
 
 }
 
-gdf_column_cpp::gdf_column_cpp(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value)
+gdf_column_cpp::gdf_column_cpp(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value, const std::string &column_name)
 {
-    this->create_gdf_column(type, num_values, input_data, width_per_value);
+    this->create_gdf_column(type, num_values, input_data, width_per_value, column_name);
 
 }
 
@@ -51,6 +52,7 @@ gdf_column_cpp::gdf_column_cpp(const gdf_column_cpp& col)
     column.null_count = col.column.null_count;
     this->allocated_size_data = col.allocated_size_data;
     this->allocated_size_valid = col.allocated_size_valid;
+    this->column_name= col.column_name;
     GDFRefCounter::getInstance()->increment(const_cast<gdf_column*>(&col.column));
 
 }
@@ -64,6 +66,7 @@ gdf_column_cpp::gdf_column_cpp(gdf_column_cpp& col)
     column.null_count = col.column.null_count;
     this->allocated_size_data = col.allocated_size_data;
     this->allocated_size_valid = col.allocated_size_valid;
+    this->column_name= col.column_name;
     GDFRefCounter::getInstance()->increment(const_cast<gdf_column*>(&col.column));
 
 }
@@ -86,7 +89,8 @@ gdf_column_cpp gdf_column_cpp::clone()
 						(gdf_valid_type*) valid_dev,
 						this->column.dtype,
 						this->column.size,
-						this->column.null_count);
+						this->column.null_count,
+						this->column_name);
 
 	print_gdf_column(col1.get_gdf_column());
 	return col1;
@@ -101,6 +105,7 @@ void gdf_column_cpp::operator=(const gdf_column_cpp& col)
     column.null_count = col.column.null_count;
     this->allocated_size_data = col.allocated_size_data;
     this->allocated_size_valid = col.allocated_size_valid;
+    this->column_name= col.column_name;
     GDFRefCounter::getInstance()->increment(const_cast<gdf_column*>(&col.column));
 
 }
@@ -124,9 +129,11 @@ gdf_error gdf_column_cpp::compact(){
     }
 }
 
-void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value)
+void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value, const std::string &column_name)
 {
     assert(type != GDF_invalid);
+
+    this->column_name = column_name;
 
     char * data;
     gdf_valid_type * valid_device;
@@ -152,9 +159,10 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
 }
 
 void gdf_column_cpp::realloc_gdf_column(gdf_dtype type, size_t size, size_t width){
+	const std::string col_name = this->column_name;
     GDFRefCounter::getInstance()->decrement(&this->column); //decremeting reference, deallocating space
 
-	this->create_gdf_column(type, size, nullptr, width);
+	this->create_gdf_column(type, size, nullptr, width, col_name);
 }
 
 gdf_error gdf_column_cpp::gdf_column_view(gdf_column *column, void *data, gdf_valid_type *valid, gdf_size_type size, gdf_dtype dtype)

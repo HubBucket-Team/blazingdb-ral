@@ -13,36 +13,12 @@
 
 #include "any.h"
 #include "definitions.h"
+#include "hd.h"
 #include "types.h"
 #include "vector.h"
 
 namespace gdf {
 namespace library {
-
-template <gdf_dtype DTYPE>
-struct DTypeTraits {};
-
-#define DTYPE_FACTORY(DTYPE, T)                                                \
-  template <>                                                                  \
-  struct DTypeTraits<GDF_##DTYPE> {                                            \
-    typedef T value_type;                                                      \
-  }
-
-DTYPE_FACTORY(INT8, std::int8_t);
-DTYPE_FACTORY(INT16, std::int16_t);
-DTYPE_FACTORY(INT32, std::int32_t);
-DTYPE_FACTORY(INT64, std::int64_t);
-DTYPE_FACTORY(UINT8, std::uint8_t);
-DTYPE_FACTORY(UINT16, std::uint16_t);
-DTYPE_FACTORY(UINT32, std::uint32_t);
-DTYPE_FACTORY(UINT64, std::uint64_t);
-DTYPE_FACTORY(FLOAT32, float);
-DTYPE_FACTORY(FLOAT64, double);
-DTYPE_FACTORY(DATE32, std::int32_t);
-DTYPE_FACTORY(DATE64, std::int64_t);
-DTYPE_FACTORY(TIMESTAMP, std::int64_t);
-
-#undef DTYPE_FACTORY
 
 class Column {
 public:
@@ -53,6 +29,18 @@ public:
   virtual gdf_column_cpp ToGdfColumnCpp() const = 0;
 
   virtual const void *get(const std::size_t i) const = 0;
+
+  bool operator==(const Column &other) const {
+    for (std::size_t i = 0; i < size(); i++) {
+      if ((*static_cast<const std::uint64_t *>(get(i)))
+          != (*static_cast<const std::uint64_t *>(other.get(i)))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool operator!=(const Column &other) const { return !(*this == other); }
 
   class Wrapper {
   public:
@@ -72,9 +60,9 @@ public:
 
   Wrapper operator[](const std::size_t i) const { return Wrapper{i, this}; }
 
-  virtual size_t      size() const                      = 0;
-  //virtual size_t      print(std::ostream &stream) const = 0;
-  virtual std::string get_as_str(int index) const       = 0;
+  virtual size_t size() const = 0;
+  // virtual size_t      print(std::ostream &stream) const = 0;
+  virtual std::string get_as_str(int index) const = 0;
 
   const std::string &name() const { return name_; }
 
@@ -98,23 +86,6 @@ gdf_column_cpp Column::Create(const gdf_dtype   dtype,
   column_cpp.create_gdf_column(dtype, length, const_cast<void *>(data), size);
   return column_cpp;
 }
-
-template <gdf_dtype GDF_DType>
-class DType {
-public:
-  using value_type = typename DTypeTraits<GDF_DType>::value_type;
-
-  static constexpr gdf_dtype value  = GDF_DType;
-  static constexpr std::size_t size = sizeof(value_type);
-
-  template <class T>
-  DType(const T value) : value_{value} {}
-
-  operator value_type() const { return value_; }
-
-private:
-  const value_type value_;
-};
 
 template <gdf_dtype value>
 using Ret = DType<value>;  //! \deprecated
@@ -238,12 +209,14 @@ public:
   using initializer_list = std::initializer_list<value_type>;
   using vector           = std::vector<value_type>;
 
-  Literals(vector values) : values_{values} {}
-  Literals(initializer_list values) : values_{values} {}
+  Literals(const vector &&values) : values_{std::move(values)} {}
+  Literals(const initializer_list &values) : values_{values} {}
 
-  vector values() const { return values_; }
+  const vector &values() const { return values_; }
 
   std::size_t size() const { return values_.size(); }
+
+  value_type operator[](const std::size_t i) const { return values_[i]; }
 
 private:
   vector values_;
@@ -302,6 +275,56 @@ private:
 
 inline LiteralColumnBuilder::ImplBase::~ImplBase() = default;
 
+class GdfColumnCppColumnBuilder {
+public:
+  GdfColumnCppColumnBuilder(const std::string &   name,
+                            const gdf_column_cpp &column_cpp)
+    : name_{name}, column_cpp_{column_cpp} {}
+
+  GdfColumnCppColumnBuilder()        = default;
+  GdfColumnCppColumnBuilder &operator=(const GdfColumnCppColumnBuilder &other) {
+    name_       = other.name_;
+    column_cpp_ = other.column_cpp_;
+    return *this;
+  }
+
+  operator LiteralColumnBuilder() const {
+    auto column_cpp = const_cast<gdf_column_cpp &>(column_cpp_);
+    switch (column_cpp.dtype()) {
+#define CASE(D)                                                                \
+  case GDF_##D:                                                                \
+    return LiteralColumnBuilder {                                              \
+      name_, Literals<GDF_##D> {                                               \
+        std::move(HostVectorFrom<GDF_##D>(column_cpp))                         \
+      }                                                                        \
+    }
+      CASE(INT8);
+      CASE(INT16);
+      CASE(INT32);
+      CASE(INT64);
+      CASE(UINT8);
+      CASE(UINT16);
+      CASE(UINT32);
+      CASE(UINT64);
+      CASE(FLOAT32);
+      CASE(FLOAT64);
+      CASE(DATE32);
+      CASE(DATE64);
+      CASE(TIMESTAMP);
+#undef CASE
+    default: throw std::runtime_error("Bad DType");
+    }
+  }
+
+  std::unique_ptr<Column> Build() const {
+    return static_cast<LiteralColumnBuilder>(*this).Build();
+  }
+
+private:
+  std::string    name_;
+  gdf_column_cpp column_cpp_;
+};
+
 class ColumnFiller {
 public:
   template <class Type>
@@ -310,7 +333,7 @@ public:
     pointer->FillData(values);
     column_ = std::shared_ptr<Column>(pointer);
   }
-  ColumnFiller() = default;
+  ColumnFiller()                          = default;
   ColumnFiller(const ColumnFiller &other) = default;
   ColumnFiller &operator=(const ColumnFiller &other) = default;
 

@@ -33,6 +33,18 @@ public:
 
   std::vector<gdf_column_cpp> ToGdfColumnCpps() const;
 
+  bool operator==(const Table &other) const {
+    if ((name_ != other.name_) || (columns_.size() != other.columns_.size())) {
+      return false;
+    }
+    for (std::size_t i = 0; i < columns_.size(); i++) {
+      if ((*columns_[i]) != (*other.columns_[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   size_t num_columns() const { return columns_.size(); }
 
   size_t num_rows() const {
@@ -197,47 +209,35 @@ private:
   std::vector<std::size_t>          lengths_;
 };
 
-class GdfColumnCppsTableBuilder : public LiteralTableBuilder {
+class GdfColumnCppsTableBuilder {
 public:
-  GdfColumnCppsTableBuilder(const std::vector<gdf_column_cpp> column_cpps)
-    : LiteralTableBuilder{"", ColumnBuildersFrom(column_cpps)} {}
+  GdfColumnCppsTableBuilder(const std::string &                name,
+                            const std::vector<gdf_column_cpp> &column_cpps)
+    : name_{name}, column_cpps_{column_cpps} {}
 
-  Table Build() const {
-    return LiteralTableBuilder::Build();
+  Table Build() {
+    return LiteralTableBuilder{std::move(name_),
+                               ColumnBuildersFrom(column_cpps_)}
+      .Build();
   }
 
 private:
   std::vector<LiteralColumnBuilder>
   ColumnBuildersFrom(const std::vector<gdf_column_cpp> column_cpps) {
     std::vector<LiteralColumnBuilder> builders;
-    builders.reserve(column_cpps.size());
-    for (auto column_cpp : column_cpps) {
-      switch (column_cpp.dtype()) {
-#define CASE(D)                                                                \
-  case GDF_##D: {                                                              \
-    builders.push_back(LiteralColumnBuilder(                                   \
-      "", Literals<GDF_##D>{HostVectorFrom<GDF_##D>(column_cpp)}));            \
-    break;                                                                     \
-  }
-        CASE(INT8);
-        CASE(INT16);
-        CASE(INT32);
-        CASE(INT64);
-        CASE(UINT8);
-        CASE(UINT16);
-        CASE(UINT32);
-        CASE(UINT64);
-        CASE(FLOAT32);
-        CASE(FLOAT64);
-        CASE(DATE32);
-        CASE(DATE64);
-        CASE(TIMESTAMP);
-#undef CASE
-      default: throw std::runtime_error("Bad DType");
-      }
-    }
+    builders.resize(column_cpps.size());
+    std::transform(column_cpps.cbegin(),
+                   column_cpps.cend(),
+                   builders.begin(),
+                   [](const gdf_column_cpp &column_cpp) {
+                     return static_cast<LiteralColumnBuilder>(
+                       GdfColumnCppColumnBuilder("", column_cpp));
+                   });
     return builders;
   }
+
+  const std::string                 name_;
+  const std::vector<gdf_column_cpp> column_cpps_;
 };
 
 // helper function to tuple_each a tuple of any size
@@ -260,48 +260,42 @@ void tuple_each(Tuple &t, Func &&f) {
 }
 // end helper function
 
-
-struct _GetValuesLambda
-{
-  size_t &i;
-  size_t &j;
-  std::vector<std::vector<linb::any>> &values;
+struct _GetValuesLambda {
+  size_t &                              i;
+  size_t &                              j;
+  std::vector<std::vector<linb::any> > &values;
 
   template <typename T>
-  void operator()(T&& value) const { 
-      values[j][i] = value;
-      j++;
+  void operator()(T &&value) const {
+    values[j][i] = value;
+    j++;
   }
 };
 
-struct _FillColumnLambda
-{
-  std::vector<std::vector<linb::any>> &values;
-  std::vector<ColumnFiller> &builders;
-  std::vector<std::string>  &headers;
-  mutable size_t i;
+struct _FillColumnLambda {
+  std::vector<std::vector<linb::any> > &values;
+  std::vector<ColumnFiller> &           builders;
+  std::vector<std::string> &            headers;
+  mutable size_t                        i;
 
-  _FillColumnLambda(std::vector<std::vector<linb::any>> &values,
-                    std::vector<ColumnFiller> &builders,
-                    std::vector<std::string>  &headers)
-                    : values{values}, builders{builders}, headers{headers}, i{0}
-  {
-  }
+  _FillColumnLambda(std::vector<std::vector<linb::any> > &values,
+                    std::vector<ColumnFiller> &           builders,
+                    std::vector<std::string> &            headers)
+    : values{values}, builders{builders}, headers{headers}, i{0} {}
 
   template <typename T>
-  void operator()(T value) const { 
-      auto name = headers[i];
-      std::vector< decltype(value) >  column_values;
-      for (auto &&any_val : values[i]) {
-        column_values.push_back( linb::any_cast<decltype(value)>(any_val) );
-      }
-      builders.push_back( ColumnFiller {name, column_values} );
-      i++;
+  void operator()(T value) const {
+    auto                         name = headers[i];
+    std::vector<decltype(value)> column_values;
+    for (auto &&any_val : values[i]) {
+      column_values.push_back(linb::any_cast<decltype(value)>(any_val));
+    }
+    builders.push_back(ColumnFiller{name, column_values});
+    i++;
   }
 };
 
-
-template <class...Ts>
+template <class... Ts>
 class TableRowBuilder {
 public:
   typedef std::tuple<Ts...> DataTuple;
@@ -321,17 +315,16 @@ public:
       tuple_each(row, _GetValuesLambda{i, j, values});
       i++;
     }
-    std::vector<ColumnFiller> builders; 
+    std::vector<ColumnFiller> builders;
     tuple_each(rows_[0], _FillColumnLambda{values, builders, this->headers_});
 
     std::vector<std::shared_ptr<Column> > columns;
     columns.resize(builders.size());
-    std::transform(std::begin(builders),
-                   std::end(builders),
-                   columns.begin(),
-                   [](ColumnFiller &builder) {
-                     return std::move(builder.Build());
-                   });
+    std::transform(
+      std::begin(builders),
+      std::end(builders),
+      columns.begin(),
+      [](ColumnFiller &builder) { return std::move(builder.Build()); });
     return Table(name_, std::move(columns));
   }
 

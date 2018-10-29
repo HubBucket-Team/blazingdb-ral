@@ -68,9 +68,6 @@ TEST(UtilsTest, TableFromLiterals) {
 
   for (std::size_t i = 0; i < 5; i++) {
     EXPECT_EQ(2 * i, t[1][i].get<GDF_INT64>());
-  }
-
-  for (std::size_t i = 0; i < 5; i++) {
     EXPECT_EQ(2 * i + 1.0, t[0][i].get<GDF_FLOAT64>());
   }
 
@@ -110,16 +107,12 @@ TEST(UtilsTest, FrameFromGdfColumnsCpps) {
                           }}
       .Build();
 
-  auto g = t.ToGdfColumnCpps();
-  //std::cout << g.size() << std::endl;
-  //for (std::size_t i = 0; i < 5; i++) {
-    //auto v = HostVectorFrom<GDF_INT64>(g[1]);
-    //std::cout << v[i] << std::endl;
-  //}
-
-  auto u = GdfColumnCppsTableBuilder{t.ToGdfColumnCpps()}.Build();
+  auto u = GdfColumnCppsTableBuilder{"emps", t.ToGdfColumnCpps()}.Build();
 
   for (std::size_t i = 0; i < 5; i++) {
-    std::cout << u[1][i].get<GDF_INT64>() << std::endl;
+    EXPECT_EQ(2 * i, u[1][i].get<GDF_INT64>());
+    EXPECT_EQ(2 * i + 1.0, u[0][i].get<GDF_FLOAT64>());
   }
+
+  EXPECT_EQ(t, u);
 }

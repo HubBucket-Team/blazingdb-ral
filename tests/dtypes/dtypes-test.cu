@@ -81,6 +81,8 @@ TYPED_TEST(DTypesTest, withGdfDType) {
     }
       .Build(100);
 
+  input_tables[0].print(std::cout);
+
   std::vector<std::string>               table_names  = {"hr.emps", "hr.sales"};
   std::vector<std::vector<std::string> > column_names = {{"x", "y", "z"},
                                                          {"a", "b", "x"}};

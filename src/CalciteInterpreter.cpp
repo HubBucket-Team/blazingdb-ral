@@ -946,9 +946,9 @@ query_token_t evaluate_query(
 		result_set_repository::get_instance().update_token(token, output_frame);
 		
 		//@todo: hablar con felipe sobre cudaIpcCloseMemHandle
-		// for(int i = 0; i < handles.size(); i++){
-			// cudaIpcCloseMemHandle (handles[i]);
-		// }
+		for(int i = 0; i < handles.size(); i++){
+			cudaIpcCloseMemHandle (handles[i]);
+		}
 		//			std::cout<<"Result\n";
 		//			print_column<int8_t>(output_frame.get_columns()[0][0].get_gdf_column());
 	// });;

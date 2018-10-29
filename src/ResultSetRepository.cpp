@@ -64,9 +64,9 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 	}
 
 	//deregister output since we are going to ipc it
-	for(size_t i = 0; i < frame.get_width(); i++){
+	/*for(size_t i = 0; i < frame.get_width(); i++){
 		GDFRefCounter::getInstance()->deregister_column(frame.get_column(i).get_gdf_column());
-	}
+	}*/
 
 	std::lock_guard<std::mutex> guard(this->repo_mutex);
 	this->result_sets[token] = std::make_tuple(true,frame);
@@ -119,15 +119,34 @@ blazing_frame result_set_repository::get_result(connection_id_t connection, quer
 		//scope the lockguard here
 		std::lock_guard<std::mutex> guard(this->repo_mutex);
 		if(std::get<0>(this->result_sets[token])){
-			blazing_frame output_frame = std::get<1>(this->result_sets[token]);
-
-			for(size_t i = 0; i < output_frame.get_width(); i++){
-				GDFRefCounter::getInstance()->deregister_column(output_frame.get_column(i).get_gdf_column());
-			}
-			//@todo remove from map
-
-			return output_frame;
+			return std::get<1>(this->result_sets[token]);
+		}
+		else{
+			//todo: WAIT or something else
 		}
 	}
 }
 
+void result_set_repository::free_resultset(connection_id_t connection, query_token_t token){
+	std::lock_guard<std::mutex> guard(this->repo_mutex);
+
+	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
+		throw std::runtime_error{"Connection does not exist"};
+	}
+
+	auto iterator = this->result_sets.find(token);
+	if(iterator == this->result_sets.end()){
+		throw std::runtime_error{"Result set does not exist"};
+	}
+
+	if(std::get<0>(iterator->second)){
+		blazing_frame output_frame = std::get<1>(iterator->second);
+
+		for(size_t i = 0; i < output_frame.get_width(); i++){
+			GDFRefCounter::getInstance()->deregister_column(output_frame.get_column(i).get_gdf_column());
+		}
+
+		//Remove from map
+		this->result_sets.erase(iterator);
+	}
+}

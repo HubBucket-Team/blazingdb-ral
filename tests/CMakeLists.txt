@@ -35,6 +35,7 @@ add_subdirectory(join-test)
 add_subdirectory(logical-filter)
 add_subdirectory(calcite-interpreter)
 add_subdirectory(integration)
+add_subdirectory(resultset)
 add_subdirectory(dtypes)
 add_subdirectory(pjoins)
 

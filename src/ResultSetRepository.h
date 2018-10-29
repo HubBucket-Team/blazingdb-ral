@@ -34,8 +34,12 @@ public:
 	void remove_all_connection_tokens(connection_id_t connection);
 	blazing_frame get_result(connection_id_t connection, query_token_t token);
 
+	void free_resultset(connection_id_t connection, query_token_t token);
+
+public:
 	result_set_repository(result_set_repository const&)	= delete;
 	void operator=(result_set_repository const&)		= delete;
+
 private:
 	std::map<query_token_t,std::tuple<bool, blazing_frame> > result_sets;
 	std::map<connection_id_t,std::vector<query_token_t> > connection_result_sets;

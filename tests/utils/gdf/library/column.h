@@ -29,6 +29,7 @@ public:
   virtual gdf_column_cpp ToGdfColumnCpp() const = 0;
 
   virtual const void *get(const std::size_t i) const = 0;
+  virtual const void *get() const = 0;
 
   bool operator==(const Column &other) const {
     for (std::size_t i = 0; i < size(); i++) {
@@ -118,6 +119,7 @@ public:
   value_type operator[](const std::size_t i) const { return values_[i]; }
 
   const void *get(const std::size_t i) const final { return &values_[i]; }
+  const void *get() const final { return values_.data(); }
 
   void FillData(std::vector<value_type> values) {
     for (std::size_t i = 0; i < values.size(); i++) {

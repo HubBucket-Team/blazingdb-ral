@@ -14,6 +14,8 @@
 
 #include <gdf/gdf.h>
 
+#include <gdf/library/table_group.h>
+
 class TestEnvironment : public testing::Environment {
 public:
 	virtual ~TestEnvironment() {}
@@ -24,33 +26,36 @@ public:
 	}
 };
 
+using gdf::library::DType;
+using gdf::library::Index;
+using gdf::library::TableGroupBuilder;
+
+using RType = DType<GDF_INT32>;
+
 struct calcite_interpreter_TEST : public ::testing::Test {
 
-	void SetUp(){
+  gdf::library::TableGroup group;
 
-		input1 = new int32_t[num_values];
-		input2 = new int32_t[num_values];
-		input3 = new int32_t[num_values];
+  calcite_interpreter_TEST()
+    : group{TableGroupBuilder{
+        {"hr.emps",
+         {
+           {"x", [](Index i) -> RType { return i % 2 ? i : 1; }},
+           {"y", [](Index i) -> RType { return i; }},
+           {"z", [](Index) -> RType { return 1; }},
+         }},
+      }
+              .Build(num_values)} {}
 
-		for(int i = 0; i < num_values; i++){
-			if(i % 2 == 0){
-				input1[i] = 1;
-			}else{
-				input1[i] = i;
-			}
-			input2[i] = i;
-			input3[i] = 1;
-		}
+  void SetUp(){
+    input_tables = group.ToBlazingFrame();
 
-		inputs.resize(3);
-		inputs[0].create_gdf_column(GDF_INT32, num_values, (void *) input1, sizeof(int32_t));
-		inputs[1].create_gdf_column(GDF_INT32, num_values, (void *) input2, sizeof(int32_t));
-		inputs[2].create_gdf_column(GDF_INT32, num_values, (void *) input3, sizeof(int32_t));
+    input1 = reinterpret_cast<const std::int32_t*>(group[0][0].get(0));
+    input2 = reinterpret_cast<const std::int32_t*>(group[0][1].get(0));
+    input3 = reinterpret_cast<const std::int32_t*>(group[0][2].get(0));
+  }
 
-		input_tables.push_back(inputs); //columns for emps
-	}
-
-	void TearDown(){
+  void TearDown(){
 
 		for(int i = 0; i < outputs.size(); i++){
 
@@ -79,11 +84,11 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 
 	std::vector<gdf_column_cpp> inputs;
 
-	int32_t * input1;
-	int32_t * input2;
-	int32_t * input3;
+  static const std::size_t num_values = 32;
 
-	size_t num_values = 32;
+  const std::int32_t *input1;
+  const std::int32_t *input2;
+  const std::int32_t *input3;
 
 	std::vector<std::vector<gdf_column_cpp> > input_tables;
 	std::vector<std::string> table_names={"hr.emps"};

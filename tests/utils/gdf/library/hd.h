@@ -14,7 +14,8 @@ struct DTypeTraits {};
 #define DTYPE_FACTORY(DTYPE, T)                                                \
   template <>                                                                  \
   struct DTypeTraits<GDF_##DTYPE> {                                            \
-    typedef T value_type;                                                      \
+    typedef T        value_type;                                               \
+    static constexpr std::size_t size = sizeof(value_type);                    \
   }
 
 DTYPE_FACTORY(INT8, std::int8_t);
@@ -39,10 +40,10 @@ public:
   using value_type = typename DTypeTraits<GDF_DType>::value_type;
 
   static constexpr gdf_dtype value  = GDF_DType;
-  static constexpr std::size_t size = sizeof(value_type);
+  static constexpr std::size_t size = DTypeTraits<GDF_DType>::size;
 
   template <class T>
-  DType(const T value) : value_{value} {}
+  DType(const T value) : value_{static_cast<value_type>(value)} {}
 
   operator value_type() const { return value_; }
 

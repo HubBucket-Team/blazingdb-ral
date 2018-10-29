@@ -180,7 +180,7 @@ gdf_column_cpp::~gdf_column_cpp()
     GDFRefCounter::getInstance()->decrement(&this->column);
 }
 bool gdf_column_cpp::is_ipc(){
-	return GDFRefCounter::getInstance()->contains_column(std::make_pair(this->data(),this->valid()));
+	return !GDFRefCounter::getInstance()->contains_column(std::make_pair(this->data(),this->valid()));
 }
 void* gdf_column_cpp::data(){
     return column.data;

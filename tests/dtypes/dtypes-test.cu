@@ -6,6 +6,8 @@
 #include <GDFColumn.cuh>
 #include <gdf/gdf.h>
 
+#include "../utils/gdf/library/table_group.h"
+
 template <class T>
 class DTypesTest : public ::testing::Test {
 protected:
@@ -65,59 +67,71 @@ template <>
 class floating<double> : public std::true_type {};
 
 TYPED_TEST(DTypesTest, withGdfDType) {
-  const std::size_t num_values = 100;
+  using gdf::library::DType;
+  using gdf::library::Index;
+  using gdf::library::TableGroupBuilder;
 
-  TypeParam *input1 = new TypeParam[num_values];
-  TypeParam *input2 = new TypeParam[num_values];
-  TypeParam *input3 = new TypeParam[num_values];
+  using RType = DType<DTypeTraits<TypeParam>::dtype>;
 
-  for (int i = 0; i < num_values; i++) {
-    if (i % 2 == 0) {
-      input1[i] = 1;
-    } else {
-      input1[i] =
-        floating<TypeParam>::value ? static_cast<TypeParam>(i) / 1000 : i;
+  auto input_tables =
+    TableGroupBuilder{
+      {"hr.emps",
+       {
+         {"x",
+          [](Index i) -> RType {
+            return i % 2 ? (floating<TypeParam>::value
+                              ? static_cast<TypeParam>(i) / 1000
+                              : i)
+                         : 1;
+          }},
+         {"y",
+          [](Index i) -> RType {
+            return floating<TypeParam>::value
+                     ? static_cast<TypeParam>(i) / 100000
+                     : i;
+          }},
+         {"z", [](Index) -> RType { return 1; }},
+       }},
+      {"hr.sales",
+       {
+         {"x",
+          [](Index i) -> RType {
+            return i % 2 ? (floating<TypeParam>::value
+                              ? static_cast<TypeParam>(i) / 1000
+                              : i)
+                         : 1;
+          }},
+         {"y",
+          [](Index i) -> RType {
+            return floating<TypeParam>::value
+                     ? static_cast<TypeParam>(i) / 100000
+                     : i;
+          }},
+         {"z", [](Index) -> RType { return 1; }},
+       }},
     }
-    input2[i] =
-      floating<TypeParam>::value ? static_cast<TypeParam>(i) / 100000 : i;
-    input3[i] = 1;
-  }
+      .Build(100);
 
-  std::vector<gdf_column_cpp> inputs;
-  inputs.resize(3);
-  inputs[0].create_gdf_column(DTypeTraits<TypeParam>::dtype,
-                              num_values,
-                              (void *) input1,
-                              sizeof(TypeParam));
-  inputs[1].create_gdf_column(DTypeTraits<TypeParam>::dtype,
-                              num_values,
-                              (void *) input2,
-                              sizeof(TypeParam));
-  inputs[2].create_gdf_column(DTypeTraits<TypeParam>::dtype,
-                              num_values,
-                              (void *) input3,
-                              sizeof(TypeParam));
+  input_tables[0].print(std::cout);
 
-  std::vector<std::vector<gdf_column_cpp> > input_tables;
   std::vector<std::string>               table_names  = {"hr.emps", "hr.sales"};
   std::vector<std::vector<std::string> > column_names = {{"x", "y", "z"},
                                                          {"a", "b", "x"}};
-  input_tables.push_back(inputs);
-  input_tables.push_back(inputs);
-  std::vector<gdf_column_cpp> outputs;
+  std::vector<gdf_column_cpp>            outputs;
   {
     std::string query = "\
 LogicalProject(S=[-($0, $1)])\n\
   EnumerableTableScan(table=[[hr, emps]])";
 
-    gdf_error err =
-      evaluate_query(input_tables, table_names, column_names, query, outputs);
+    gdf_error err = evaluate_query(
+      input_tables.ToBlazingFrame(), table_names, column_names, query, outputs);
     EXPECT_TRUE(err == GDF_SUCCESS);
     EXPECT_TRUE(outputs.size() == 1);
 
-    TypeParam *host_output = new TypeParam[num_values];
-    for (std::size_t i = 0; i < num_values; i++) {
-      host_output[i] = input1[i] - input2[i];
+    TypeParam *host_output = new TypeParam[100];
+    for (std::size_t i = 0; i < 100; i++) {
+      host_output[i] = input_tables[0][0][i].get<RType::value>()
+                       - input_tables[0][1][i].get<RType::value>();
     }
 
     this->Check(outputs[0], host_output);

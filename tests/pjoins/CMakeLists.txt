@@ -1,5 +1,6 @@
-set(dtypes-test_SRCS
-  ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
+
+cuda_add_library(joint-test-utils
+${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
   ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
   ${CMAKE_SOURCE_DIR}/src/ColumnManipulation.cu
   ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
@@ -8,6 +9,17 @@ set(dtypes-test_SRCS
   ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp
   ${CMAKE_SOURCE_DIR}/src/StringUtil.cpp
   ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
-  dtypes-test.cu)
-configure_test(dtypes-test "${dtypes-test_SRCS}")
-target_link_libraries(dtypes-test ral-test-utils)
+  
+)
+target_link_libraries(joint-test-utils
+  ${LIBGDF_STATIC_LIB}
+  ${CUDA_CUDA_LIBRARY}
+  ${CUDA_NVRTC_LIBRARY}
+  ${CUDA_NVTX_LIBRARY}
+)
+
+configure_test(joint-test
+  pjoins.cu
+)
+target_link_libraries(joint-test joint-test-utils)
+

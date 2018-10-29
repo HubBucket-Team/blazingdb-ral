@@ -189,8 +189,7 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 			//assumes worst possible case allocation for output
 			//TODO: find a way to know what our output size will be
 			gdf_column_cpp output;
-			//TODO de donde saco el nombre de la columna aqui???
-			output.create_gdf_column(output_type_expressions[i],size,nullptr,get_width_dtype(output_type_expressions[i]), "");
+			output.create_gdf_column(output_type_expressions[i],size,nullptr,get_width_dtype(output_type_expressions[i]), name);
 
 			gdf_error err = evaluate_expression(
 					input,
@@ -222,7 +221,7 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 
 				//TODO de donde saco el nombre de la columna aqui???
 				empty.create_gdf_column(input.get_column(index).dtype(),0,nullptr,width, "");
-				output.create_gdf_column(input.get_column(index).dtype(),size,nullptr,width, "");
+				output.create_gdf_column(input.get_column(index).dtype(),size,nullptr,width, name);
 				//TODO: verify that this works concat whoudl be able to take in an empty one
 				//even better would be if we could pass it in a  a null pointer and use it for copy
 				gdf_error err = gpu_concat(input.get_column(index).get_gdf_column(), empty.get_gdf_column(), output.get_gdf_column());

@@ -37,12 +37,6 @@ gdf_column_cpp::gdf_column_cpp(void* _data, gdf_valid_type* _valid, gdf_dtype _d
 
 }
 
-gdf_column_cpp::gdf_column_cpp(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value, const std::string &column_name)
-{
-    this->create_gdf_column(type, num_values, input_data, width_per_value, column_name);
-
-}
-
 gdf_column_cpp::gdf_column_cpp(const gdf_column_cpp& col)
 {
     column.data = col.column.data;
@@ -71,7 +65,7 @@ gdf_column_cpp::gdf_column_cpp(gdf_column_cpp& col)
 
 }
 
-gdf_column_cpp gdf_column_cpp::clone()
+gdf_column_cpp gdf_column_cpp::clone()  // TODO clone needs to register
 {
 	void* data_dev = nullptr;
 	void* valid_dev = nullptr;
@@ -92,7 +86,10 @@ gdf_column_cpp gdf_column_cpp::clone()
 						this->column.null_count,
 						this->column_name);
 
-	print_gdf_column(col1.get_gdf_column());
+//	print_gdf_column(col1.get_gdf_column());
+
+	GDFRefCounter::getInstance()->register_column(&col1->column);
+
 	return col1;
 }
 
@@ -144,7 +141,7 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
 
     cudaMemset(valid_device, (gdf_valid_type)255, allocated_size_valid); //assume all relevant bits are set to on
 
-    this->allocated_size_data = ((width_per_value * num_values) + 63 /64) * 64;
+    this->allocated_size_data = (((width_per_value * num_values) + 63) /64) * 64;
     cudaMalloc((void **) &data, this->allocated_size_data);
 
     gdf_column_view(&this->column, (void *) data, valid_device, num_values, type);
@@ -180,7 +177,7 @@ gdf_column_cpp::~gdf_column_cpp()
     GDFRefCounter::getInstance()->decrement(&this->column);
 }
 bool gdf_column_cpp::is_ipc(){
-	return GDFRefCounter::getInstance()->contains_column(std::make_pair(this->data(),this->valid()));
+	return !GDFRefCounter::getInstance()->contains_column(std::make_pair(this->data(),this->valid()));
 }
 void* gdf_column_cpp::data(){
     return column.data;

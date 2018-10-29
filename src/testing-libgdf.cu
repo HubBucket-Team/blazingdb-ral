@@ -160,6 +160,8 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
 
 int main(void)
 { 
+	std::cout << "RAL Engine starting"<< std::endl;
+
   blazingdb::protocol::UnixSocketConnection connection({"/tmp/ral.socket", std::allocator<char>()});
   blazingdb::protocol::Server server(connection);
 

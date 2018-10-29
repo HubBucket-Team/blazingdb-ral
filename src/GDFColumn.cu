@@ -88,7 +88,7 @@ gdf_column_cpp gdf_column_cpp::clone()  // TODO clone needs to register
 
 //	print_gdf_column(col1.get_gdf_column());
 
-	GDFRefCounter::getInstance()->register_column(&col1->column);
+	GDFRefCounter::getInstance()->register_column(&col1.column);
 
 	return col1;
 }

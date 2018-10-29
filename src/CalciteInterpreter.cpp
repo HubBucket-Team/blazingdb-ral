@@ -217,7 +217,7 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 				//becuase we already used this we can't just 0 copy it
 				//we have to make a copy of it here
 
-				gdf_column_cpp output = input.clone();
+				gdf_column_cpp output = input.get_column(i).clone();
 
 				columns[i] = output;
 			}else{

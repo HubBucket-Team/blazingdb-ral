@@ -92,7 +92,8 @@ struct LeftJoinTest : public ::testing::Test {
 	}
 	void TearDown(){
 		for(int i = 0; i < outputs.size(); i++){
-			GDFRefCounter::getInstance()->free_if_deregistered(outputs[i].get_gdf_column());
+			//TODO percy rommel: move to integration/end-to-end test
+			//GDFRefCounter::getInstance()->free_if_deregistered(outputs[i].get_gdf_column());
 		}
 	}
 

@@ -17,13 +17,28 @@
 #include "gdf/library/api.h"
 using namespace gdf::library;
 
-struct InputTestItem {
-  std::string query;
-  std::string logicalPlan;
-  gdf::library::TableGroup tableGroup;
-  gdf::library::Table resultTable;
+struct EvaluateQueryTest : public ::testing::Test {
+  struct InputTestItem {
+    std::string query;
+    std::string logicalPlan;
+    gdf::library::TableGroup tableGroup;
+    gdf::library::Table resultTable;
+  };
+
+  void CHECK_RESULT(gdf::library::Table& computed_solution,
+                    gdf::library::Table& reference_solution) {
+    computed_solution.print(std::cout);
+    reference_solution.print(std::cout);
+
+    for (size_t index = 0; index < reference_solution.size(); index++) {
+      const auto& reference_column = reference_solution[index];
+      const auto& computed_column = computed_solution[index];
+      auto a = reference_column.to_string();
+      auto b = computed_column.to_string();
+      EXPECT_EQ(a, b);
+    }
+  }
 };
-struct EvaluateQueryTest : public ::testing::Test {};
 
 // AUTO GENERATED UNIT TESTS
 TEST_F(EvaluateQueryTest, test1) {
@@ -54,6 +69,9 @@ TEST_F(EvaluateQueryTest, test1) {
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
   EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
 }
 TEST_F(EvaluateQueryTest, test2) {
   auto input = InputTestItem{
@@ -81,6 +99,9 @@ TEST_F(EvaluateQueryTest, test2) {
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
   EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
 }
 TEST_F(EvaluateQueryTest, test3) {
   auto input = InputTestItem{
@@ -108,6 +129,9 @@ TEST_F(EvaluateQueryTest, test3) {
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
   EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
 }
 TEST_F(EvaluateQueryTest, test4) {
   auto input = InputTestItem{
@@ -140,6 +164,9 @@ TEST_F(EvaluateQueryTest, test4) {
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
   EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
 }
 TEST_F(EvaluateQueryTest, test5) {
   auto input = InputTestItem{
@@ -172,6 +199,9 @@ TEST_F(EvaluateQueryTest, test5) {
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
   EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
 }
 TEST_F(EvaluateQueryTest, test6) {
   auto input = InputTestItem{
@@ -209,6 +239,9 @@ TEST_F(EvaluateQueryTest, test6) {
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
   EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
 }
 TEST_F(EvaluateQueryTest, test7) {
   auto input = InputTestItem{
@@ -246,6 +279,9 @@ TEST_F(EvaluateQueryTest, test7) {
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
   EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
 }
 TEST_F(EvaluateQueryTest, test8) {
   auto input = InputTestItem{
@@ -278,6 +314,9 @@ TEST_F(EvaluateQueryTest, test8) {
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
   EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
 }
 TEST_F(EvaluateQueryTest, test9) {
   auto input = InputTestItem{
@@ -309,4 +348,7 @@ TEST_F(EvaluateQueryTest, test9) {
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
   EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
 }

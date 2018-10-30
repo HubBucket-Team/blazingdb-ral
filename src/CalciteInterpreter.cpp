@@ -213,11 +213,11 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 			//we dont want to modify in place
 
 
-			if(input_used_in_output[index] || columns[i].is_ipc()){
+			if(input_used_in_output[index] || input.get_column(index).is_ipc()){
 				//becuase we already used this we can't just 0 copy it
 				//we have to make a copy of it here
 
-				gdf_column_cpp output = input.get_column(i).clone();
+				gdf_column_cpp output = input.get_column(index).clone();
 
 				columns[i] = output;
 			}else{

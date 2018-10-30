@@ -37,5 +37,6 @@ add_subdirectory(calcite-interpreter)
 add_subdirectory(integration)
 add_subdirectory(dtypes)
 add_subdirectory(pjoins)
+add_subdirectory(gdf-ref-counter)
 
 message(STATUS "******** Tests are ready ********")

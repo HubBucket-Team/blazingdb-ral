@@ -13,14 +13,17 @@
 #include <map>
 #include <vector>
 #include <mutex>
+#include <condition_variable>
 
 typedef void * response_descriptor; //this shoudl be substituted for something that can generate a response
 
 //singleton class
 
 class result_set_repository {
-public:
+private:
+	using TupleFrame = std::tuple<bool, blazing_frame>;
 
+public:
 	virtual ~result_set_repository();
 	result_set_repository();
 	static result_set_repository & get_instance(){
@@ -47,6 +50,11 @@ private:
 	void add_token(query_token_t token, connection_id_t connection);
 	std::map<query_token_t,response_descriptor> requested_responses;
 	std::mutex repo_mutex;
+
+private:
+	std::mutex cv_mutex;
+	std::condition_variable cv;
+	unsigned int cv_counter {0};
 };
 
 #endif /* RESULTSETREPOSITORY_H_ */

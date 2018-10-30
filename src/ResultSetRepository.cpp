@@ -68,8 +68,16 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 		GDFRefCounter::getInstance()->deregister_column(frame.get_column(i).get_gdf_column());
 	}*/
 
-	std::lock_guard<std::mutex> guard(this->repo_mutex);
-	this->result_sets[token] = std::make_tuple(true,frame);
+	{
+		std::lock_guard<std::mutex> lock(cv_mutex);
+		cv_counter++;
+		{
+			std::lock_guard<std::mutex> guard(repo_mutex);
+			result_sets[token] = std::make_tuple(true, frame);
+		}
+		cv.notify_all();
+	}
+
 	/*if(this->requested_responses.find(token) != this->requested_responses.end()){
 		write_response(std::get<1>(this->result_sets[token]),this->requested_responses[token]);
 	}*/
@@ -115,14 +123,27 @@ blazing_frame result_set_repository::get_result(connection_id_t connection, quer
 	if(this->result_sets.find(token) == this->result_sets.end()){
 		throw std::runtime_error{"Result set does not exist"};
 	}
+
 	{
-		//scope the lockguard here
-		std::lock_guard<std::mutex> guard(this->repo_mutex);
-		if(std::get<0>(this->result_sets[token])){
-			return std::get<1>(this->result_sets[token]);
-		}
-		else{
-			//todo: WAIT or something else
+		int local = 0;
+		TupleFrame tupleFrame;
+		{
+			std::unique_lock<std::mutex> lock(cv_mutex);
+			do {
+				while (!cv_counter || (local == cv_counter)) {
+					cv.wait(lock);
+				}
+				{
+					std::lock_guard<std::mutex> guard(repo_mutex);
+					tupleFrame = result_sets[token];
+				}
+				if (!std::get<0>(tupleFrame)) {
+					local = cv_counter;
+					continue;
+				}
+				cv_counter--;
+				return std::get<1>(tupleFrame);
+			} while (false);
 		}
 	}
 }

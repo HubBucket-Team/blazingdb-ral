@@ -29,8 +29,9 @@ TEST(GdfRefCounterTest, NoSideEffectsForRegisteringNull) {
 TEST(GdfRefCounterTest, NoSideEffectsForDeregisteringNull) {
   GDFRefCounter *counter = GDFRefCounter::getInstance();
 
-  EXPECT_EXIT(
-    counter->deregister_column(nullptr), testing::ExitedWithCode(0), ".*");
+  EXPECT_EQ(0, counter->get_map_size());
+  counter->deregister_column(nullptr);
+  EXPECT_EQ(0, counter->get_map_size());
 }
 
 TEST(GdfRefCounterTest, NoSideEffectsForDeregistering) {

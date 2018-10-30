@@ -24,11 +24,13 @@ void GDFRefCounter::register_column(gdf_column* col_ptr){
 
 void GDFRefCounter::deregister_column(gdf_column* col_ptr)
 {
-    std::lock_guard<std::mutex> lock(gc_mutex);
-    rc_key_t map_key = {col_ptr->data, col_ptr->valid};
+    if (col_ptr != nullptr) {  // TODO: use exceptions instead jump nulls
+        std::lock_guard<std::mutex> lock(gc_mutex);
+        rc_key_t map_key = {col_ptr->data, col_ptr->valid};
 
-    if(map.find(map_key) != map.end()){
-        map[map_key]=0; //deregistering
+        if(map.find(map_key) != map.end()){
+            map[map_key]=0; //deregistering
+        }
     }
 }
 

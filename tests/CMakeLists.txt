@@ -38,5 +38,6 @@ add_subdirectory(integration)
 add_subdirectory(dtypes)
 add_subdirectory(pjoins)
 add_subdirectory(evaluate_query)
+add_subdirectory(gdf-ref-counter)
 
 message(STATUS "******** Tests are ready ********")

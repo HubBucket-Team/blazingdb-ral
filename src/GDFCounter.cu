@@ -4,7 +4,7 @@
  *  Created on: Sep 12, 2018
  *      Author: rqc
  */
- 
+
  #include "GDFCounter.cuh"
  #include <iostream>
 
@@ -15,7 +15,7 @@ void GDFRefCounter::register_column(gdf_column* col_ptr){
     if(col_ptr != nullptr){
         std::lock_guard<std::mutex> lock(gc_mutex);
         rc_key_t map_key = {col_ptr->data, col_ptr->valid};
-        
+
         if(map.find(map_key) == map.end()){
             map[map_key]=1;
         }
@@ -24,11 +24,13 @@ void GDFRefCounter::register_column(gdf_column* col_ptr){
 
 void GDFRefCounter::deregister_column(gdf_column* col_ptr)
 {
-    std::lock_guard<std::mutex> lock(gc_mutex);
-    rc_key_t map_key = {col_ptr->data, col_ptr->valid};
+    if (col_ptr != nullptr) {  // TODO: use exceptions instead jump nulls
+        std::lock_guard<std::mutex> lock(gc_mutex);
+        rc_key_t map_key = {col_ptr->data, col_ptr->valid};
 
-    if(map.find(map_key) != map.end()){
-        map[map_key]=0; //deregistering
+        if(map.find(map_key) != map.end()){
+            map[map_key]=0; //deregistering
+        }
     }
 }
 

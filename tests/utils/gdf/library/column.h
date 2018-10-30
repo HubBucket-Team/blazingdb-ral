@@ -64,7 +64,7 @@ public:
   // virtual size_t      print(std::ostream &stream) const = 0;
   virtual std::string get_as_str(int index) const = 0;
 
-  const std::string &name() const { return name_; }
+  std::string name() const { return name_; }
 
 protected:
   static gdf_column_cpp Create(const gdf_dtype   dtype,

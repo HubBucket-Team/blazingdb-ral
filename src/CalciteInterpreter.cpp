@@ -942,9 +942,9 @@ query_token_t evaluate_query(
 		std::cout<<"Result\n";
 		print_gdf_column(output_frame.get_columns()[0][0].get_gdf_column());
 		std::cout<<"end:Result\n";
-		
+
 		result_set_repository::get_instance().update_token(token, output_frame);
-		
+
 		//@todo: hablar con felipe sobre cudaIpcCloseMemHandle
 		for(int i = 0; i < handles.size(); i++){
 			cudaIpcCloseMemHandle (handles[i]);
@@ -968,6 +968,8 @@ gdf_error evaluate_query(
 
 	std::vector<std::string> splitted = StringUtil::split(logicalPlan, '\n');
 	blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
+
+	std::cout << "evaluation is done!!!\n" << std::flush;
 
 	for(size_t i=0;i<output_frame.get_width();i++){
 

@@ -8,7 +8,7 @@
 function(configure_test TEST_NAME Tests_SRCS)
     message(STATUS "${TEST_NAME} will link against: gdf arrow")
 
-    include_directories(${PROJECT_SOURCE_DIR}/src)
+    include_directories(${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/tests/utils)
 
     cuda_add_executable(${TEST_NAME} ${Tests_SRCS})
 
@@ -37,5 +37,6 @@ add_subdirectory(calcite-interpreter)
 add_subdirectory(integration)
 add_subdirectory(dtypes)
 add_subdirectory(pjoins)
+add_subdirectory(evaluate_query)
 
 message(STATUS "******** Tests are ready ********")

@@ -21,7 +21,7 @@ def main():
 
   plans = make_plans(items, args.calcite_jar)
 
-  strings_classes = (Φ(item, plan) for item, plan in zip(items, plans))
+  strings_classes = (make_unit_test(item, plan) for item, plan in zip(items, plans))
 
   header_text = '\n'.join(strings_classes)
 
@@ -52,20 +52,42 @@ def item_from(dct):
     key: item_from(value) if type(value) is dict else value
     for key, value in dct.items()})
 
+def make_unit_test(item, plan):
+  return ('TEST_F(EvaluateQueryTest, %(test_name)s) {'
+    'auto input = %(input)s;'
+		'auto logical_plan = input.logicalPlan;'
+		'auto input_tables = input.tableGroup.ToBlazingFrame();'
+		'auto table_names = input.tableGroup.table_names();'
+		'auto column_names = input.tableGroup.column_names();'
+		'std::vector<gdf_column_cpp> outputs;'
+		'gdf_error err = evaluate_query(input_tables, table_names, column_names, logical_plan, outputs);'
+		'EXPECT_TRUE(err == GDF_SUCCESS);'
+        '}') % {'test_name': item.testName, 'input': Φ(item, plan)}
+
+
+
 
 def Φ(item, plan):
   return ('InputTestItem{.query = "%(query)s", .logicalPlan ="%(plan)s",'
-          ' .dataTable = %(dataTable)s, .resultTable = %(resultTable)s},') % {
+          ' .tableGroup = %(tableGroup)s, .resultTable = %(resultTable)s}') % {
   'query': item.query,
   'plan': '\\n'.join(line for line in plan.split('\n')),
-  'dataTable': make_table(item.data, item.schema.tableName, item.schema.columnNames, item.schema.columnTypes),
+  'tableGroup': make_table_group(item.data, item.schema.tableName, item.schema.columnNames, item.schema.columnTypes),
   'resultTable': make_table(item.result, 'ResultSet', item.resultTypes, item.resultTypes),
   }
 
 
 def make_table(data, tableName, columnNames, columnTypes):
-  return ('LiteralTableBuilder{.name = "%(tableName)s",'
-          ' .columns = %(literals)s}.Build()') % {
+  return ('LiteralTableBuilder{"%(tableName)s",'
+          ' %(literals)s}.Build()') % {
+    'tableName': tableName,
+    'literals': make_literals(data, columnNames, columnTypes),
+  }
+
+
+def make_table_group(data, tableName, columnNames, columnTypes):
+  return ('LiteralTableGroupBuilder{{"%(tableName)s",'
+          ' %(literals)s}}.Build()') % {
     'tableName': tableName,
     'literals': make_literals(data, columnNames, columnTypes),
   }
@@ -73,7 +95,7 @@ def make_table(data, tableName, columnNames, columnTypes):
 
 def make_literals(data, columnNames, columnTypes):
   return '{%s}' % (
-    ','.join(['{.name = "%s", .values = Literals<%s>{%s} }'
+    ','.join(['{"%s", Literals<%s>{%s} }'
               % (name, _type, ','.join(str(x) for x in values)[:-1])
               for name, _type, values in zip(columnNames, columnTypes, data)]))
 
@@ -86,26 +108,37 @@ def write(header_text):
 
 
 HEADER_DEFINITIONS = '''
-#pragma once
-
-#include <string>
+#include <cstdlib>
+#include <iostream>
 #include <vector>
+#include <string>
 
-#include <gdf/library/api.h>
+#include <gtest/gtest.h>
+#include <CalciteExpressionParsing.h>
+#include <CalciteInterpreter.h>
+#include <StringUtil.h>
+#include <DataFrame.h>
+#include <GDFColumn.cuh>
+#include <GDFCounter.cuh>
+#include <Utils.cuh>
+#include <gdf/gdf.h>
 
-using gdf::library::LiteralTableBuilder;
-using gdf::library::Literal;
+#include "gdf/library/api.h"
+using namespace gdf::library;
 
 struct InputTestItem {
   std::string query;
   std::string logicalPlan;
-  gdf::library::Table dataTable;
+  gdf::library::TableGroup tableGroup;
   gdf::library::Table resultTable;
 };
+struct EvaluateQueryTest : public ::testing::Test {
 
-std::vector<InputTestItem> inputTestSet{
-%s
 };
+
+// AUTO GENERATED UNIT TESTS
+%s
+
 
 '''
 

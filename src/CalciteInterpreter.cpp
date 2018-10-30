@@ -971,7 +971,7 @@ gdf_error evaluate_query(
 
 	for(size_t i=0;i<output_frame.get_width();i++){
 
-		GDFRefCounter::getInstance()->deregister_column(output_frame.get_column(i).get_gdf_column());
+		//GDFRefCounter::getInstance()->deregister_column(output_frame.get_column(i).get_gdf_column());
 		outputs.push_back(output_frame.get_column(i));
 
 	}

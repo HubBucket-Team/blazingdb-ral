@@ -29,6 +29,8 @@ void GDFRefCounter::deregister_column(gdf_column* col_ptr)
 
     if(map.find(map_key) != map.end()){
         map[map_key]=0; //deregistering
+        cudaFree(map_key.first); //data
+        cudaFree(map_key.second); //valid
     }
 }
 
@@ -55,9 +57,8 @@ void GDFRefCounter::decrement(gdf_column* col_ptr)
 
             if(map[map_key]==0){
                 map.erase(map_key);
-                //@todo: memory leak
-                // cudaFree(map_key.first); //data
-                // cudaFree(map_key.second); //valid
+                cudaFree(map_key.first); //data
+                cudaFree(map_key.second); //valid
             }
         }
     }

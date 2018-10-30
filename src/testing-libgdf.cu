@@ -63,7 +63,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
     .message = "metadata message",
     .time = 0.1f,
     .rows = rows
-  }; 
+  };
 
   std::vector<std::string> fieldNames;
   std::vector<::gdf_dto::gdf_column> values;
@@ -121,7 +121,7 @@ static result_pair freeResultService(uint64_t accessToken, Buffer&& requestPaylo
 
   interpreter::GetResultRequestMessage request(requestPayloadBuffer.data());
   std::cout << "resultToken: " << request.getResultToken() << std::endl;
-  
+
   ZeroMessage response{};
   return std::make_pair(Status_Success, response.getBufferData());
 }
@@ -150,16 +150,16 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
      ResponseErrorMessage errorMessage{ std::string{error.what()} };
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
-  interpreter::NodeConnectionInformationDTO nodeInfo {
+  interpreter::NodeConnectionDTO nodeInfo {
       .path = "/tmp/ral.socket",
-      .type = interpreter::NodeConnectionType {interpreter::NodeConnectionType_IPC}
+      .type = NodeConnectionType {NodeConnectionType_IPC}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
   return std::make_pair(Status_Success, responsePayload.getBufferData());
 }
 
 int main(void)
-{ 
+{
 	std::cout << "RAL Engine starting"<< std::endl;
 
   blazingdb::protocol::UnixSocketConnection connection({"/tmp/ral.socket", std::allocator<char>()});
@@ -176,7 +176,7 @@ int main(void)
     std::cout << "header: " << (int)request.messageType() << std::endl;
 
     auto result = services[request.messageType()] ( request.accessToken(),  request.getPayloadBuffer() );
-    ResponseMessage responseObject{result.first, result.second};    
+    ResponseMessage responseObject{result.first, result.second};
     return Buffer{responseObject.getBufferData()};
   };
   server.handle(interpreterServices);

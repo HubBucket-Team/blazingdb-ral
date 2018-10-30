@@ -41,7 +41,7 @@ struct EvaluateQueryTest : public ::testing::Test {
 };
 
 // AUTO GENERATED UNIT TESTS
-TEST_F(EvaluateQueryTest, test1) {
+TEST_F(EvaluateQueryTest, TEST_01) {
   auto input = InputTestItem{
       .query = "select * from main.emps",
       .logicalPlan =
@@ -73,7 +73,7 @@ TEST_F(EvaluateQueryTest, test1) {
       GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
   CHECK_RESULT(output_table, input.resultTable);
 }
-TEST_F(EvaluateQueryTest, test2) {
+TEST_F(EvaluateQueryTest, TEST_02) {
   auto input = InputTestItem{
       .query = "select id > 3 from main.emps",
       .logicalPlan =
@@ -103,7 +103,7 @@ TEST_F(EvaluateQueryTest, test2) {
       GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
   CHECK_RESULT(output_table, input.resultTable);
 }
-TEST_F(EvaluateQueryTest, test3) {
+TEST_F(EvaluateQueryTest, TEST_03) {
   auto input = InputTestItem{
       .query = "select id from main.emps where age > 30",
       .logicalPlan =
@@ -133,7 +133,7 @@ TEST_F(EvaluateQueryTest, test3) {
       GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
   CHECK_RESULT(output_table, input.resultTable);
 }
-TEST_F(EvaluateQueryTest, test4) {
+TEST_F(EvaluateQueryTest, TEST_04) {
   auto input = InputTestItem{
       .query = "select age + salary from main.emps",
       .logicalPlan =
@@ -168,7 +168,7 @@ TEST_F(EvaluateQueryTest, test4) {
       GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
   CHECK_RESULT(output_table, input.resultTable);
 }
-TEST_F(EvaluateQueryTest, test5) {
+TEST_F(EvaluateQueryTest, TEST_05) {
   auto input = InputTestItem{
       .query = "select salary from main.emps where age > 80",
       .logicalPlan =
@@ -203,7 +203,7 @@ TEST_F(EvaluateQueryTest, test5) {
       GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
   CHECK_RESULT(output_table, input.resultTable);
 }
-TEST_F(EvaluateQueryTest, test6) {
+TEST_F(EvaluateQueryTest, TEST_06) {
   auto input = InputTestItem{
       .query = "select * from main.emps where age = 10",
       .logicalPlan =
@@ -243,7 +243,7 @@ TEST_F(EvaluateQueryTest, test6) {
       GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
   CHECK_RESULT(output_table, input.resultTable);
 }
-TEST_F(EvaluateQueryTest, test7) {
+TEST_F(EvaluateQueryTest, TEST_07) {
   auto input = InputTestItem{
       .query = "select * from main.emps where age = 10 and salary > 4999",
       .logicalPlan =
@@ -283,7 +283,7 @@ TEST_F(EvaluateQueryTest, test7) {
       GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
   CHECK_RESULT(output_table, input.resultTable);
 }
-TEST_F(EvaluateQueryTest, test8) {
+TEST_F(EvaluateQueryTest, TEST_08) {
   auto input = InputTestItem{
       .query = "select id + salary from main.emps",
       .logicalPlan =
@@ -318,7 +318,7 @@ TEST_F(EvaluateQueryTest, test8) {
       GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
   CHECK_RESULT(output_table, input.resultTable);
 }
-TEST_F(EvaluateQueryTest, test9) {
+TEST_F(EvaluateQueryTest, TEST_09) {
   auto input = InputTestItem{
       .query = "select age * salary from main.emps where id < 5 and age = 10",
       .logicalPlan =

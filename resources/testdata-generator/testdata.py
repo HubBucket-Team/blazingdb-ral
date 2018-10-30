@@ -13,15 +13,13 @@ def main():
                       help='Fixture JSON file name')
   parser.add_argument('calcite_jar', type=str,
                       help='Calcite CLI Jar')
-  parser.add_argument('h2_path', type=str,
-                      help='Path with H2 database folder')
   parser.add_argument('-O', '--output', type=str, default='-',
                       help='Output file path or - for stdout')
   args = parser.parse_args()
 
   items = make_items(args.filename)
 
-  plans = make_plans(items, args.calcite_jar, args.h2_path)
+  plans = make_plans(items, args.calcite_jar)
 
   strings_classes = (Φ(item, plan) for item, plan in zip(items, plans))
 
@@ -35,10 +33,9 @@ def make_items(filename):
     return [item_from(dct) for dct in json.load(jsonfile)]
 
 
-def make_plans(items, calcite_jar, h2_path):
+def make_plans(items, calcite_jar):
   inputjson = lambda item: re.findall('non optimized\\n(.*)\\n\\noptimized',
       subprocess.Popen(('java', '-jar', calcite_jar),
-                       cwd=h2_path,
                        stdin=subprocess.PIPE,
                        stdout=subprocess.PIPE).communicate(json.dumps({
                          'columnNames': item.schema.columnNames,
@@ -57,23 +54,28 @@ def item_from(dct):
 
 
 def Φ(item, plan):
-  return ('Item{"%(query)s", "%(plan)s", %(dataTypes)s,'
-          ' %(resultTypes)s, %(data)s, %(result)s},') % {
+  return ('InputTestItem{.query = "%(query)s", .logicalPlan ="%(plan)s",'
+          ' .dataTable = %(dataTable)s, .resultTable = %(resultTable)s},') % {
   'query': item.query,
   'plan': '\\n'.join(line for line in plan.split('\n')),
-  'dataTypes': '{%s}' % ','.join('"%s"' % str(columnType)
-                                 for columnType in item.schema.columnTypes),
-  'resultTypes': '{%s}' % ','.join('"%s"' % str(resultType)
-                                   for resultType in item.resultTypes),
-  'data': make_str(item.data),
-  'result': make_str(item.result)
+  'dataTable': make_table(item.data, item.schema.tableName, item.schema.columnNames, item.schema.columnTypes),
+  'resultTable': make_table(item.result, 'ResultSet', item.resultTypes, item.resultTypes),
   }
 
 
-def make_str(collections):
-  return ('{%s},' % ','.join('{%s}' % ','.join(('"%s"' % str(value)
-                                                for value in collection))
-                             for collection in collections))[:-1]
+def make_table(data, tableName, columnNames, columnTypes):
+  return ('LiteralTableBuilder{.name = "%(tableName)s",'
+          ' .columns = %(literals)s}.Build()') % {
+    'tableName': tableName,
+    'literals': make_literals(data, columnNames, columnTypes),
+  }
+
+
+def make_literals(data, columnNames, columnTypes):
+  return '{%s}' % (
+    ','.join(['{.name = "%s", .values = Literals<%s>{%s} }'
+              % (name, _type, ','.join(str(x) for x in values)[:-1])
+              for name, _type, values in zip(columnNames, columnTypes, data)]))
 
 
 def write(header_text):
@@ -89,16 +91,19 @@ HEADER_DEFINITIONS = '''
 #include <string>
 #include <vector>
 
-struct Item {
+#include <gdf/library/api.h>
+
+using gdf::library::LiteralTableBuilder;
+using gdf::library::Literal;
+
+struct InputTestItem {
   std::string query;
   std::string logicalPlan;
-  std::vector<std::string> dataTypes;
-  std::vector<std::string> resultTypes;
-  std::vector<std::vector<std::string> > data;
-  std::vector<std::vector<std::string> > result;
+  gdf::library::Table dataTable;
+  gdf::library::Table resultTable;
 };
 
-std::vector<Item> inputSet{
+std::vector<InputTestItem> inputTestSet{
 %s
 };
 

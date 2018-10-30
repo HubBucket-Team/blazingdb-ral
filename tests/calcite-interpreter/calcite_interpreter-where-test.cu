@@ -60,7 +60,8 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 		for(int i = 0; i < outputs.size(); i++){
 
 			// Releasing allocated memory, here we are responsible for that
-			GDFRefCounter::getInstance()->free_if_deregistered(outputs[i].get_gdf_column());
+			//TODO percy rommel: move to integration/end-to-end test
+			//GDFRefCounter::getInstance()->free_if_deregistered(outputs[i].get_gdf_column());
 		}
 	}
 

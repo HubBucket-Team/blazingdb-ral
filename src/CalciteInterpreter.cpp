@@ -119,6 +119,9 @@ bool contains_evaluation(std::string expression){
 }
 
 gdf_error process_project(blazing_frame & input, std::string query_part){
+
+	std::cout<<"starting process_project"<<std::endl;
+
 	size_t size = input.get_column(0).size();
 
 
@@ -189,8 +192,7 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 			//assumes worst possible case allocation for output
 			//TODO: find a way to know what our output size will be
 			gdf_column_cpp output;
-			//TODO de donde saco el nombre de la columna aqui???
-			output.create_gdf_column(output_type_expressions[i],size,nullptr,get_width_dtype(output_type_expressions[i]), "");
+			output.create_gdf_column(output_type_expressions[i],size,nullptr,get_width_dtype(output_type_expressions[i]), name);
 
 			gdf_error err = evaluate_expression(
 					input,
@@ -214,22 +216,9 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 			if(input_used_in_output[index] || columns[i].is_ipc()){
 				//becuase we already used this we can't just 0 copy it
 				//we have to make a copy of it here
-				gdf_column_cpp output;
-				gdf_column_cpp empty;
 
-				int width;
-				get_column_byte_width(input.get_column(index).get_gdf_column(), &width);
+				gdf_column_cpp output = input.get_column(i).clone();
 
-				//TODO de donde saco el nombre de la columna aqui???
-				empty.create_gdf_column(input.get_column(index).dtype(),0,nullptr,width, "");
-				output.create_gdf_column(input.get_column(index).dtype(),size,nullptr,width, "");
-				//TODO: verify that this works concat whoudl be able to take in an empty one
-				//even better would be if we could pass it in a  a null pointer and use it for copy
-				gdf_error err = gpu_concat(input.get_column(index).get_gdf_column(), empty.get_gdf_column(), output.get_gdf_column());
-				if(err != GDF_SUCCESS){
-					//TODO: clean up everything here so we dont run out of memory
-					return err;
-				}
 				columns[i] = output;
 			}else{
 				input_used_in_output[index] = true;
@@ -957,9 +946,9 @@ query_token_t evaluate_query(
 		result_set_repository::get_instance().update_token(token, output_frame);
 		
 		//@todo: hablar con felipe sobre cudaIpcCloseMemHandle
-		// for(int i = 0; i < handles.size(); i++){
-			// cudaIpcCloseMemHandle (handles[i]);
-		// }
+		for(int i = 0; i < handles.size(); i++){
+			cudaIpcCloseMemHandle (handles[i]);
+		}
 		//			std::cout<<"Result\n";
 		//			print_column<int8_t>(output_frame.get_columns()[0][0].get_gdf_column());
 	// });;

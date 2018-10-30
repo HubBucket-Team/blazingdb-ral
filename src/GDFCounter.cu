@@ -32,21 +32,6 @@ void GDFRefCounter::deregister_column(gdf_column* col_ptr)
     }
 }
 
-void GDFRefCounter::free_if_deregistered(gdf_column* col_ptr)
-{
-    std::lock_guard<std::mutex> lock(gc_mutex);
-    rc_key_t map_key = {col_ptr->data, col_ptr->valid};
-
-    if(map.find(map_key)!=map.end()){
-        if(map[map_key]==0){
-            map.erase(map_key);
-            //@todo: memory leak
-            // cudaFree(map_key.first); //data
-            // cudaFree(map_key.second); //valid
-        }
-    }
-}
-
 void GDFRefCounter::increment(gdf_column* col_ptr)
 {
     std::lock_guard<std::mutex> lock(gc_mutex);

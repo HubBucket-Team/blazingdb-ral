@@ -207,15 +207,7 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 				return err;
 			}
 		}else{
-			//TODO handle exceptions
-			int index = -1; //int index = get_index(expression);
-
-			for (int i = 0; i < input.get_columns()[0].size(); ++i) {
-				if (input.get_columns()[0][i].column_name == name) {
-					index = i;
-					break;
-				}
-			}
+			int index = get_index(expression);
 
 			//if the column came over via ipc or was already used
 			//we dont want to modify in place

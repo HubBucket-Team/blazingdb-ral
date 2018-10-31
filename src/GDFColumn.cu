@@ -137,17 +137,17 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
 
     this->allocated_size_valid = ((((num_values + 7 ) / 8) + 63 ) / 64) * 64; //so allocations are supposed to be 64byte aligned
 
-    cudaMalloc((void **) &valid_device, allocated_size_valid);
+    CheckCudaErrors(cudaMalloc(&valid_device, allocated_size_valid));
 
-    cudaMemset(valid_device, (gdf_valid_type)255, allocated_size_valid); //assume all relevant bits are set to on
+    CheckCudaErrors(cudaMemset(valid_device, (gdf_valid_type)255, allocated_size_valid)); //assume all relevant bits are set to on
 
     this->allocated_size_data = (((width_per_value * num_values) + 63) /64) * 64;
-    cudaMalloc((void **) &data, this->allocated_size_data);
+    CheckCudaErrors(cudaMalloc(&data, this->allocated_size_data));
 
     gdf_column_view(&this->column, (void *) data, valid_device, num_values, type);
 
     if(input_data != nullptr){
-        cudaMemcpy(data, input_data, num_values * width_per_value, cudaMemcpyHostToDevice);
+        CheckCudaErrors(cudaMemcpy(data, input_data, num_values * width_per_value, cudaMemcpyHostToDevice));
     }
 
 

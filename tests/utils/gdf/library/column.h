@@ -4,10 +4,10 @@
 #include <functional>
 #include <initializer_list>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <type_traits>
 #include <vector>
-#include <sstream>      // std::stringstream
 
 #include "any.h"
 #include "definitions.h"
@@ -67,10 +67,11 @@ public:
   std::string name() const { return name_; }
 
 protected:
-  static gdf_column_cpp Create(const gdf_dtype   dtype,
-                               const std::size_t length,
-                               const void *      data,
-                               const std::size_t size);
+  static gdf_column_cpp Create(const std::string &name,
+                               const gdf_dtype    dtype,
+                               const std::size_t  length,
+                               const void *       data,
+                               const std::size_t  size);
 
 protected:
   const std::string name_;
@@ -78,12 +79,14 @@ protected:
 
 Column::~Column() {}
 
-gdf_column_cpp Column::Create(const gdf_dtype   dtype,
-                              const std::size_t length,
-                              const void *      data,
-                              const std::size_t size) {
+gdf_column_cpp Column::Create(const std::string &name,
+                              const gdf_dtype    dtype,
+                              const std::size_t  length,
+                              const void *       data,
+                              const std::size_t  size) {
   gdf_column_cpp column_cpp;
   column_cpp.create_gdf_column(dtype, length, const_cast<void *>(data), size);
+  column_cpp.column_name = name;
   return column_cpp;
 }
 
@@ -112,7 +115,8 @@ public:
   }
 
   gdf_column_cpp ToGdfColumnCpp() const final {
-    return Create(DType, this->size(), values_.data(), sizeof(value_type));
+    return Create(
+      name(), DType, this->size(), values_.data(), sizeof(value_type));
   }
 
   value_type operator[](const std::size_t i) const { return values_[i]; }
@@ -140,7 +144,7 @@ public:
     std::ostringstream out;
     if (std::is_floating_point<value_type>::value) { out.precision(1); }
     if (sizeof(value_type) == 1) {
-      out << std::fixed << (int)values_.at(index);
+      out << std::fixed << (int) values_.at(index);
     } else {
       out << std::fixed << values_.at(index);
     }
@@ -167,7 +171,7 @@ public:
   template <class Callback>
   ColumnBuilder(const std::string &name, Callback &&callback)
     : impl_{std::make_shared<Impl<Callback> >(
-        std::move(name), std::forward<Callback>(callback))} {}
+      std::move(name), std::forward<Callback>(callback))} {}
 
   ColumnBuilder() {}
   ColumnBuilder &operator=(const ColumnBuilder &other) {

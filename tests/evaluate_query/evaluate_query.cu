@@ -45,7 +45,7 @@ TEST_F(EvaluateQueryTest, TEST_01) {
   auto input = InputTestItem{
       .query = "select * from main.emps",
       .logicalPlan =
-          "LogicalProject(age=[$0], id=[$1], salary=[$2])\n  "
+          "LogicalProject(id=[$0], age=[$1])\n  "
           "EnumerableTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
@@ -77,7 +77,7 @@ TEST_F(EvaluateQueryTest, TEST_02) {
   auto input = InputTestItem{
       .query = "select id > 3 from main.emps",
       .logicalPlan =
-          "LogicalProject(EXPR$0=[>($1, 3)])\n  "
+          "LogicalProject(EXPR$0=[>($0, 3)])\n  "
           "EnumerableTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
@@ -89,7 +89,7 @@ TEST_F(EvaluateQueryTest, TEST_02) {
       .resultTable =
           LiteralTableBuilder{
               "ResultSet",
-              {{"GDF_INT8", Literals<GDF_INT8>{4, 5, 6, 7, 8, 9, 1}}}}
+              {{"GDF_INT8", Literals<GDF_INT8>{0, 0, 0, 1, 1, 1, 1, 1, 1, 0}}}}
               .Build()};
   auto logical_plan = input.logicalPlan;
   auto input_tables = input.tableGroup.ToBlazingFrame();
@@ -107,7 +107,7 @@ TEST_F(EvaluateQueryTest, TEST_03) {
   auto input = InputTestItem{
       .query = "select id from main.emps where age > 30",
       .logicalPlan =
-          "LogicalProject(id=[$1])\n  LogicalFilter(condition=[>($0, 30)])\n   "
+          "LogicalProject(id=[$0])\n  LogicalFilter(condition=[>($1, 30)])\n   "
           " EnumerableTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
@@ -119,7 +119,7 @@ TEST_F(EvaluateQueryTest, TEST_03) {
       .resultTable =
           LiteralTableBuilder{
               "ResultSet",
-              {{"GDF_INT8", Literals<GDF_INT8>{4, 5, 6, 7, 8, 9, 1}}}}
+              {{"GDF_INT8", Literals<GDF_INT8>{4, 5, 6, 7, 8, 9, 0, 0, 0, 0}}}} //Todo: check the zeroes at the final output, (hardcoding output)
               .Build()};
   auto logical_plan = input.logicalPlan;
   auto input_tables = input.tableGroup.ToBlazingFrame();
@@ -137,7 +137,7 @@ TEST_F(EvaluateQueryTest, TEST_04) {
   auto input = InputTestItem{
       .query = "select age + salary from main.emps",
       .logicalPlan =
-          "LogicalProject(EXPR$0=[+($0, $2)])\n  "
+          "LogicalProject(EXPR$0=[+($1, $2)])\n  "
           "EnumerableTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
@@ -146,8 +146,7 @@ TEST_F(EvaluateQueryTest, TEST_04) {
                 {"age",
                  Literals<GDF_INT8>{10, 20, 30, 40, 50, 60, 70, 80, 90, 10}},
                 {"salary",
-                 Literals<GDF_INT8>{
-                     90, 80, 70, 60, 50, 40, 30, 20, 10,
+                 Literals<GDF_INT8>{90, 80, 70, 60, 50, 40, 30, 20, 10, 0
                  }}}}}
               .Build(),
       .resultTable =
@@ -172,7 +171,7 @@ TEST_F(EvaluateQueryTest, TEST_05) {
   auto input = InputTestItem{
       .query = "select salary from main.emps where age > 80",
       .logicalPlan =
-          "LogicalProject(salary=[$2])\n  LogicalFilter(condition=[>($0, "
+          "LogicalProject(salary=[$2])\n  LogicalFilter(condition=[>($1, "
           "80)])\n    EnumerableTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
@@ -182,14 +181,14 @@ TEST_F(EvaluateQueryTest, TEST_05) {
                  Literals<GDF_INT8>{10, 20, 30, 40, 50, 60, 70, 80, 90, 10}},
                 {"salary",
                  Literals<GDF_INT8>{
-                     90, 80, 70, 60, 50, 40, 30, 20, 10,
+                     90, 80, 70, 60, 50, 40, 30, 20, 10, 0
                  }}}}}
               .Build(),
       .resultTable = LiteralTableBuilder{"ResultSet",
                                          {{"GDF_INT8",
                                            Literals<GDF_INT8>{
-                                               10,
-                                           }}}}
+                                               10, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                                           }}}} //Hardcoding output, zeroes at the end
                          .Build()};
   auto logical_plan = input.logicalPlan;
   auto input_tables = input.tableGroup.ToBlazingFrame();
@@ -207,8 +206,8 @@ TEST_F(EvaluateQueryTest, TEST_06) {
   auto input = InputTestItem{
       .query = "select * from main.emps where age = 10",
       .logicalPlan =
-          "LogicalProject(age=[$0], id=[$1], salary=[$2])\n  "
-          "LogicalFilter(condition=[=($0, 10)])\n    "
+          "LogicalProject(id=[$0], age=[$1], salary=[$2])\n  "
+          "LogicalFilter(condition=[=($1, 10)])\n    "
           "EnumerableTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
@@ -218,7 +217,7 @@ TEST_F(EvaluateQueryTest, TEST_06) {
                  Literals<GDF_INT8>{10, 20, 10, 20, 10, 20, 10, 20, 10, 2}},
                 {"salary",
                  Literals<GDF_INT8>{
-                     90, 80, 70, 60, 50, 40, 30, 20, 10,
+                     90, 80, 70, 60, 50, 40, 30, 20, 10, 0
                  }}}}}
               .Build(),
       .resultTable =
@@ -226,10 +225,10 @@ TEST_F(EvaluateQueryTest, TEST_06) {
               "ResultSet",
               {{"GDF_INT8",
                 Literals<GDF_INT8>{
-                    1, 3, 5, 7,
+                    1, 3, 5, 7, 9, 0, 0, 0, 0, 0
                 }},
-               {"GDF_INT8", Literals<GDF_INT8>{10, 10, 10, 10, 1}},
-               {"GDF_INT8", Literals<GDF_INT8>{90, 70, 50, 30, 1}}}}
+               {"GDF_INT8", Literals<GDF_INT8>{10, 10, 10, 10, 10, 0, 0, 0, 0, 0}},
+               {"GDF_INT8", Literals<GDF_INT8>{90, 70, 50, 30, 10, 0, 0, 0, 0, 0}}}}
               .Build()};
   auto logical_plan = input.logicalPlan;
   auto input_tables = input.tableGroup.ToBlazingFrame();
@@ -247,8 +246,8 @@ TEST_F(EvaluateQueryTest, TEST_07) {
   auto input = InputTestItem{
       .query = "select * from main.emps where age = 10 and salary > 4999",
       .logicalPlan =
-          "LogicalProject(age=[$0], id=[$1], salary=[$2])\n  "
-          "LogicalFilter(condition=[AND(=($0, 10), >($2, 4999))])\n    "
+          "LogicalProject(id=[$0], age=[$1], salary=[$2])\n  "
+          "LogicalFilter(condition=[AND(=($1, 10), >($2, 4999))])\n    "
           "EnumerableTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
@@ -258,7 +257,7 @@ TEST_F(EvaluateQueryTest, TEST_07) {
                  Literals<GDF_INT32>{10, 20, 10, 20, 10, 20, 10, 20, 10, 2}},
                 {"salary",
                  Literals<GDF_INT32>{
-                     9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000,
+                     9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000, 0
                  }}}}}
               .Build(),
       .resultTable =
@@ -266,10 +265,10 @@ TEST_F(EvaluateQueryTest, TEST_07) {
               "ResultSet",
               {{"GDF_INT32",
                 Literals<GDF_INT32>{
-                    1, 3,
+                    1, 3, 5, 0, 0, 0, 0, 0, 0, 0
                 }},
-               {"GDF_INT32", Literals<GDF_INT32>{10, 10, 1}},
-               {"GDF_INT32", Literals<GDF_INT32>{9000, 7000, 500}}}}
+               {"GDF_INT32", Literals<GDF_INT32>{10, 10, 10, 0, 0, 0, 0, 0, 0, 0}},
+               {"GDF_INT32", Literals<GDF_INT32>{9000, 7000, 5000, 0, 0, 0, 0, 0, 0, 0}}}}
               .Build()};
   auto logical_plan = input.logicalPlan;
   auto input_tables = input.tableGroup.ToBlazingFrame();
@@ -287,7 +286,7 @@ TEST_F(EvaluateQueryTest, TEST_08) {
   auto input = InputTestItem{
       .query = "select id + salary from main.emps",
       .logicalPlan =
-          "LogicalProject(EXPR$0=[+($1, $2)])\n  "
+          "LogicalProject(EXPR$0=[+($0, $2)])\n  "
           "EnumerableTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
@@ -297,7 +296,7 @@ TEST_F(EvaluateQueryTest, TEST_08) {
                  Literals<GDF_INT32>{10, 20, 10, 20, 10, 20, 10, 20, 10, 2}},
                 {"salary",
                  Literals<GDF_INT32>{
-                     9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000,
+                     9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000, 0
                  }}}}}
               .Build(),
       .resultTable =
@@ -322,8 +321,8 @@ TEST_F(EvaluateQueryTest, TEST_09) {
   auto input = InputTestItem{
       .query = "select age * salary from main.emps where id < 5 and age = 10",
       .logicalPlan =
-          "LogicalProject(EXPR$0=[*($0, $2)])\n  "
-          "LogicalFilter(condition=[AND(<($1, 5), =($0, 10))])\n    "
+          "LogicalProject(EXPR$0=[*($1, $2)])\n  "
+          "LogicalFilter(condition=[AND(<($0, 5), =($1, 10))])\n    "
           "EnumerableTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
@@ -338,7 +337,7 @@ TEST_F(EvaluateQueryTest, TEST_09) {
               .Build(),
       .resultTable =
           LiteralTableBuilder{"ResultSet",
-                              {{"GDF_INT32", Literals<GDF_INT32>{90000, 7000}}}}
+                              {{"GDF_INT32", Literals<GDF_INT32>{90000, 70000, 0, 0, 0, 0, 0, 0, 0, 0}}}}
               .Build()};
   auto logical_plan = input.logicalPlan;
   auto input_tables = input.tableGroup.ToBlazingFrame();

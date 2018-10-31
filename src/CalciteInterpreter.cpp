@@ -207,7 +207,15 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 				return err;
 			}
 		}else{
-			int index = get_index(expression);
+			//TODO handle exceptions
+			int index = -1; //int index = get_index(expression);
+
+			for (int i = 0; i < input.get_columns()[0].size(); ++i) {
+				if (input.get_columns()[0][i].column_name == name) {
+					index = i;
+					break;
+				}
+			}
 
 			//if the column came over via ipc or was already used
 			//we dont want to modify in place
@@ -942,9 +950,9 @@ query_token_t evaluate_query(
 		std::cout<<"Result\n";
 		print_gdf_column(output_frame.get_columns()[0][0].get_gdf_column());
 		std::cout<<"end:Result\n";
-		
+
 		result_set_repository::get_instance().update_token(token, output_frame);
-		
+
 		//@todo: hablar con felipe sobre cudaIpcCloseMemHandle
 		for(int i = 0; i < handles.size(); i++){
 			cudaIpcCloseMemHandle (handles[i]);

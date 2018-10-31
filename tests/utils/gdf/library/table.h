@@ -45,10 +45,16 @@ public:
     return true;
   }
 
-  size_t num_columns() const { return columns_.size(); }
+  std::string name() const {return name_; }
 
-  size_t num_rows() const {
-    return columns_[0]->size();  //@todo check and assert this
+  size_t size() const { return columns_.size(); }
+
+  std::vector<std::shared_ptr<Column> >::iterator begin()   {
+    return columns_.begin();
+  }
+
+  std::vector<std::shared_ptr<Column> >::iterator end()   {
+    return columns_.end();
   }
 
   template <typename StreamType>
@@ -56,8 +62,8 @@ public:
     _size_columns();
     unsigned int cell_padding = 1;
     // Start computing the total width
-    // First - we will have num_columns() + 1 "|" characters
-    unsigned int total_width = num_columns() + 1;
+    // First - we will have size() + 1 "|" characters
+    unsigned int total_width = size() + 1;
 
     // Now add in the size of each colum
     for (auto &col_size : column_sizes_)
@@ -67,12 +73,12 @@ public:
     stream << std::string(total_width, '-') << "\n";
 
     std::vector<std::string> headers;
-    for (unsigned int i = 0; i < num_columns(); i++)
+    for (unsigned int i = 0; i < size(); i++)
       headers.push_back(this->columns_[i]->name());
 
     // Print out the headers
     stream << "|";
-    for (unsigned int i = 0; i < num_columns(); i++) {
+    for (unsigned int i = 0; i < size(); i++) {
       // Must find the center of the column
       auto half = column_sizes_[i] / 2;
       half -= headers[i].size() / 2;
@@ -87,10 +93,10 @@ public:
     stream << std::string(total_width, '-') << "\n";
 
     // Now print the rows of the VTable
-    for (int i = 0; i < num_rows(); i++) {
+    for (int i = 0; i < _num_rows(); i++) {
       stream << "|";
 
-      for (int j = 0; j < num_columns(); j++) {
+      for (int j = 0; j < size(); j++) {
         stream << std::string(cell_padding, ' ') << std::setw(column_sizes_[j])
                << columns_[j]->get_as_str(i) << std::string(cell_padding, ' ')
                << "|";
@@ -104,15 +110,20 @@ public:
 
 protected:
   void _size_columns() const {
-    column_sizes_.resize(num_columns());
+    column_sizes_.resize(size());
 
     // Temporary for querying each row
-    std::vector<unsigned int> column_sizes(num_columns());
+    std::vector<unsigned int> column_sizes(size());
 
     // Start with the size of the headers
-    for (unsigned int i = 0; i < num_columns(); i++)
+    for (unsigned int i = 0; i < size(); i++)
       column_sizes_[i] = this->columns_[i]->name().size();
   }
+
+  size_t _num_rows() const {
+    return columns_[0]->size();  //@todo check and assert this
+  }
+
 
 private:
   std::string                           name_;
@@ -136,10 +147,6 @@ class TableBuilder {
 public:
   TableBuilder(const std::string &&name, std::vector<ColumnBuilder> builders)
     : name_{std::move(name)}, builders_{builders} {}
-
-  Table build(const std::size_t length) {  //! \deprecated
-    return Build(length);
-  }
 
   Table Build(const std::size_t length) const {
     std::vector<std::shared_ptr<Column> > columns;
@@ -189,7 +196,8 @@ public:
                    });
   }
 
-  Table Build() const { return TableBuilder::Build(lengths_); }
+  Table Build(const std::size_t length = 0 ) const { return TableBuilder::Build(lengths_); }
+
 
 private:
   static std::vector<ColumnBuilder>

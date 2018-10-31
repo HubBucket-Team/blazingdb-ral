@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <gdf/gdf.h>
+#include <GDFColumn.cuh>
 
 namespace gdf {
 namespace library {

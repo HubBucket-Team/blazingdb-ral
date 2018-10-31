@@ -4,30 +4,35 @@
 
 #include <gtest/gtest.h>
 
-class WhereTest : public testing::Test {};
+class Item {
+public:
+  const std::string                                               name;
+  const std::string                                               plan;
+  const std::vector<gdf::library::DType<GDF_FLOAT64>::value_type> result;
+};
+
+class WhereFrom2e2Test : public testing::TestWithParam<Item> {};
 
 using gdf::library::Literals;
 using gdf::library::LiteralTableBuilder;
 using gdf::library::TableGroup;
 
-TEST_F(WhereTest, CompareLiteralWhere) {
+TEST_P(WhereFrom2e2Test, CompareLiteral) {
   auto table = LiteralTableBuilder{
     "main.holas",
     {
       {
         "swings",
-        Literals<GDF_INT64>{1, 2, 3, 4, 5, 6},
+        Literals<GDF_FLOAT64>{1, 2, 3, 4, 5, 6, 7},
       },
       {
         "tractions",
-        Literals<GDF_INT64>{1, 0, 1, 0, 1, 0},
+        Literals<GDF_FLOAT64>{1, 0, 1, 0, -1, 0, -1},
       },
     }}.Build();
   auto group = TableGroup{table};
 
-  std::string plan = "LogicalProject(swings=[$0])\n"
-                     "  LogicalFilter(condition=[=($1, 1)])\n"
-                     "    EnumerableTableScan(table=[[main, holas]])";
+  const std::string &plan = GetParam().plan;
 
   std::vector<gdf_column_cpp> output;
 
@@ -44,8 +49,70 @@ TEST_F(WhereTest, CompareLiteralWhere) {
   auto expected = LiteralTableBuilder{
     "ResultTable",
     {
-      {"", Literals<GDF_INT64>{1, 3, 5, 0, 0, 0}},
+      {"", Literals<GDF_FLOAT64>{std::move(GetParam().result)}},
     }}.Build();
 
   EXPECT_EQ(expected, result);
 }
+
+class ItemParamName {
+public:
+  template <class ParamType>
+  std::string operator()(const testing::TestParamInfo<ParamType> &info) const {
+    return info.param.name;
+  }
+};
+
+INSTANTIATE_TEST_CASE_P(SwingsCompareWithOne,
+                        WhereFrom2e2Test,
+                        testing::ValuesIn({
+                          Item{
+                            "EqualsOne",
+                            "LogicalProject(swings=[$0])\n"
+                            "  LogicalFilter(condition=[=($1, 1)])\n"
+                            "    EnumerableTableScan(table=[[main, holas]])",
+                            {1, 3, 0, 0, 0, 0, 0},
+                          },
+                          Item{
+                            "LessThanOne",
+                            "LogicalProject(swings=[$0])\n"
+                            "  LogicalFilter(condition=[<($1, 1)])\n"
+                            "    EnumerableTableScan(table=[[main, holas]])",
+                            {2, 4, 5, 6, 7, 0, 0},
+                          },
+                          Item{
+                            "GreaterThanOne",
+                            "LogicalProject(swings=[$0])\n"
+                            "  LogicalFilter(condition=[>($1, 1)])\n"
+                            "    EnumerableTableScan(table=[[main, holas]])",
+                            {0, 0, 0, 0, 0, 0, 0},
+                          },
+                        }),
+                        ItemParamName());
+
+INSTANTIATE_TEST_CASE_P(SwingsCompareWithNegativeOne,
+                        WhereFrom2e2Test,
+                        testing::ValuesIn({
+                          Item{
+                            "EqualsNegativeOne",
+                            "LogicalProject(swings=[$0])\n"
+                            "  LogicalFilter(condition=[=($1, -1)])\n"
+                            "    EnumerableTableScan(table=[[main, holas]])",
+                            {5, 7, 0, 0, 0, 0, 0},
+                          },
+                          Item{
+                            "LessThanNegativeOne",
+                            "LogicalProject(swings=[$0])\n"
+                            "  LogicalFilter(condition=[<($1, -1)])\n"
+                            "    EnumerableTableScan(table=[[main, holas]])",
+                            {0, 0, 0, 0, 0, 0, 0},
+                          },
+                          Item{
+                            "GreaterThanNegativeOne",
+                            "LogicalProject(swings=[$0])\n"
+                            "  LogicalFilter(condition=[>($1, -1)])\n"
+                            "    EnumerableTableScan(table=[[main, holas]])",
+                            {1, 2, 3, 4, 6, 0, 0},
+                          },
+                        }),
+                        ItemParamName());

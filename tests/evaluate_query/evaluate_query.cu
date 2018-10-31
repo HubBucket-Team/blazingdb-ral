@@ -17,16 +17,31 @@
 #include "gdf/library/api.h"
 using namespace gdf::library;
 
-struct InputTestItem {
-  std::string query;
-  std::string logicalPlan;
-  gdf::library::TableGroup tableGroup;
-  gdf::library::Table resultTable;
+struct EvaluateQueryTest : public ::testing::Test {
+  struct InputTestItem {
+    std::string query;
+    std::string logicalPlan;
+    gdf::library::TableGroup tableGroup;
+    gdf::library::Table resultTable;
+  };
+
+  void CHECK_RESULT(gdf::library::Table& computed_solution,
+                    gdf::library::Table& reference_solution) {
+    computed_solution.print(std::cout);
+    reference_solution.print(std::cout);
+
+    for (size_t index = 0; index < reference_solution.size(); index++) {
+      const auto& reference_column = reference_solution[index];
+      const auto& computed_column = computed_solution[index];
+      auto a = reference_column.to_string();
+      auto b = computed_column.to_string();
+      EXPECT_EQ(a, b);
+    }
+  }
 };
-struct EvaluateQueryTest : public ::testing::Test {};
 
 // AUTO GENERATED UNIT TESTS
-TEST_F(EvaluateQueryTest, test1) {
+TEST_F(EvaluateQueryTest, TEST_01) {
   auto input = InputTestItem{
       .query = "select * from main.emps",
       .logicalPlan =
@@ -54,8 +69,11 @@ TEST_F(EvaluateQueryTest, test1) {
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
   EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
 }
-TEST_F(EvaluateQueryTest, test2) {
+TEST_F(EvaluateQueryTest, TEST_02) {
   auto input = InputTestItem{
       .query = "select id > 3 from main.emps",
       .logicalPlan =
@@ -81,8 +99,11 @@ TEST_F(EvaluateQueryTest, test2) {
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
   EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
 }
-TEST_F(EvaluateQueryTest, test3) {
+TEST_F(EvaluateQueryTest, TEST_03) {
   auto input = InputTestItem{
       .query = "select id from main.emps where age > 30",
       .logicalPlan =
@@ -108,8 +129,11 @@ TEST_F(EvaluateQueryTest, test3) {
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
   EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
 }
-TEST_F(EvaluateQueryTest, test4) {
+TEST_F(EvaluateQueryTest, TEST_04) {
   auto input = InputTestItem{
       .query = "select age + salary from main.emps",
       .logicalPlan =
@@ -140,8 +164,11 @@ TEST_F(EvaluateQueryTest, test4) {
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
   EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
 }
-TEST_F(EvaluateQueryTest, test5) {
+TEST_F(EvaluateQueryTest, TEST_05) {
   auto input = InputTestItem{
       .query = "select salary from main.emps where age > 80",
       .logicalPlan =
@@ -172,8 +199,11 @@ TEST_F(EvaluateQueryTest, test5) {
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
   EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
 }
-TEST_F(EvaluateQueryTest, test6) {
+TEST_F(EvaluateQueryTest, TEST_06) {
   auto input = InputTestItem{
       .query = "select * from main.emps where age = 10",
       .logicalPlan =
@@ -209,8 +239,11 @@ TEST_F(EvaluateQueryTest, test6) {
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
   EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
 }
-TEST_F(EvaluateQueryTest, test7) {
+TEST_F(EvaluateQueryTest, TEST_07) {
   auto input = InputTestItem{
       .query = "select * from main.emps where age = 10 and salary > 4999",
       .logicalPlan =
@@ -246,8 +279,11 @@ TEST_F(EvaluateQueryTest, test7) {
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
   EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
 }
-TEST_F(EvaluateQueryTest, test8) {
+TEST_F(EvaluateQueryTest, TEST_08) {
   auto input = InputTestItem{
       .query = "select id + salary from main.emps",
       .logicalPlan =
@@ -278,8 +314,11 @@ TEST_F(EvaluateQueryTest, test8) {
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
   EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
 }
-TEST_F(EvaluateQueryTest, test9) {
+TEST_F(EvaluateQueryTest, TEST_09) {
   auto input = InputTestItem{
       .query = "select age * salary from main.emps where id < 5 and age = 10",
       .logicalPlan =
@@ -309,4 +348,7 @@ TEST_F(EvaluateQueryTest, test9) {
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
   EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
 }

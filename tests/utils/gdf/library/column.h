@@ -7,9 +7,7 @@
 #include <string>
 #include <type_traits>
 #include <vector>
-
-#include <GDFColumn.cuh>
-#include <gdf/gdf.h>
+#include <sstream>      // std::stringstream
 
 #include "any.h"
 #include "definitions.h"
@@ -61,7 +59,9 @@ public:
   Wrapper operator[](const std::size_t i) const { return Wrapper{i, this}; }
 
   virtual size_t size() const = 0;
-  // virtual size_t      print(std::ostream &stream) const = 0;
+
+  virtual std::string to_string() const = 0;
+
   virtual std::string get_as_str(int index) const = 0;
 
   std::string name() const { return name_; }
@@ -127,16 +127,23 @@ public:
 
   size_t size() const final { return values_.size(); }
 
-  size_t print(std::ostream &stream) const {
+  std::string to_string() const final {
+    std::ostringstream stream;
+
     for (std::size_t i = 0; i < values_.size(); i++) {
-      stream << values_.at(i) << " | ";
+      stream << values_.at(i) << ",";
     }
+    return std::string{stream.str()};
   }
 
   std::string get_as_str(int index) const final {
     std::ostringstream out;
     if (std::is_floating_point<value_type>::value) { out.precision(1); }
-    out << std::fixed << values_.at(index);
+    if (sizeof(value_type) == 1) {
+      out << std::fixed << (int)values_.at(index);
+    } else {
+      out << std::fixed << values_.at(index);
+    }
     return out.str();
   }
 

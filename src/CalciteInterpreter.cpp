@@ -977,8 +977,6 @@ gdf_error evaluate_query(
 	std::vector<std::string> splitted = StringUtil::split(logicalPlan, '\n');
 	blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
 
-	std::cout << "evaluation is done!!!\n" << std::flush;
-
 	for(size_t i=0;i<output_frame.get_width();i++){
 
 		GDFRefCounter::getInstance()->deregister_column(output_frame.get_column(i).get_gdf_column());

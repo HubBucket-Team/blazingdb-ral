@@ -1,11 +1,11 @@
-
-#include "CalciteExpressionParsing.h"
-#include "DataFrame.h"
 #include <stack>
-#include "StringUtil.h"
 #include <sstream>
 #include <iomanip>
 #include <regex>
+
+#include "CalciteExpressionParsing.h"
+#include "DataFrame.h"
+#include "StringUtil.h"
 
 bool is_type_signed(gdf_dtype type){
 	return (GDF_INT8 == type ||
@@ -482,6 +482,11 @@ bool is_digits(const std::string &str)
 	return str.find_first_not_of("0123456789") == std::string::npos;
 }
 
+bool is_integer(const std::string &s) {
+  static const std::regex re{"-?\\d+"};
+  return std::regex_match(s, re);
+}
+
 std::string get_last_token(std::string expression, int * position){
 	size_t old_position = *position;
 	*position = expression.find_last_of(' ',*position - 1);
@@ -494,11 +499,9 @@ std::string get_last_token(std::string expression, int * position){
 	}
 }
 
-
-bool is_operator_token(std::string operand){
-
-	return (operand[0] != '$' && ! is_digits(operand) && ! is_date(operand));
-
+bool is_operator_token(std::string operand) {
+  return (operand[0] != '$' && !is_digits(operand) && !is_date(operand)
+          && !is_integer(operand));
 }
 
 size_t get_index(std::string operand_string){

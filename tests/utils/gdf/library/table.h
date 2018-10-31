@@ -38,22 +38,31 @@ public:
       return false;
     }
     for (std::size_t i = 0; i < columns_.size(); i++) {
-      if ((*columns_[i]) != (*other.columns_[i])) {
-        return false;
-      }
+      if ((*columns_[i]) != (*other.columns_[i])) { return false; }
     }
     return true;
   }
 
-  std::string name() const {return name_; }
+  std::string name() const { return name_; }
 
   size_t size() const { return columns_.size(); }
 
-  std::vector<std::shared_ptr<Column> >::iterator begin()   {
+  std::vector<std::string> ColumnNames() const {
+    std::vector<std::string> names;
+    names.resize(size());
+    std::transform(
+      columns_.cbegin(),
+      columns_.cend(),
+      names.begin(),
+      [](const std::shared_ptr<Column> &column) { return column->name(); });
+    return names;
+  }
+
+  std::vector<std::shared_ptr<Column> >::iterator begin() {
     return columns_.begin();
   }
 
-  std::vector<std::shared_ptr<Column> >::iterator end()   {
+  std::vector<std::shared_ptr<Column> >::iterator end() {
     return columns_.end();
   }
 
@@ -123,7 +132,6 @@ protected:
   size_t _num_rows() const {
     return columns_[0]->size();  //@todo check and assert this
   }
-
 
 private:
   std::string                           name_;
@@ -196,8 +204,9 @@ public:
                    });
   }
 
-  Table Build(const std::size_t length = 0 ) const { return TableBuilder::Build(lengths_); }
-
+  Table Build(const std::size_t length = 0) const {
+    return TableBuilder::Build(lengths_);
+  }
 
 private:
   static std::vector<ColumnBuilder>

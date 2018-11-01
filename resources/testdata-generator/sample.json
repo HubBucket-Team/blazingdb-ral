@@ -1,9 +1,9 @@
 [{
-		"objectName": "test1",
+		"testName": "TEST_01",
 		"query": "select * from main.emps",
 		"schema": {
 			"dbName": "main",
-			"tableName": "emps",
+			"tableName": "main.emps",
 			"columnNames": ["id", "age"],
 			"columnTypes": ["GDF_INT8", "GDF_INT8"]
 		},
@@ -18,11 +18,11 @@
 		"resultTypes": ["GDF_INT8", "GDF_INT8"]
 	},
 	{
-		"objectName": "test2",
+		"testName": "TEST_02",
 		"query": "select id > 3 from main.emps",
 		"schema": {
 			"dbName": "main",
-			"tableName": "emps",
+			"tableName": "main.emps",
 			"columnNames": ["id", "age"],
 			"columnTypes": ["GDF_INT8", "GDF_INT8"]
 		},
@@ -36,11 +36,11 @@
 		"resultTypes": ["GDF_INT8"]
 	},
 	{
-		"objectName": "test3",
+		"testName": "TEST_03",
 		"query": "select id from main.emps where age > 30",
 		"schema": {
 			"dbName": "main",
-			"tableName": "emps",
+			"tableName": "main.emps",
 			"columnNames": ["id", "age"],
 			"columnTypes": ["GDF_INT8", "GDF_INT8"]
 		},
@@ -54,11 +54,11 @@
 		"resultTypes": ["GDF_INT8"]
 	},
 	{
-		"objectName": "test4",
+		"testName": "TEST_04",
 		"query": "select age + salary from main.emps",
 		"schema": {
 			"dbName": "main",
-			"tableName": "emps",
+			"tableName": "main.emps",
 			"columnNames": ["id", "age", "salary"],
 			"columnTypes": ["GDF_INT8", "GDF_INT8", "GDF_INT8"]
 		},
@@ -73,11 +73,11 @@
 		"resultTypes": ["GDF_INT8"]
 	},
 	{
-		"objectName": "test5",
+		"testName": "TEST_05",
 		"query": "select salary from main.emps where age > 80",
 		"schema": {
 			"dbName": "main",
-			"tableName": "emps",
+			"tableName": "main.emps",
 			"columnNames": ["id", "age", "salary"],
 			"columnTypes": ["GDF_INT8", "GDF_INT8", "GDF_INT8"]
 		},
@@ -92,11 +92,11 @@
 		"resultTypes": ["GDF_INT8"]
 	},
 	{
-		"objectName": "test6",
+		"testName": "TEST_06",
 		"query": "select * from main.emps where age = 10",
 		"schema": {
 			"dbName": "main",
-			"tableName": "emps",
+			"tableName": "main.emps",
 			"columnNames": ["id", "age", "salary"],
 			"columnTypes": ["GDF_INT8", "GDF_INT8", "GDF_INT8"]
 		},
@@ -113,11 +113,11 @@
 		"resultTypes": ["GDF_INT8", "GDF_INT8", "GDF_INT8"]
 	},
 	{
-		"objectName": "test7",
+		"testName": "TEST_07",
 		"query": "select * from main.emps where age = 10 and salary > 4999",
 		"schema": {
 			"dbName": "main",
-			"tableName": "emps",
+			"tableName": "main.emps",
 			"columnNames": ["id", "age", "salary"],
 			"columnTypes": ["GDF_INT32", "GDF_INT32", "GDF_INT32"]
 		},
@@ -134,11 +134,11 @@
 		"resultTypes": ["GDF_INT32", "GDF_INT32", "GDF_INT32"]
 	},
 	{
-		"objectName": "test8",
+		"testName": "TEST_08",
 		"query": "select id + salary from main.emps",
 		"schema": {
 			"dbName": "main",
-			"tableName": "emps",
+			"tableName": "main.emps",
 			"columnNames": ["id", "age", "salary"],
 			"columnTypes": ["GDF_INT32", "GDF_INT32", "GDF_INT32"]
 		},
@@ -153,11 +153,11 @@
 		"resultTypes": ["GDF_INT32"]
 	},
 	{
-		"objectName": "test9",
+		"testName": "TEST_09",
 		"query": "select age * salary from main.emps where id < 5 and age = 10",
 		"schema": {
 			"dbName": "main",
-			"tableName": "emps",
+			"tableName": "main.emps",
 			"columnNames": ["id", "age", "salary"],
 			"columnTypes": ["GDF_INT32", "GDF_INT32", "GDF_INT32"]
 		},

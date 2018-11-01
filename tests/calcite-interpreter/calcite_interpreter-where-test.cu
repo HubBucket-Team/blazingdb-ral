@@ -346,9 +346,3 @@ LogicalProject(x=[$0], z=[$2])\n\
 		Check(outputs[1], host_output2, cur);
 	}
 }*/
-
-int main(int argc, char **argv){
-	::testing::InitGoogleTest(&argc, argv);
-	::testing::Environment* const env = ::testing::AddGlobalTestEnvironment(new TestEnvironment());
-	return RUN_ALL_TESTS();
-}

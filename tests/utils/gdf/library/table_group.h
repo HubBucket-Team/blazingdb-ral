@@ -17,6 +17,26 @@ public:
 
   BlazingFrame ToBlazingFrame() const;
 
+  std::vector<std::string> table_names() const {
+    std::vector<std::string> names;
+    for (auto &table : tables_) {
+      names.push_back(table.name());
+    }
+    return names;
+  }
+
+  std::vector<std::vector<std::string>>  column_names()   {
+    std::vector<std::vector<std::string>> list_of_names;
+    for (auto &table : tables_) {
+      std::vector<std::string> names;
+      for (std::shared_ptr<Column> &column : table) {
+        names.push_back(column->name());
+      }
+      list_of_names.push_back(names);
+    }
+    return list_of_names;
+  }
+
   const Table &operator[](const std::size_t i) const { return tables_[i]; }
 
 private:
@@ -33,9 +53,10 @@ BlazingFrame TableGroup::ToBlazingFrame() const {
   return frame;
 }
 
-class TableGroupBuilder {
+template<class TableBuilderType>
+class TypedTableGroupBuilder {
 public:
-  TableGroupBuilder(std::initializer_list<TableBuilder> builders)
+  TypedTableGroupBuilder(std::initializer_list<TableBuilderType> builders)
     : builders_{builders} {}
 
   TableGroup Build(const std::initializer_list<const std::size_t> lengths) {
@@ -44,7 +65,7 @@ public:
     std::transform(std::begin(builders_),
                    std::end(builders_),
                    tables.begin(),
-                   [this, lengths](const TableBuilder &builder) {
+                   [this, lengths](const TableBuilderType &builder) {
                      return builder.Build(
                        *(std::begin(lengths)
                          + std::distance(std::begin(builders_), &builder)));
@@ -52,22 +73,25 @@ public:
     return TableGroup(tables);
   }
 
-  TableGroup Build(const std::size_t length) {
+  TableGroup Build(const std::size_t length = 0) {
     std::vector<Table> tables;
     tables.resize(builders_.size());
     std::transform(
       std::begin(builders_),
       std::end(builders_),
       tables.begin(),
-      [length](const TableBuilder &builder) { return builder.Build(length); });
+      [length](const TableBuilderType &builder) { return builder.Build(length); });
     return TableGroup{tables};
   }
 
 private:
-  std::initializer_list<TableBuilder> builders_;
+  std::initializer_list<TableBuilderType> builders_;
 };
 
 using Index = const std::size_t;
+
+using TableGroupBuilder = TypedTableGroupBuilder<TableBuilder>;
+using LiteralTableGroupBuilder = TypedTableGroupBuilder<LiteralTableBuilder>;
 
 }  // namespace library
 }  // namespace gdf

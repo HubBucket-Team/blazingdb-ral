@@ -321,7 +321,7 @@ TEST_F(EvaluateQueryTest, TEST_09) {
   auto input = InputTestItem{
       .query = "select age * salary from main.emps where id < 5 and age = 10",
       .logicalPlan =
-          "LogicalProject(EXPR$0=[*($1, $2)])\n  "
+          "LogicalProject(EXPR$0=[*(10, $2)])\n  "
           "LogicalFilter(condition=[AND(<($0, 5), =($1, 10))])\n    "
           "EnumerableTableScan(table=[[main, emps]])",
       .tableGroup =
@@ -346,6 +346,13 @@ TEST_F(EvaluateQueryTest, TEST_09) {
   std::vector<gdf_column_cpp> outputs;
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
+  std::cout<<"is this valid bitmask null? "<<(input_tables[0][0].get_gdf_column()->valid == nullptr)<<std::endl;
+  print_gdf_column( input_tables[0][0].get_gdf_column());
+  print_gdf_column( input_tables[0][1].get_gdf_column());
+
+  print_gdf_column(  outputs[0].get_gdf_column());
+std::cout<<"bummer"<<std::endl;
+
   EXPECT_TRUE(err == GDF_SUCCESS);
   auto output_table =
       GdfColumnCppsTableBuilder{"output_table", outputs}.Build();

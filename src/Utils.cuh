@@ -346,15 +346,7 @@ void print_typed_column(col_type * col_data,
   {
     cudaMemcpy(h_mask.data(), validity_mask, num_masks * sizeof(gdf_valid_type), cudaMemcpyDeviceToHost);
   }
-  for(size_t i = 0; i < num_rows; ++i)
-  {
-    if (sizeof(col_type) == 1)
-      std::cout << (int)h_data[i] << " ";
-    else
-      std::cout << h_data[i] << " ";
-  }
-  std::cout << std::endl;
-  return ;
+
   if (validity_mask == nullptr) {
     for(size_t i = 0; i < num_rows; ++i)
     {

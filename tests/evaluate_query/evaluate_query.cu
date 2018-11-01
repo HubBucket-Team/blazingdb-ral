@@ -119,7 +119,7 @@ TEST_F(EvaluateQueryTest, TEST_03) {
       .resultTable =
           LiteralTableBuilder{
               "ResultSet",
-              {{"GDF_INT8", Literals<GDF_INT8>{4, 5, 6, 7, 8, 9, 0, 0, 0, 0}}}} //Todo: check the zeroes at the final output, (hardcoding output)
+              {{"GDF_INT8", Literals<GDF_INT8>{4, 5, 6, 7, 8, 9}}}} //Todo: check the zeroes at the final output, (hardcoding output)
               .Build()};
   auto logical_plan = input.logicalPlan;
   auto input_tables = input.tableGroup.ToBlazingFrame();
@@ -187,7 +187,7 @@ TEST_F(EvaluateQueryTest, TEST_05) {
       .resultTable = LiteralTableBuilder{"ResultSet",
                                          {{"GDF_INT8",
                                            Literals<GDF_INT8>{
-                                               10, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                                               10
                                            }}}} //Hardcoding output, zeroes at the end
                          .Build()};
   auto logical_plan = input.logicalPlan;
@@ -225,10 +225,10 @@ TEST_F(EvaluateQueryTest, TEST_06) {
               "ResultSet",
               {{"GDF_INT8",
                 Literals<GDF_INT8>{
-                    1, 3, 5, 7, 9, 0, 0, 0, 0, 0
+                    1, 3, 5, 7, 9
                 }},
-               {"GDF_INT8", Literals<GDF_INT8>{10, 10, 10, 10, 10, 0, 0, 0, 0, 0}},
-               {"GDF_INT8", Literals<GDF_INT8>{90, 70, 50, 30, 10, 0, 0, 0, 0, 0}}}}
+               {"GDF_INT8", Literals<GDF_INT8>{10, 10, 10, 10, 10}},
+               {"GDF_INT8", Literals<GDF_INT8>{90, 70, 50, 30, 10}}}}
               .Build()};
   auto logical_plan = input.logicalPlan;
   auto input_tables = input.tableGroup.ToBlazingFrame();
@@ -265,10 +265,10 @@ TEST_F(EvaluateQueryTest, TEST_07) {
               "ResultSet",
               {{"GDF_INT32",
                 Literals<GDF_INT32>{
-                    1, 3, 5, 0, 0, 0, 0, 0, 0, 0
+                    1, 3, 5
                 }},
-               {"GDF_INT32", Literals<GDF_INT32>{10, 10, 10, 0, 0, 0, 0, 0, 0, 0}},
-               {"GDF_INT32", Literals<GDF_INT32>{9000, 7000, 5000, 0, 0, 0, 0, 0, 0, 0}}}}
+               {"GDF_INT32", Literals<GDF_INT32>{10, 10, 10}},
+               {"GDF_INT32", Literals<GDF_INT32>{9000, 7000, 5000}}}}
               .Build()};
   auto logical_plan = input.logicalPlan;
   auto input_tables = input.tableGroup.ToBlazingFrame();
@@ -337,7 +337,7 @@ TEST_F(EvaluateQueryTest, TEST_09) {
               .Build(),
       .resultTable =
           LiteralTableBuilder{"ResultSet",
-                              {{"GDF_INT32", Literals<GDF_INT32>{90000, 70000, 0, 0, 0, 0, 0, 0, 0, 0}}}}
+                              {{"GDF_INT32", Literals<GDF_INT32>{90000, 70000}}}}
               .Build()};
   auto logical_plan = input.logicalPlan;
   auto input_tables = input.tableGroup.ToBlazingFrame();

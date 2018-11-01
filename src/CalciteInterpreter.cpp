@@ -733,46 +733,7 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 			}
 
 
-
-			gdf_column_cpp new_output;
-			gdf_column_cpp empty;
-
-			int width;
-			get_column_byte_width(input.get_column(i).get_gdf_column(), &width);
-
-			int empty_size = input.get_column(i).size() - temp.size();
-			int empty_byte_size = empty_size * get_width_dtype(input.get_column(i).dtype());
-
-			char* zeroes = new char[empty_byte_size];
-			memset(zeroes, 0, empty_byte_size);
-
-			//TODO de donde saco el nombre de la columna aqui???
-			empty.create_gdf_column(input.get_column(i).dtype(), empty_size, zeroes, width);
-			delete[] zeroes;
-
-			if(input.get_column(i).is_ipc()){
-				//make a copy
-				std::string col_name = input.get_column(i).column_name;
-				new_output.create_gdf_column(input.get_column(i).dtype(),input.get_column(i).size(),nullptr,get_width_dtype(input.get_column(i).dtype()), col_name);
-
-				if(err != GDF_SUCCESS){
-					return err;
-				}
-			}else{
-
-				input.get_column(i).realloc_gdf_column(input.get_column(i).dtype(),temp.size(),width);
-				new_output = input.get_column(i);
-			}
-
-			gdf_error err = gpu_concat(temp.get_gdf_column(), empty.get_gdf_column(), new_output.get_gdf_column());
-
-			if(input.get_column(i).is_ipc()){
-				input.set_column(i, new_output);
-			}
-
-			if(err != GDF_SUCCESS){
-				return err;
-			}
+			input.set_column(i,temp.clone());
 		}
 
 	}else{

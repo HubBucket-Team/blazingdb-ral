@@ -97,7 +97,9 @@ connection_id_t result_set_repository::init_session(){
 
 void result_set_repository::remove_all_connection_tokens(connection_id_t connection){
 	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
-		throw std::runtime_error{"Closing a connection that did not exist"};
+		//TODO percy uncomment this later
+		//WARNING uncomment this ... avoid leaks
+		//throw std::runtime_error{"Closing a connection that did not exist"};
 	}
 
 	std::lock_guard<std::mutex> guard(this->repo_mutex);

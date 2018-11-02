@@ -540,18 +540,12 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 
 }
 
-gdf_error gdf_group_by_sum(int ncols,                    // # columns
-                           gdf_column** cols,            //input cols
-                           gdf_column* col_agg,          //column to aggregate on
-                           gdf_column* out_col_indices,  //if not null return indices of re-ordered rows
-                           gdf_column** out_col_values,  //if not null return the grouped-by columns
-                                                         //(multi-gather based on indices, which are needed anyway)
-                           gdf_column* out_col_agg,      //aggregation result
-                           gdf_context* ctxt);           //struct with additional info: bool is_sorted, flag_sort_or_hash, bool flag_count_distinct
-
 
 
 gdf_error process_sort(blazing_frame & input, std::string query_part){
+
+	//oh yah lets get weird!
+
 
 
 	/*gdf_error gdf_order_by(size_t nrows,     //in: # rows
@@ -578,7 +572,8 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 	cudaMalloc((void **)&d_types,sizeof(int) * num_sort_columns);
 	gdf_column * cols = new gdf_column[num_sort_columns];
 	std::vector<size_t> sort_column_indices(num_sort_columns);
-
+	gdf_column_cpp index_col;
+	index_col.create_gdf_column(GDF_UINT64,input.get_column(0).size(),nullptr,8, "");
 	for(int i = 0; i < num_sort_columns; i++){
 		int sort_column_index = get_index(
 				get_named_expression(
@@ -599,8 +594,23 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 		cols[i].valid = other_column.valid();*/
 	}
 
-	size_t * indices;
-	cudaMalloc((void **)&indices,sizeof(size_t) * input.get_column(0).size());
+
+	//TODO de donde saco el nombre de la columna aqui???
+
+
+	size_t size_in_chars = ((sizeof(gdf_valid_type) * num_sort_columns )+ 7) / 8;
+	gdf_valid_type * asc_desc_bitmask;
+	cudaMalloc((void **) &asc_desc_bitmask,size_in_chars);
+
+	//trying all ascending for now
+	cudaMemset	(	(char *) asc_desc_bitmask,255,size_in_chars	);
+
+	gdf_error err = gdf_order_by_asc_desc(
+			cols,
+			num_sort_columns,
+			index_col.get_gdf_column(),
+			asc_desc_bitmask);
+/*
 	gdf_error err = gdf_order_by(
 			input.get_column(0).size(),
 			cols,
@@ -608,7 +618,7 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 			d_cols,
 			d_types,
 			indices
-	);
+	);*/
 
 	cudaFree(d_cols);
 	cudaFree(d_types);
@@ -634,15 +644,18 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 
 
 		//TODO de donde saco el nombre de la columna aqui???
-		gdf_column_cpp indices_column((void *)indices,nullptr,GDF_UINT64,input.get_column(i).size(),0, "");
+
 
 		gdf_error err = materialize_column(
 				input.get_column(i).get_gdf_column(),
 				temp_output.get_gdf_column(),
-				indices_column.get_gdf_column()
+				index_col.get_gdf_column()
 		);
 
-		gdf_column_cpp empty;
+
+		input.set_column(i,temp_output.clone());
+
+		/*gdf_column_cpp empty;
 
 		int width;
 		get_column_byte_width(input.get_column(i).get_gdf_column(), &width);
@@ -662,10 +675,10 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 		}
 		err = gpu_concat(temp_output.get_gdf_column(), empty.get_gdf_column(), new_output.get_gdf_column());
 
-		//free_gdf_column(&empty);
+		//free_gdf_column(&empty);*/
 	}
 	//TODO: handle errors
-	cudaFree(indices);
+	//cudaFree(indices);
 	delete[] cols;
 	//free_gdf_column(&temp_output);
 	return GDF_SUCCESS;

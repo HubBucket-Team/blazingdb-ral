@@ -118,8 +118,7 @@ TEST_F(EvaluateQueryTest, TEST_03) {
               .Build(),
       .resultTable =
           LiteralTableBuilder{
-              "ResultSet",
-              {{"GDF_INT8", Literals<GDF_INT8>{4, 5, 6, 7, 8, 9}}}} //Todo: check the zeroes at the final output, (hardcoding output)
+              "ResultSet", {{"GDF_INT8", Literals<GDF_INT8>{4, 5, 6, 7, 8, 9}}}}
               .Build()};
   auto logical_plan = input.logicalPlan;
   auto input_tables = input.tableGroup.ToBlazingFrame();
@@ -146,8 +145,7 @@ TEST_F(EvaluateQueryTest, TEST_04) {
                 {"age",
                  Literals<GDF_INT8>{10, 20, 30, 40, 50, 60, 70, 80, 90, 10}},
                 {"salary",
-                 Literals<GDF_INT8>{90, 80, 70, 60, 50, 40, 30, 20, 10, 0
-                 }}}}}
+                 Literals<GDF_INT8>{90, 80, 70, 60, 50, 40, 30, 20, 10, 0}}}}}
               .Build(),
       .resultTable =
           LiteralTableBuilder{
@@ -180,15 +178,10 @@ TEST_F(EvaluateQueryTest, TEST_05) {
                 {"age",
                  Literals<GDF_INT8>{10, 20, 30, 40, 50, 60, 70, 80, 90, 10}},
                 {"salary",
-                 Literals<GDF_INT8>{
-                     90, 80, 70, 60, 50, 40, 30, 20, 10, 0
-                 }}}}}
+                 Literals<GDF_INT8>{90, 80, 70, 60, 50, 40, 30, 20, 10, 0}}}}}
               .Build(),
       .resultTable = LiteralTableBuilder{"ResultSet",
-                                         {{"GDF_INT8",
-                                           Literals<GDF_INT8>{
-                                               10
-                                           }}}} //Hardcoding output, zeroes at the end
+                                         {{"GDF_INT8", Literals<GDF_INT8>{10}}}}
                          .Build()};
   auto logical_plan = input.logicalPlan;
   auto input_tables = input.tableGroup.ToBlazingFrame();
@@ -207,7 +200,7 @@ TEST_F(EvaluateQueryTest, TEST_06) {
       .query = "select * from main.emps where age = 10",
       .logicalPlan =
           "LogicalProject(id=[$0], age=[$1], salary=[$2])\n  "
-          "LogicalFilter(condition=[=($1, 10)])\n    "
+          "LogicalFilter(condition=[=(CAST($1):INTEGER NOT NULL, 10)])\n    "
           "EnumerableTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
@@ -216,17 +209,12 @@ TEST_F(EvaluateQueryTest, TEST_06) {
                 {"age",
                  Literals<GDF_INT8>{10, 20, 10, 20, 10, 20, 10, 20, 10, 2}},
                 {"salary",
-                 Literals<GDF_INT8>{
-                     90, 80, 70, 60, 50, 40, 30, 20, 10, 0
-                 }}}}}
+                 Literals<GDF_INT8>{90, 80, 70, 60, 50, 40, 30, 20, 10, 0}}}}}
               .Build(),
       .resultTable =
           LiteralTableBuilder{
               "ResultSet",
-              {{"GDF_INT8",
-                Literals<GDF_INT8>{
-                    1, 3, 5, 7, 9
-                }},
+              {{"GDF_INT8", Literals<GDF_INT8>{1, 3, 5, 7, 9}},
                {"GDF_INT8", Literals<GDF_INT8>{10, 10, 10, 10, 10}},
                {"GDF_INT8", Literals<GDF_INT8>{90, 70, 50, 30, 10}}}}
               .Build()};
@@ -255,18 +243,13 @@ TEST_F(EvaluateQueryTest, TEST_07) {
                {{"id", Literals<GDF_INT32>{1, 2, 3, 4, 5, 6, 7, 8, 9, 1}},
                 {"age",
                  Literals<GDF_INT32>{10, 20, 10, 20, 10, 20, 10, 20, 10, 2}},
-                {"salary",
-                 Literals<GDF_INT32>{
-                     9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000, 0
-                 }}}}}
+                {"salary", Literals<GDF_INT32>{9000, 8000, 7000, 6000, 5000,
+                                               4000, 3000, 2000, 1000, 0}}}}}
               .Build(),
       .resultTable =
           LiteralTableBuilder{
               "ResultSet",
-              {{"GDF_INT32",
-                Literals<GDF_INT32>{
-                    1, 3, 5
-                }},
+              {{"GDF_INT32", Literals<GDF_INT32>{1, 3, 5}},
                {"GDF_INT32", Literals<GDF_INT32>{10, 10, 10}},
                {"GDF_INT32", Literals<GDF_INT32>{9000, 7000, 5000}}}}
               .Build()};
@@ -294,10 +277,8 @@ TEST_F(EvaluateQueryTest, TEST_08) {
                {{"id", Literals<GDF_INT32>{1, 2, 3, 4, 5, 6, 7, 8, 9, 1}},
                 {"age",
                  Literals<GDF_INT32>{10, 20, 10, 20, 10, 20, 10, 20, 10, 2}},
-                {"salary",
-                 Literals<GDF_INT32>{
-                     9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000, 0
-                 }}}}}
+                {"salary", Literals<GDF_INT32>{9000, 8000, 7000, 6000, 5000,
+                                               4000, 3000, 2000, 1000, 0}}}}}
               .Build(),
       .resultTable =
           LiteralTableBuilder{
@@ -321,7 +302,7 @@ TEST_F(EvaluateQueryTest, TEST_09) {
   auto input = InputTestItem{
       .query = "select age * salary from main.emps where id < 5 and age = 10",
       .logicalPlan =
-          "LogicalProject(EXPR$0=[*(10, $2)])\n  "
+          "LogicalProject(EXPR$0=[*($1, $2)])\n  "
           "LogicalFilter(condition=[AND(<($0, 5), =($1, 10))])\n    "
           "EnumerableTableScan(table=[[main, emps]])",
       .tableGroup =
@@ -330,14 +311,12 @@ TEST_F(EvaluateQueryTest, TEST_09) {
                {{"id", Literals<GDF_INT32>{1, 2, 3, 4, 5, 6, 7, 8, 9, 1}},
                 {"age",
                  Literals<GDF_INT32>{10, 20, 10, 20, 10, 20, 10, 20, 10, 2}},
-                {"salary",
-                 Literals<GDF_INT32>{
-                     9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000,
-                 }}}}}
+                {"salary", Literals<GDF_INT32>{9000, 8000, 7000, 6000, 5000,
+                                               4000, 3000, 2000, 1000}}}}}
               .Build(),
       .resultTable =
-          LiteralTableBuilder{"ResultSet",
-                              {{"GDF_INT32", Literals<GDF_INT32>{90000, 70000}}}}
+          LiteralTableBuilder{
+              "ResultSet", {{"GDF_INT32", Literals<GDF_INT32>{90000, 70000}}}}
               .Build()};
   auto logical_plan = input.logicalPlan;
   auto input_tables = input.tableGroup.ToBlazingFrame();
@@ -346,13 +325,6 @@ TEST_F(EvaluateQueryTest, TEST_09) {
   std::vector<gdf_column_cpp> outputs;
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
-  std::cout<<"is this valid bitmask null? "<<(input_tables[0][0].get_gdf_column()->valid == nullptr)<<std::endl;
-  print_gdf_column( input_tables[0][0].get_gdf_column());
-  print_gdf_column( input_tables[0][1].get_gdf_column());
-
-  print_gdf_column(  outputs[0].get_gdf_column());
-std::cout<<"bummer"<<std::endl;
-
   EXPECT_TRUE(err == GDF_SUCCESS);
   auto output_table =
       GdfColumnCppsTableBuilder{"output_table", outputs}.Build();

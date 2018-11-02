@@ -74,7 +74,7 @@ def Φ(item, plan):
           ' .tableGroup = %(tableGroup)s, .resultTable = %(resultTable)s}') % {
   'query': item.query,
   'plan': '\\n'.join(line for line in plan.split('\n')),
-  'tableGroup': make_table_group(item.data, item.schema.tableName, item.schema.columnNames, item.schema.columnTypes),
+  'tableGroup': make_table_group(item.data, item.schema.dbName + '.' + item.schema.tableName, item.schema.columnNames, item.schema.columnTypes),
   'resultTable': make_table(item.result, 'ResultSet', item.resultTypes, item.resultTypes),
   }
 
@@ -98,7 +98,7 @@ def make_table_group(data, tableName, columnNames, columnTypes):
 def make_literals(data, columnNames, columnTypes):
   return '{%s}' % (
     ','.join(['{"%s", Literals<%s>{%s} }'
-              % (name, _type, ','.join(str(x) for x in values)[:-1])
+              % (name, _type, ','.join(str(x) for x in values))
               for name, _type, values in zip(columnNames, columnTypes, data)]))
 
 

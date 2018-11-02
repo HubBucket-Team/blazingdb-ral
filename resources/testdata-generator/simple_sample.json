@@ -1,0 +1,20 @@
+[{
+		"testName": "TEST_01",
+		"query": "select * from main.emps",
+		"schema": {
+			"dbName": "main",
+			"tableName": "emps",
+			"columnNames": ["id", "age"],
+			"columnTypes": ["GDF_INT8", "GDF_INT8"]
+		},
+		"data": [
+			[1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
+			[10, 20, 30, 40, 50, 60, 70, 80, 90, 10]
+		],
+		"result": [
+			[1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
+			[10, 20, 30, 40, 50, 60, 70, 80, 90, 10]
+		],
+		"resultTypes": ["GDF_INT8", "GDF_INT8"]
+	}
+]

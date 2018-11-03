@@ -67,8 +67,8 @@ gdf_column_cpp::gdf_column_cpp(gdf_column_cpp& col)
 
 gdf_column_cpp gdf_column_cpp::clone()  // TODO clone needs to register
 {
-	void* data_dev = nullptr;
-	void* valid_dev = nullptr;
+	char * data_dev = nullptr;
+	char * valid_dev = nullptr;
 
 	CheckCudaErrors(cudaMalloc(&data_dev, this->allocated_size_data));
 	CheckCudaErrors(cudaMemcpy(data_dev, this->column.data, this->allocated_size_data, cudaMemcpyDeviceToDevice));

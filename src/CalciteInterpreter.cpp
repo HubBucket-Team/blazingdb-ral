@@ -12,6 +12,7 @@
 #include "JoinProcessor.h"
 #include "ColumnManipulation.cuh"
 #include "CalciteExpressionParsing.h"
+#include "CodeTimer.h"
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 const std::string LOGICAL_UNION_TEXT = "LogicalUnion";
@@ -979,6 +980,9 @@ query_token_t evaluate_query(
 	query_token_t token = result_set_repository::get_instance().register_query(connection); //register the query so we can receive result requests for it
 
 	 std::thread t = std::thread([=]{
+	
+	CodeTimer blazing_timer;
+
 	std::vector<std::string> splitted = StringUtil::split(logicalPlan, "\n");
 	if (splitted[splitted.size() - 1].length() == 0) {
 		splitted.erase(splitted.end() -1);
@@ -988,7 +992,8 @@ query_token_t evaluate_query(
 	print_gdf_column(output_frame.get_columns()[0][0].get_gdf_column());
 	std::cout<<"end:Result\n";
 
-	result_set_repository::get_instance().update_token(token, output_frame);
+	double duration = blazing_timer.getDuration();
+	result_set_repository::get_instance().update_token(token, output_frame, duration);
 
 	//@todo: hablar con felipe sobre cudaIpcCloseMemHandle
 	for(int i = 0; i < handles.size(); i++){

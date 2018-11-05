@@ -13,6 +13,7 @@
 #include <map>
 #include <vector>
 #include <mutex>
+#include <condition_variable>
 
 typedef void * response_descriptor; //this shoudl be substituted for something that can generate a response
 
@@ -21,6 +22,7 @@ typedef void * response_descriptor; //this shoudl be substituted for something t
 class result_set_repository {
 public:
 
+	bool free_result(query_token_t token);
 	virtual ~result_set_repository();
 	result_set_repository();
 	static result_set_repository & get_instance(){
@@ -43,6 +45,7 @@ private:
 	void add_token(query_token_t token, connection_id_t connection);
 	std::map<query_token_t,response_descriptor> requested_responses;
 	std::mutex repo_mutex;
+	std::condition_variable cv;
 };
 
 #endif /* RESULTSETREPOSITORY_H_ */

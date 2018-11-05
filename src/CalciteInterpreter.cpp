@@ -978,7 +978,7 @@ query_token_t evaluate_query(
 
 	query_token_t token = result_set_repository::get_instance().register_query(connection); //register the query so we can receive result requests for it
 
-	// std::thread t = std::thread([&handles,logicalPlan, &input_tables, table_names, column_names,token]{
+	 std::thread t = std::thread([=]{
 	std::vector<std::string> splitted = StringUtil::split(logicalPlan, "\n");
 	if (splitted[splitted.size() - 1].length() == 0) {
 		splitted.erase(splitted.end() -1);
@@ -996,10 +996,10 @@ query_token_t evaluate_query(
 	}
 	//			std::cout<<"Result\n";
 	//			print_column<int8_t>(output_frame.get_columns()[0][0].get_gdf_column());
-	// });;
+	 });;
 
 	//@todo: hablar con felipe sobre detach
-	// t.detach();
+	 t.detach();
 
 	return token;
 }

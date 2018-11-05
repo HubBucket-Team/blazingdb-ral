@@ -68,8 +68,11 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 		GDFRefCounter::getInstance()->deregister_column(frame.get_column(i).get_gdf_column());
 	}
 
-	std::lock_guard<std::mutex> guard(this->repo_mutex);
-	this->result_sets[token] = std::make_tuple(true,frame);
+	{
+		std::lock_guard<std::mutex> guard(this->repo_mutex);
+		this->result_sets[token] = std::make_tuple(true,frame);
+	}
+	cv.notify_all();
 	/*if(this->requested_responses.find(token) != this->requested_responses.end()){
 		write_response(std::get<1>(this->result_sets[token]),this->requested_responses[token]);
 	}*/
@@ -109,6 +112,28 @@ void result_set_repository::remove_all_connection_tokens(connection_id_t connect
 	this->connection_result_sets.erase(connection);
 }
 
+bool result_set_repository::free_result(query_token_t token){
+	std::lock_guard<std::mutex> guard(this->repo_mutex);
+	this->result_sets.erase(token);
+	for(auto it = this->connection_result_sets.begin(); it != this->connection_result_sets.end(); ++it) {
+		connection_id_t connection = it->first;
+		for(size_t i = 0; i <  this->connection_result_sets[connection].size(); i++){
+			query_token_t token_test  = this->connection_result_sets[connection][i];
+			if(token == token_test){
+				std::vector<query_token_t> tokens= this->connection_result_sets[connection];
+				tokens.erase(tokens.begin() + i);
+				this->connection_result_sets[connection] = tokens;
+				std::cout<<"freed result!"<<std::endl;
+				return true;
+			}
+
+		}
+
+	}
+	return false;
+
+}
+
 blazing_frame result_set_repository::get_result(connection_id_t connection, query_token_t token){
 	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
 		throw std::runtime_error{"Connection does not exist"};
@@ -118,9 +143,14 @@ blazing_frame result_set_repository::get_result(connection_id_t connection, quer
 		throw std::runtime_error{"Result set does not exist"};
 	}
 	{
+		std::cout<<"Result is ready = "<<std::get<0>(this->result_sets[token])<<std::endl;
 		//scope the lockguard here
-		std::lock_guard<std::mutex> guard(this->repo_mutex);
-		if(std::get<0>(this->result_sets[token])){
+		std::unique_lock<std::mutex> lock(this->repo_mutex);
+		cv.wait(lock,[this,token](){
+			return std::get<0>(this->result_sets[token]);
+		});
+		std::cout<<"Result is after lock = "<<std::get<0>(this->result_sets[token])<<std::endl;
+
 			blazing_frame output_frame = std::get<1>(this->result_sets[token]);
 
 			for(size_t i = 0; i < output_frame.get_width(); i++){
@@ -129,7 +159,7 @@ blazing_frame result_set_repository::get_result(connection_id_t connection, quer
 			//@todo remove from map
 
 			return output_frame;
-		}
+
 	}
 }
 

@@ -14,6 +14,7 @@ gdf_column_cpp::gdf_column_cpp()
 	column = nullptr;
     this->allocated_size_data = 0;
     this->allocated_size_valid = 0;
+    this->is_ipc_column = false;
 
 }
 /*
@@ -102,7 +103,7 @@ gdf_column_cpp gdf_column_cpp::clone(std::string name)  // TODO clone needs to r
 	col1.column->valid =(gdf_valid_type *) valid_dev;
 	col1.allocated_size_data = this->allocated_size_data;
 	col1.allocated_size_valid = this->allocated_size_valid;
-	col1.is_ipc_column = this->is_ipc_column;
+	col1.is_ipc_column = false;
 	if(name == ""){
 		col1.set_name(this->column_name);
 	}else{
@@ -124,6 +125,7 @@ void gdf_column_cpp::operator=(const gdf_column_cpp& col)
     this->allocated_size_data = col.allocated_size_data;
     this->allocated_size_valid = col.allocated_size_valid;
     this->set_name(col.column_name);
+    this->is_ipc_column = col.is_ipc_column;
     GDFRefCounter::getInstance()->increment(const_cast<gdf_column*>(col.column));
 
 }
@@ -175,6 +177,7 @@ void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,g
     get_column_byte_width(this->column, &width);
     this->allocated_size_data = num_values * width;
     this->allocate_valid();
+    is_ipc_column = true;
     this->set_name(column_name);
 }
 
@@ -187,6 +190,7 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     //needing to not require numvalues so it can be called rom outside
     this->get_gdf_column()->size = num_values;
     char * data;
+    is_ipc_column = false;
 
     gdf_valid_type * valid_device = allocate_valid();
     this->allocated_size_data = (((width_per_value * num_values) + 63) /64) * 64;
@@ -222,10 +226,17 @@ gdf_error gdf_column_cpp::gdf_column_view(gdf_column *column, void *data, gdf_va
 
 gdf_column_cpp::~gdf_column_cpp()
 {
-    GDFRefCounter::getInstance()->decrement(this->column);
+	if(this->is_ipc_column){
+		//TODO: this is a big memory leak. we probably just need to have anothe reference
+		//counter, the valid pointer was allocated on our side
+		//we cant free it here because we dont know if this ipc column is used somewhere else
+	}else{
+	    GDFRefCounter::getInstance()->decrement(this->column);
+	}
+
 }
 bool gdf_column_cpp::is_ipc(){
-	return !GDFRefCounter::getInstance()->contains_column(this->column);
+	return this->is_ipc_column;
 }
 void* gdf_column_cpp::data(){
     return column->data;

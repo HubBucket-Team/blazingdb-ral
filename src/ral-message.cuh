@@ -59,8 +59,13 @@ std::tuple<std::vector<std::vector<gdf_column_cpp>>,
     	handles.push_back(col.data());
 
     	if(col.valid() == nullptr){
-    		std::cout<<"oh thank god"<<std::endl;
-    		 col.allocate_set_valid();
+    		//TODO: we can remove this when libgdf properly
+    		//implements all algorithsm with valid == nullptr support
+    		//it crashes somethings like group by
+    		col.allocate_set_valid();
+
+    	}else{
+			handles.push_back(col.valid());
     	}
     	input_table.push_back(col);
 

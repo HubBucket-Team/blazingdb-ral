@@ -70,7 +70,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
 
   //TODO WARNING why 0 why multitables?
   for(int i = 0; i < result.get_columns()[0].size(); ++i) {
-	  fieldNames.push_back(result.get_columns()[0][i].column_name);
+	  fieldNames.push_back(result.get_columns()[0][i].name());
 
 	  auto data = libgdf::BuildCudaIpcMemHandler(result.get_columns()[0][i].get_gdf_column()->data);
 	  auto valid = libgdf::BuildCudaIpcMemHandler(result.get_columns()[0][i].get_gdf_column()->valid);

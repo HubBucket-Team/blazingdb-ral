@@ -20,6 +20,7 @@ public:
     static std::string & rtrim(std::string &s);
 	static std::string replace(std::string containingString,const std::string toReplace,const std::string replacement);
     static std::vector<std::string> split(std::string input, std::string regex);
+    static void findAndReplaceAll(std::string & data, std::string toSearch, std::string replaceStr);
 };
 
 #endif /* STRINGUTIL_H_ */

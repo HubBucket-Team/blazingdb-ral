@@ -44,7 +44,7 @@ public:
 	}
 
 
-	gdf_column_cpp get_column(int column_index){
+	gdf_column_cpp & get_column(int column_index){
 		size_t cur_count = 0;
 		for(int i = 0; i < columns.size(); i++){
 			if(column_index < cur_count + columns[i].size()){
@@ -65,6 +65,8 @@ public:
 			//fill row_indeces with 0 to n
 		}
 	}
+
+
 
 	void set_column(size_t column_index, gdf_column_cpp column){
 		size_t cur_count = 0;

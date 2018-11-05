@@ -45,4 +45,6 @@ gdf_scalar get_scalar_from_string(std::string scalar_string, gdf_dtype type);
 
 size_t get_width_dtype(gdf_dtype type);
 
+std::string aggregator_to_string(gdf_agg_op operation);
+
 #endif /* CALCITEEXPRESSIONPARSING_H_ */

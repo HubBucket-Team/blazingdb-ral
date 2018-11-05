@@ -344,7 +344,7 @@ void print_typed_column(col_type * col_data,
   std::vector<gdf_valid_type> h_mask(num_masks);
   if(nullptr != validity_mask)
   {
-    cudaMemcpy(h_mask.data(), validity_mask, num_masks * sizeof(gdf_valid_type), cudaMemcpyDeviceToHost);
+    cudaMemcpy((int *) h_mask.data(), validity_mask, num_masks * sizeof(gdf_valid_type), cudaMemcpyDeviceToHost);
   }
 
   if (validity_mask == nullptr) {

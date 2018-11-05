@@ -70,7 +70,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
 
   //TODO WARNING why 0 why multitables?
   for(int i = 0; i < result.get_columns()[0].size(); ++i) {
-	  fieldNames.push_back(result.get_columns()[0][i].column_name);
+	  fieldNames.push_back(result.get_columns()[0][i].name());
 
 	  auto data = libgdf::BuildCudaIpcMemHandler(result.get_columns()[0][i].get_gdf_column()->data);
 	  auto valid = libgdf::BuildCudaIpcMemHandler(result.get_columns()[0][i].get_gdf_column()->valid);
@@ -121,9 +121,14 @@ static result_pair freeResultService(uint64_t accessToken, Buffer&& requestPaylo
 
   interpreter::GetResultRequestMessage request(requestPayloadBuffer.data());
   std::cout << "resultToken: " << request.getResultToken() << std::endl;
+  if(result_set_repository::get_instance().free_result(request.getResultToken())){
+	  ZeroMessage response{};
+	  return std::make_pair(Status_Success, response.getBufferData());
+  }else{
+	  ResponseErrorMessage errorMessage{ std::string{"Could not free result set!"} };
+	  return std::make_pair(Status_Error, errorMessage.getBufferData());
+  }
 
-  ZeroMessage response{};
-  return std::make_pair(Status_Success, response.getBufferData());
 }
 
 static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayloadBuffer)   {

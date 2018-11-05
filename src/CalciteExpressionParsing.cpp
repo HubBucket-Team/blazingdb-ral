@@ -414,6 +414,10 @@ gdf_error get_output_type_expression(blazing_frame * input, gdf_dtype * output_t
 
 gdf_error get_aggregation_operation(std::string operator_string, gdf_agg_op * operation){
 
+	operator_string = operator_string.substr(
+			operator_string.find("=[") + 2,
+			(operator_string.find("]") - (operator_string.find("=[") + 2))
+			);
 	operator_string = StringUtil::replace(operator_string,"COUNT(DISTINCT","COUNT_DISTINCT");
 	//remove expression
 	operator_string = operator_string.substr(0,operator_string.find("("));
@@ -479,7 +483,7 @@ bool is_literal(std::string operand){
 
 bool is_digits(const std::string &str)
 {
-	return str.find_first_not_of("0123456789") == std::string::npos;
+	return str.find_first_not_of("0123456789.") == std::string::npos;
 }
 
 bool is_integer(const std::string &s) {
@@ -509,8 +513,30 @@ size_t get_index(std::string operand_string){
 	return std::stoull (operand_string.substr(1,operand_string.size()-1),0);
 }
 
-
+std::string aggregator_to_string(gdf_agg_op aggregation){
+	if(aggregation == GDF_COUNT){
+			return "count";
+		}else if(aggregation == GDF_SUM){
+			return "sum";
+		}else if(aggregation == GDF_MIN){
+			return "min";
+		}else if(aggregation == GDF_MAX){
+			return "max";
+		}else if(aggregation == GDF_AVG){
+			return "avg";
+		}else if(aggregation == GDF_COUNT_DISTINCT){
+			return "count_distinct";
+		}else{
+			return "";
+		}
+}
 std::string clean_calcite_expression(std::string expression){
+	//TODO: this is very hacky, the proper way is to remove this in calcite
+	StringUtil::findAndReplaceAll(expression," NOT NULL","");
+	StringUtil::findAndReplaceAll(expression,"):DOUBLE","");
+	StringUtil::findAndReplaceAll(expression,"CAST(","");
+
+
 	std::string new_string = "";
 	new_string.reserve(expression.size());
 
@@ -534,7 +560,7 @@ std::string get_string_between_outer_parentheses(std::string input_string){
 		return "";
 	}
 	start_pos++;
-	end_pos--;
+	//end_pos--;
 
 	return input_string.substr(start_pos,end_pos - start_pos);
 }

@@ -252,7 +252,7 @@ std::string get_named_expression(std::string query_part, std::string expression_
 
 blazing_frame process_join(blazing_frame input, std::string query_part){
 
-	size_t size = 0; //libgdf will be handling the outputs for these
+	size_t size = 1000; //libgdf will be handling the outputs for these
 
 	gdf_column_cpp left_indices, right_indices;
 	//right now it outputs int32
@@ -263,6 +263,15 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 	std::string condition = get_condition_expression(query_part);
 	std::string join_type = get_named_expression(query_part,"joinType");
 
+
+	size_t allocation_size_valid = ((((left_indices.get_gdf_column()->size + 7 ) / 8) + 63 ) / 64) * 64; //so allocations are supposed to be 64byte aligned
+
+		cudaMalloc((void **) &left_indices.get_gdf_column()->valid, allocation_size_valid);
+		cudaMalloc((void **) &right_indices.get_gdf_column()->valid, allocation_size_valid);
+		cudaMemset(left_indices.get_gdf_column()->valid, (gdf_valid_type) 255, allocation_size_valid);
+		cudaMemset(right_indices.get_gdf_column()->valid, (gdf_valid_type) 255, allocation_size_valid);
+
+
 	gdf_error err = evaluate_join(
 			condition,
 			join_type,
@@ -271,12 +280,12 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 			right_indices.get_gdf_column()
 	);
 
-	size_t allocation_size_valid = ((((left_indices.get_gdf_column()->size + 7 ) / 8) + 63 ) / 64) * 64; //so allocations are supposed to be 64byte aligned
+	std::cout<<"Indices are starting!"<<std::endl;
+	print_gdf_column(left_indices.get_gdf_column());
+	print_gdf_column(right_indices.get_gdf_column());
+	std::cout<<"Indices are done!"<<std::endl;
 
-	cudaMalloc((void **) &left_indices.get_gdf_column()->valid, allocation_size_valid);
-	cudaMalloc((void **) &right_indices.get_gdf_column()->valid, allocation_size_valid);
-	cudaMemset(left_indices.get_gdf_column()->valid, (gdf_valid_type) 255, allocation_size_valid);
-	cudaMemset(right_indices.get_gdf_column()->valid, (gdf_valid_type) 255, allocation_size_valid);
+
 
 	if(err != GDF_SUCCESS){
 		//TODO: clean up everything here so we dont run out of memory
@@ -302,9 +311,13 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 		{
 			//materialize with left_indices
 			err = materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),left_indices.get_gdf_column());
+			std::cout<<"left table output"<<std::endl;
+			print_gdf_column(output.get_gdf_column());
 		}else{
 			//materialize with right indices
 			err = materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),right_indices.get_gdf_column());
+			std::cout<<"right table output"<<std::endl;
+			print_gdf_column(output.get_gdf_column());
 		}
 		if(err != GDF_SUCCESS){
 			//TODO: clean up all the resources

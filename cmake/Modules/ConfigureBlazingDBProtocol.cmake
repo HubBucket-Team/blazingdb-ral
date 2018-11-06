@@ -1,22 +1,60 @@
-include(ExternalProject)
+#=============================================================================
+# Copyright 2018 BlazingDB, Inc.
+#     Copyright 2018 Percy Camilo Triveño Aucahuasi <percy@blazingdb.com>
+#=============================================================================
 
-ExternalProject_Add(blazingdb-protocol_ep
-	CMAKE_ARGS
-		-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-		-DCMAKE_INSTALL_PREFIX=blazingdb-protocol_prefix
-	GIT_REPOSITORY git@github.com:BlazingDB/blazingdb-protocol.git
-    GIT_TAG develop
-    SOURCE_SUBDIR cpp
-	UPDATE_COMMAND "")
-ExternalProject_Get_property(blazingdb-protocol_ep BINARY_DIR)
-set(BLAZINGDB_PROTOCOL_ROOT ${BINARY_DIR}/blazingdb-protocol_prefix)
+# BEGIN macros
 
-file(MAKE_DIRECTORY ${BLAZINGDB_PROTOCOL_ROOT}/include)
-file(MAKE_DIRECTORY ${BLAZINGDB_PROTOCOL_ROOT}/lib)
+macro(CONFIGURE_BLAZINGDB_PROTOCOL_EXTERNAL_PROJECT)
+    # Download and unpack blazingdb-protocol at configure time
+    configure_file(${CMAKE_SOURCE_DIR}/cmake/Templates/BlazingDBProtocol.CMakeLists.txt.cmake ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/blazingdb-protocol-download/CMakeLists.txt)
 
-add_library(BlazingDB::Protocol INTERFACE IMPORTED)
-add_dependencies(BlazingDB::Protocol blazingdb-protocol_ep)
-target_include_directories(BlazingDB::Protocol
-    INTERFACE ${BLAZINGDB_PROTOCOL_ROOT}/include)
-target_link_libraries(BlazingDB::Protocol
-    INTERFACE ${BLAZINGDB_PROTOCOL_ROOT}/lib/libblazingdb-protocol.a)
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+        RESULT_VARIABLE result
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/blazingdb-protocol-download/
+    )
+
+    if(result)
+        message(FATAL_ERROR "CMake step for blazingdb-protocol failed: ${result}")
+    endif()
+
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} --build . -- -j8
+        RESULT_VARIABLE result
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/blazingdb-protocol-download/
+    )
+
+    if(result)
+        message(FATAL_ERROR "Build step for blazingdb-protocol failed: ${result}")
+    endif()
+endmacro()
+
+# END macros
+
+# BEGIN MAIN #
+
+if (BLAZINGDB_PROTOCOL_HOME)
+    message(STATUS "BLAZINGDB_PROTOCOL_HOME defined, it will use vendor version from ${BLAZINGDB_PROTOCOL_HOME}")
+    set(BLAZINGDB_PROTOCOL_ROOT "${BLAZINGDB_PROTOCOL_HOME}")
+else()
+    message(STATUS "BLAZINGDB_PROTOCOL_HOME not defined, it will be built from sources")
+    configure_blazingdb_protocol_external_project()
+    set(BLAZINGDB_PROTOCOL_ROOT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/blazingdb-protocol-install/")
+endif()
+
+find_package(BlazingDBProtocol REQUIRED)
+set_package_properties(BlazingDBProtocol PROPERTIES TYPE REQUIRED
+    PURPOSE "BlazingDBProtocol has the C++ protocol definitions for the BlazingSQL."
+    URL "https://github.com/BlazingDB/blazingdb-protocol")
+
+if(NOT BLAZINGDB_PROTOCOL_FOUND)
+    message(FATAL_ERROR "blazingdb-protocol not found, please check your settings.")
+endif()
+
+message(STATUS "blazingdb-protocol found in ${BLAZINGDB_PROTOCOL_ROOT}")
+include_directories(${BLAZINGDB_PROTOCOL_INCLUDEDIR})
+
+link_directories(${BLAZINGDB_PROTOCOL_LIBDIR})
+
+# END MAIN #

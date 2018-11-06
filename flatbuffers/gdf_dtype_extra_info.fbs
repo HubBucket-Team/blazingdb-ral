@@ -1,8 +1,0 @@
-include "gdf_time_unit.fbs";
-
-namespace BlazingDB.Protocol;
-
-table gdf_dtype_extra_info {
-    time_unit:gdf_time_unit;
-    // here we can also hold info for decimal datatype or any other datatype that requires additional information
-}

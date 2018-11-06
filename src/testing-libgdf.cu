@@ -16,7 +16,6 @@
 #include "Types.h"
 #include <cuda_runtime.h>
 
-#include "ipc/calcite_client.h"
 #include "gdf/gdf.h"
 
 #include <tuple>

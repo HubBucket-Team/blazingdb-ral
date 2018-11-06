@@ -21,10 +21,6 @@ include(CheckIncludeFiles)
 include(CheckLibraryExists)
 include(CTest)
 
-#TODO cmake bug, it says blazingdb-protocol was not deteected vut everything seems fine
-#find_package(Threads)
-
-
 # NOTE Do not change the inclusion order
 # Configure dependencies
 include(ConfigureCUDA)

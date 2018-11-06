@@ -20,7 +20,7 @@ result_set_repository::~result_set_repository() {
 void result_set_repository::add_token(query_token_t token, connection_id_t connection){
 	std::lock_guard<std::mutex> guard(this->repo_mutex);
 	blazing_frame temp;
-	this->result_sets[token] = std::make_tuple(false,temp);
+	this->result_sets[token] = std::make_tuple(false, temp, 0.0);
 
 	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
 		std::vector<query_token_t> empty_tokens;
@@ -58,7 +58,7 @@ query_token_t result_set_repository::register_query(connection_id_t connection){
 
 }*/
 
-void result_set_repository::update_token(query_token_t token, blazing_frame frame){
+void result_set_repository::update_token(query_token_t token, blazing_frame frame, double duration){
 	if(this->result_sets.find(token) == this->result_sets.end()){
 		throw std::runtime_error{"Token does not exist"};
 	}
@@ -70,7 +70,7 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 
 	{
 		std::lock_guard<std::mutex> guard(this->repo_mutex);
-		this->result_sets[token] = std::make_tuple(true,frame);
+		this->result_sets[token] = std::make_tuple(true, frame, duration);
 	}
 	cv.notify_all();
 	/*if(this->requested_responses.find(token) != this->requested_responses.end()){
@@ -134,7 +134,7 @@ bool result_set_repository::free_result(query_token_t token){
 
 }
 
-blazing_frame result_set_repository::get_result(connection_id_t connection, query_token_t token){
+std::tuple<blazing_frame, double> result_set_repository::get_result(connection_id_t connection, query_token_t token){
 	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
 		throw std::runtime_error{"Connection does not exist"};
 	}
@@ -158,7 +158,7 @@ blazing_frame result_set_repository::get_result(connection_id_t connection, quer
 			}
 			//@todo remove from map
 
-			return output_frame;
+			return std::make_tuple(output_frame, std::get<2>(this->result_sets[token]));
 
 	}
 }

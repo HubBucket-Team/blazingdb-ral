@@ -153,9 +153,11 @@ gdf_error evaluate_join(std::string condition,
 		//std::cout<<"Token is ==> "<<token<<"\n";
 
 		if(is_operator_token(token)){
-			operator_count++;
-			if(token != "="){
+
+			if(token == "="){
 				//so far only equijoins are supported in libgdf
+				operator_count++;
+			}else if(token != "AND"){
 				return GDF_INVALID_API_CALL;
 			}
 		}else{
@@ -173,14 +175,21 @@ gdf_error evaluate_join(std::string condition,
 		int join_cols[operator_count];
 		for(int i = 0; i < operator_count; i++){
 			join_cols[i] = i;
-		}
-		int right_index = get_index(operand.top());
-		operand.pop();
-		int left_index = get_index(operand.top());
-		operand.pop();
+			int right_index = get_index(operand.top());
+			operand.pop();
+			int left_index = get_index(operand.top());
+			operand.pop();
 
-		left_columns[0] = data_frame.get_column(left_index).get_gdf_column();
-		right_columns[0] = data_frame.get_column(right_index).get_gdf_column();
+			if(right_index < left_index){
+				int temp_index = left_index;
+				left_index = right_index;
+				right_index = temp_index;
+			}
+
+			left_columns[i] = data_frame.get_column(left_index).get_gdf_column();
+			right_columns[i] = data_frame.get_column(right_index).get_gdf_column();
+
+		}
 
 		if(join_type == INNER_JOIN){
 			err = gdf_inner_join( left_columns,operator_count,join_cols, right_columns,operator_count,join_cols,operator_count,0, nullptr,left_result, right_result, &ctxt);

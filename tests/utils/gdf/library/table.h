@@ -226,6 +226,20 @@ private:
   std::vector<std::size_t>          lengths_;
 };
 
+// class CsvTableBuilder : public TableBuilder {
+// public:
+//   CsvTableBuilder(const std::string && name,
+//                   const std::string && path,
+//                   std::vector<size_t> indexes
+//                   ):
+//   {}
+
+//   Table Build(const std::size_t length = 0) const {
+//     return TableBuilder::Build(lengths_);
+//   }
+
+// };
+
 class GdfColumnCppsTableBuilder {
 public:
   GdfColumnCppsTableBuilder(const std::string &                name,
@@ -319,7 +333,7 @@ public:
 
   TableRowBuilder(const std::string &              name,
                   std::vector<std::string>         headers,
-                  std::initializer_list<DataTuple> rows)
+                  std::vector<DataTuple> rows)
     : name_{name}, headers_(headers), rows_{rows},
       ncols_{std::tuple_size<DataTuple>::value}, nrows_{rows.size()} {}
 

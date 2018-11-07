@@ -471,6 +471,12 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 
 		gdf_error err;
 		gdf_dtype output_type = get_aggregation_output_type(aggregation_input.dtype(),aggregation_types[i]);
+
+        // The 'gdf_sum_generic' libgdf function requires that all input operands have the same dtype.
+        if ((group_columns.size() == 0) && (aggregation_types[i] == GDF_SUM)) {
+            output_type = aggregation_input.dtype();
+        }
+
 		gdf_column_cpp output_column;
 		//TODO de donde saco el nombre de la columna aqui???
 		output_column.create_gdf_column(output_type,aggregation_size,nullptr,get_width_dtype(output_type), aggregator_to_string(aggregation_types[i]) + "(" + aggregation_input.name() + ")" );

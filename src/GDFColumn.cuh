@@ -31,7 +31,7 @@ class gdf_column_cpp
     void* data();
     void allocate_set_valid();
     gdf_valid_type* valid();
-    std::string name();
+    std::string name() const;
 
     gdf_size_type size();
 

@@ -1,28 +1,37 @@
-#include <gtest/gtest.h>
-#include <sys/stat.h>
 
-#include "gdf/library/table_group.h"
-#include "gdf/library/types.h"
+#include <cstdlib>
+#include <iostream>
+#include <string>
+#include <vector>
+
+#include <CalciteExpressionParsing.h>
+#include <CalciteInterpreter.h>
+#include <DataFrame.h>
+#include <StringUtil.h>
+#include <gtest/gtest.h>
+#include <GDFColumn.cuh>
+#include <GDFCounter.cuh>
+#include <Utils.cuh>
+
+#include "gdf/library/api.h"
+using namespace gdf::library;
 
 #include <gdf/cffi/functions.h>
 #include <gdf/gdf.h>
+#include <sys/stat.h>
+
+#include "csv_utils.cuh"
+
 using namespace gdf::library;
-
-bool checkFile(const char *fpath) {
-	struct stat     st;
-
-	if (stat(fpath, &st)) {
-		return 0;
-	}
-	return 1;
-}
-
 
 struct EvaluateQueryTest : public ::testing::Test {
   struct InputTestItem {
     std::string query;
     std::string logicalPlan;
-    std::string filePath;
+    std::vector<std::string> filePaths;
+    std::vector<std::string> tableNames;
+    std::vector<std::vector<std::string>> columnNames;
+    std::vector<std::vector<const char*>> columnTypes;
     gdf::library::Table resultTable;
   };
 
@@ -41,113 +50,82 @@ struct EvaluateQueryTest : public ::testing::Test {
   }
 };
 
-
-gdf_column_cpp ToGdfColumnCpp(const std::string &name,
-                              const gdf_dtype    dtype,
-                              const std::size_t  length,
-                              const void *       data,
-                              const std::size_t  size) {
-  gdf_column_cpp column_cpp;
-  column_cpp.create_gdf_column(dtype, length, const_cast<void *>(data), size);
-  column_cpp.delete_set_name(name);
-  return column_cpp;
+// AUTO GENERATED UNIT TESTS
+TEST_F(EvaluateQueryTest, TEST_00) {
+  auto input = InputTestItem{
+      .query =
+          "select c_custkey, c_nationkey, c_acctbal from main.customer where "
+          "c_custkey < 15",
+      .logicalPlan =
+          "LogicalProject(c_custkey=[$0], c_nationkey=[$3], c_acctbal=[$5])\n  "
+          "LogicalFilter(condition=[<($0, 15)])\n    "
+          "EnumerableTableScan(table=[[main, customer]])",
+      .filePaths = {"/home/aocsa/blazingdb/tpch/1mb/customer.psv"},
+      .tableNames = {"main.customer"},
+      .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
+                       "c_phone", "c_acctbal", "c_mktsegment", "c_comment"}},
+      .columnTypes = {{"int32", "int64", "int64", "int32", "int64", "float32",
+                       "int64", "int64"}},
+      .resultTable =
+          LiteralTableBuilder{
+              "ResultSet",
+              {{"GDF_INT32", Literals<GDF_INT32>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                                                 11, 12, 13, 14}},
+               {"GDF_INT32", Literals<GDF_INT32>{15, 13, 1, 4, 3, 20, 18, 17, 8,
+                                                 5, 23, 13, 3, 1}},
+               {"GDF_FLOAT32",
+                Literals<GDF_FLOAT32>{711.56, 121.65, 7498.12, 2866.83, 794.47,
+                                      7638.57, 9561.95, 6819.74, 8324.07,
+                                      2753.54, -272.6, 3396.49, 3857.34,
+                                      5266.3}}}}
+              .Build()};
+  auto logical_plan = input.logicalPlan;
+  auto input_tables =
+      ToBlazingFrame(input.filePaths, input.columnNames, input.columnTypes);
+  auto table_names = input.tableNames;
+  auto column_names = input.columnNames;
+  std::vector<gdf_column_cpp> outputs;
+  gdf_error err = evaluate_query(input_tables, table_names, column_names,
+                                 logical_plan, outputs);
+  EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
 }
-
-
-int dtype_size(gdf_dtype col_type) {
-  switch( col_type )
-    {
-    case GDF_INT8:
-      {
-        using ColType = int8_t;
-
-        return sizeof(ColType);
-      }
-    case GDF_INT16:
-      {
-        using ColType = int16_t;
-
-        return sizeof(ColType);
-      }
-    case GDF_INT32:
-      {
-        using ColType = int32_t;
-
-        return sizeof(ColType);
-      }
-    case GDF_INT64:
-      {
-        using ColType = int64_t;
-
-        return sizeof(ColType);
-      }
-    case GDF_FLOAT32:
-      {
-        using ColType = float;
-
-        return sizeof(ColType);
-      }
-    case GDF_FLOAT64:
-      {
-        using ColType = double;
-
-        return sizeof(ColType);
-      }
-
-    default:
-      assert( false );//type not handled
-    }
-    return 0;
-}
-
-std::vector<gdf_column_cpp> ToGdfColumnCpps(gdf_column	**data, const char	**names, size_t ncols)   {
-  std::vector<gdf_column_cpp> gdfColumnsCpps;
-  for(size_t i = 0; i < ncols; i++ ){
-    gdf_column	*column = data[i];
-    size_t type_size = dtype_size(column->dtype);
-    gdfColumnsCpps.push_back(ToGdfColumnCpp(names[i], column->dtype, column->size, column->data, type_size));
-  }
-  return gdfColumnsCpps;
-}
-
-BlazingFrame ToBlazingFrame(gdf_column	**data, const char	**names, size_t ncols)   {
-  BlazingFrame frame;
-  frame.push_back(
-    ToGdfColumnCpps(data, names, ncols)
-  );
-  return frame;
-}
-
-
-
-TEST(UtilsTest, CSVReaderGdf)
-{
-  gdf_error error = GDF_SUCCESS;
-  csv_read_arg args;
-  args.num_cols = 8;
-  args.names = new const char* [8] {
-    "c_custkey", "c_name", "c_address", "c_nationkey", "c_phone", "c_acctbal", "c_mktsegment", "c_comment"
-  };
-  args.dtype = new const char* [8] {"int32", "int64", "int64", "int32", "int64", "float32", "int64", "int64"};
-  args.file_path = (char*)("/home/aocsa/blazingdb/tpch/1mb/customer.psv");
-
-  if (checkFile(args.file_path)) {
-
-    args.delimiter = '|';
-    args.lineterminator = '\n';
-    args.delim_whitespace = 0;
-    args.skipinitialspace = 0;
-    args.skiprows = 0;
-    args.skipfooter = 0;
-    args.dayfirst = 0;
-
-    error = read_csv(&args);
-
-    std::cout << args.num_cols_out << std::endl;
-    std::cout << args.num_rows_out << std::endl;
-    auto bframe = ToBlazingFrame(args.data, args.names, args.num_cols_out);
-
-  }
-
-  EXPECT_TRUE(error == GDF_SUCCESS);
+TEST_F(EvaluateQueryTest, TEST_01) {
+  auto input = InputTestItem{
+      .query =
+          "select c_custkey, c_nationkey, c_acctbal from main.customer where "
+          "c_custkey < 150 and c_nationkey = 5",
+      .logicalPlan =
+          "LogicalProject(c_custkey=[$0], c_nationkey=[$3], c_acctbal=[$5])\n  "
+          "LogicalFilter(condition=[AND(<($0, 150), =($3, 5))])\n    "
+          "EnumerableTableScan(table=[[main, customer]])",
+      .filePaths = {"/home/aocsa/blazingdb/tpch/1mb/customer.psv"},
+      .tableNames = {"main.customer"},
+      .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
+                       "c_phone", "c_acctbal", "c_mktsegment", "c_comment"}},
+      .columnTypes = {{"int32", "int64", "int64", "int32", "int64", "float32",
+                       "int64", "int64"}},
+      .resultTable =
+          LiteralTableBuilder{
+              "ResultSet",
+              {{"GDF_INT32", Literals<GDF_INT32>{10, 42, 85, 108, 123, 138}},
+               {"GDF_INT32", Literals<GDF_INT32>{5, 5, 5, 5, 5, 5}},
+               {"GDF_FLOAT32",
+                Literals<GDF_FLOAT32>{2753.54, 8727.01, 3386.64, 2259.38,
+                                      5897.83, 430.59}}}}
+              .Build()};
+  auto logical_plan = input.logicalPlan;
+  auto input_tables =
+      ToBlazingFrame(input.filePaths, input.columnNames, input.columnTypes);
+  auto table_names = input.tableNames;
+  auto column_names = input.columnNames;
+  std::vector<gdf_column_cpp> outputs;
+  gdf_error err = evaluate_query(input_tables, table_names, column_names,
+                                 logical_plan, outputs);
+  EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
 }

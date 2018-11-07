@@ -79,6 +79,8 @@ public:
       total_width += col_size + (2 * cell_padding);
 
     // Print out the top line
+    stream << "## TABLE_NAME:" <<  this->name() << "\n";
+
     stream << std::string(total_width, '-') << "\n";
 
     std::vector<std::string> headers;
@@ -226,19 +228,6 @@ private:
   std::vector<std::size_t>          lengths_;
 };
 
-// class CsvTableBuilder : public TableBuilder {
-// public:
-//   CsvTableBuilder(const std::string && name,
-//                   const std::string && path,
-//                   std::vector<size_t> indexes
-//                   ):
-//   {}
-
-//   Table Build(const std::size_t length = 0) const {
-//     return TableBuilder::Build(lengths_);
-//   }
-
-// };
 
 class GdfColumnCppsTableBuilder {
 public:
@@ -262,7 +251,7 @@ private:
                    builders.begin(),
                    [](const gdf_column_cpp &column_cpp) {
                      return static_cast<LiteralColumnBuilder>(
-                       GdfColumnCppColumnBuilder("", column_cpp));
+                       GdfColumnCppColumnBuilder(column_cpp.name(), column_cpp));
                    });
     return builders;
   }

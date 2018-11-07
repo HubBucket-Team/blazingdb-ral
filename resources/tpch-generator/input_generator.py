@@ -4,6 +4,8 @@ from collections import OrderedDict
 import tpch
 import numpy as np
 import re
+import argparse
+import sys
 
 def get_table_occurrences(query):
   # [ y for y in a if y not in b]
@@ -131,13 +133,35 @@ def get_selected_columns(table):
   return  [_name for _name, _type in table.items() if _type.find('string') == -1 ]
 
 
+
+def write(json_list):
+    def to(filename):
+        with sys.stdout if '-' == filename else open(filename, 'w') as output:
+            output.write( '[%s]' % (','.join([ item for item in json_list])) )
+    return type('writer', (), dict(to=to))
+
 if __name__ == '__main__':
   drill = PyDrill(host='localhost', port=8047)
   if not drill.is_active():
       raise Exception('Please run Drill first')
 
-  ROOT_PATH = '/home/aocsa/blazingdb/tpch/1mb/'
-  tpch.init_schema(drill, ROOT_PATH)
-  query = '''select nation.n_nationkey, region.r_regionkey from nation inner join region on region.r_regionkey = nation.n_nationkey'''
-  res = get_reference_input(drill, ROOT_PATH, 'TEST_01', query)
-  print(res)
+  parser = argparse.ArgumentParser(description='Generate Input Generator for UnitTestGenerator.')
+  parser.add_argument('tpch_path', type=str,
+                      help='use complete path, ex /tmp/tpch/1mb/')
+  parser.add_argument('-O', '--output', type=str, default='-',
+                      help='Output file path or - for stdout')
+  args = parser.parse_args()
+
+  tpch_path = args.tpch_path
+  tpch.init_schema(drill, tpch_path)
+  queries = [
+    '''select c_custkey, c_nationkey, c_acctbal from customer where c_custkey < 15''',
+    '''select c_custkey, c_nationkey, c_acctbal from customer where c_custkey < 150 and c_nationkey = 5''',
+    ]
+
+  json_list = []
+  for index, query in enumerate(queries):
+    json_text = get_reference_input(drill, tpch_path, 'TEST_0%s' % index , query)
+    json_list.append(json_text)
+
+  write(json_list).to(args.output)

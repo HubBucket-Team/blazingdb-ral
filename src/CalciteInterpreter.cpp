@@ -1003,7 +1003,11 @@ query_token_t evaluate_query(
 	}
 	blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
 	std::cout<<"Result\n";
-	print_gdf_column(output_frame.get_columns()[0][0].get_gdf_column());
+	for (auto outputTable : output_frame.get_columns()) {
+		for (auto outputColumn : outputTable) {
+			print_gdf_column(outputColumn.get_gdf_column());
+		}
+	}
 	std::cout<<"end:Result\n";
 
 	double duration = blazing_timer.getDuration();

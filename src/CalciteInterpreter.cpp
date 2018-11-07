@@ -726,6 +726,7 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 	//i dont think we can do that in place since we are writing and reading out of order
 	for(int i = 0; i < input.get_width();i++){
 		temp_output.set_dtype(input.get_column(i).dtype());
+		temp_output.set_name(input.get_column(i).name());
 
 
 		//TODO de donde saco el nombre de la columna aqui???

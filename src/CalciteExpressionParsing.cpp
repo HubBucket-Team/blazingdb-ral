@@ -555,7 +555,7 @@ std::string clean_calcite_expression(std::string expression){
 std::string get_string_between_outer_parentheses(std::string input_string){
 	int start_pos, end_pos;
 	start_pos = input_string.find("(");
-	end_pos = input_string.rfind(")");
+	end_pos = input_string.find(")");
 	if(start_pos == input_string.npos || end_pos == input_string.npos || end_pos < start_pos){
 		return "";
 	}

@@ -509,6 +509,9 @@ bool is_operator_token(std::string operand) {
 }
 
 size_t get_index(std::string operand_string){
+    if (operand_string.length() == 0) {
+        return 0;
+    }
 	size_t start = 1;
 	return std::stoull (operand_string.substr(1,operand_string.size()-1),0);
 }

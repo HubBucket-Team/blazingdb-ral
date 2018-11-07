@@ -18,6 +18,30 @@ bool checkFile(const char *fpath) {
 }
 
 
+struct EvaluateQueryTest : public ::testing::Test {
+  struct InputTestItem {
+    std::string query;
+    std::string logicalPlan;
+    std::string filePath;
+    gdf::library::Table resultTable;
+  };
+
+  void CHECK_RESULT(gdf::library::Table& computed_solution,
+                    gdf::library::Table& reference_solution) {
+    computed_solution.print(std::cout);
+    reference_solution.print(std::cout);
+
+    for (size_t index = 0; index < reference_solution.size(); index++) {
+      const auto& reference_column = reference_solution[index];
+      const auto& computed_column = computed_solution[index];
+      auto a = reference_column.to_string();
+      auto b = computed_column.to_string();
+      EXPECT_EQ(a, b);
+    }
+  }
+};
+
+
 gdf_column_cpp ToGdfColumnCpp(const std::string &name,
                               const gdf_dtype    dtype,
                               const std::size_t  length,

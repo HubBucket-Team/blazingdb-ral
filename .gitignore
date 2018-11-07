@@ -60,5 +60,6 @@ cmake_install.cmake
 
 #generated folders (in source)
 blazingdb-protocol_ep-prefix
+google-flatbuffers_ep-prefix
 
 \.idea/

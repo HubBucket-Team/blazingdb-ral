@@ -71,7 +71,7 @@ void gdf_column_cpp::set_name(std::string name){
 
 	}
 void gdf_column_cpp::delete_set_name(std::string name){
-	delete this->column->col_name;
+	delete [] this->column->col_name;
 	this->set_name(name);
 }
 std::string gdf_column_cpp::name() const{

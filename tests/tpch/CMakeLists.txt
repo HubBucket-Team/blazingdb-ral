@@ -7,6 +7,7 @@ cuda_add_library(tpch_interface
   ${CMAKE_SOURCE_DIR}/src/JoinProcessor.cpp
   ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp
   ${CMAKE_SOURCE_DIR}/src/StringUtil.cpp
+  ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
   ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
 )
 target_include_directories(tpch_interface PUBLIC .)

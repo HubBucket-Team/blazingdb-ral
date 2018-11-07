@@ -60,7 +60,7 @@ TEST_F(EvaluateQueryTest, TEST_00) {
           "LogicalProject(c_custkey=[$0], c_nationkey=[$3], c_acctbal=[$5])\n  "
           "LogicalFilter(condition=[<($0, 15)])\n    "
           "EnumerableTableScan(table=[[main, customer]])",
-      .filePaths = {"/home/aocsa/blazingdb/tpch/1mb/customer.psv"},
+      .filePaths = {"../resources/tpch-generator/tpch/1mb/customer.psv"},
       .tableNames = {"main.customer"},
       .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
                        "c_phone", "c_acctbal", "c_mktsegment", "c_comment"}},
@@ -74,7 +74,7 @@ TEST_F(EvaluateQueryTest, TEST_00) {
                {"GDF_INT64", Literals<GDF_INT64>{15, 13, 1, 4, 3, 20, 18, 17, 8,
                                                  5, 23, 13, 3, 1}},
                {"GDF_INT64",
-                Literals<GDF_INT64>{711.56, 121.65, 7498.12, 2866.83, 794.47,
+                Literals<GDF_FLOAT32>{711.56, 121.65, 7498.12, 2866.83, 794.47,
                                     7638.57, 9561.95, 6819.74, 8324.07, 2753.54,
                                     -272.6, 3396.49, 3857.34, 5266.3}}}}
               .Build()};
@@ -100,7 +100,7 @@ TEST_F(EvaluateQueryTest, TEST_01) {
           "LogicalProject(c_custkey=[$0], c_nationkey=[$3], c_acctbal=[$5])\n  "
           "LogicalFilter(condition=[AND(<($0, 150), =($3, 5))])\n    "
           "EnumerableTableScan(table=[[main, customer]])",
-      .filePaths = {"/home/aocsa/blazingdb/tpch/1mb/customer.psv"},
+      .filePaths = {"../resources/tpch-generator/tpch/1mb/customer.psv"},
       .tableNames = {"main.customer"},
       .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
                        "c_phone", "c_acctbal", "c_mktsegment", "c_comment"}},
@@ -111,7 +111,7 @@ TEST_F(EvaluateQueryTest, TEST_01) {
               "ResultSet",
               {{"GDF_INT64", Literals<GDF_INT64>{10, 42, 85, 108, 123, 138}},
                {"GDF_INT64", Literals<GDF_INT64>{5, 5, 5, 5, 5, 5}},
-               {"GDF_INT64", Literals<GDF_INT64>{2753.54, 8727.01, 3386.64,
+               {"GDF_INT64", Literals<GDF_FLOAT32>{2753.54, 8727.01, 3386.64,
                                                  2259.38, 5897.83, 430.59}}}}
               .Build()};
   auto logical_plan = input.logicalPlan;
@@ -136,7 +136,7 @@ TEST_F(EvaluateQueryTest, TEST_02) {
           "LogicalProject(c_custkey=[$0], nkey=[$3])\n  "
           "LogicalFilter(condition=[<($0, 0)])\n    "
           "EnumerableTableScan(table=[[main, customer]])",
-      .filePaths = {"/home/aocsa/blazingdb/tpch/1mb/customer.psv"},
+      .filePaths = {"../resources/tpch-generator/tpch/1mb/customer.psv"},
       .tableNames = {"main.customer"},
       .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
                        "c_phone", "c_acctbal", "c_mktsegment", "c_comment"}},
@@ -165,7 +165,7 @@ TEST_F(EvaluateQueryTest, TEST_03) {
           "LogicalProject(c_custkey=[$0], nkey=[$3])\n  "
           "LogicalFilter(condition=[AND(<($0, 0), >=($3, 30))])\n    "
           "EnumerableTableScan(table=[[main, customer]])",
-      .filePaths = {"/home/aocsa/blazingdb/tpch/1mb/customer.psv"},
+      .filePaths = {"../resources/tpch-generator/tpch/1mb/customer.psv"},
       .tableNames = {"main.customer"},
       .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
                        "c_phone", "c_acctbal", "c_mktsegment", "c_comment"}},
@@ -194,7 +194,7 @@ TEST_F(EvaluateQueryTest, TEST_04) {
           "LogicalProject(c_custkey=[$0], nkey=[$3])\n  "
           "LogicalFilter(condition=[OR(<($0, 0), >=($3, 24))])\n    "
           "EnumerableTableScan(table=[[main, customer]])",
-      .filePaths = {"/home/aocsa/blazingdb/tpch/1mb/customer.psv"},
+      .filePaths = {"../resources/tpch-generator/tpch/1mb/customer.psv"},
       .tableNames = {"main.customer"},
       .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
                        "c_phone", "c_acctbal", "c_mktsegment", "c_comment"}},
@@ -227,7 +227,7 @@ TEST_F(EvaluateQueryTest, TEST_05) {
           "LogicalProject(c_custkey=[$0], nkey=[$3])\n  "
           "LogicalFilter(condition=[AND(<($0, 0), >=($3, 3))])\n    "
           "EnumerableTableScan(table=[[main, customer]])",
-      .filePaths = {"/home/aocsa/blazingdb/tpch/1mb/customer.psv"},
+      .filePaths = {"../resources/tpch-generator/tpch/1mb/customer.psv"},
       .tableNames = {"main.customer"},
       .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
                        "c_phone", "c_acctbal", "c_mktsegment", "c_comment"}},
@@ -256,7 +256,7 @@ TEST_F(EvaluateQueryTest, TEST_06) {
           "LogicalProject(c_custkey=[$0], nkey=[$3])\n  "
           "LogicalFilter(condition=[>(+(-($3), $5), 750.3)])\n    "
           "EnumerableTableScan(table=[[main, customer]])",
-      .filePaths = {"/home/aocsa/blazingdb/tpch/1mb/customer.psv"},
+      .filePaths = {"../resources/tpch-generator/tpch/1mb/customer.psv"},
       .tableNames = {"main.customer"},
       .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
                        "c_phone", "c_acctbal", "c_mktsegment", "c_comment"}},
@@ -312,7 +312,7 @@ TEST_F(EvaluateQueryTest, TEST_07) {
           "LogicalProject(c_custkey=[$0], nkey=[$3])\n  "
           "LogicalFilter(condition=[>(+(-($3), $5), 750)])\n    "
           "EnumerableTableScan(table=[[main, customer]])",
-      .filePaths = {"/home/aocsa/blazingdb/tpch/1mb/customer.psv"},
+      .filePaths = {"../resources/tpch-generator/tpch/1mb/customer.psv"},
       .tableNames = {"main.customer"},
       .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
                        "c_phone", "c_acctbal", "c_mktsegment", "c_comment"}},

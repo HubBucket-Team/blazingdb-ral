@@ -3,8 +3,12 @@ CWD="$(pwd)"
 echo "Build cpp library"
 cd ../../resources/tpch-generator
 
-#example: ~/blazingdb/blazingdb-calcite/blazingdb-calcite-cli/target/BlazingCalciteCli.jar
-CalciteCli=$1
-python3  test_generator.py tpch_queries.json $CalciteCli -O ../../tests/tpch/tpch-tests.cu
+#example:
+# ./gen_unit_tests where_queries.json ~/blazingdb/blazingdb-calcite/blazingdb-calcite-cli/target/BlazingCalciteCli.jar tpch-tests.cu
+
+JsonFile=$1
+CalciteCli=$2
+OutputFile=$3
+python3  test_generator.py $JsonFile $CalciteCli -O ../../tests/tpch/$OutputFile
 cd $CWD
-clang-format -i -style=Google tpch-tests.cu
+clang-format -i -style=Google $OutputFile

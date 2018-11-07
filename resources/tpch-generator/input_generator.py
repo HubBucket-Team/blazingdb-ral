@@ -60,7 +60,7 @@ def get_reference_input(drill, root_path, test_name, query):
       "query": "%(query)s",
       "tables": [%(table_inputs)s],
       "result":  %(result)s,
-      "resultTypes": %(result_types)s
+      "resultTypes": %(result_types)s,
       "resultColumnNames": %(result_names)s
   }
   ''') % {'test_name': test_name,
@@ -217,5 +217,25 @@ if __name__ == '__main__':
     print('## processing...\t', query)
     json_text = get_reference_input(drill, tpch_path, 'TEST_0%s' % index , query)
     json_list.append(json_text)
+  write(json_list).to('where_queries.json')
 
-  write(json_list).to(args.output)
+  json_list = []
+  for index, query in enumerate(join_queries):
+    print('## processing...\t', query)
+    json_text = get_reference_input(drill, tpch_path, 'TEST_0%s' % index , query)
+    json_list.append(json_text)
+  write(json_list).to('join_queries.json')
+
+  json_list = []
+  for index, query in enumerate(orderby_queries):
+    print('## processing...\t', query)
+    json_text = get_reference_input(drill, tpch_path, 'TEST_0%s' % index , query)
+    json_list.append(json_text)
+  write(json_list).to('orderby_queries.json')
+
+  json_list = []
+  for index, query in enumerate(orderby_queries):
+    print('## processing...\t', query)
+    json_text = get_reference_input(drill, tpch_path, 'TEST_0%s' % index , query)
+    json_list.append(json_text)
+  write(json_list).to('groupby_queries.json')

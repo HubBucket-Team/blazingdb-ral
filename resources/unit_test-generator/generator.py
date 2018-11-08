@@ -38,11 +38,15 @@ def make_plans(items, calcite_jar):
       subprocess.Popen(('java', '-jar', calcite_jar),
                        stdin=subprocess.PIPE,
                        stdout=subprocess.PIPE).communicate(json.dumps({
-                         'columnNames': item.schema.columnNames,
-                         'types': item.schema.columnTypes,
-                         'name': item.schema.tableName,
-                         'dbName': item.schema.dbName,
                          'query': item.query,
+                         'tables': [
+                            {
+                              'columnNames': item.schema.columnNames,
+                              'columnTypes': item.schema.columnTypes,
+                              'tableName': item.schema.tableName,
+                              'dbName': item.schema.dbName
+                            }
+                         ]
                        }).encode())[0].decode('utf-8'), re.M|re.S)[0]
   return (inputjson(item) for item in items)
 

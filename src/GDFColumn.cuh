@@ -21,6 +21,7 @@ class gdf_column_cpp
 		size_t allocated_size_valid;
 		std::string column_name;
 		gdf_valid_type * allocate_valid();
+		void set_name(std::string name);
 		int8_t is_ipc_column;
 	//	gdf_column_cpp(void* _data, gdf_valid_type* _valid, gdf_dtype _dtype, size_t _size, gdf_size_type _null_count, const std::string &column_name = "");
 	public:
@@ -31,7 +32,6 @@ class gdf_column_cpp
     void allocate_set_valid();
     gdf_valid_type* valid();
     std::string name();
-    void set_name(std::string name);
 
     gdf_size_type size();
 

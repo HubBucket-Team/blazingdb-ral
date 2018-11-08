@@ -71,10 +71,10 @@ void gdf_column_cpp::set_name(std::string name){
 
 	}
 void gdf_column_cpp::delete_set_name(std::string name){
-	delete this->column->col_name;
+	delete [] this->column->col_name;
 	this->set_name(name);
 }
-std::string gdf_column_cpp::name(){
+std::string gdf_column_cpp::name() const{
 	return this->column_name;
 }
 gdf_column_cpp gdf_column_cpp::clone(std::string name)  // TODO clone needs to register
@@ -89,7 +89,7 @@ gdf_column_cpp gdf_column_cpp::clone(std::string name)  // TODO clone needs to r
 	CheckCudaErrors(cudaMalloc(&data_dev, this->allocated_size_data));
 	CheckCudaErrors(cudaMemcpy(data_dev, this->column->data, this->allocated_size_data, cudaMemcpyDeviceToDevice));
 
-	print_gdf_column(this->get_gdf_column());
+	// print_gdf_column(this->get_gdf_column());
     if (this->column->valid != nullptr) {
     	CheckCudaErrors(cudaMalloc(&valid_dev, this->allocated_size_valid));
 	    CheckCudaErrors(cudaMemcpy(valid_dev, this->column->valid, this->allocated_size_valid, cudaMemcpyDeviceToDevice));

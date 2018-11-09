@@ -478,12 +478,14 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 
 
 		gdf_error err;
-		gdf_dtype output_type = get_aggregation_output_type(aggregation_input.dtype(),aggregation_types[i]);
+		gdf_dtype output_type = get_aggregation_output_type(aggregation_input.dtype(),aggregation_types[i], group_columns.size());
 
+        /*
         // The 'gdf_sum_generic' libgdf function requires that all input operands have the same dtype.
         if ((group_columns.size() == 0) && (aggregation_types[i] == GDF_SUM)) {
             output_type = aggregation_input.dtype();
         }
+        */
 
 		gdf_column_cpp output_column;
 		//TODO de donde saco el nombre de la columna aqui???
@@ -582,7 +584,7 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		case GDF_COUNT_DISTINCT:
 			if(group_columns.size() == 0){
                 // output dtype is GDF_UINT64
-                // defined on 'get_aggregation_output_type' function.
+                // defined in 'get_aggregation_output_type' function.
                 uint64_t result = aggregation_input.get_gdf_column()->size;
                 output_column.create_gdf_column(output_type,
                                                 aggregation_size,

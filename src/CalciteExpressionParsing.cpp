@@ -55,10 +55,14 @@ gdf_dtype get_next_biggest_type(gdf_dtype type){
 	}
 }
 
-gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregation){
+gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregation, std::size_t group_size){
 	if(aggregation == GDF_COUNT){
 		return GDF_UINT64;
 	}else if(aggregation == GDF_SUM){
+        if (group_size == 0) {
+            return input_type;
+        }
+
 		//we can assume it is numeric based on the oepration
 		//here we are in an interseting situation
 		//it can grow larger than the input type, to be safe we should enlarge to the greatest signed or unsigned representation

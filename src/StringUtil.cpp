@@ -16,7 +16,35 @@ StringUtil::StringUtil() {
 StringUtil::~StringUtil() {
 	// TODO Auto-generated destructor stub
 }
+#include <iostream>
+void StringUtil::findAndReplaceAll(std::string & data, std::string toSearch, std::string replaceStr)
+{
+	// Get the first occurrence
+	size_t pos = data.find(toSearch);
 
+	// Repeat till end is reached
+	while( pos != std::string::npos)
+	{
+		// Replace this occurrence of Sub String
+		data.replace(pos, toSearch.size(), replaceStr);
+		// Get the next occurrence from the current position
+		pos =data.find(toSearch, pos + toSearch.size());
+	}
+}
+
+std::string StringUtil::replace(std::string containingString,const std::string toReplace,const std::string replacement)
+{
+
+	std::string::size_type n = 0;
+	while ( ( n = containingString.find( toReplace, n ) ) != std::string::npos )
+	{
+	    containingString.replace( n, toReplace.size(), replacement );
+	    n += replacement.size();
+	}
+
+	return containingString;
+
+}
 std::vector<std::string> StringUtil::split(std::string &s, char delim) {
   std::vector<std::string> elems;
   split(s, delim, elems);

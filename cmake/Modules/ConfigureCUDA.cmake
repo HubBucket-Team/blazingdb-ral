@@ -11,8 +11,8 @@ macro(CONFIGURE_GPU_COMPUTE_CAPABILITY)
     #GPU_COMPUTE_CAPABILITY 30 means GPU compute capability version 3.0
 
     if(NOT GPU_COMPUTE_CAPABILITY)
-        message(AUTHOR_WARNING "NVIDIA GPU Compute Capability is not defined, using NVIDIA GPU compute capability version 3.0")
-        set(GPU_COMPUTE_CAPABILITY "30")
+        message(AUTHOR_WARNING "NVIDIA GPU Compute Capability is not defined, using NVIDIA GPU compute capability version 6.1")
+        set(GPU_COMPUTE_CAPABILITY "61")
     endif ()
 endmacro()
 

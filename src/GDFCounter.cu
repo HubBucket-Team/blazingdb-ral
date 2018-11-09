@@ -4,7 +4,7 @@
  *  Created on: Sep 12, 2018
  *      Author: rqc
  */
- 
+
  #include "GDFCounter.cuh"
  #include <iostream>
 
@@ -14,8 +14,8 @@ void GDFRefCounter::register_column(gdf_column* col_ptr){
 
     if(col_ptr != nullptr){
         std::lock_guard<std::mutex> lock(gc_mutex);
-        rc_key_t map_key = {col_ptr->data, col_ptr->valid};
-        
+        gdf_column * map_key = {col_ptr};
+
         if(map.find(map_key) == map.end()){
             map[map_key]=1;
         }
@@ -24,24 +24,12 @@ void GDFRefCounter::register_column(gdf_column* col_ptr){
 
 void GDFRefCounter::deregister_column(gdf_column* col_ptr)
 {
-    std::lock_guard<std::mutex> lock(gc_mutex);
-    rc_key_t map_key = {col_ptr->data, col_ptr->valid};
+    if (col_ptr != nullptr) {  // TODO: use exceptions instead jump nulls
+        std::lock_guard<std::mutex> lock(gc_mutex);
+        gdf_column * map_key = {col_ptr};
 
-    if(map.find(map_key) != map.end()){
-        map[map_key]=0; //deregistering
-    }
-}
-
-void GDFRefCounter::free_if_deregistered(gdf_column* col_ptr)
-{
-    std::lock_guard<std::mutex> lock(gc_mutex);
-    rc_key_t map_key = {col_ptr->data, col_ptr->valid};
-
-    if(map.find(map_key)!=map.end()){
-        if(map[map_key]==0){
-            map.erase(map_key);
-            cudaFree(map_key.first); //data
-            cudaFree(map_key.second); //valid
+        if(map.find(map_key) != map.end()){
+            map[map_key]=0; //deregistering
         }
     }
 }
@@ -49,7 +37,7 @@ void GDFRefCounter::free_if_deregistered(gdf_column* col_ptr)
 void GDFRefCounter::increment(gdf_column* col_ptr)
 {
     std::lock_guard<std::mutex> lock(gc_mutex);
-    rc_key_t map_key = {col_ptr->data, col_ptr->valid};
+    gdf_column * map_key = {col_ptr};
 
     if(map.find(map_key)!=map.end()){
         if(map[map_key]!=0){ //is already deregistered
@@ -61,7 +49,7 @@ void GDFRefCounter::increment(gdf_column* col_ptr)
 void GDFRefCounter::decrement(gdf_column* col_ptr)
 {
     std::lock_guard<std::mutex> lock(gc_mutex);
-    rc_key_t map_key = {col_ptr->data, col_ptr->valid};
+    gdf_column * map_key = {col_ptr};
 
     if(map.find(map_key)!=map.end()){
         if(map[map_key]>0){
@@ -69,11 +57,22 @@ void GDFRefCounter::decrement(gdf_column* col_ptr)
 
             if(map[map_key]==0){
                 map.erase(map_key);
-                cudaFree(map_key.first); //data
-                cudaFree(map_key.second); //valid
+
+                cudaFree(map_key->data);
+                if(map_key->valid != nullptr){
+                	cudaFree(map_key->valid);
+                }
+                delete map_key;
             }
         }
     }
+}
+
+bool GDFRefCounter::contains_column(gdf_column * ptrs){
+	if(this->map.find(ptrs) == this->map.end()){
+		return false;
+	}
+	return true;
 }
 
 GDFRefCounter::GDFRefCounter()

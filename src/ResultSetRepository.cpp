@@ -20,7 +20,7 @@ result_set_repository::~result_set_repository() {
 void result_set_repository::add_token(query_token_t token, connection_id_t connection){
 	std::lock_guard<std::mutex> guard(this->repo_mutex);
 	blazing_frame temp;
-	this->result_sets[token] = std::make_tuple(false,temp);
+	this->result_sets[token] = std::make_tuple(false, temp, 0.0);
 
 	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
 		std::vector<query_token_t> empty_tokens;
@@ -58,7 +58,7 @@ query_token_t result_set_repository::register_query(connection_id_t connection){
 
 }*/
 
-void result_set_repository::update_token(query_token_t token, blazing_frame frame){
+void result_set_repository::update_token(query_token_t token, blazing_frame frame, double duration){
 	if(this->result_sets.find(token) == this->result_sets.end()){
 		throw std::runtime_error{"Token does not exist"};
 	}
@@ -68,8 +68,11 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 		GDFRefCounter::getInstance()->deregister_column(frame.get_column(i).get_gdf_column());
 	}
 
-	std::lock_guard<std::mutex> guard(this->repo_mutex);
-	this->result_sets[token] = std::make_tuple(true,frame);
+	{
+		std::lock_guard<std::mutex> guard(this->repo_mutex);
+		this->result_sets[token] = std::make_tuple(true, frame, duration);
+	}
+	cv.notify_all();
 	/*if(this->requested_responses.find(token) != this->requested_responses.end()){
 		write_response(std::get<1>(this->result_sets[token]),this->requested_responses[token]);
 	}*/
@@ -97,7 +100,9 @@ connection_id_t result_set_repository::init_session(){
 
 void result_set_repository::remove_all_connection_tokens(connection_id_t connection){
 	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
-		throw std::runtime_error{"Closing a connection that did not exist"};
+		//TODO percy uncomment this later
+		//WARNING uncomment this ... avoid leaks
+		//throw std::runtime_error{"Closing a connection that did not exist"};
 	}
 
 	std::lock_guard<std::mutex> guard(this->repo_mutex);
@@ -107,7 +112,29 @@ void result_set_repository::remove_all_connection_tokens(connection_id_t connect
 	this->connection_result_sets.erase(connection);
 }
 
-blazing_frame result_set_repository::get_result(connection_id_t connection, query_token_t token){
+bool result_set_repository::free_result(query_token_t token){
+	std::lock_guard<std::mutex> guard(this->repo_mutex);
+	this->result_sets.erase(token);
+	for(auto it = this->connection_result_sets.begin(); it != this->connection_result_sets.end(); ++it) {
+		connection_id_t connection = it->first;
+		for(size_t i = 0; i <  this->connection_result_sets[connection].size(); i++){
+			query_token_t token_test  = this->connection_result_sets[connection][i];
+			if(token == token_test){
+				std::vector<query_token_t> tokens= this->connection_result_sets[connection];
+				tokens.erase(tokens.begin() + i);
+				this->connection_result_sets[connection] = tokens;
+				std::cout<<"freed result!"<<std::endl;
+				return true;
+			}
+
+		}
+
+	}
+	return false;
+
+}
+
+std::tuple<blazing_frame, double> result_set_repository::get_result(connection_id_t connection, query_token_t token){
 	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
 		throw std::runtime_error{"Connection does not exist"};
 	}
@@ -116,9 +143,14 @@ blazing_frame result_set_repository::get_result(connection_id_t connection, quer
 		throw std::runtime_error{"Result set does not exist"};
 	}
 	{
+		std::cout<<"Result is ready = "<<std::get<0>(this->result_sets[token])<<std::endl;
 		//scope the lockguard here
-		std::lock_guard<std::mutex> guard(this->repo_mutex);
-		if(std::get<0>(this->result_sets[token])){
+		std::unique_lock<std::mutex> lock(this->repo_mutex);
+		cv.wait(lock,[this,token](){
+			return std::get<0>(this->result_sets[token]);
+		});
+		std::cout<<"Result is after lock = "<<std::get<0>(this->result_sets[token])<<std::endl;
+
 			blazing_frame output_frame = std::get<1>(this->result_sets[token]);
 
 			for(size_t i = 0; i < output_frame.get_width(); i++){
@@ -126,8 +158,8 @@ blazing_frame result_set_repository::get_result(connection_id_t connection, quer
 			}
 			//@todo remove from map
 
-			return output_frame;
-		}
+			return std::make_tuple(output_frame, std::get<2>(this->result_sets[token]));
+
 	}
 }
 

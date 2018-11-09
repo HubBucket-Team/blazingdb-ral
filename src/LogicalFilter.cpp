@@ -40,45 +40,39 @@ gdf_error process__binary_operation_column_column(
 	operands.pop();
 
 	if(is_literal(left_operand)){
-		size_t right_index = get_index(right_operand);
-		
+
+
 		if(is_literal(right_operand)){
 			//kind of silly, should evalute literals
 			//then copy results to output
+			return GDF_INVALID_API_CALL;
 		}else{
 			//for now we shortcut for our usecase
 			//assuming type char
-			if(inputs.get_column(right_index).dtype() == GDF_INT8){
 
-				gdf_data data = {.ui08=static_cast<uint8_t>(stoi(left_operand))};
-				gdf_scalar left = {data, GDF_UINT8};
+			size_t right_index = get_index(right_operand);
 
-				gdf_error err = gdf_binary_operation_v_s_v(output.get_gdf_column(),&left,inputs.get_column(right_index).get_gdf_column(),operation);
-				if(err == GDF_SUCCESS){
-					inputs.add_column(temp);
-					operands.push("$" + std::to_string(inputs.get_size_column()-1));
-				}
+			gdf_scalar left = get_scalar_from_string(left_operand,inputs.get_column(right_index).dtype());
+			gdf_error err = gdf_binary_operation_v_s_v(output.get_gdf_column(),&left,inputs.get_column(right_index).get_gdf_column(),operation);
+			if(err == GDF_SUCCESS){
+				inputs.add_column(temp.clone());
+				operands.push("$" + std::to_string(inputs.get_size_column()-1));
 			}
+			return err;
 		}
 	}else{
 		size_t left_index = get_index(left_operand);
 
 		if(is_literal(right_operand)){
-			//TODO:libgdf should have an easier interface to passing in literals, like passing in a void * of the right
-			//data type gpu_comparison_literal(same as gpu_comparison, void * literal)
+			gdf_scalar right = get_scalar_from_string(right_operand,inputs.get_column(left_index).dtype());
 
-			//for now we shortcut for our usecase
-			//assuming type char
-			if(inputs.get_column(left_index).dtype() == GDF_INT8){
-				gdf_data data = {.ui08=static_cast<uint8_t>(stoi(right_operand))};
-				gdf_scalar right = {data, GDF_UINT8};
 
-				gdf_error err = gdf_binary_operation_v_s_v(output.get_gdf_column(),&right,inputs.get_column(left_index).get_gdf_column(),operation);
-				if(err == GDF_SUCCESS){
-					inputs.add_column(temp);
-					operands.push("$" + std::to_string(inputs.get_size_column()-1));
-				}
+			gdf_error err = gdf_binary_operation_v_v_s(output.get_gdf_column(),inputs.get_column(left_index).get_gdf_column(),&right,operation);
+			if(err == GDF_SUCCESS){
+				inputs.add_column(temp.clone());
+				operands.push("$" + std::to_string(inputs.get_size_column()-1));
 			}
+			return err;
 		}else{
 
 			size_t right_index = get_index(right_operand);
@@ -86,7 +80,7 @@ gdf_error process__binary_operation_column_column(
 			gdf_error err = gdf_binary_operation_v_v_v(output.get_gdf_column(),inputs.get_column(left_index).get_gdf_column(),inputs.get_column(right_index).get_gdf_column(),
 					operation);
 			if(err == GDF_SUCCESS){
-				inputs.add_column(temp);
+				inputs.add_column(temp.clone());
 				operands.push("$" + std::to_string(inputs.get_size_column()-1));
 			}
 			return err;
@@ -137,6 +131,22 @@ gdf_error evaluate_expression(
 		//std::cout<<"Token is ==> "<<token<<"\n";
 
 		if(is_operator_token(token)){
+
+			//Todo: Check correctness
+			/*if (token == "OR") {
+				auto op1 = operand_stack.top();
+				operand_stack.pop();
+				auto op2 = operand_stack.top();
+				operand_stack.pop();
+
+				std::string equal = { "MOD + " };
+				equal.append(op1 + " " + op2 + " 2");
+				clean_expression.erase(position, 2);
+				clean_expression.insert(position, equal);
+				position += equal.length();
+				continue;
+			}*/
+
 			process__binary_operation_column_column(
 					token,
 					operand_stack,

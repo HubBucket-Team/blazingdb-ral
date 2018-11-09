@@ -3,12 +3,6 @@
 #     Copyright 2018 Percy Camilo Triveño Aucahuasi <percy@blazingdb.com>
 #=============================================================================
 
-if (DEFINED ENV{LIBGDF_HOME})
-    set(LIBGDF_HOME_HOME "$ENV{LIBGDF_HOME}")
-else()
-    message(STATUS "LIBGDF_HOME not defined, it will be built from sources")
-endif()
-
 # BEGIN macros
 
 macro(CONFIGURE_GPU_LIBGDF_EXTERNAL_PROJECT)
@@ -36,43 +30,16 @@ macro(CONFIGURE_GPU_LIBGDF_EXTERNAL_PROJECT)
     endif()
 endmacro()
 
-# define arrow, flatbuffer, etc. dirs
-macro(CONFIGURE_LIBGDF_TRANSITIVE_DEPENDENCIES)
-    # Add transitive dependency: Apache Arrow
-    #set(FLATBUFFERS_ROOT ${ARROW_DOWNLOAD_BINARY_DIR}/arrow-prefix/src/arrow-build/flatbuffers_ep-prefix/src/flatbuffers_ep-install/)
-    #set(FLATBUFFERS_HOME ${FLATBUFFERS_ROOT})
-
-    # Add transitive dependency: Flatbuffers
-    if (DEFINED ENV{LIBGDF_HOME})
-        set(FLATBUFFERS_ROOT ${LIBGDF_HOME_HOME}/build/${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-download/arrow-prefix/src/arrow-build/flatbuffers_ep-prefix/src/flatbuffers_ep-install/)
-    else()
-        set(FLATBUFFERS_ROOT ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-build/${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-download/arrow-prefix/src/arrow-build/flatbuffers_ep-prefix/src/flatbuffers_ep-install/)
-    endif()
-
-    set(FLATBUFFERS_HOME ${FLATBUFFERS_ROOT})
-endmacro()
-
 # END macros
 
 # BEGIN MAIN #
 
-# TODO percy use vendored option too
-#
-# if("${SNAPPY_HOME}" STREQUAL "")
-#     CONFIGURE_GPU_LIBGDF_EXTERNAL_PROJECT
-# else()
-#     find_package(Snappy REQUIRED)
-# endif()
-
-if (NOT DEFINED ENV{LIBGDF_HOME})
-    configure_gpu_libgdf_external_project()
-endif()
-
-configure_libgdf_transitive_dependencies()
-
-if (DEFINED ENV{LIBGDF_HOME})
-    set(LIBGDF_ROOT "${LIBGDF_HOME_HOME}")
+if (LIBGDF_HOME)
+    message(STATUS "LIBGDF_HOME defined, it will use vendor version from ${LIBGDF_HOME}")
+    set(LIBGDF_ROOT "${LIBGDF_HOME}")
 else()
+    message(STATUS "LIBGDF_HOME not defined, it will be built from sources")
+    configure_gpu_libgdf_external_project()
     set(LIBGDF_ROOT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-install/")
 endif()
 
@@ -82,7 +49,7 @@ set_package_properties(LibGDF PROPERTIES TYPE REQUIRED
     URL "https://github.com/gpuopenanalytics/libgdf")
 
 if(NOT LIBGDF_FOUND)
-    message(AUTHOR_WARNING "libgdf not found, please check your settings.")
+    message(FATAL_ERROR "libgdf not found, please check your settings.")
 endif()
 
 message(STATUS "libgdf found in ${LIBGDF_ROOT}")

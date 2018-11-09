@@ -20,7 +20,8 @@ query_token_t evaluate_query(
 		std::vector<std::string> table_names,
 		std::vector<std::vector<std::string>> column_names,
 		std::string logicalPlan,
-		connection_id_t connection);
+		connection_id_t connection,
+		  std::vector<void *> handles);
 
 gdf_error evaluate_query(
 		std::vector<std::vector<gdf_column_cpp> > input_tables,

@@ -4,9 +4,12 @@
 #=============================================================================
 
 cmake_minimum_required(VERSION 3.11)
+
 project(testing-cmake-libgdf)
 
 set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 message(STATUS "Using C++ standard: c++${CMAKE_CXX_STANDARD}")
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/" ${CMAKE_MODULE_PATH})
@@ -22,10 +25,10 @@ include(CTest)
 # Configure dependencies
 include(ConfigureCUDA)
 include(ConfigureLibGDF)
-#include(ConfigureArrow)
 include(ConfigureFlatBuffers)
+include(ConfigureBlazingDBProtocol)
+#include(ConfigureArrow)
 include(ConfigureGoogleTest)
-include(ConfigureBlazingDBProcotol)
 
 # BEGIN MAIN #
 include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -33,27 +36,24 @@ include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOUR
 set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteInterpreter.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/ColumnManipulation.cu
-#              ${CMAKE_CURRENT_SOURCE_DIR}/src/JoinProcessor.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/ResultSetRepository.cpp
+              ${CMAKE_CURRENT_SOURCE_DIR}/src/JoinProcessor.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/LogicalFilter.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/StringUtil.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/QueryState.cpp
+              ${CMAKE_CURRENT_SOURCE_DIR}/src/CodeTimer.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/Utils.cu
               ${CMAKE_CURRENT_SOURCE_DIR}/src/GDFCounter.cu
               ${CMAKE_CURRENT_SOURCE_DIR}/src/GDFColumn.cu
               ${CMAKE_CURRENT_SOURCE_DIR}/src/testing-libgdf.cu
-
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/ipc/calcite_client.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol/MessageBuilder.cpp
 )
 
 cuda_add_executable(testing-libgdf ${SRC_FILES})
-target_link_libraries(testing-libgdf ${LIBGDF_STATIC_LIB} BlazingDB::Protocol ${CUDA_CUDA_LIBRARY} ${CUDA_NVRTC_LIBRARY} ${CUDA_NVTX_LIBRARY})
-
-# NOTE Each time we build the target testing-libgdf we will compile the flatbuffer schemas
-add_dependencies(testing-libgdf FlatBuffersSchemas)
+target_link_libraries(testing-libgdf ${LIBGDF_STATIC_LIB} Google::Flatbuffers ${BLAZINGDB_PROTOCOL_STATIC_LIB} ${CUDA_CUDA_LIBRARY} ${CUDA_NVRTC_LIBRARY} ${CUDA_NVTX_LIBRARY})
 
 # Print the project summary
-feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)
+#TODO cmake bug, it says blazingdb-protocol was not deteected vut everything seems
+#fine (cmake test fail with link issues with pthreads_create)
+#feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)
 
 #END MAIN #

@@ -55,3 +55,11 @@ CMakeCache.txt
 CMakeFiles/
 Makefile
 cmake_install.cmake
+
+\.vscode/
+
+#generated folders (in source)
+blazingdb-protocol_ep-prefix
+google-flatbuffers_ep-prefix
+
+\.idea/

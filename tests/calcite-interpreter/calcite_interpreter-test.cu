@@ -12,7 +12,9 @@
 #include <GDFCounter.cuh>
 #include <Utils.cuh>
 
+
 #include <gdf/gdf.h>
+//#include <sqls_rtti_comp.hpp> //TODO build fails here it seems we need to export this header from libgdf
 
 class TestEnvironment : public testing::Environment {
 public:
@@ -61,7 +63,8 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 			print_column<int8_t>(outputs[i].get_gdf_column());
 
 			// Releasing allocated memory, here we are responsible for that
-			GDFRefCounter::getInstance()->free_if_deregistered(outputs[i].get_gdf_column());
+			//TODO percy rommel: move to integration/end-to-end test
+			//GDFRefCounter::getInstance()->free_if_deregistered(outputs[i].get_gdf_column());
 		}
 	}
 
@@ -82,7 +85,7 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 	gdf_column_cpp third;
 
 	std::vector<gdf_column_cpp> inputs;
-	
+
 	char * input1;
 	char * input2;
 	char * input3;
@@ -98,7 +101,7 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 	const int WIDTH_PER_VALUE = 1;
 };
 
-TEST_F(calcite_interpreter_TEST, processing_project0) {
+/*TEST_F(calcite_interpreter_TEST, processing_project0) {
 
 	{   //select * from hr.emps
 		std::string query = "\
@@ -225,7 +228,7 @@ LogicalProject(S=[-($0, $1)])\n\
   EnumerableTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
-			query, outputs);
+				query, outputs);
 		EXPECT_TRUE(err == GDF_SUCCESS);
 		EXPECT_TRUE(outputs.size() == 1);
 
@@ -237,6 +240,134 @@ LogicalProject(S=[-($0, $1)])\n\
 		Check(outputs[0], host_output);
 	}
 }
+
+TEST_F(calcite_interpreter_TEST, order_by) {
+
+	{
+		size_t num_values = 32;
+
+		uint64_t * data_test = new uint64_t[num_values];
+		int* data = new int[num_values];
+		for(size_t i = 0; i < num_values; i++){
+			data[i] = num_values - i;
+			data_test[i] = i;
+		}
+
+		gdf_column_cpp input_column;
+
+		gdf_column_cpp indices_col;
+
+		 std::cout<<"now running other version"<<std::endl;
+
+
+		input_column.create_gdf_column(GDF_INT32,num_values,(void *) data,4);
+
+
+		indices_col.create_gdf_column(GDF_UINT64,num_values,nullptr,8);
+		print_column<uint64_t>(indices_col.get_gdf_column());
+		gdf_valid_type asc_desc_bitmask = 255;
+		gdf_valid_type* asc_desc_bitmask_dev;
+
+		cudaMalloc((void **) &asc_desc_bitmask_dev,1);
+
+		cudaError_t err2 = cudaMemcpy(asc_desc_bitmask_dev,&asc_desc_bitmask,1,cudaMemcpyHostToDevice);
+
+
+		std::vector<gdf_column> v_cols(1);
+		for(auto i = 0; i < 1; ++i)
+		{
+			v_cols[i] = *(input_column.get_gdf_column());
+		}
+
+		gdf_column* input_columns = &v_cols[0];
+
+
+		print_column<int32_t>(input_column.get_gdf_column());
+		try{
+			gdf_error err = gdf_order_by_asc_desc(
+					input_columns,
+					1,
+					indices_col.get_gdf_column(),
+					asc_desc_bitmask_dev);
+			EXPECT_TRUE(err == GDF_SUCCESS);
+
+		}catch(std::exception e){
+
+			std::cout<<"We caught an exception running order by!"<<e.what()<<std::endl;
+		}
+		std::cout<<"printing size "<<indices_col.size()<<std::endl;
+		print_typed_column<uint64_t>((uint64_t *) indices_col.get_gdf_column()->data, nullptr,indices_col.size());
+		delete[] data;
+		cudaFree(asc_desc_bitmask_dev);
+
+		// thrust::device_vector<void*> d_cols(1, nullptr);
+		// thrust::device_vector<int>   d_types(1, 0);
+
+
+		/*gdf_column col;
+
+
+		void * col_data;
+		cudaMalloc(&col_data,num_values * sizeof(int32_t));
+		gdf_error err_create = gdf_column_view(&col, col_data, nullptr, num_values, GDF_INT32);
+		void ** d_cols;
+		cudaMalloc( &d_cols,sizeof(void*) * 1);
+		int * d_types;
+		cudaMalloc(&d_types,sizeof(int) * 1);
+		gdf_column * cols = new gdf_column[1];
+		cols[0] = col;
+		std::cout<<"yes this one!"<<std::endl;
+		size_t * indices;
+		cudaMalloc(&indices,sizeof(size_t) * num_values);
+		gdf_error err = gdf_order_by(num_values,
+				cols,
+				1,
+				d_cols,
+				d_types,
+				indices);
+		//				(size_t *) indices.data());
+
+		if(err != GDF_SUCCESS){
+			std::cout<<"We had an issue!!!"<<std::endl;
+		}
+		cudaFree(d_cols);
+		cudaFree(col_data);
+		cudaFree(d_types);
+		//		gdf_column indices_col;
+		//		gdf_column_view(&indices_col, indices, nullptr, num_values, GDF_UINT64);
+
+		//print_column(indices_col);
+		EXPECT_TRUE(err == GDF_SUCCESS);*/
+
+	}
+}
+
+TEST_F(calcite_interpreter_TEST, processing_sort) {
+
+	{   //select x - y as S from hr.emps
+		std::string query = "LogicalSort(sort0=[$0], dir0=[ASC])\n\
+  LogicalProject(x=[$0], x=[$1])\n\
+    EnumerableTableScan(table=[[hr, emps]])";
+		std::cout<<"about to evalute"<<std::endl;
+		gdf_error err = evaluate_query(input_tables, table_names, column_names,
+				query, outputs);
+		std::cout<<"evaluated"<<std::endl;
+		EXPECT_TRUE(err == GDF_SUCCESS);
+		EXPECT_TRUE(outputs.size() == 2);
+
+		for(int i = 0; i < outputs.size(); i++){
+			print_column<int8_t>(outputs[i].get_gdf_column());
+		}
+
+		std::vector<char> output = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29,31};
+		char * host_output = &output[0];
+		Check(outputs[0], host_output);
+		output = {0, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31};
+		host_output = &output[0];
+		Check(outputs[1], host_output);
+	}
+}
+
 
 int main(int argc, char **argv){
 	::testing::InitGoogleTest(&argc, argv);

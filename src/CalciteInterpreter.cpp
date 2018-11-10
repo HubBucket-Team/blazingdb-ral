@@ -727,18 +727,13 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 	for(int i = 0; i < input.get_width();i++){
 		temp_output.set_dtype(input.get_column(i).dtype());
 
-
-		//TODO de donde saco el nombre de la columna aqui???
-
-
 		gdf_error err = materialize_column(
 				input.get_column(i).get_gdf_column(),
 				temp_output.get_gdf_column(),
 				index_col.get_gdf_column()
 		);
 
-
-		input.set_column(i,temp_output.clone());
+		input.set_column(i,temp_output.clone(input.get_column(i).name()));
 
 		/*gdf_column_cpp empty;
 
@@ -1001,9 +996,15 @@ query_token_t evaluate_query(
 		splitted.erase(splitted.end() -1);
 	}
 	blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
-	std::cout<<"Result\n";
-	print_gdf_column(output_frame.get_columns()[0][0].get_gdf_column());
-	std::cout<<"end:Result\n";
+	
+	//Todo: put it on a macro for debugging purposes!
+	/*std::cout<<"Result\n";
+	for (auto outputTable : output_frame.get_columns()) {
+		for (auto outputColumn : outputTable) {
+			print_gdf_column(outputColumn.get_gdf_column());
+		}
+	}
+	std::cout<<"end:Result\n";*/
 
 	double duration = blazing_timer.getDuration();
 	result_set_repository::get_instance().update_token(token, output_frame, duration);

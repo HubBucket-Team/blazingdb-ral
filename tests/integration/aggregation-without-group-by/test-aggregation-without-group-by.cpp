@@ -76,7 +76,7 @@ TEST_F(EvaluateQueryTest, TEST_01) {
           LiteralTableBuilder{"ResultSet",
                               {{"GDF_UINT64", Literals<GDF_UINT64>{200}},
                                {"GDF_INT16", Literals<GDF_INT16>{20100}},
-                               {"GDF_FLOAT64", Literals<GDF_FLOAT64>{100.5}},
+                               {"GDF_UINT64", Literals<GDF_UINT64>{100}},
                                {"GDF_INT64", Literals<GDF_INT64>{200}},
                                {"GDF_INT64", Literals<GDF_INT64>{1}}}}
               .Build()};

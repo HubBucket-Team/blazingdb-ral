@@ -13,6 +13,7 @@
 #include "ColumnManipulation.cuh"
 #include "CalciteExpressionParsing.h"
 #include "CodeTimer.h"
+#include "Traits/RuntimeTraits.h"
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 const std::string LOGICAL_UNION_TEXT = "LogicalUnion";
@@ -118,6 +119,51 @@ std::string get_condition_expression(std::string query_part){
 bool contains_evaluation(std::string expression){
 	return (expression.find("(") != std::string::npos);
 }
+
+
+gdf_error perform_avg(gdf_column* column_output, gdf_column* column_input) {
+    gdf_error error;
+    gdf_column_cpp column_avg;
+    uint64_t avg_sum = 0;
+    uint64_t avg_count = column_input->size;
+    {
+        auto dtype = column_input->dtype;
+        auto dtype_size = get_width_dtype(dtype);
+        column_avg.create_gdf_column(dtype, 1, nullptr, dtype_size);
+        error = gdf_sum_generic(column_input, column_avg.get_gdf_column()->data, dtype_size);
+        if (error != GDF_SUCCESS) {
+            return error;
+        }
+        CheckCudaErrors(cudaMemcpy(&avg_sum, column_avg.get_gdf_column()->data, dtype_size, cudaMemcpyDeviceToHost));
+    }
+    {
+        auto dtype = column_output->dtype;
+        auto dtype_size = get_width_dtype(dtype);
+        if (Ral::Traits::is_dtype_float32(dtype)) {
+            float result = (float) avg_sum / (float) avg_count;
+            CheckCudaErrors(cudaMemcpy(column_output->data, &result, dtype_size, cudaMemcpyHostToDevice));
+        }
+        else if (Ral::Traits::is_dtype_float64(dtype)) {
+            double result = (double) avg_sum / (double) avg_count;
+            CheckCudaErrors(cudaMemcpy(column_output->data, &result, dtype_size, cudaMemcpyHostToDevice));
+        }
+        else if (Ral::Traits::is_dtype_integer(dtype)) {
+            if (Ral::Traits::is_dtype_signed(dtype)) {
+                int64_t result = (int64_t) avg_sum / (int64_t) avg_count;
+                CheckCudaErrors(cudaMemcpy(column_output->data, &result, dtype_size, cudaMemcpyHostToDevice));
+            }
+            else if (Ral::Traits::is_dtype_unsigned(dtype)) {
+                uint64_t result = (uint64_t) avg_sum / (uint64_t) avg_count;
+                CheckCudaErrors(cudaMemcpy(column_output->data, &result, dtype_size, cudaMemcpyHostToDevice));
+            }
+        }
+        else {
+            error = GDF_UNSUPPORTED_DTYPE;
+        }
+    }
+    return error;
+}
+
 
 gdf_error process_project(blazing_frame & input, std::string query_part){
 
@@ -565,10 +611,8 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 			break;
 		case GDF_AVG:
 			if(group_columns.size() == 0){
-
+                err = perform_avg(output_column.get_gdf_column(), aggregation_input.get_gdf_column());
 				//err = gdf_avg_generic(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
-
-
 			}else{
 				err = gdf_group_by_avg(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
 						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);

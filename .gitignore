@@ -63,3 +63,5 @@ blazingdb-protocol_ep-prefix
 google-flatbuffers_ep-prefix
 
 \.idea/
+
+resources/tpch-generator/__pycache__/

@@ -27,6 +27,7 @@ struct logical_filter_TEST : public ::testing::Test {
 		input1 = new char[num_values];
 		input2 = new char[num_values];
 		input3 = new char[num_values];
+		input4 = new char[num_values];
 
 		for(int i = 0; i < num_values; i++){
 			if(i % 2 == 0){
@@ -35,13 +36,15 @@ struct logical_filter_TEST : public ::testing::Test {
 				input1[i] = i;
 			}
 			input2[i] = i;
-			input3[i] = 1;
+			input3[i] = i%2;
+			input4[i] = i+1;
 		}
 
-		inputs.resize(3);
+		inputs.resize(4);
 		inputs[0].create_gdf_column(GDF_INT8, num_values, (void *) input1, 1);
 		inputs[1].create_gdf_column(GDF_INT8, num_values, (void *) input2, 1);
 		inputs[2].create_gdf_column(GDF_INT8, num_values, (void *) input3, 1);
+		inputs[3].create_gdf_column(GDF_INT8, num_values, (void *) input4, 1);
 
 		blzframe.add_table(inputs);
 	
@@ -71,6 +74,7 @@ struct logical_filter_TEST : public ::testing::Test {
 	char * input1;
 	char * input2;
 	char * input3;
+	char * input4;
 
 	blazing_frame blzframe;
 
@@ -216,6 +220,159 @@ TEST_F(logical_filter_TEST, processing_logical_expressions1) {
 
 		for(int i = 0; i < num_values; i++){
 			host_output[i] = ((input1[i] * input1[i]) == 1) && (input2[i] == 2) ? 1 : 0;
+		}
+	}
+}
+
+TEST_F(logical_filter_TEST, processing_logical_expressions2) {
+
+	{
+		std::string expression = "AND(=(*($0, $0), 1), =($1, 2), >($2, 0))";
+
+		evaluate_expression(
+				blzframe,
+				expression,
+				output,
+				temp);
+
+		for(int i = 0; i < num_values; i++){
+			host_output[i] = ((input1[i] * input1[i]) == 1) && (input2[i] == 2) && (input3[i] > 0) ? 1 : 0;
+		}
+	}
+}
+
+TEST_F(logical_filter_TEST, processing_logical_expressions3) {
+
+	{
+		std::string expression = "AND(=($0, 1), >($1, 5), >($2, 0))";
+
+		evaluate_expression(
+				blzframe,
+				expression,
+				output,
+				temp);
+
+		for(int i = 0; i < num_values; i++){
+			host_output[i] = (input1[i] == 1) && (input2[i] > 5) && (input3[i] > 0) ? 1 : 0;
+		}
+	}
+}
+
+TEST_F(logical_filter_TEST, processing_logical_expressions31) {
+
+	{
+		std::string expression = "AND(=($0, 1), >($1, 5), >($3, 10))";
+
+		evaluate_expression(
+				blzframe,
+				expression,
+				output,
+				temp);
+
+		for(int i = 0; i < num_values; i++){
+			host_output[i] = (input1[i] == 1) && (input2[i] > 5) && (input4[i] > 10) ? 1 : 0;
+		}
+	}
+}
+
+TEST_F(logical_filter_TEST, processing_logical_expressions4) {
+
+	{
+		std::string expression = "AND(=($0, 1), >($1, 5))";
+
+		evaluate_expression(
+				blzframe,
+				expression,
+				output,
+				temp);
+
+		for(int i = 0; i < num_values; i++){
+			host_output[i] = (input1[i] == 1) && (input2[i] > 5) ? 1 : 0;
+		}
+	}
+}
+
+TEST_F(logical_filter_TEST, processing_logical_expressions5) {
+
+	{
+		std::string expression = "AND(>($1, 5), >($2, 0)))";
+
+		evaluate_expression(
+				blzframe,
+				expression,
+				output,
+				temp);
+
+		for(int i = 0; i < num_values; i++){
+			host_output[i] = (input2[i] > 5) && (input3[i] > 0) ? 1 : 0;
+		}
+	}
+}
+
+TEST_F(logical_filter_TEST, processing_logical_expressions51) {
+
+	{
+		std::string expression = "AND(>($1, 50), >($2, 0)))";
+
+		evaluate_expression(
+				blzframe,
+				expression,
+				output,
+				temp);
+
+		for(int i = 0; i < num_values; i++){
+			host_output[i] = (input2[i] > 50) && (input3[i] > 0) ? 1 : 0;
+		}
+	}
+}
+
+TEST_F(logical_filter_TEST, processing_logical_expressions52) {
+
+	{
+		std::string expression = "AND(>($1, 5), >($2, 100)))";
+
+		evaluate_expression(
+				blzframe,
+				expression,
+				output,
+				temp);
+
+		for(int i = 0; i < num_values; i++){
+			host_output[i] = (input2[i] > 5) && (input3[i] > 100) ? 1 : 0;
+		}
+	}
+}
+
+TEST_F(logical_filter_TEST, processing_logical_expressions6) {
+
+	{
+		std::string expression = "AND(=($0, 1), >($1, 5), =($2, 0), >($3, 5))";
+
+		evaluate_expression(
+				blzframe,
+				expression,
+				output,
+				temp);
+
+		for(int i = 0; i < num_values; i++){
+			host_output[i] = (input1[i] == 1) && (input2[i] > 5) && (input3[i] == 0) && (input4[i] > 5) ? 1 : 0;
+		}
+	}
+}
+
+TEST_F(logical_filter_TEST, processing_logical_expressions7) {
+
+	{
+		std::string expression = "AND(=($0, 1), >($1, 5), =($2, 1), >($3, 5))";
+
+		evaluate_expression(
+				blzframe,
+				expression,
+				output,
+				temp);
+
+		for(int i = 0; i < num_values; i++){
+			host_output[i] = (input1[i] == 1) && (input2[i] > 5) && (input3[i] == 1) && (input4[i] > 5) ? 1 : 0;
 		}
 	}
 }

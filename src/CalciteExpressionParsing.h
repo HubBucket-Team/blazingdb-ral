@@ -29,6 +29,9 @@ bool is_date(const std::string &str);
 
 size_t get_index(std::string operand_string);
 
+// interprets the expression and if is n-ary and logical, then returns their corresponding binary version
+std::string expand_if_logical_op(std::string expression);
+
 std::string clean_calcite_expression(std::string expression);
 
 std::string get_last_token(std::string expression, int * position);

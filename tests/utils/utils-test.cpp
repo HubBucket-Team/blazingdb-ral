@@ -121,30 +121,30 @@ TEST(UtilsTest, FrameFromGdfColumnsCpps)
   EXPECT_EQ(t, u);
 }
 
-TEST(UtilsTest, CSVReaderForCustomerFile)
-{
-  io::CSVReader<8> in("/home/aocsa/blazingdb/tpch/1mb/customer.psv");
-  std::vector<std::string> columnNames = { "c_custkey", "c_nationkey", "c_acctbal" };
-  //  std::vector<std::string> columnTypes =  {GDF_INT32, GDF_INT32, GDF_FLOAT32};
-  using VTableBuilder = gdf::library::TableRowBuilder<int32_t, int32_t, float>;
-  using DataTuple = VTableBuilder::DataTuple;
-  std::vector<DataTuple> rows;
-  int c_custkey;
-  std::string c_name;
-  std::string c_address;
-  int c_nationkey;
-  std::string c_phone;
-  float c_acctbal;
-  std::string c_mktsegment;
-  std::string c_comment;
-  while (in.read_row(c_custkey, c_name, c_address, c_nationkey, c_phone, c_acctbal, c_mktsegment, c_comment)) {
-    // do stuff with the data
-    rows.push_back(DataTuple{ c_custkey, c_nationkey, c_acctbal });
-  }
-  gdf::library::Table table = VTableBuilder{
-    .name = "customer",
-    .headers = columnNames,
-    .rows = rows,
-  }.Build();
-  table.print(std::cout);
-}
+// TEST(UtilsTest, CSVReaderForCustomerFile)
+// {
+//   io::CSVReader<8> in("/home/aocsa/blazingdb/tpch/1mb/customer.psv");
+//   std::vector<std::string> columnNames = { "c_custkey", "c_nationkey", "c_acctbal" };
+//   //  std::vector<std::string> columnTypes =  {GDF_INT32, GDF_INT32, GDF_FLOAT32};
+//   using VTableBuilder = gdf::library::TableRowBuilder<int32_t, int32_t, float>;
+//   using DataTuple = VTableBuilder::DataTuple;
+//   std::vector<DataTuple> rows;
+//   int c_custkey;
+//   std::string c_name;
+//   std::string c_address;
+//   int c_nationkey;
+//   std::string c_phone;
+//   float c_acctbal;
+//   std::string c_mktsegment;
+//   std::string c_comment;
+//   while (in.read_row(c_custkey, c_name, c_address, c_nationkey, c_phone, c_acctbal, c_mktsegment, c_comment)) {
+//     // do stuff with the data
+//     rows.push_back(DataTuple{ c_custkey, c_nationkey, c_acctbal });
+//   }
+//   gdf::library::Table table = VTableBuilder{
+//     .name = "customer",
+//     .headers = columnNames,
+//     .rows = rows,
+//   }.Build();
+//   table.print(std::cout);
+// }

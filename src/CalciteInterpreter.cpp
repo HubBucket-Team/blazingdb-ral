@@ -127,22 +127,13 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 
 
 	// LogicalProject(x=[$0], y=[$1], z=[$2], e=[$3], join_x=[$4], y0=[$5], EXPR$6=[+($0, $5)])
-	std::string combined_expression = query_part.substr(
+	const std::string combined_expression = query_part.substr(
 			query_part.find("(") + 1,
 			(query_part.rfind(")") - query_part.find("(")) - 1
 	);
 
-	std::regex pattern ("[\\w$_]+=\\[.*?\\]");
-	std::smatch matcher;
-	std::vector<std::string> expressions;
+	std::vector<std::string> expressions = get_expressions_from_expression_list(combined_expression);
 
-	while (std::regex_search (combined_expression, matcher, pattern)) {
-		for (auto match:matcher)
-			expressions.push_back(match);
-		combined_expression = matcher.suffix().str();
-	}
-
-	//std::vector<std::string> expressions = StringUtil::split(combined_expression,"]");
 	//now we have a vector
 	//x=[$0
 	std::vector<bool> input_used_in_output(size,false);

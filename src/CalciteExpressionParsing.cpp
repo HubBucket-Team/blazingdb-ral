@@ -564,3 +564,46 @@ std::string get_string_between_outer_parentheses(std::string input_string){
 
 	return input_string.substr(start_pos,end_pos - start_pos);
 }
+
+// takes a comma delimited list of expressions and splits it into separate expressions
+std::vector<std::string> get_expressions_from_expression_list(const std::string & combined_expression){
+
+	std::vector<std::string> expressions;
+
+	int curInd = 0;
+	int curStart = 0;
+	bool inQuotes = false;
+	int parenthesisDepth = 0;
+	int sqBraketsDepth = 0;
+	while (curInd < combined_expression.size()){
+		if (inQuotes){
+			if (combined_expression[curInd] == '\''){
+				if (!(curInd + 1 < combined_expression.size() && combined_expression[curInd + 1] == '\'')){ // if we are in quotes and we get a double single quotes, that is an escaped quotes
+					inQuotes = false;
+				}
+			}
+		} else {
+			if (combined_expression[curInd] == '\''){
+				inQuotes = true;
+			} else if (combined_expression[curInd] == '('){
+				parenthesisDepth++;
+			} else if (combined_expression[curInd] == ')'){
+				parenthesisDepth--;
+			} else if (combined_expression[curInd] == '['){
+				sqBraketsDepth++;
+			} else if (combined_expression[curInd] == ']'){
+				sqBraketsDepth--;
+			} else if (combined_expression[curInd] == ',' && parenthesisDepth == 0 && sqBraketsDepth == 0){
+				expressions.push_back(combined_expression.substr(curStart, curInd - curStart));
+				curStart = curInd + 1;
+			}
+		}
+		curInd++;
+	}
+
+	if (curStart < combined_expression.size() && curInd <= combined_expression.size()){
+		expressions.push_back(combined_expression.substr(curStart, curInd - curStart));
+	}
+
+	return expressions;
+}

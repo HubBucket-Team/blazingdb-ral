@@ -9,6 +9,7 @@
 #define CALCITEEXPRESSIONPARSING_H_
 
 #include <string>
+#include <vector>
 #include <gdf/gdf.h>
 
 class blazing_frame;
@@ -46,5 +47,8 @@ gdf_scalar get_scalar_from_string(std::string scalar_string, gdf_dtype type);
 size_t get_width_dtype(gdf_dtype type);
 
 std::string aggregator_to_string(gdf_agg_op operation);
+
+// takes a comma delimited list of expressions and splits it into separate expressions
+std::vector<std::string> get_expressions_from_expression_list(const std::string & combined_expressions);
 
 #endif /* CALCITEEXPRESSIONPARSING_H_ */

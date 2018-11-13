@@ -587,6 +587,9 @@ std::string expand_if_logical_op(std::string expression){
 			}
 			output += processed[processed.size()-1] + ")";
 
+			if (expression_end < expression.size() - 1){
+				output += expression.substr(expression_end + 1);
+			}
 			expression = output;
 		} else {
 			return output;

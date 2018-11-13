@@ -470,8 +470,9 @@ gdf_error get_operation(
 		*operation = GDF_MOD;
 	}else if(operator_string == "AND"){
 		*operation = GDF_MUL;
-	}
-	else{
+	}else if(operator_string == "OR"){
+		*operation = GDF_ADD;
+	}else{
 		return GDF_UNSUPPORTED_DTYPE;
 	}
 	return GDF_SUCCESS;

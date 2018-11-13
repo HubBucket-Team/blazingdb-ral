@@ -541,35 +541,69 @@ std::string aggregator_to_string(gdf_agg_op aggregation){
 
 //interprets the expression and if is n-ary and logical, then returns their corresponding binary version
 std::string expand_if_logical_op(std::string expression){
-	size_t first = expression.find_first_of("(");
-	std::string operator_string = expression.substr(0, first);
 
-	if(operator_string == "AND"){
-		size_t last = expression.find_last_of(")");
 
-		std::string rest = expression.substr(first+1, expression.size()-(first+2));
-		std::vector<std::string> processed = get_expressions_from_expression_list(rest);
+	std::string output = expression;
+	int start_pos = 0;
 
-		if(processed.size() == 2){ //is already binary
-			return expression;
+	while(start_pos < expression.size()){
+
+		std::vector<bool> is_quoted_vector = StringUtil::generateQuotedVector(expression);
+
+		int first_and = StringUtil::findFirstNotInQuotes(expression, "AND(", start_pos, is_quoted_vector); // returns -1 if not found
+		int first_or = StringUtil::findFirstNotInQuotes(expression, "OR(", start_pos, is_quoted_vector); // returns -1 if not found
+
+		int first = -1;
+		std::string op = "";
+		if (first_and >= 0) {
+			if (first_or >= 0 && first_or < first_and){
+				first = first_or;
+				op = "OR(";
+			} else {
+				first = first_and;
+				op = "AND(";
+			}
+		} else {
+			first = first_or;
+			op = "OR(";
 		}
 
-		std::string output = "";
-		for(size_t I=0; I<processed.size(); I++){
-			output += "AND(";
+		if (first >= 0) {
+			int expression_start = first + op.size() - 1;
+			int expression_end = find_closing_char(expression, expression_start);
+
+			std::string rest = expression.substr(expression_start+1, expression_end-(expression_start+1));
+			std::vector<std::string> processed = get_expressions_from_expression_list(rest);
+
+			if(processed.size() == 2){ //is already binary
+				start_pos = expression_start;
+				continue;
+			} else {
+				start_pos = first;
+			}
+
+			output = expression.substr(0, first);
+			for(size_t I=0; I<processed.size()-1; I++){
+				output += op;
+				start_pos += op.size();
+			}
+
+			output += processed[0] + ",";
+			for(size_t I=1; I<processed.size()-1; I++){
+				output += processed[I] + "),";
+			}
+			output += processed[processed.size()-1] + ")";
+
+			if (expression_end < expression.size() - 1){
+				output += expression.substr(expression_end + 1);
+			}
+			expression = output;
+		} else {
+			return output;
 		}
-
-		output += processed[0] + ", ";
-		for(size_t I=0; I<processed.size()-1; I++){
-			output += processed[I] + "),";
-		}
-
-		output += processed[processed.size()-1] + ")";
-
-		return output;
 	}
 
-	return expression;
+	return output;
 }
 
 std::string clean_calcite_expression(std::string expression){
@@ -606,6 +640,50 @@ std::string get_string_between_outer_parentheses(std::string input_string){
 	//end_pos--;
 
 	return input_string.substr(start_pos,end_pos - start_pos);
+}
+
+int find_closing_char(const std::string & expression, int start) {
+
+	char openChar = expression[start];
+
+	char closeChar = openChar;
+	if (openChar == '('){
+		closeChar = ')';
+	} else if (openChar == '['){
+		closeChar = ']';
+	} else {
+		// TODO throw error
+		return -1;
+	}
+
+	int curInd = start + 1;
+	int closePos = curInd;
+	int depth = 1;
+	bool inQuotes = false;
+
+	while (curInd < expression.size()){
+		if (inQuotes){
+			if (expression[curInd] == '\''){
+				if (!(curInd + 1 < expression.size() && expression[curInd + 1] == '\'')){ // if we are in quotes and we get a double single quotes, that is an escaped quotes
+					inQuotes = false;
+				}
+			}
+		} else {
+			if (expression[curInd] == '\''){
+				inQuotes = true;
+			} else if (expression[curInd] == openChar){
+				depth++;
+			} else if (expression[curInd] == closeChar){
+				depth--;
+				if (depth == 0){
+					return curInd;
+				}
+			}
+		}
+		curInd++;
+	}
+	// TODO throw error
+	return -1;
 }
 
 // takes a comma delimited list of expressions and splits it into separate expressions

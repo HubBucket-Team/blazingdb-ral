@@ -51,6 +51,9 @@ size_t get_width_dtype(gdf_dtype type);
 
 std::string aggregator_to_string(gdf_agg_op operation);
 
+// takes an expression and given a starting index pointing at either ( or [, it finds the corresponding closing char ) or ]
+int find_closing_char(const std::string & expression, int start);
+
 // takes a comma delimited list of expressions and splits it into separate expressions
 std::vector<std::string> get_expressions_from_expression_list(const std::string & combined_expressions);
 

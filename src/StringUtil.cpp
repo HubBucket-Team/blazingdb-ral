@@ -8,6 +8,7 @@
 #include "StringUtil.h"
 #include <sstream>
 #include <algorithm>
+#include <limits.h>
 
 StringUtil::StringUtil() {
 	// TODO Auto-generated constructor stub
@@ -86,4 +87,95 @@ std::vector<std::string> StringUtil::split(std::string input, std::string regex)
 	return result;
 	//std::cout << s << std::endl;
 
+}
+
+
+std::vector<bool> StringUtil::generateQuotedVector(std::string input){
+	std::vector<bool> quoted(input.size());
+	bool inQuote = false;
+	bool inDoubleQuote = false;
+	int i = 0;
+	if (input.size() > 2){
+		if (input[i]=='\'' && !(input[i+1]=='\'')){
+			inQuote = !inQuote;
+		}
+		if (input[i]=='"'){
+			inDoubleQuote = !inDoubleQuote;
+		}
+		quoted[i]=inQuote | inDoubleQuote;
+		for (int i=1; i<quoted.size()-1; i++){
+			if (input[i]=='\'' && !(input[i+1]=='\'' || input[i-1]=='\'')){
+				inQuote = !inQuote;
+			}
+			if (input[i]=='"'){
+				inDoubleQuote = !inDoubleQuote;
+			}
+			quoted[i]=inQuote | inDoubleQuote;
+		}
+		i = quoted.size()-1;
+		if (input[i]=='\'' && !(input[i-1]=='\'')){
+			inQuote = !inQuote;
+		}
+		if (input[i]=='"'){
+			inDoubleQuote = !inDoubleQuote;
+		}
+		quoted[i]=inQuote | inDoubleQuote;
+	}
+	return quoted;
+}
+
+int StringUtil::findFirstNotInQuotes(std::string haystack, std::string needle) {
+	std::vector<bool> quoted = generateQuotedVector(haystack);
+	return findFirstNotInQuotes(haystack, needle, 0, quoted);
+}
+
+int StringUtil::findFirstNotInQuotes(std::string haystack, std::vector<std::string> needles, std::string & needleFound) {
+	std::vector<bool> quoted = generateQuotedVector(haystack);
+	return findFirstNotInQuotes(haystack, needles, needleFound, 0, quoted);
+}
+
+int StringUtil::findFirstNotInQuotes(std::string haystack, std::string needle, int pos, std::vector<bool> & quoted) {
+
+	if (quoted.size() != haystack.size()){
+		quoted = generateQuotedVector(haystack);
+	}
+
+	while (pos < haystack.size()){
+		pos = haystack.find(needle, pos);
+		if (pos == -1 || !quoted[pos]){
+			return pos;
+		}
+		pos += needle.size();
+	}
+	return -1;
+}
+
+int StringUtil::findFirstNotInQuotes(std::string haystack, std::vector<std::string> needles, std::string & needleFound, int startPos, std::vector<bool> & quoted) {
+
+	if (quoted.size() != haystack.size()){
+		quoted = generateQuotedVector(haystack);
+	}
+
+	int minPos = INT_MAX;
+	needleFound = "";
+	for (int i = 0; i < needles.size(); i++){
+		int pos = startPos;
+		while (pos != -1){
+			pos = haystack.find(needles[i], pos);
+			if (pos != -1){
+				if (!quoted[pos] && pos < minPos){
+					minPos = pos;
+					needleFound = needles[i];
+					break;
+				} else {
+					pos = pos + needles[i].size();
+				}
+			}
+		}
+	}
+	if (minPos == INT_MAX){
+		return -1;
+	} else {
+		return minPos;
+	}
 }

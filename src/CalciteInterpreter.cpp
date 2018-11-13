@@ -13,6 +13,7 @@
 #include "ColumnManipulation.cuh"
 #include "CalciteExpressionParsing.h"
 #include "CodeTimer.h"
+#include "Traits/RuntimeTraits.h"
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 const std::string LOGICAL_UNION_TEXT = "LogicalUnion";
@@ -118,6 +119,51 @@ std::string get_condition_expression(std::string query_part){
 bool contains_evaluation(std::string expression){
 	return (expression.find("(") != std::string::npos);
 }
+
+
+gdf_error perform_avg(gdf_column* column_output, gdf_column* column_input) {
+    gdf_error error;
+    gdf_column_cpp column_avg;
+    uint64_t avg_sum = 0;
+    uint64_t avg_count = column_input->size;
+    {
+        auto dtype = column_input->dtype;
+        auto dtype_size = get_width_dtype(dtype);
+        column_avg.create_gdf_column(dtype, 1, nullptr, dtype_size);
+        error = gdf_sum_generic(column_input, column_avg.get_gdf_column()->data, dtype_size);
+        if (error != GDF_SUCCESS) {
+            return error;
+        }
+        CheckCudaErrors(cudaMemcpy(&avg_sum, column_avg.get_gdf_column()->data, dtype_size, cudaMemcpyDeviceToHost));
+    }
+    {
+        auto dtype = column_output->dtype;
+        auto dtype_size = get_width_dtype(dtype);
+        if (Ral::Traits::is_dtype_float32(dtype)) {
+            float result = (float) avg_sum / (float) avg_count;
+            CheckCudaErrors(cudaMemcpy(column_output->data, &result, dtype_size, cudaMemcpyHostToDevice));
+        }
+        else if (Ral::Traits::is_dtype_float64(dtype)) {
+            double result = (double) avg_sum / (double) avg_count;
+            CheckCudaErrors(cudaMemcpy(column_output->data, &result, dtype_size, cudaMemcpyHostToDevice));
+        }
+        else if (Ral::Traits::is_dtype_integer(dtype)) {
+            if (Ral::Traits::is_dtype_signed(dtype)) {
+                int64_t result = (int64_t) avg_sum / (int64_t) avg_count;
+                CheckCudaErrors(cudaMemcpy(column_output->data, &result, dtype_size, cudaMemcpyHostToDevice));
+            }
+            else if (Ral::Traits::is_dtype_unsigned(dtype)) {
+                uint64_t result = (uint64_t) avg_sum / (uint64_t) avg_count;
+                CheckCudaErrors(cudaMemcpy(column_output->data, &result, dtype_size, cudaMemcpyHostToDevice));
+            }
+        }
+        else {
+            error = GDF_UNSUPPORTED_DTYPE;
+        }
+    }
+    return error;
+}
+
 
 gdf_error process_project(blazing_frame & input, std::string query_part){
 
@@ -352,7 +398,17 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 	 * 			As you can see the project following aggregate expects the columns to be grouped by to appear BEFORE the expressions
 	 */
 
-
+    {
+        auto pos = query_part.find("(") + 1;
+        if (pos == std::string::npos) {
+            throw std::runtime_error{"process_aggregate, parse error, " + query_part};
+        }
+        auto count = query_part.length() - pos - 1;
+        if (count == 0) {
+            throw std::runtime_error{"process_aggregate, parse error, " + query_part};
+        }
+        query_part = query_part.substr(pos, count);
+    }
 
 	//get groups
 	std::vector<size_t> group_columns = get_group_columns(query_part);
@@ -363,13 +419,11 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 
 	bool expressionFound = true;
 
-
 	  std::regex rgx(",(?![^()]*+\\))");
 	  std::sregex_token_iterator iter(query_part.begin(),
 			  query_part.end(),
 	      rgx,
 	      -1);
-	  std::vector<std::string> all_parts;
 	  std::sregex_token_iterator end;
 	  for ( ; iter != end; ++iter)
 	  {
@@ -461,7 +515,15 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 
 
 		gdf_error err;
-		gdf_dtype output_type = get_aggregation_output_type(aggregation_input.dtype(),aggregation_types[i]);
+		gdf_dtype output_type = get_aggregation_output_type(aggregation_input.dtype(),aggregation_types[i], group_columns.size());
+
+        /*
+        // The 'gdf_sum_generic' libgdf function requires that all input operands have the same dtype.
+        if ((group_columns.size() == 0) && (aggregation_types[i] == GDF_SUM)) {
+            output_type = aggregation_input.dtype();
+        }
+        */
+
 		gdf_column_cpp output_column;
 		//TODO de donde saco el nombre de la columna aqui???
 		output_column.create_gdf_column(output_type,aggregation_size,nullptr,get_width_dtype(output_type), aggregator_to_string(aggregation_types[i]) + "(" + aggregation_input.name() + ")" );
@@ -540,10 +602,8 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 			break;
 		case GDF_AVG:
 			if(group_columns.size() == 0){
-
+                err = perform_avg(output_column.get_gdf_column(), aggregation_input.get_gdf_column());
 				//err = gdf_avg_generic(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
-
-
 			}else{
 				err = gdf_group_by_avg(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
 						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);
@@ -558,10 +618,17 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		case GDF_COUNT:
 		case GDF_COUNT_DISTINCT:
 			if(group_columns.size() == 0){
-
-				//err = gdf_sum_generic(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
-
-
+                // output dtype is GDF_UINT64
+                // defined in 'get_aggregation_output_type' function.
+                uint64_t result = aggregation_input.get_gdf_column()->size;
+                output_column.create_gdf_column(output_type,
+                                                aggregation_size,
+                                                &result,
+                                                get_width_dtype(output_type),
+                                                aggregator_to_string(aggregation_types[i]));
+                output_columns_aggregations.pop_back();
+                output_columns_aggregations.emplace_back(output_column);
+                err = GDF_SUCCESS;
 			}else{
 				err = gdf_group_by_count(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
 						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);

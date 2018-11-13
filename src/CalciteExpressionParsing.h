@@ -43,7 +43,7 @@ gdf_error get_aggregation_operation(std::string operator_string, gdf_agg_op * op
 std::string get_string_between_outer_parentheses(std::string operator_string);
 
 gdf_error get_output_type_expression(blazing_frame * input, gdf_dtype * output_type, gdf_dtype * max_temp_type, std::string expression);
-gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregation);
+gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregation, std::size_t group_size);
 
 gdf_scalar get_scalar_from_string(std::string scalar_string, gdf_dtype type);
 

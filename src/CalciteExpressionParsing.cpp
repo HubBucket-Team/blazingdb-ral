@@ -530,12 +530,47 @@ std::string aggregator_to_string(gdf_agg_op aggregation){
 			return "";
 		}
 }
+
+//interprets the expression and if is n-ary and logical, then returns their corresponding binary version
+std::string expand_if_logical_op(std::string expression){
+	size_t first = expression.find_first_of("(");
+	std::string operator_string = expression.substr(0, first);
+
+	if(operator_string == "AND"){
+		size_t last = expression.find_last_of(")");
+
+		std::string rest = expression.substr(first+1, expression.size()-(first+2));
+		std::vector<std::string> processed = get_expressions_from_expression_list(rest);
+
+		if(processed.size() == 2){ //is already binary
+			return expression;
+		}
+
+		std::string output = "";
+		for(size_t I=0; I<processed.size(); I++){
+			output += "AND(";
+		}
+
+		output += processed[0] + ", ";
+		for(size_t I=0; I<processed.size()-1; I++){
+			output += processed[I] + "),";
+		}
+
+		output += processed[processed.size()-1] + ")";
+
+		return output;
+	}
+
+	return expression;
+}
+
 std::string clean_calcite_expression(std::string expression){
 	//TODO: this is very hacky, the proper way is to remove this in calcite
 	StringUtil::findAndReplaceAll(expression," NOT NULL","");
 	StringUtil::findAndReplaceAll(expression,"):DOUBLE","");
 	StringUtil::findAndReplaceAll(expression,"CAST(","");
 
+	expression = expand_if_logical_op(expression);
 
 	std::string new_string = "";
 	new_string.reserve(expression.size());

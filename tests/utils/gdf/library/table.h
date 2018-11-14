@@ -132,7 +132,7 @@ protected:
   }
 
   size_t _num_rows() const {
-    return columns_[0]->size();  //@todo check and assert this
+    return size() == 0 ? 0 : columns_[0]->size();  //@todo check and assert this
   }
 
 private:

@@ -55,10 +55,17 @@ gdf_dtype get_next_biggest_type(gdf_dtype type){
 	}
 }
 
-gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregation){
+
+// TODO all these return types need to be revisited later. Right now we have issues with some aggregators that only support returning the same input type. Also pygdf does not currently support unsigned types (for example count should return and unsigned type)
+gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregation, std::size_t group_size){
 	if(aggregation == GDF_COUNT){
-		return GDF_UINT64;
+		return GDF_INT64;
 	}else if(aggregation == GDF_SUM){
+		return input_type;
+        if (group_size == 0) {
+            return input_type;
+        }
+
 		//we can assume it is numeric based on the oepration
 		//here we are in an interseting situation
 		//it can grow larger than the input type, to be safe we should enlarge to the greatest signed or unsigned representation
@@ -76,11 +83,11 @@ gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregat
 	}else if(aggregation == GDF_MAX){
 		return input_type;
 	}else if(aggregation == GDF_AVG){
-		return input_type;
+		return GDF_FLOAT64;
 	}else if(aggregation == GDF_COUNT){
-		return GDF_UINT64;
+		return GDF_INT64;
 	}else if(aggregation == GDF_COUNT_DISTINCT){
-		return GDF_UINT64;
+		return GDF_INT64;
 	}else{
 		return GDF_invalid;
 	}
@@ -470,8 +477,9 @@ gdf_error get_operation(
 		*operation = GDF_MOD;
 	}else if(operator_string == "AND"){
 		*operation = GDF_MUL;
-	}
-	else{
+	}else if(operator_string == "OR"){
+		*operation = GDF_ADD;
+	}else{
 		return GDF_UNSUPPORTED_DTYPE;
 	}
 	return GDF_SUCCESS;
@@ -509,6 +517,9 @@ bool is_operator_token(std::string operand) {
 }
 
 size_t get_index(std::string operand_string){
+    if (operand_string.length() == 0) {
+        return 0;
+    }
 	size_t start = 1;
 	return std::stoull (operand_string.substr(1,operand_string.size()-1),0);
 }
@@ -530,12 +541,81 @@ std::string aggregator_to_string(gdf_agg_op aggregation){
 			return "";
 		}
 }
+
+//interprets the expression and if is n-ary and logical, then returns their corresponding binary version
+std::string expand_if_logical_op(std::string expression){
+
+
+	std::string output = expression;
+	int start_pos = 0;
+
+	while(start_pos < expression.size()){
+
+		std::vector<bool> is_quoted_vector = StringUtil::generateQuotedVector(expression);
+
+		int first_and = StringUtil::findFirstNotInQuotes(expression, "AND(", start_pos, is_quoted_vector); // returns -1 if not found
+		int first_or = StringUtil::findFirstNotInQuotes(expression, "OR(", start_pos, is_quoted_vector); // returns -1 if not found
+
+		int first = -1;
+		std::string op = "";
+		if (first_and >= 0) {
+			if (first_or >= 0 && first_or < first_and){
+				first = first_or;
+				op = "OR(";
+			} else {
+				first = first_and;
+				op = "AND(";
+			}
+		} else {
+			first = first_or;
+			op = "OR(";
+		}
+
+		if (first >= 0) {
+			int expression_start = first + op.size() - 1;
+			int expression_end = find_closing_char(expression, expression_start);
+
+			std::string rest = expression.substr(expression_start+1, expression_end-(expression_start+1));
+			std::vector<std::string> processed = get_expressions_from_expression_list(rest);
+
+			if(processed.size() == 2){ //is already binary
+				start_pos = expression_start;
+				continue;
+			} else {
+				start_pos = first;
+			}
+
+			output = expression.substr(0, first);
+			for(size_t I=0; I<processed.size()-1; I++){
+				output += op;
+				start_pos += op.size();
+			}
+
+			output += processed[0] + ",";
+			for(size_t I=1; I<processed.size()-1; I++){
+				output += processed[I] + "),";
+			}
+			output += processed[processed.size()-1] + ")";
+
+			if (expression_end < expression.size() - 1){
+				output += expression.substr(expression_end + 1);
+			}
+			expression = output;
+		} else {
+			return output;
+		}
+	}
+
+	return output;
+}
+
 std::string clean_calcite_expression(std::string expression){
 	//TODO: this is very hacky, the proper way is to remove this in calcite
 	StringUtil::findAndReplaceAll(expression," NOT NULL","");
 	StringUtil::findAndReplaceAll(expression,"):DOUBLE","");
 	StringUtil::findAndReplaceAll(expression,"CAST(","");
 
+	expression = expand_if_logical_op(expression);
 
 	std::string new_string = "";
 	new_string.reserve(expression.size());
@@ -563,4 +643,91 @@ std::string get_string_between_outer_parentheses(std::string input_string){
 	//end_pos--;
 
 	return input_string.substr(start_pos,end_pos - start_pos);
+}
+
+int find_closing_char(const std::string & expression, int start) {
+
+	char openChar = expression[start];
+
+	char closeChar = openChar;
+	if (openChar == '('){
+		closeChar = ')';
+	} else if (openChar == '['){
+		closeChar = ']';
+	} else {
+		// TODO throw error
+		return -1;
+	}
+
+	int curInd = start + 1;
+	int closePos = curInd;
+	int depth = 1;
+	bool inQuotes = false;
+
+	while (curInd < expression.size()){
+		if (inQuotes){
+			if (expression[curInd] == '\''){
+				if (!(curInd + 1 < expression.size() && expression[curInd + 1] == '\'')){ // if we are in quotes and we get a double single quotes, that is an escaped quotes
+					inQuotes = false;
+				}
+			}
+		} else {
+			if (expression[curInd] == '\''){
+				inQuotes = true;
+			} else if (expression[curInd] == openChar){
+				depth++;
+			} else if (expression[curInd] == closeChar){
+				depth--;
+				if (depth == 0){
+					return curInd;
+				}
+			}
+		}
+		curInd++;
+	}
+	// TODO throw error
+	return -1;
+}
+
+// takes a comma delimited list of expressions and splits it into separate expressions
+std::vector<std::string> get_expressions_from_expression_list(const std::string & combined_expression){
+
+	std::vector<std::string> expressions;
+
+	int curInd = 0;
+	int curStart = 0;
+	bool inQuotes = false;
+	int parenthesisDepth = 0;
+	int sqBraketsDepth = 0;
+	while (curInd < combined_expression.size()){
+		if (inQuotes){
+			if (combined_expression[curInd] == '\''){
+				if (!(curInd + 1 < combined_expression.size() && combined_expression[curInd + 1] == '\'')){ // if we are in quotes and we get a double single quotes, that is an escaped quotes
+					inQuotes = false;
+				}
+			}
+		} else {
+			if (combined_expression[curInd] == '\''){
+				inQuotes = true;
+			} else if (combined_expression[curInd] == '('){
+				parenthesisDepth++;
+			} else if (combined_expression[curInd] == ')'){
+				parenthesisDepth--;
+			} else if (combined_expression[curInd] == '['){
+				sqBraketsDepth++;
+			} else if (combined_expression[curInd] == ']'){
+				sqBraketsDepth--;
+			} else if (combined_expression[curInd] == ',' && parenthesisDepth == 0 && sqBraketsDepth == 0){
+				expressions.push_back(combined_expression.substr(curStart, curInd - curStart));
+				curStart = curInd + 1;
+			}
+		}
+		curInd++;
+	}
+
+	if (curStart < combined_expression.size() && curInd <= combined_expression.size()){
+		expressions.push_back(combined_expression.substr(curStart, curInd - curStart));
+	}
+
+	return expressions;
 }

@@ -1,4 +1,4 @@
-set(integration_test_SRCS
+set(test_sources
     ${CMAKE_SOURCE_DIR}/src/Utils.cu
     ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
     ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
@@ -10,9 +10,7 @@ set(integration_test_SRCS
     ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
     ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
     ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
-    integration-test.cu
+    test-aggregation-without-group-by.cpp
 )
 
-configure_test(integration-test "${integration_test_SRCS}")
-
-add_subdirectory(aggregation-without-group-by)
+configure_test(test-integration-aggregation-without-group-by "${test_sources}")

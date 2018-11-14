@@ -5,8 +5,6 @@ import json
 import re
 import subprocess
 import sys
-import numpy as np
-import pandas as pd
 
 
 def main():
@@ -23,7 +21,8 @@ def main():
 
     plans = make_plans(items, args.calcite_jar)
 
-    strings_classes = (make_unit_test(item, plan) for item, plan in zip(items, plans))
+    strings_classes = (make_unit_test(item, plan)
+                       for item, plan in zip(items, plans))
     header_text = '\n'.join(strings_classes)
 
     write(header_text).to(args.output)
@@ -37,11 +36,11 @@ def make_items(filename):
 def make_plans(items, calcite_jar):
     def inputjson(item):
         json_obj = json.dumps({'query': item.query, 'tables': item.tables})
+        print(json_obj)
         return re.findall('non optimized\\n(.*)\\n\\noptimized',
                           subprocess.Popen(('java', '-jar', calcite_jar),
                                            stdin=subprocess.PIPE,
-                                           stdout=subprocess.PIPE).communicate(json_obj.encode())[0].decode('utf-8'),
-                          re.M | re.S)[0]
+                                           stdout=subprocess.PIPE).communicate(json_obj.encode())[0].decode('utf-8'), re.M | re.S)[0]
 
     return [inputjson(item) for item in items]
 
@@ -56,9 +55,9 @@ def make_unit_test(item, plan):
     return ('TEST_F(EvaluateQueryTest, %(test_name)s) {'
             'auto input = %(input)s;'
             'auto logical_plan = input.logicalPlan;'
-            'auto input_tables = input.tableGroup.ToBlazingFrame();'
-            'auto table_names = input.tableGroup.table_names();'
-            'auto column_names = input.tableGroup.column_names();'
+            'auto input_tables = ToBlazingFrame(input.filePaths, input.columnNames, input.columnTypes);'
+            'auto table_names = input.tableNames;'
+            'auto column_names = input.columnNames;'
             'std::vector<gdf_column_cpp> outputs;'
             'gdf_error err = evaluate_query(input_tables, table_names, column_names, logical_plan, outputs);'
             'EXPECT_TRUE(err == GDF_SUCCESS);'
@@ -68,18 +67,21 @@ def make_unit_test(item, plan):
 
 
 def get_file_paths(tables):
-    return [table['filePath'] for table in tables]
+    items = ['"%s"' % table['filePath'] for table in tables]
+    return '{%s}' % (','.join(items))
 
 
 def get_table_names(tables):
-    return ['main.%s' % table['tableName'] for table in tables]
+    items = ['"main.%s"' % table['tableName'] for table in tables]
+    return '{%s}' % (','.join(items))
 
 
 def get_column_names(tables):
     def get_list(columnNames):
-        return [name for name in columnNames]
+        return '{%s}' % (','.join(['"%s"' % name for name in columnNames]))
 
-    return [get_list(table['columnNames']) for table in tables]
+    items = [get_list(table['columnNames']) for table in tables]
+    return '{%s}' % (','.join(items))
 
 
 def get_column_types(tables):
@@ -93,84 +95,47 @@ def get_column_types(tables):
         }[val]
 
     def get_list(columnTypes):
-        return ([native_type(val) for val in columnTypes])
+        return '{%s}' % (','.join(['"%s"' % native_type(val) for val in columnTypes]))
 
-    return [get_list(table['columnTypes']) for table in tables]
+    items = [get_list(table['columnTypes']) for table in tables]
+    return '{%s}' % (','.join(items))
 
-
-def get_gdf_type(val):
-    print(val)
-    return {
-        'float64': 'GDF_FLOAT64',
-        'float32': 'GDF_FLOAT32',
-        'int': 'GDF_INT8',
-        'int32': 'GDF_INT32',
-        'int64': 'GDF_INT64'
-    }[val]
 
 def Φ(item, plan):
-    tableNames = get_table_names(item.tables)
-    columnNames = get_column_names(item.tables)
-    columnTypes = get_column_types(item.tables)
-    print('## columnTypes ')
-    print(columnTypes)
-    filePaths = get_file_paths(item.tables)
-
-    return ('InputTestItem{.query = "%(query)s", .logicalPlan ="%(plan)s",'
-            ' .tableGroup = %(tableGroup)s, .resultTable = %(resultTable)s}') % {
-               'query': item.query,
-               'plan': '\\n'.join(line for line in plan.split('\n')),
-               'tableGroup': make_table_group(filePaths, tableNames, columnNames, columnTypes),
-               'resultTable': make_table(item.result, 'ResultSet', item.resultTypes, item.resultTypes),
-           }
+    return (
+        '''InputTestItem{
+        .query = "%(query)s",
+        .logicalPlan ="%(plan)s",
+        .filePaths = %(filePaths)s,
+        .tableNames = %(tableNames)s,
+        .columnNames = %(columnNames)s,
+        .columnTypes = %(columnTypes)s,
+        .resultTable = %(resultTable)s}
+  ''') % {
+        'query': item.query,
+        'plan': '\\n'.join(line for line in plan.split('\n')),
+        'filePaths': get_file_paths(item.tables),
+        'tableNames': get_table_names(item.tables),
+        'columnNames': get_column_names(item.tables),
+        'columnTypes': get_column_types(item.tables),
+        'resultTable': make_table(item.result, 'ResultSet', item.resultTypes, item.resultTypes),
+    }
 
 
 def make_table(data, tableName, columnNames, columnTypes):
     return ('LiteralTableBuilder{"%(tableName)s",'
             ' %(literals)s}.Build()') % {
-               'tableName': tableName,
-               'literals': make_literals(data, columnNames, columnTypes),
-           }
+        'tableName': tableName,
+        'literals': make_literals(data, columnNames, columnTypes),
+    }
 
 
-def make_table_pandas(data, tableName, columnNames, columnTypes):
-    return ('{"%(tableName)s",'
-            ' %(literals)s}') % {
-               'tableName': tableName,
-               'literals': make_literals_pandas(data, columnNames, columnTypes),
-           }
-
-
-def get_csv_data(csv_path, column_names, column_types):
-    dtypes = {}
-    for name, t in zip(column_names, column_types) :
-        dtypes[name] = t
-    print(dtypes)
-
-    dfA = pd.read_csv(csv_path, delimiter='|',   names=column_names)
-    print(dfA)
-    return dfA.transpose().values.tolist()
-
-
-def make_table_group(filePaths, tableNames, columnNames, columnTypes):
-    return 'LiteralTableGroupBuilder{ %s }.Build()' % ','.join(
-        [make_table_pandas(get_csv_data(cvs_path, c_names, c_types), name, c_names, c_types) for
-         cvs_path, name, c_names, c_types in zip(filePaths, tableNames, columnNames, columnTypes)])
-
-def cast_val (_type, x):
-    return {
-        'float64': lambda x : float(x),
-        'float32': lambda x : float(x),
-        'int': lambda x : int(x),
-        'int32': lambda x : int(x),
-        'int64': lambda x : 0 #@todo  casting prolemas (python to c++)
-    }[_type](x)
-
-def make_literals_pandas(data, columnNames, columnTypes):
-    return '{%s}' % (
-        ','.join(['{"%s", Literals<%s>{%s} }'
-                  % (name, get_gdf_type(_type), ','.join(str(  cast_val(_type, x) ) for x in values))
-                  for name, _type, values in zip(columnNames, columnTypes, data)]))
+def make_table_group(data, tableName, columnNames, columnTypes):
+    return ('LiteralTableGroupBuilder{{"%(tableName)s",'
+            ' %(literals)s}}.Build()') % {
+        'tableName': tableName,
+        'literals': make_literals(data, columnNames, columnTypes),
+    }
 
 
 def make_literals(data, columnNames, columnTypes):
@@ -184,7 +149,6 @@ def write(header_text):
     def to(filename):
         with sys.stdout if '-' == filename else open(filename, 'w') as output:
             output.write(HEADER_DEFINITIONS % header_text)
-
     return type('writer', (), dict(to=to))
 
 
@@ -206,12 +170,23 @@ HEADER_DEFINITIONS = '''
 # include "gdf/library/api.h"
 using namespace gdf::library;
 
+#include <sys/stat.h>
+#include <gdf/cffi/functions.h>
+#include <gdf/gdf.h>
+
+#include "csv_utils.cuh"
+
+using namespace gdf::library;
+
 
 struct EvaluateQueryTest : public ::testing::Test {
   struct InputTestItem {
     std::string query;
     std::string logicalPlan;
-    gdf::library::TableGroup tableGroup;
+    std::vector<std::string> filePaths;
+    std::vector<std::string> tableNames;
+    std::vector<std::vector<std::string>> columnNames;
+    std::vector<std::vector<const char*>> columnTypes;
     gdf::library::Table resultTable;
   };
 
@@ -234,6 +209,7 @@ struct EvaluateQueryTest : public ::testing::Test {
 %s
 
 '''
+
 
 if '__main__' == __name__:
     main()

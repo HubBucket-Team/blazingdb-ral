@@ -536,6 +536,7 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		gdf_context ctxt;
 		ctxt.flag_distinct = aggregation_types[i] == GDF_COUNT_DISTINCT ? true : false;
 		ctxt.flag_method = GDF_HASH;
+		ctxt.flag_sort_result = 1;
 
 
 		switch(aggregation_types[i]){
@@ -546,17 +547,18 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 
 
 			}else{
-				std::cout<<"before"<<std::endl;
-				print_gdf_column(output_columns_group[0].get_gdf_column());
+//				std::cout<<"before"<<std::endl;
+//				print_gdf_column(output_columns_group[0].get_gdf_column());
 				err = gdf_group_by_sum(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
 						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);
-				std::cout<<"after"<<std::endl;
-				print_gdf_column(output_columns_group[0].get_gdf_column());
-				std::cout<<"direct "<<(group_by_columns_ptr_out[0] == nullptr)<<std::endl;
-								print_gdf_column(group_by_columns_ptr_out[0]);
-								std::cout<<"direct done"<<std::endl;
-
-
+//				std::cout<<"after"<<std::endl;
+//				print_gdf_column(output_columns_group[0].get_gdf_column());
+//				std::cout<<"direct "<<(group_by_columns_ptr_out[0] == nullptr)<<std::endl;
+//								print_gdf_column(group_by_columns_ptr_out[0]);
+//								std::cout<<"direct done"<<std::endl;
+//
+//								std::cout<<"output column"<<std::endl;
+//								print_gdf_column(output_column.get_gdf_column());
 			}
 
 			if(err == GDF_SUCCESS){

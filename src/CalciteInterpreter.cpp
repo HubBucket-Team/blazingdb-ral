@@ -419,17 +419,13 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 
 	bool expressionFound = true;
 
-	  std::regex rgx(",(?![^()]*+\\))");
-	  std::sregex_token_iterator iter(query_part.begin(),
-			  query_part.end(),
-	      rgx,
-	      -1);
-	  std::sregex_token_iterator end;
-	  for ( ; iter != end; ++iter)
+	std::vector<std::string> expressions = get_expressions_from_expression_list(query_part);
+
+	  for(std::string expr : expressions)
 	  {
-//		  std::cout << *iter << '\n';
+		  std::cout << expr << '\n';
 		  std::string group_str("group");
-		  std::string expression = std::regex_replace(std::string(*iter), std::regex("^ +| +$|( ) +"), "$1");
+		  std::string expression = std::regex_replace(expr, std::regex("^ +| +$|( ) +"), "$1");
 		  if (expression.find("group=") == std::string::npos)
 		  {
 				gdf_agg_op operation;

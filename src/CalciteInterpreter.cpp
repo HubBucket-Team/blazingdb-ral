@@ -423,7 +423,7 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 
 	  for(std::string expr : expressions)
 	  {
-		  std::cout << expr << '\n';
+		  //std::cout << expr << '\n';
 		  std::string group_str("group");
 		  std::string expression = std::regex_replace(expr, std::regex("^ +| +$|( ) +"), "$1");
 		  if (expression.find("group=") == std::string::npos)

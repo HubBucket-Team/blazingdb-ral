@@ -45,8 +45,8 @@ if __name__ == '__main__':
         'select c.c_custkey, c.c_nationkey, n.n_regionkey from customer as c inner join nation as n on c.c_nationkey = n.n_nationkey where n.n_regionkey = 1 and c.c_custkey < 50',
         'select avg(c.c_custkey), avg(c.c_acctbal), n.n_nationkey, r.r_regionkey from customer as c inner join nation as n on c.c_nationkey = n.n_nationkey inner join region as r on r.r_regionkey = n.n_regionkey group by n.n_nationkey, r.r_regionkey',
         'select n1.n_nationkey as supp_nation, n2.n_nationkey as cust_nation, l.l_extendedprice * l.l_discount from supplier as s inner join lineitem as l on s.s_suppkey = l.l_suppkey inner join orders as o on o.o_orderkey = l.l_orderkey inner join customer as c on c.c_custkey = o.o_custkey inner join nation as n1 on s.s_nationkey = n1.n_nationkey inner join nation as n2 on c.c_nationkey = n2.n_nationkey where n1.n_nationkey = 1 and n2.n_nationkey = 2 and o.o_orderkey < 10000',
-        'select *, r.r_regionkey + n.n_nationkey from region as r inner join nation as n on r.r_regionkey + n.n_regionkey',
-        'select *, r.r_regionkey + n.n_nationkey from region as r left outer join nation as n on r.r_regionkey + n.n_regionkey'
+        'select *, r.r_regionkey + n.n_nationkey from region as r inner join nation as n on r.r_regionkey = n.n_regionkey',
+        'select *, r.r_regionkey + n.n_nationkey from region as r left outer join nation as n on r.r_regionkey = n.n_regionkey'
     ]
     where_queries = [
         'select c_custkey, c_nationkey, c_acctbal from customer where c_custkey < 15',

@@ -12,7 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 message(STATUS "Using C++ standard: c++${CMAKE_CXX_STANDARD}")
 
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/" ${CMAKE_MODULE_PATH})
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules/" ${CMAKE_MODULE_PATH})
 message(STATUS "CMAKE_MODULE_PATH:" "${CMAKE_MODULE_PATH}")
 
 # Include CMake modules
@@ -31,7 +31,14 @@ include(ConfigureBlazingDBProtocol)
 include(ConfigureGoogleTest)
 
 # BEGIN MAIN #
-include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src)
+include_directories(
+    ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/thirdparty/jitify
+    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper)
+
+## Binary Operations
+add_subdirectory(${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation)
+get_directory_property(binary_operation_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation DEFINITION source_files)
 
 set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteInterpreter.cpp
@@ -46,7 +53,7 @@ set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/GDFCounter.cu
               ${CMAKE_CURRENT_SOURCE_DIR}/src/GDFColumn.cu
               ${CMAKE_CURRENT_SOURCE_DIR}/src/testing-libgdf.cu
-)
+              ${binary_operation_source_files})
 
 cuda_add_executable(testing-libgdf ${SRC_FILES})
 target_link_libraries(testing-libgdf ${LIBGDF_STATIC_LIB} Google::Flatbuffers ${BLAZINGDB_PROTOCOL_STATIC_LIB} ${CUDA_CUDA_LIBRARY} ${CUDA_NVRTC_LIBRARY} ${CUDA_NVTX_LIBRARY})

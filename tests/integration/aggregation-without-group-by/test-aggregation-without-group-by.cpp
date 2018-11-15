@@ -74,9 +74,16 @@ TEST_F(EvaluateQueryTest, TEST_01) {
               .Build(),
       .resultTable =
           LiteralTableBuilder{"ResultSet",
-                              {{"GDF_UINT64", Literals<GDF_UINT64>{200}},
+                              {
+                               //{"GDF_UINT64", Literals<GDF_UINT64>{200}},
+                               //TODO percy noboa see upgrade to uints
+                               {"GDF_INT64", Literals<GDF_INT64>{200}},
                                {"GDF_INT16", Literals<GDF_INT16>{20100}},
-                               {"GDF_UINT64", Literals<GDF_UINT64>{100}},
+
+                               //TODO percy noboa see upgrade to uints
+                               //{"GDF_UINT64", Literals<GDF_UINT64>{100}},
+                               {"GDF_INT64", Literals<GDF_INT64>{100}},
+
                                {"GDF_INT64", Literals<GDF_INT64>{200}},
                                {"GDF_INT64", Literals<GDF_INT64>{1}}}}
               .Build()};

@@ -1,3 +1,18 @@
+include_directories(
+    ${CMAKE_SOURCE_DIR}/thirdparty/jitify
+    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper)
+
+set(source_files
+    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/code/gdf-data.cpp
+    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/code/kernel.cpp
+    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/code/operation.cpp
+    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/code/traits.cpp
+    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/core/binop.cpp
+    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/core/launcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/util/operator.cpp
+    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/util/type.cpp
+)
+
 set(dtypes-test_SRCS
   ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
   ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
@@ -9,6 +24,8 @@ set(dtypes-test_SRCS
   ${CMAKE_SOURCE_DIR}/src/StringUtil.cpp
   ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
   ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
+  ${source_files}
   dtypes-test.cu)
+
 configure_test(dtypes-test "${dtypes-test_SRCS}")
 target_link_libraries(dtypes-test ral-test-utils)

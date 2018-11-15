@@ -10,7 +10,8 @@
 
 #include <string>
 #include <vector>
-#include <gdf/gdf.h>
+
+#include "gdf_wrapper/gdf_wrapper.cuh"
 
 class blazing_frame;
 

@@ -7,7 +7,7 @@ BlazingDB Relational Algebra Interpreter
 - Boost libs
 
 # Build
-There 2 ways to build the RAL component (for both cases you don't to have conda in your system).
+There are two ways to build the RAL component (for both cases you don't to have conda in your system).
 
 The first one will automagically download all the RAL dependencies as part of the cmake process.
 

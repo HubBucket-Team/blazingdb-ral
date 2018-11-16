@@ -6,6 +6,10 @@
 # BEGIN macros
 
 macro(CONFIGURE_GPU_LIBGDF_EXTERNAL_PROJECT)
+    set(ENV{NVSTRINGS_ROOT} ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-download/nvstrings-prefix/src/nvstrings/)
+
+    link_directories($ENV{NVSTRINGS_ROOT}/lib/)
+
     # Download and unpack libgdf at configure time
     configure_file(${CMAKE_SOURCE_DIR}/cmake/Templates/LibGDF.CMakeLists.txt.cmake ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-download/CMakeLists.txt)
 

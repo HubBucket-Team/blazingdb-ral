@@ -32,6 +32,8 @@ cmake -DCMAKE_BUILD_TYPE=Debug \
 make
 ```
 
+Note: If don't want to use conda and need the nvstrings library, just download https://anaconda.org/rapidsai/nvstrings/0.0.0.dev/download/linux-64/nvstrings-0.0.0.dev-cuda9.2_py35_0.tar.bz2 and uncompress the folder, this folder is the NVSTRINGS_HOME.
+
 # Integration Tests
 
 ```bash

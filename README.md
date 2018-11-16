@@ -15,6 +15,7 @@ The first one will automagically download all the RAL dependencies as part of th
 cd blazingdb-ral
 mkdir build
 cmake -DCMAKE_BUILD_TYPE=Debug ..
+make
 ```
 
 The second one will reuse your development environment.
@@ -28,6 +29,7 @@ cmake -DCMAKE_BUILD_TYPE=Debug \
       -DLIBGDF_HOME=/path/to/cudf-libgdf/home/install/ \
       -DBLAZINGDB_PROTOCOL_HOME=/path/to/blazingdb-protocol-cpp/home/install/ \
       ..
+make
 ```
 
 # Integration Tests

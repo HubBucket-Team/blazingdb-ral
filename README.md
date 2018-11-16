@@ -7,7 +7,7 @@ BlazingDB Relational Algebra Interpreter
 - Boost libs
 
 # Build
-There are two ways to build the RAL component (for both cases you don't to have conda in your system).
+There are two ways to build the RAL component (for both cases you don't need to have conda in your system).
 
 The first one will automagically download all the RAL dependencies as part of the cmake process.
 
@@ -32,7 +32,11 @@ cmake -DCMAKE_BUILD_TYPE=Debug \
 make
 ```
 
-Note: If don't want to use conda and need the nvstrings library, just download https://anaconda.org/rapidsai/nvstrings/0.0.0.dev/download/linux-64/nvstrings-0.0.0.dev-cuda9.2_py35_0.tar.bz2 and uncompress the folder, this folder is the NVSTRINGS_HOME.
+Notes:
+- NVSTRINGS_HOME and LIBGDF_HOME always got together.
+- BLAZINGDB_PROTOCOL_HOME is optional (if you no pass this arg then the project will download a copy of blazingdb-protocol)
+- If you pass BLAZINGDB_PROTOCOL_HOME but not NVSTRINGS_HOME and LIBGDF_HOME, then the project will download a copy of nvstrings lib and cudf/libgdf.
+- If don't want to use conda and need the nvstrings library, just download https://anaconda.org/rapidsai/nvstrings/0.0.0.dev/download/linux-64/nvstrings-0.0.0.dev-cuda9.2_py35_0.tar.bz2 and uncompress the folder, this folder is the NVSTRINGS_HOME.
 
 # Integration Tests
 

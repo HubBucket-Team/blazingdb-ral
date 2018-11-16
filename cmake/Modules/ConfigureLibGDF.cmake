@@ -8,8 +8,6 @@
 macro(CONFIGURE_GPU_LIBGDF_EXTERNAL_PROJECT)
     set(ENV{NVSTRINGS_ROOT} ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-download/nvstrings-prefix/src/nvstrings/)
 
-    link_directories($ENV{NVSTRINGS_ROOT}/lib/)
-
     # Download and unpack libgdf at configure time
     configure_file(${CMAKE_SOURCE_DIR}/cmake/Templates/LibGDF.CMakeLists.txt.cmake ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-download/CMakeLists.txt)
 
@@ -39,6 +37,10 @@ endmacro()
 # BEGIN MAIN #
 
 if (LIBGDF_HOME)
+    if (NOT DEFINED ENV{NVSTRINGS_ROOT})
+        message(FATAL_ERROR "If you use the LIBGDF_HOME argument then you need to export first the env variable NVSTRINGS_ROOT (the home installation of nvstrings)")
+    endif()
+
     message(STATUS "LIBGDF_HOME defined, it will use vendor version from ${LIBGDF_HOME}")
     set(LIBGDF_ROOT "${LIBGDF_HOME}")
 else()
@@ -46,6 +48,9 @@ else()
     configure_gpu_libgdf_external_project()
     set(LIBGDF_ROOT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-install/")
 endif()
+
+message(STATUS "NVString library home: $ENV{NVSTRINGS_ROOT}")
+link_directories($ENV{NVSTRINGS_ROOT}/lib/)
 
 find_package(LibGDF REQUIRED)
 set_package_properties(LibGDF PROPERTIES TYPE REQUIRED

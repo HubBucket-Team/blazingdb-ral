@@ -57,11 +57,7 @@ set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
 
 cuda_add_executable(testing-libgdf ${SRC_FILES})
 
-target_link_libraries(testing-libgdf gdf Google::Flatbuffers ${BLAZINGDB_PROTOCOL_STATIC_LIB} ${CUDA_CUDA_LIBRARY} ${CUDA_NVRTC_LIBRARY} ${CUDA_NVTX_LIBRARY})
-
-if (NOT LIBGDF_HOME)
-    target_link_libraries(testing-libgdf NVStrings)
-endif()
+target_link_libraries(testing-libgdf NVStrings gdf Google::Flatbuffers ${BLAZINGDB_PROTOCOL_STATIC_LIB} ${CUDA_CUDA_LIBRARY} ${CUDA_NVRTC_LIBRARY} ${CUDA_NVTX_LIBRARY})
 
 # Print the project summary
 #TODO cmake bug, it says blazingdb-protocol was not deteected vut everything seems

@@ -4,41 +4,32 @@ BlazingDB Relational Algebra Interpreter
 # Dependencies
 - C++11 compiler
 - CMake 3.11+
-- LibGDF (branch: binary-operators-draft)
-- FlatBuffers
-- BlazingDB Procotol
-- Google Test
+- Boost libs
 
-Except for the compiler and CMake, all the dependencies will be downloaded and configured automatically.
+# Build
+There 2 ways to build the RAL component (for both cases you don't to have conda in your system).
 
-# Building
+The first one will automagically download all the RAL dependencies as part of the cmake process.
 
 ```bash
+cd blazingdb-ral
 mkdir build
-cd build
-cmake ..
-make -j8
+cmake -DCMAKE_BUILD_TYPE=Debug ..
 ```
 
-To avoid the libgdf building, make sure to set the LIBGDF_HOME environment variable to wherever you have statically built the libgdf repository in the branch binary-operators-draft.
+The second one will reuse your development environment.
+So you just need to pass cmake arguments for nvstrings, cudf/libgdf and blazingdb-protocol/cpp installation paths.  
 
-To build LIBGDF statically:
 ```bash
-cmake -DCMAKE_BUILD_TYPE=Release -DLIBGDF_STATIC_LIB=ON ..
+cd blazingdb-ral
+mkdir build
+cmake -DCMAKE_BUILD_TYPE=Debug \
+      -DNVSTRINGS_HOME=/path/to/nvstrings/home/install/ \
+      -DLIBGDF_HOME=/path/to/cudf-libgdf/home/install/ \
+      -DBLAZINGDB_PROTOCOL_HOME=/path/to/blazingdb-protocol-cpp/home/install/ \
+      ..
 ```
 
-Then, build the RAL with:
-```bash
-export LIBGDF_HOME="/path/to/libgdf"
-cmake ..
-make -j8
-```
-
-or with:
-```bash
-LIBGDF_HOME="/path/to/libgdf" cmake ..
-make -j8
-```
 # Integration Tests
 
 ```bash

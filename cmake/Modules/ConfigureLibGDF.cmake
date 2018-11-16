@@ -65,7 +65,6 @@ message(STATUS "libgdf found in ${LIBGDF_ROOT}")
 include_directories(${LIBGDF_INCLUDEDIR})
 # TODO percy seems cmake bug: we cannot define target dirs per cuda target
 # ... see if works in future cmake versions
-
 link_directories(${LIBGDF_LIBDIR})
 
 # END MAIN #

@@ -14,6 +14,7 @@
 # LIBGDF_LIBDIR, directory containing libgdf libraries
 # LIBGDF_STATIC_LIB, path to libgdf.a
 # gdf - static library
+#TODO percy find librmm.so/.a ...
 
 # If LIBGDF_ROOT is not defined try to search in the default system path
 if ("${LIBGDF_ROOT}" STREQUAL "")
@@ -57,7 +58,7 @@ if (NOT LIBGDF_STATIC_LIB)
     set(LIBGDF_FOUND FALSE)
 else()
     set(LIBGDF_INCLUDEDIR ${LIBGDF_ROOT}/include/)
-    set(LIBGDF_LIBDIR ${LIBGDF_ROOT}/build) # TODO percy make this part cross platform
+    set(LIBGDF_LIBDIR ${LIBGDF_ROOT}/lib) # TODO percy make this part cross platform
     set(LIBGDF_FOUND TRUE)
     #TODO percy change to STATIC once cudf supports static build
     add_library(gdf SHARED IMPORTED)

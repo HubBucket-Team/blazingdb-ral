@@ -1,10 +1,15 @@
 # blazingdb-ral
 BlazingDB Relational Algebra Interpreter
 
-# Dependencies
+# Requirements
 - C++11 compiler
 - CMake 3.11+
 - Boost libs
+
+# Dependencies
+- cudf/libgdf development branch from BlazingDB fork https://github.com/BlazingDB/cudf/tree/develop/libgdf
+- blazingdb-protocol/cpp development branch from https://github.com/BlazingDB/blazingdb-protocol/tree/develop/cpp
+- Google Tests
 
 # Build
 There are two ways to build the RAL component (for both cases you don't need to have conda in your system).

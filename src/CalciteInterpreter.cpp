@@ -289,7 +289,7 @@ std::string get_named_expression(std::string query_part, std::string expression_
 
 blazing_frame process_join(blazing_frame input, std::string query_part){
 
-	size_t size = 1000; //libgdf will be handling the outputs for these
+	size_t size = 0; //libgdf will be handling the outputs for these
 
 	gdf_column_cpp left_indices, right_indices;
 	//right now it outputs int32

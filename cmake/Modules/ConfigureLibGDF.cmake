@@ -37,8 +37,8 @@ endmacro()
 # BEGIN MAIN #
 
 if (LIBGDF_HOME)
-    if (NOT NVSTRINGS_ROOT)
-        message(FATAL_ERROR "If you use the LIBGDF_HOME argument then you need pass the NVSTRINGS_ROOT argument too (the home installation of nvstrings)")
+    if (NOT NVSTRINGS_HOME)
+        message(FATAL_ERROR "If you use the LIBGDF_HOME argument then you need pass the NVSTRINGS_HOME argument too (the home installation of nvstrings)")
     endif()
 
     message(STATUS "LIBGDF_HOME defined, it will use vendor version from ${LIBGDF_HOME}")
@@ -49,7 +49,7 @@ else()
     set(LIBGDF_ROOT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-install/")
 endif()
 
-set(NVSTRINGS_LIBDIR ${NVSTRINGS_ROOT}/lib/)
+set(NVSTRINGS_LIBDIR ${NVSTRINGS_HOME}/lib/)
 link_directories(${NVSTRINGS_LIBDIR})
 
 find_package(LibGDF REQUIRED)

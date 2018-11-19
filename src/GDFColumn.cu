@@ -264,3 +264,7 @@ gdf_dtype_extra_info gdf_column_cpp::dtype_info(){
 void gdf_column_cpp::set_dtype(gdf_dtype dtype){
     column->dtype=dtype;
 }
+
+std::size_t gdf_column_cpp::get_valid_size() const {
+    return allocated_size_valid;
+}

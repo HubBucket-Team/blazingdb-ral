@@ -68,6 +68,9 @@ class gdf_column_cpp
 
 	void resize(size_t new_size);
 	gdf_error compact();
+
+public:
+    std::size_t get_valid_size() const;
 };
 
 #endif /* GDFCOLUMN_H_ */

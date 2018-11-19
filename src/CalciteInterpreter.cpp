@@ -120,6 +120,25 @@ bool contains_evaluation(std::string expression){
 	return (expression.find("(") != std::string::npos);
 }
 
+gdf_error create_null_value_gdf_column(int64_t output_value,
+                                       gdf_dtype output_type,
+                                       std::size_t output_size,
+                                       std::string&& output_name,
+                                       gdf_column_cpp& output_column,
+                                       std::vector<gdf_column_cpp>& output_vector) {
+    output_column.create_gdf_column(output_type,
+                                    output_size,
+                                    &output_value,
+                                    get_width_dtype(output_type),
+                                    output_name);
+
+    output_vector.pop_back();
+    output_vector.emplace_back(output_column);
+
+    int invalid = 0;
+    CheckCudaErrors(cudaMemcpy(output_column.valid(), &invalid, 1, cudaMemcpyHostToDevice));
+    return GDF_SUCCESS;
+}
 
 gdf_error perform_avg(gdf_column* column_output, gdf_column* column_input) {
     gdf_error error;
@@ -611,10 +630,20 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 			}
 			break;
 		case GDF_AVG:
-			if(group_columns.size() == 0){
-                err = perform_avg(output_column.get_gdf_column(), aggregation_input.get_gdf_column());
-				//err = gdf_avg_generic(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
-			}else{
+            if(group_columns.size() == 0){
+                if (aggregation_input.get_gdf_column()->size != 0) {
+                    err = perform_avg(output_column.get_gdf_column(), aggregation_input.get_gdf_column());
+                }
+                else {
+                    err = create_null_value_gdf_column(0,
+                                                       output_type,
+                                                       aggregation_size,
+                                                       aggregator_to_string(aggregation_types[i]),
+                                                       output_column,
+                                                       output_columns_aggregations);
+                }
+            }
+			else{
 				err = gdf_group_by_avg(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
 						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);
 			}

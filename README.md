@@ -11,6 +11,20 @@ BlazingDB Relational Algebra Interpreter
 - blazingdb-protocol/cpp development branch from https://github.com/BlazingDB/blazingdb-protocol/tree/develop/cpp
 - Google Tests
 
+# Clone
+This repo uses submodules. Make sure you cloned recursively:
+
+```bash
+git clone --recurse-submodules git@github.com:BlazingDB/blazingdb-ral.git
+```
+
+Or, after cloning:
+
+```bash
+cd blazingdb-ral
+git submodule update --init --recursive
+```
+
 # Build
 There are two ways to build the RAL component (for both cases you don't need to have conda in your system).
 

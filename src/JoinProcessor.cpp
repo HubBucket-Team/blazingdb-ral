@@ -19,7 +19,7 @@
 const std::string INNER_JOIN = "inner";
 const std::string LEFT_JOIN = "left";
 const std::string RIGHT_JOIN = "right";
-const std::string OUTER_JOIN = "outer";
+const std::string OUTER_JOIN = "full";
 
 
 //TODO: a temporary function until we make it so that reductionss can
@@ -165,7 +165,7 @@ gdf_error evaluate_join(std::string condition,
 		}
 	}
 
-	if(operator_count > 3 || join_type == OUTER_JOIN){
+	if(operator_count > 3 && join_type == OUTER_JOIN){
 		return GDF_JOIN_TOO_MANY_COLUMNS;
 	}
 	gdf_error err;

@@ -40,6 +40,7 @@ add_subdirectory(evaluate_query)
 add_subdirectory(order-by)
 add_subdirectory(gdf-ref-counter)
 add_subdirectory(where)
+add_subdirectory(joins)
 add_subdirectory(tpch)
 
 message(STATUS "******** Tests are ready ********")

@@ -301,14 +301,6 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 	std::string join_type = get_named_expression(query_part,"joinType");
 
 
-	size_t allocation_size_valid = ((((left_indices.get_gdf_column()->size + 7 ) / 8) + 63 ) / 64) * 64; //so allocations are supposed to be 64byte aligned
-
-		cudaMalloc((void **) &left_indices.get_gdf_column()->valid, allocation_size_valid);
-		cudaMalloc((void **) &right_indices.get_gdf_column()->valid, allocation_size_valid);
-		cudaMemset(left_indices.get_gdf_column()->valid, (gdf_valid_type) 255, allocation_size_valid);
-		cudaMemset(right_indices.get_gdf_column()->valid, (gdf_valid_type) 255, allocation_size_valid);
-
-
 	gdf_error err = evaluate_join(
 			condition,
 			join_type,

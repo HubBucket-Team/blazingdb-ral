@@ -33,7 +33,6 @@
 
 # Folders
 build/
-thirdparty/
 /testing-libgdf
 gtests/
 

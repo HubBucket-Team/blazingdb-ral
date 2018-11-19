@@ -756,15 +756,12 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 //			index_col.get_gdf_column(),
 //			asc_desc_bitmask);
 
-	/*
-	gdf_error err = gdf_order_by(
-			input.get_column(0).size(),
-			cols,
-			num_sort_columns,
-			d_cols,
-			d_types,
-			indices
-	);*/
+    gdf_error err = gdf_order_by(input.get_column(0).size(),
+                                 cols,
+                                 num_sort_columns,
+                                 d_cols,
+                                 d_types,
+                                 (size_t*)index_col.get_gdf_column()->data);
 
 	cudaFree(d_cols);
 	cudaFree(d_types);

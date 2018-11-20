@@ -65,6 +65,18 @@ HostVectorFrom(const gdf_column_cpp &column_cpp) {
   return vector;
 }
 
+std::vector<gdf_valid_type> HostValidFrom(const gdf_column_cpp& column_cpp) {
+    auto column = const_cast<gdf_column_cpp&>(column_cpp);
+    std::size_t size = column.get_valid_size();
+
+    std::vector<gdf_valid_type> vector;
+    vector.resize(size);
+
+    cudaMemcpy(vector.data(), column.valid(), size * sizeof(gdf_valid_type), cudaMemcpyDeviceToHost);
+
+    return vector;
+}
+
 }  // namespace library
 }  // namespace gdf
 

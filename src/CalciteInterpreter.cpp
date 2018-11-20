@@ -592,10 +592,17 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 			break;
 		case GDF_MIN:
 			if(group_columns.size() == 0){
-
-				err = gdf_min_generic(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
-
-
+                if (aggregation_input.get_gdf_column()->size != 0) {
+                    err = gdf_min_generic(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
+                }
+                else {
+                    err = create_null_value_gdf_column(0,
+                                                       output_type,
+                                                       aggregation_size,
+                                                       aggregator_to_string(aggregation_types[i]),
+                                                       output_column,
+                                                       output_columns_aggregations);
+                }
 			}else{
 				err = gdf_group_by_min(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
 						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);

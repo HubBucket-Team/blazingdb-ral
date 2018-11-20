@@ -561,17 +561,12 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
                     err = gdf_sum_generic(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
                 }
                 else {
-                    int64_t result = 0;
-                    output_column.create_gdf_column(output_type,
-                                                    aggregation_size,
-                                                    &result,
-                                                    get_width_dtype(output_type),
-                                                    aggregator_to_string(aggregation_types[i]));
-                    output_columns_aggregations.pop_back();
-                    output_columns_aggregations.emplace_back(output_column);
-
-                    CheckCudaErrors(cudaMemcpy(output_column.valid(), &result, 1, cudaMemcpyHostToDevice));
-                    err = GDF_SUCCESS;
+                    err = create_null_value_gdf_column(0,
+                                                       output_type,
+                                                       aggregation_size,
+                                                       aggregator_to_string(aggregation_types[i]),
+                                                       output_column,
+                                                       output_columns_aggregations);
                 }
 			}else{
 //				std::cout<<"before"<<std::endl;

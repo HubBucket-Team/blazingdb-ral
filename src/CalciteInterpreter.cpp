@@ -132,11 +132,12 @@ gdf_error create_null_value_gdf_column(int64_t output_value,
                                     get_width_dtype(output_type),
                                     output_name);
 
+    int invalid = 0;
+    CheckCudaErrors(cudaMemcpy(output_column.valid(), &invalid, 1, cudaMemcpyHostToDevice));
+
     output_vector.pop_back();
     output_vector.emplace_back(output_column);
 
-    int invalid = 0;
-    CheckCudaErrors(cudaMemcpy(output_column.valid(), &invalid, 1, cudaMemcpyHostToDevice));
     return GDF_SUCCESS;
 }
 

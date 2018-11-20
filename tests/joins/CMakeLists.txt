@@ -1,4 +1,4 @@
-cuda_add_library(fullouter_join_interface
+cuda_add_library(join_interface
   ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
   ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
   ${CMAKE_SOURCE_DIR}/src/ColumnManipulation.cu
@@ -10,8 +10,8 @@ cuda_add_library(fullouter_join_interface
   ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
   ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
 )
-target_include_directories(fullouter_join_interface PUBLIC .)
-target_link_libraries(fullouter_join_interface
+target_include_directories(join_interface PUBLIC .)
+target_link_libraries(join_interface
   ${LIBGDF_STATIC_LIB}
   ${CUDA_CUDA_LIBRARY}
   ${CUDA_NVRTC_LIBRARY}
@@ -21,4 +21,9 @@ target_link_libraries(fullouter_join_interface
 configure_test(fullouter_join-test
   fullouter_join.cu
 )
-target_link_libraries(fullouter_join-test fullouter_join_interface)
+target_link_libraries(fullouter_join-test join_interface)
+
+configure_test(leftouter_join-test
+  leftouter_join.cu
+)
+target_link_libraries(leftouter_join-test join_interface)

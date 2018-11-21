@@ -19,35 +19,50 @@ bool is_type_signed(gdf_dtype type){
 			GDF_TIMESTAMP == type);
 }
 
-bool is_type_unsigned_numeric(gdf_dtype type){
-	return (GDF_UINT8 == type ||
-			GDF_UINT16 == type ||
-			GDF_UINT32 == type ||
-			GDF_UINT64 == type);
-}
-
 bool is_type_float(gdf_dtype type){
 	return (GDF_FLOAT32 == type ||
 			GDF_FLOAT64 == type);
 }
 
+//TODO percy noboa see upgrade to uints
+//bool is_type_unsigned_numeric(gdf_dtype type){
+//	return (GDF_UINT8 == type ||
+//			GDF_UINT16 == type ||
+//			GDF_UINT32 == type ||
+//			GDF_UINT64 == type);
+//}
+
+//TODO percy noboa see upgrade to uints
 bool is_numeric_type(gdf_dtype type){
-	return is_type_signed(type) || is_type_unsigned_numeric(type);
+	//return is_type_signed(type) || is_type_unsigned_numeric(type);
+	return is_type_signed(type);
 }
 
 gdf_dtype get_next_biggest_type(gdf_dtype type){
+//	if(type == GDF_INT8){
+//		return GDF_INT16;
+//	}else if(type == GDF_INT16){
+//		return GDF_INT32;
+//	}else if(type == GDF_INT32){
+//		return GDF_INT64;
+//	}else if(type == GDF_UINT8){
+//		return GDF_UINT16;
+//	}else if(type == GDF_UINT16){
+//		return GDF_UINT32;
+//	}else if(type == GDF_UINT32){
+//		return GDF_UINT64;
+//	}else if(type == GDF_FLOAT32){
+//		return GDF_FLOAT64;
+//	}else{
+//		return type;
+//	}
+	//TODO felipe percy noboa see upgrade to uints
 	if(type == GDF_INT8){
 		return GDF_INT16;
 	}else if(type == GDF_INT16){
 		return GDF_INT32;
 	}else if(type == GDF_INT32){
 		return GDF_INT64;
-	}else if(type == GDF_UINT8){
-		return GDF_UINT16;
-	}else if(type == GDF_UINT16){
-		return GDF_UINT32;
-	}else if(type == GDF_UINT32){
-		return GDF_UINT64;
 	}else if(type == GDF_FLOAT32){
 		return GDF_FLOAT64;
 	}else{
@@ -59,6 +74,8 @@ gdf_dtype get_next_biggest_type(gdf_dtype type){
 // TODO all these return types need to be revisited later. Right now we have issues with some aggregators that only support returning the same input type. Also pygdf does not currently support unsigned types (for example count should return and unsigned type)
 gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregation, std::size_t group_size){
 	if(aggregation == GDF_COUNT){
+		//return GDF_UINT64;
+		//TODO felipe percy noboa see upgrade to uints
 		return GDF_INT64;
 	}else if(aggregation == GDF_SUM){
 		return input_type;
@@ -73,11 +90,13 @@ gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregat
 			return input_type;
 		}
 
-		if(is_type_signed(input_type)){
+		//TODO felipe percy noboa see upgrade to uints
+		//if(is_type_signed(input_type)){
 			return GDF_INT64;
-		}else{
-			return GDF_UINT64;
-		}
+		//}
+		//else{
+		//	return GDF_UINT64;
+		//}
 	}else if(aggregation == GDF_MIN){
 		return input_type;
 	}else if(aggregation == GDF_MAX){
@@ -85,8 +104,17 @@ gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregat
 	}else if(aggregation == GDF_AVG){
 		return GDF_FLOAT64;
 	}else if(aggregation == GDF_COUNT){
+
+		//return GDF_UINT64;
+		//TODO felipe percy noboa see upgrade to uints
+
+
 		return GDF_INT64;
 	}else if(aggregation == GDF_COUNT_DISTINCT){
+
+		//return GDF_UINT64;
+		//TODO felipe percy noboa see upgrade to uints
+
 		return GDF_INT64;
 	}else{
 		return GDF_invalid;
@@ -103,15 +131,18 @@ size_t get_width_dtype(gdf_dtype type){
 		return 4;
 	}else if(type == GDF_INT64){
 		return 8;
-	}else if(type == GDF_UINT8){
-		return 1;
-	}else if(type == GDF_UINT16){
-		return 2;
-	}else if(type == GDF_UINT32){
-		return 4;
-	}else if(type == GDF_UINT64){
-		return 8;
-	}else if(type == GDF_FLOAT32){
+	//}
+	//TODO felipe percy noboa see upgrade to uints
+//	else if(type == GDF_UINT8){
+//		return 1;
+//	}else if(type == GDF_UINT16){
+//		return 2;
+//	}else if(type == GDF_UINT32){
+//		return 4;
+//	}else if(type == GDF_UINT64){
+//		return 8;
+	}else if(type == GDF_FLOAT32)
+	{
 		return 4;
 	}else if(type == GDF_FLOAT64){
 		return 8;
@@ -152,17 +183,19 @@ bool is_comparison_operation(gdf_binary_operator operation){
 }
 
 gdf_dtype get_signed_type_from_unsigned(gdf_dtype type){
-	if(type == GDF_UINT8){
-		return GDF_INT16;
-	}else if(type == GDF_UINT16){
-		return GDF_INT32;
-	}else if(type == GDF_UINT32){
-		return GDF_INT64;
-	}else if(type == GDF_UINT64){
-		return GDF_INT64;
-	}else{
-		return GDF_INT64;
-	}
+	return type;
+	//TODO felipe percy noboa see upgrade to uints
+//	if(type == GDF_UINT8){
+//		return GDF_INT16;
+//	}else if(type == GDF_UINT16){
+//		return GDF_INT32;
+//	}else if(type == GDF_UINT32){
+//		return GDF_INT64;
+//	}else if(type == GDF_UINT64){
+//		return GDF_INT64;
+//	}else{
+//		return GDF_INT64;
+//	}
 }
 
 gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type, gdf_binary_operator operation){
@@ -228,10 +261,12 @@ gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type,
 
 		if(is_type_float(input_left_type) || is_type_float(input_right_type) ){
 			return GDF_FLOAT64;
-		}else if(is_type_signed(input_left_type)){
-			return GDF_INT64;
+//		}else if(is_type_signed(input_left_type)){
+//			return GDF_INT64;
 		}else{
-			return GDF_UINT64;
+			//TODO felipe percy noboa see upgrade to uints
+			//return GDF_UINT64;
+			return GDF_INT64;
 		}
 	}else{
 		return GDF_invalid;
@@ -322,23 +357,25 @@ int64_t  tmst;  // GDF_TIMESTAMP
 		gdf_data data;
 		data.si64 = stoll(scalar_string);
 		return {data, GDF_INT64, true};
-	}else if(type == GDF_UINT8){
-		gdf_data data;
-		data.ui08 = stoull(scalar_string);
-		return {data, GDF_UINT8, true};
-	}else if(type == GDF_UINT16){
-		gdf_data data;
-		data.ui16 = stoull(scalar_string);
-		return {data, GDF_UINT16, true};
-	}else if(type == GDF_UINT32){
-		gdf_data data;
-		data.ui32 = stoull(scalar_string);
-		return {data, GDF_UINT32, true};
-	}else if(type == GDF_UINT64){
-		gdf_data data;
-		data.ui64 = stoull(scalar_string);
-		return {data, GDF_UINT64, true};
-	}else if(type == GDF_FLOAT32){
+	}
+//	else if(type == GDF_UINT8){
+//		gdf_data data;
+//		data.ui08 = stoull(scalar_string);
+//		return {data, GDF_UINT8, true};
+//	}else if(type == GDF_UINT16){
+//		gdf_data data;
+//		data.ui16 = stoull(scalar_string);
+//		return {data, GDF_UINT16, true};
+//	}else if(type == GDF_UINT32){
+//		gdf_data data;
+//		data.ui32 = stoull(scalar_string);
+//		return {data, GDF_UINT32, true};
+//	}else if(type == GDF_UINT64){
+//		gdf_data data;
+//		data.ui64 = stoull(scalar_string);
+//		return {data, GDF_UINT64, true};
+//	}
+	else if(type == GDF_FLOAT32){
 		gdf_data data;
 		data.fp32 = stof(scalar_string);
 		return {data, GDF_FLOAT32, true};

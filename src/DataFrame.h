@@ -10,7 +10,7 @@
 
 
 #include "Utils.cuh"
-#include <gdf/gdf.h>
+#include "gdf_wrapper/gdf_wrapper.cuh"
 #include <GDFColumn.cuh>
 #include <vector>
 typedef struct blazing_frame{

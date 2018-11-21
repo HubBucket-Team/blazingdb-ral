@@ -1,44 +1,62 @@
 # blazingdb-ral
 BlazingDB Relational Algebra Interpreter
 
-# Dependencies
+# Requirements
 - C++11 compiler
 - CMake 3.11+
-- LibGDF (branch: binary-operators-draft)
-- FlatBuffers
-- BlazingDB Procotol
-- Google Test
+- Boost libs
 
-Except for the compiler and CMake, all the dependencies will be downloaded and configured automatically.
+# Dependencies
+- cudf/libgdf development branch from BlazingDB fork https://github.com/BlazingDB/cudf/tree/develop/libgdf
+- blazingdb-protocol/cpp development branch from https://github.com/BlazingDB/blazingdb-protocol/tree/develop/cpp
+- Google Tests
 
-# Building
+# Clone
+This repo uses submodules. Make sure you cloned recursively:
 
 ```bash
+git clone --recurse-submodules git@github.com:BlazingDB/blazingdb-ral.git
+```
+
+Or, after cloning:
+
+```bash
+cd blazingdb-ral
+git submodule update --init --recursive
+```
+
+# Build
+There are two ways to build the RAL component (for both cases you don't need to have conda in your system).
+
+The first one will automagically download all the RAL dependencies as part of the cmake process.
+
+```bash
+cd blazingdb-ral
 mkdir build
-cd build
-cmake ..
-make -j8
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+make
 ```
 
-To avoid the libgdf building, make sure to set the LIBGDF_HOME environment variable to wherever you have statically built the libgdf repository in the branch binary-operators-draft.
+The second one will reuse your development environment.
+So you just need to pass cmake arguments for nvstrings, cudf/libgdf and blazingdb-protocol/cpp installation paths.  
 
-To build LIBGDF statically:
 ```bash
-cmake -DCMAKE_BUILD_TYPE=Release -DLIBGDF_STATIC_LIB=ON ..
+cd blazingdb-ral
+mkdir build
+cmake -DCMAKE_BUILD_TYPE=Debug \
+      -DNVSTRINGS_HOME=/path/to/nvstrings/home/install/ \
+      -DLIBGDF_HOME=/path/to/cudf-libgdf/home/install/ \
+      -DBLAZINGDB_PROTOCOL_HOME=/path/to/blazingdb-protocol-cpp/home/install/ \
+      ..
+make
 ```
 
-Then, build the RAL with:
-```bash
-export LIBGDF_HOME="/path/to/libgdf"
-cmake ..
-make -j8
-```
+Notes:
+- NVSTRINGS_HOME and LIBGDF_HOME always got together.
+- BLAZINGDB_PROTOCOL_HOME is optional (if you no pass this arg then the project will download a copy of blazingdb-protocol)
+- If you pass BLAZINGDB_PROTOCOL_HOME but not NVSTRINGS_HOME and LIBGDF_HOME, then the project will download a copy of nvstrings lib and cudf/libgdf.
+- If don't want to use conda and need the nvstrings library, just download https://anaconda.org/rapidsai/nvstrings/0.0.0.dev/download/linux-64/nvstrings-0.0.0.dev-cuda9.2_py35_0.tar.bz2 and uncompress the folder, this folder is the NVSTRINGS_HOME.
 
-or with:
-```bash
-LIBGDF_HOME="/path/to/libgdf" cmake ..
-make -j8
-```
 # Integration Tests
 
 ```bash

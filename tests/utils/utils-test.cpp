@@ -16,13 +16,17 @@ TEST(UtilsTest, TableBuilder)
     "emps",
     {
       { "x", [](Index i) -> DType<GDF_FLOAT64> { return i / 10.0; } },
-      { "y", [](Index i) -> DType<GDF_UINT64> { return i * 1000; } },
+	  //TODO percy noboa see upgrade to uints
+      //{ "y", [](Index i) -> DType<GDF_UINT64> { return i * 1000; } },
+	  { "y", [](Index i) -> DType<GDF_INT64> { return i * 1000; } },
     }
   }
               .Build(10);
 
   for (std::size_t i = 0; i < 10; i++) {
-    EXPECT_EQ(i * 1000, t[1][i].get<GDF_UINT64>());
+	//TODO percy noboa see upgrade to uints
+    //EXPECT_EQ(i * 1000, t[1][i].get<GDF_UINT64>());
+	EXPECT_EQ(i * 1000, t[1][i].get<GDF_INT64>());
   }
 
   for (std::size_t i = 0; i < 10; i++) {
@@ -37,12 +41,16 @@ TEST(UtilsTest, FrameFromTableGroup)
     { "emps",
       {
         { "x", [](Index i) -> DType<GDF_FLOAT64> { return i / 10.0; } },
-        { "y", [](Index i) -> DType<GDF_UINT64> { return i * 1000; } },
+        //{ "y", [](Index i) -> DType<GDF_UINT64> { return i * 1000; } },
+        //TODO percy noboa see upgrade to uints
+        { "y", [](Index i) -> DType<GDF_INT64> { return i * 1000; } },
       } },
     { "emps",
       {
         { "x", [](Index i) -> DType<GDF_FLOAT64> { return i / 100.0; } },
-        { "y", [](Index i) -> DType<GDF_UINT64> { return i * 10000; } },
+        //TODO percy noboa see upgrade to uints
+        //{ "y", [](Index i) -> DType<GDF_UINT64> { return i * 10000; } },
+        { "y", [](Index i) -> DType<GDF_INT64> { return i * 10000; } },
       } }
   }
              .Build({ 10, 20 });
@@ -52,7 +60,9 @@ TEST(UtilsTest, FrameFromTableGroup)
 
   BlazingFrame frame = g.ToBlazingFrame();
 
-  auto hostVector = HostVectorFrom<GDF_UINT64>(frame[1][1]);
+  //auto hostVector = HostVectorFrom<GDF_UINT64>(frame[1][1]);
+  //TODO percy noboa see upgrade to uints
+  auto hostVector = HostVectorFrom<GDF_INT64>(frame[1][1]);
 
   for (std::size_t i = 0; i < 20; i++) {
     EXPECT_EQ(i * 10000, hostVector[i]);

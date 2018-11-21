@@ -238,9 +238,12 @@ gdf_error evaluate_join(std::string condition,
 			err = gdf_left_join( left_columns,operator_count,join_cols, right_columns,operator_count,join_cols,operator_count,0, nullptr,left_result, right_result, &ctxt);
 
 		}else if(join_type == OUTER_JOIN){
-		err = gdf_outer_join_generic(left_columns[0], right_columns[0], left_result, right_result);
-//			err = gdf_outer_join( left_columns,operator_count,join_cols, right_columns,operator_count,join_cols,operator_count,0, nullptr,left_result, right_result, &ctxt);
 
+		//WARNING TODO felipe percy noboa alexander see outer_join
+		//err = gdf_outer_join_generic(left_columns[0], right_columns[0], left_result, right_result);
+
+//			err = gdf_outer_join( left_columns,operator_count,join_cols, right_columns,operator_count,join_cols,operator_count,0, nullptr,left_result, right_result, &ctxt);
+		    err = gdf_full_join(left_columns,operator_count,join_cols, right_columns,operator_count,join_cols,operator_count,0, nullptr,left_result, right_result, &ctxt);
 		}
 
 		delete[] left_columns;

@@ -396,10 +396,13 @@ public:
       CASE(INT16);
       CASE(INT32);
       CASE(INT64);
-      CASE(UINT8);
-      CASE(UINT16);
-      CASE(UINT32);
-      CASE(UINT64);
+
+      //TODO percy noboa see upgrade to uints
+//      CASE(UINT8);
+//      CASE(UINT16);
+//      CASE(UINT32);
+//      CASE(UINT64);
+
       CASE(FLOAT32);
       CASE(FLOAT64);
       CASE(DATE32);

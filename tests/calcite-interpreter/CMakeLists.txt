@@ -1,3 +1,18 @@
+include_directories(
+    ${CMAKE_SOURCE_DIR}/thirdparty/jitify
+    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper)
+
+set(source_files
+    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/code/gdf-data.cpp
+    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/code/kernel.cpp
+    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/code/operation.cpp
+    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/code/traits.cpp
+    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/core/binop.cpp
+    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/core/launcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/util/operator.cpp
+    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/util/type.cpp
+)
+
 set(calcite_interpreter_test_SRCS
     ${CMAKE_SOURCE_DIR}/src/Utils.cu
     ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
@@ -10,6 +25,7 @@ set(calcite_interpreter_test_SRCS
     ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
         ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
     ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
+    ${source_files}
     calcite_interpreter-test.cu
 )
 
@@ -25,6 +41,7 @@ set(calcite_interpreter_where_test_SRCS
     ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
         ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
     ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
+    ${source_files}
     calcite_interpreter-where-test.cu
 )
 

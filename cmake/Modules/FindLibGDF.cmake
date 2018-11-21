@@ -14,6 +14,7 @@
 # LIBGDF_LIBDIR, directory containing libgdf libraries
 # LIBGDF_STATIC_LIB, path to libgdf.a
 # gdf - static library
+#TODO percy find librmm.so/.a ...
 
 # If LIBGDF_ROOT is not defined try to search in the default system path
 if ("${LIBGDF_ROOT}" STREQUAL "")
@@ -43,7 +44,8 @@ find_path(LIBGDF_INCLUDE_DIR gdf.h
 #    DOC "Path to libgdf library"
 #)
 
-find_library(LIBGDF_STATIC_LIB NAMES libgdf.a
+#TODO percy change to libgdf.a once cudf supports static build
+find_library(LIBGDF_STATIC_LIB NAMES libgdf.so
     PATHS ${LIBGDF_SEARCH_LIB_PATH}
     NO_DEFAULT_PATH
     DOC "Path to libgdf static library"
@@ -56,9 +58,10 @@ if (NOT LIBGDF_STATIC_LIB)
     set(LIBGDF_FOUND FALSE)
 else()
     set(LIBGDF_INCLUDEDIR ${LIBGDF_ROOT}/include/)
-    set(LIBGDF_LIBDIR ${LIBGDF_ROOT}/build) # TODO percy make this part cross platform
+    set(LIBGDF_LIBDIR ${LIBGDF_ROOT}/lib) # TODO percy make this part cross platform
     set(LIBGDF_FOUND TRUE)
-    add_library(gdf STATIC IMPORTED)
+    #TODO percy change to STATIC once cudf supports static build
+    add_library(gdf SHARED IMPORTED)
     set_target_properties(gdf PROPERTIES IMPORTED_LOCATION "${LIBGDF_STATIC_LIB}")
 endif ()
 

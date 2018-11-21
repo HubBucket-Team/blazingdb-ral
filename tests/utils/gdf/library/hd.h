@@ -23,10 +23,13 @@ DTYPE_FACTORY(INT8, std::int8_t);
 DTYPE_FACTORY(INT16, std::int16_t);
 DTYPE_FACTORY(INT32, std::int32_t);
 DTYPE_FACTORY(INT64, std::int64_t);
-DTYPE_FACTORY(UINT8, std::uint8_t);
-DTYPE_FACTORY(UINT16, std::uint16_t);
-DTYPE_FACTORY(UINT32, std::uint32_t);
-DTYPE_FACTORY(UINT64, std::uint64_t);
+
+//TODO percy noboa see upgrade to uints
+//DTYPE_FACTORY(UINT8, std::uint8_t);
+//DTYPE_FACTORY(UINT16, std::uint16_t);
+//DTYPE_FACTORY(UINT32, std::uint32_t);
+//DTYPE_FACTORY(UINT64, std::uint64_t);
+
 DTYPE_FACTORY(FLOAT32, float);
 DTYPE_FACTORY(FLOAT64, double);
 DTYPE_FACTORY(DATE32, std::int32_t);

@@ -172,10 +172,11 @@ gdf_error perform_avg(gdf_column* column_output, gdf_column* column_input) {
                 int64_t result = (int64_t) avg_sum / (int64_t) avg_count;
                 CheckCudaErrors(cudaMemcpy(column_output->data, &result, dtype_size, cudaMemcpyHostToDevice));
             }
-            else if (Ral::Traits::is_dtype_unsigned(dtype)) {
-                uint64_t result = (uint64_t) avg_sum / (uint64_t) avg_count;
-                CheckCudaErrors(cudaMemcpy(column_output->data, &result, dtype_size, cudaMemcpyHostToDevice));
-            }
+            //TODO felipe percy noboa see upgrade to uints
+//            else if (Ral::Traits::is_dtype_unsigned(dtype)) {
+//                uint64_t result = (uint64_t) avg_sum / (uint64_t) avg_count;
+//                CheckCudaErrors(cudaMemcpy(column_output->data, &result, dtype_size, cudaMemcpyHostToDevice));
+//            }
         }
         else {
             error = GDF_UNSUPPORTED_DTYPE;
@@ -757,7 +758,9 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 	gdf_column * cols = new gdf_column[num_sort_columns];
 	std::vector<size_t> sort_column_indices(num_sort_columns);
 	gdf_column_cpp index_col;
-	index_col.create_gdf_column(GDF_UINT64,input.get_column(0).size(),nullptr,8, "");
+	//index_col.create_gdf_column(GDF_UINT64,input.get_column(0).size(),nullptr,8, "");
+	//WARNING TODO felipe percy noboa see upgrade to uints
+	index_col.create_gdf_column(GDF_INT64,input.get_column(0).size(),nullptr,8, "");
 	for(int i = 0; i < num_sort_columns; i++){
 		int sort_column_index = get_index(
 				get_named_expression(
@@ -789,20 +792,19 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 	//trying all ascending for now
 	cudaMemset	(	(char *) asc_desc_bitmask,255,size_in_chars	);
 
-	gdf_error err = gdf_order_by_asc_desc(
-			cols,
-			num_sort_columns,
-			index_col.get_gdf_column(),
-			asc_desc_bitmask);
-	/*
-	gdf_error err = gdf_order_by(
-			input.get_column(0).size(),
-			cols,
-			num_sort_columns,
-			d_cols,
-			d_types,
-			indices
-	);*/
+	//WARNING TODO felipe percy noboa see group_by
+//	gdf_error err = gdf_order_by_asc_desc(
+//			cols,
+//			num_sort_columns,
+//			index_col.get_gdf_column(),
+//			asc_desc_bitmask);
+
+    gdf_error err = gdf_order_by(input.get_column(0).size(),
+                                 cols,
+                                 num_sort_columns,
+                                 d_cols,
+                                 d_types,
+                                 (size_t*)index_col.get_gdf_column()->data);
 
 	cudaFree(d_cols);
 	cudaFree(d_types);

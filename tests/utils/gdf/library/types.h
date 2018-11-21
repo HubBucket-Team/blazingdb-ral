@@ -18,7 +18,7 @@
 #ifndef GDF_TESTS_BINARY_OPERATION_UTIL_TYPES_H
 #define GDF_TESTS_BINARY_OPERATION_UTIL_TYPES_H
 
-#include "gdf/gdf.h"
+#include "gdf_wrapper/gdf_wrapper.cuh"
 
 namespace gdf {
 namespace library {
@@ -74,25 +74,26 @@ namespace library {
             using Type = int64_t;
         };
 
-        template <>
-        struct GdfEnumType<GDF_UINT8> {
-            using Type = uint8_t;
-        };
-
-        template <>
-        struct GdfEnumType<GDF_UINT16> {
-            using Type = uint16_t;
-        };
-
-        template <>
-        struct GdfEnumType<GDF_UINT32> {
-            using Type = uint32_t;
-        };
-
-        template <>
-        struct GdfEnumType<GDF_UINT64> {
-            using Type = uint64_t;
-        };
+        //TODO percy noboa see upgrade to uints
+//        template <>
+//        struct GdfEnumType<GDF_UINT8> {
+//            using Type = uint8_t;
+//        };
+//
+//        template <>
+//        struct GdfEnumType<GDF_UINT16> {
+//            using Type = uint16_t;
+//        };
+//
+//        template <>
+//        struct GdfEnumType<GDF_UINT32> {
+//            using Type = uint32_t;
+//        };
+//
+//        template <>
+//        struct GdfEnumType<GDF_UINT64> {
+//            using Type = uint64_t;
+//        };
 
         template <>
         struct GdfEnumType<GDF_FLOAT32> {
@@ -129,25 +130,26 @@ namespace library {
             static constexpr gdf_dtype Value = GDF_INT64;
         };
 
-        template <>
-        struct GdfDataType<uint8_t> {
-            static constexpr gdf_dtype Value = GDF_UINT8;
-        };
-
-        template <>
-        struct GdfDataType<uint16_t> {
-            static constexpr gdf_dtype Value = GDF_UINT16;
-        };
-
-        template <>
-        struct GdfDataType<uint32_t> {
-            static constexpr gdf_dtype Value = GDF_UINT32;
-        };
-
-        template <>
-        struct GdfDataType<uint64_t> {
-            static constexpr gdf_dtype Value = GDF_UINT64;
-        };
+        //TODO percy noboa see upgrade to uints
+//        template <>
+//        struct GdfDataType<uint8_t> {
+//            static constexpr gdf_dtype Value = GDF_UINT8;
+//        };
+//
+//        template <>
+//        struct GdfDataType<uint16_t> {
+//            static constexpr gdf_dtype Value = GDF_UINT16;
+//        };
+//
+//        template <>
+//        struct GdfDataType<uint32_t> {
+//            static constexpr gdf_dtype Value = GDF_UINT32;
+//        };
+//
+//        template <>
+//        struct GdfDataType<uint64_t> {
+//            static constexpr gdf_dtype Value = GDF_UINT64;
+//        };
 
         template <>
         struct GdfDataType<float> {

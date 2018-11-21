@@ -243,7 +243,7 @@ public:
 
 private:
   std::vector<LiteralColumnBuilder>
-  ColumnBuildersFrom(const std::vector<gdf_column_cpp> column_cpps) {
+  ColumnBuildersFrom(const std::vector<gdf_column_cpp>& column_cpps) {
     std::vector<LiteralColumnBuilder> builders;
     builders.resize(column_cpps.size());
     std::transform(column_cpps.cbegin(),

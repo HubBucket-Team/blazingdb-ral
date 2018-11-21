@@ -16,7 +16,7 @@ def get_table_occurrences(query):
 
 def replace_all(text, dic):
     for i, j in dic.items():
-        text = re.sub(r"\s%s\s" % i, j, text)
+        text = re.sub(r"\s%s(\s|$)" % i, j, text)
     return text
 
 

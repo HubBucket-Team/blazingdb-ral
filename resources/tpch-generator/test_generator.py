@@ -90,6 +90,7 @@ def get_column_types(tables):
             'GDF_INT8': 'int',
             'GDF_INT32': 'int32',
             'GDF_INT64': 'int64',
+            'GDF_STRING': 'object'
         }[val]
 
     def get_list(columnTypes):
@@ -105,7 +106,8 @@ def get_gdf_type(val):
         'float32': 'GDF_FLOAT32',
         'int': 'GDF_INT8',
         'int32': 'GDF_INT32',
-        'int64': 'GDF_INT64'
+        'int64': 'GDF_INT64',
+        'object': 'GDF_INT64'
     }[val]
 
 def Φ(item, plan):
@@ -163,7 +165,8 @@ def cast_val (_type, x):
         'float32': lambda x : float(x),
         'int': lambda x : int(x),
         'int32': lambda x : int(x),
-        'int64': lambda x : 0 #@todo  casting prolemas (python to c++)
+        'int64': lambda x : int(x), #@todo  casting prolemas (python to c++)
+        'object': lambda x : 0
     }[_type](x)
 
 def make_literals_pandas(data, columnNames, columnTypes):

@@ -80,6 +80,18 @@ tables = OrderedDict([
     ]))
 ])
 
+tables['customer']['c_acctbal'] = 'double'
+tables['lineitem']['l_quantity'] = 'double'
+tables['lineitem']['l_extendedprice'] = 'double'
+tables['lineitem']['l_discount'] = 'double'
+tables['lineitem']['l_tax'] = 'double'
+tables['orders']['o_totalprice'] = 'double'
+tables['orders']['o_shippriority'] = 'short'
+tables['part']['p_retailprice'] = 'double'
+tables['partsupp']['ps_supplycost'] = 'double'
+tables['region']['r_regionkey'] = 'short'
+tables['supplier']['s_nationkey'] = 'short'
+
 tableNames = [tableName for tableName, tableColumns in tables.items()]
 
 import os

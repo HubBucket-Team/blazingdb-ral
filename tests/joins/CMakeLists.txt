@@ -30,4 +30,9 @@ set(the-test_SRCS
 
 configure_test(fullouter_join-test "${the-test_SRCS}")
 
+target_link_libraries(fullouter_join-test
+                      ${cuDF_adapter_testing_library}
+                      ${cuDF_adapter_testing_dependencies}
+)
+
 #target_link_libraries(where-test ral-test-utils)

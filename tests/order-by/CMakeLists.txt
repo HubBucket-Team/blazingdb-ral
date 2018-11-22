@@ -32,6 +32,8 @@ target_link_libraries(order_by_interface
   ${CUDA_CUDA_LIBRARY}
   ${CUDA_NVRTC_LIBRARY}
   ${CUDA_NVTX_LIBRARY}
+  ${cuDF_adapter_testing_library}
+  ${cuDF_adapter_testing_dependencies}
 )
 
 configure_test(order_by-test

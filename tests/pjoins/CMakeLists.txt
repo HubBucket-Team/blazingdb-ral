@@ -23,3 +23,7 @@ configure_test(joint-test
 )
 target_link_libraries(joint-test joint-test-utils)
 
+target_link_libraries(joint-test
+                      ${cuDF_adapter_testing_library}
+                      ${cuDF_adapter_testing_dependencies}
+)

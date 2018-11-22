@@ -39,3 +39,8 @@ configure_test(evaluate_query-test
   evaluate_query.cu
 )
 target_link_libraries(evaluate_query-test evaluate_query_interface)
+
+target_link_libraries(evaluate_query-test
+                      ${cuDF_adapter_testing_library}
+                      ${cuDF_adapter_testing_dependencies}
+)

@@ -25,6 +25,20 @@ endfunction()
 
 enable_testing()
 
+
+## Helper libraries for TESTING
+# Static library (libcuDF_adapter_testing.a) - cuDF folder
+include(${CMAKE_SOURCE_DIR}/src/cuDF/CMakeLists.txt)
+
+set(cuDF_adapter_testing_files ${source_files})
+set(cuDF_adapter_testing_library "cuDF_adapter_testing")
+set(cuDF_adapter_testing_dependencies "rmm")
+
+add_library(${cuDF_adapter_testing_library} STATIC ${cuDF_adapter_testing_files})
+
+target_include_directories(${cuDF_adapter_testing_library} PRIVATE ${CMAKE_SOURCE_DIR}/src/)
+
+
 # Configure unit tests with Google Test
 # -------------------
 message(STATUS "******** Configuring tests ********")

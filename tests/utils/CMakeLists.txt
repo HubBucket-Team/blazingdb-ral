@@ -1,3 +1,5 @@
+
+
 cuda_add_library(ral-test-utils
   ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
   ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
@@ -8,6 +10,8 @@ target_link_libraries(ral-test-utils
   ${CUDA_CUDA_LIBRARY}
   ${CUDA_NVRTC_LIBRARY}
   ${CUDA_NVTX_LIBRARY}
+  ${cuDF_adapter_testing_library}
+  ${cuDF_adapter_testing_dependencies}
 )
 
 configure_test(utils-test

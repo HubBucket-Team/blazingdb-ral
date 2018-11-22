@@ -1,15 +1,16 @@
 #pragma once
 
 #include <string>
+#include <cuda_runtime_api.h>
 
 namespace cuDF {
 namespace Allocator {
 
-void allocate(void** pointer, std::size_t size);
+void allocate(void** pointer, std::size_t size, cudaStream_t stream = 0);
 
-void reallocate(void **pointer, std::size_t size);
+void reallocate(void** pointer, std::size_t size, cudaStream_t stream = 0);
 
-void deallocate(void* pointer);
+void deallocate(void* pointer, cudaStream_t stream = 0);
 
 
 class Exception {

@@ -4,27 +4,26 @@
 namespace cuDF {
 namespace Allocator {
 
-const cudaStream_t STREAM = 0;
 const std::string BASE_MESSAGE {"ERROR, cuDF::Allocator, "};
 
 void throwException(rmmError_t error);
 
-void allocate(void** pointer, std::size_t size) {
-    auto error = RMM_ALLOC(pointer, size, STREAM);
+void allocate(void** pointer, std::size_t size, cudaStream_t stream) {
+    auto error = RMM_ALLOC(pointer, size, stream);
     if (error != RMM_SUCCESS) {
         throwException(error);
     }
 }
 
-void reallocate(void **pointer, std::size_t size) {
-    auto error = RMM_REALLOC(pointer, size, STREAM);
+void reallocate(void **pointer, std::size_t size, cudaStream_t stream) {
+    auto error = RMM_REALLOC(pointer, size, stream);
     if (error != RMM_SUCCESS) {
         throwException(error);
     }
 }
 
-void deallocate(void* pointer) {
-    auto error = RMM_FREE(pointer, STREAM);
+void deallocate(void* pointer, cudaStream_t stream) {
+    auto error = RMM_FREE(pointer, stream);
     if (error != RMM_SUCCESS) {
         throwException(error);
     }

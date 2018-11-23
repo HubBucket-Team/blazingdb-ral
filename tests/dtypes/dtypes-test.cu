@@ -4,7 +4,6 @@
 
 #include <CalciteInterpreter.h>
 #include <GDFColumn.cuh>
-#include <gdf/gdf.h>
 
 #include "../utils/gdf/library/table_group.h"
 

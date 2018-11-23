@@ -6,8 +6,8 @@
 #include "gdf/library/table_group.h"
 #include "gdf/library/types.h"
 
-#include <gdf/cffi/functions.h>
-#include <gdf/gdf.h>
+#include "gdf_wrapper/gdf_wrapper.cuh"
+
 using namespace gdf::library;
 
 TEST(UtilsTest, TableBuilder)

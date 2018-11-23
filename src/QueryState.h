@@ -9,7 +9,8 @@
 #define QUERYSTATE_H_
 
 #include <vector>
-#include <gdf/gdf.h>
+#include "gdf_wrapper/gdf_wrapper.cuh"
+
 class QueryState {
 public:
 

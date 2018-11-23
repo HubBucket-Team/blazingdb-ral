@@ -29,10 +29,10 @@ set(LIBGDF_SEARCH_LIB_PATH
 )
 
 set(LIBGDF_SEARCH_INCLUDE_DIR
-  ${LIBGDF_ROOT}/include/gdf
+  ${LIBGDF_ROOT}/include/
 )
 
-find_path(LIBGDF_INCLUDE_DIR gdf.h
+find_path(LIBGDF_INCLUDE_DIR cudf.h
     PATHS ${LIBGDF_SEARCH_INCLUDE_DIR}
     NO_DEFAULT_PATH
     DOC "Path to libgdf headers"
@@ -45,7 +45,7 @@ find_path(LIBGDF_INCLUDE_DIR gdf.h
 #)
 
 #TODO percy change to libgdf.a once cudf supports static build
-find_library(LIBGDF_STATIC_LIB NAMES libgdf.so
+find_library(LIBGDF_STATIC_LIB NAMES libcudf.so
     PATHS ${LIBGDF_SEARCH_LIB_PATH}
     NO_DEFAULT_PATH
     DOC "Path to libgdf static library"

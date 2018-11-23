@@ -7,7 +7,7 @@
 
 #include "GDFColumn.cuh"
 
-#include <gdf/utils.h>
+#include "gdf_wrapper/gdf_wrapper.cuh"
 
 gdf_column_cpp::gdf_column_cpp()
 {

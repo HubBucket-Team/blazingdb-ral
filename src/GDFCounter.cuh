@@ -8,7 +8,7 @@
 #ifndef GDFCOUNTER_H_
 #define GDFCOUNTER_H_
 
-#include <gdf/gdf.h>
+#include "gdf_wrapper/gdf_wrapper.cuh"
 #include <map>
 #include <mutex>
 

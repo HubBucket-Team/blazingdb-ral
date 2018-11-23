@@ -8,7 +8,7 @@
 #include <Utils.cuh>
 #include <GDFColumn.cuh>
 
-#include <gdf/gdf.h>
+#include "gdf_wrapper/gdf_wrapper.cuh"
 
 class TestEnvironment : public testing::Environment {
 public:

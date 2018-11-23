@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#include "gdf/gdf.h"
+#include "cudf.h"
 #include "binary-operation/jit/core/launcher.h"
 #include "binary-operation/jit/util/operator.h"
 

@@ -12,7 +12,7 @@ project(libgdf-download NONE)
 include(ExternalProject)
 
 ExternalProject_Add(nvstrings
-    URL               https://anaconda.org/rapidsai/nvstrings/0.0.0.dev/download/linux-64/nvstrings-0.0.0.dev-cuda9.2_py35_0.tar.bz2
+    URL               https://anaconda.org/nvidia/nvstrings/0.0.3/download/linux-64/nvstrings-0.0.3-cuda9.2_py35_0.tar.bz2
     CONFIGURE_COMMAND ""
     BUILD_COMMAND     ""
     INSTALL_COMMAND   ""

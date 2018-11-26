@@ -1,6 +1,18 @@
 #=============================================================================
 # Copyright 2018 BlazingDB, Inc.
 #     Copyright 2018 Percy Camilo Triveño Aucahuasi <percy@blazingdb.com>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #=============================================================================
 
 # - Find Apache Arrow (libarrow.a)
@@ -57,6 +69,28 @@ else()
     set(ARROW_FOUND TRUE)
     add_library(arrow STATIC IMPORTED)
     set_target_properties(arrow PROPERTIES IMPORTED_LOCATION "${ARROW_STATIC_LIB}")
+
+    # Determine arrow version information for CPP macros
+    file(STRINGS ${ARROW_ROOT}/lib/pkgconfig/arrow.pc _ARROW_VERSION REGEX "^Version: ([0-9]+\\.[0-9]+\\.[0-9]+)")
+    STRING(REGEX REPLACE "^Version: ([0-9]+)\\.[0-9]+\\.[0-9]+" "\\1" ARROW_VERSION_MAJOR "${_ARROW_VERSION}")
+    STRING(REGEX REPLACE "^Version: [0-9]+\\.([0-9]+)\\.[0-9]+" "\\1" ARROW_VERSION_MINOR "${_ARROW_VERSION}")
+    STRING(REGEX REPLACE "^Version: [0-9]+\\.[0-9]+\\.([0-9]+)" "\\1" ARROW_VERSION_PATCH "${_ARROW_VERSION}")
+    math(EXPR ARROW_NUMERIC_VERSION "(${ARROW_VERSION_MAJOR}+0) * 10000 + (${ARROW_VERSION_MINOR}+0) * 100 + (${ARROW_VERSION_PATCH}+0)")
+    message(STATUS "ARROW_NUMERIC_VERSION=${ARROW_NUMERIC_VERSION}")
+    ADD_DEFINITIONS(-DARROW_VERSION=${ARROW_NUMERIC_VERSION})
+
+    # see arrow/ipc/message.h
+    if (ARROW_NUMERIC_VERSION EQUAL 0)
+      message(FATAL_ERROR "Apache Arrow version indetermined. Check for any error messages above.")
+    elseif (ARROW_NUMERIC_VERSION LESS 200)
+      ADD_DEFINITIONS(-DARROW_METADATA_V1)
+    elseif (ARROW_NUMERIC_VERSION LESS 300)
+      ADD_DEFINITIONS(-DARROW_METADATA_V2)
+    elseif (ARROW_NUMERIC_VERSION LESS 800)
+      ADD_DEFINITIONS(-DARROW_METADATA_V3)
+    else()
+      ADD_DEFINITIONS(-DARROW_METADATA_V4)
+    endif()
 endif ()
 
 mark_as_advanced(

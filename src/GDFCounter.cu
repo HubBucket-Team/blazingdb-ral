@@ -7,6 +7,7 @@
 
  #include "GDFCounter.cuh"
  #include <iostream>
+#include "cuDF/Allocator.h"
 
 GDFRefCounter* GDFRefCounter::Instance=0;
 
@@ -58,11 +59,18 @@ void GDFRefCounter::decrement(gdf_column* col_ptr)
             if(map[map_key]==0){
                 map.erase(map_key);
 
-                cudaFree(map_key->data);
-                if(map_key->valid != nullptr){
-                	cudaFree(map_key->valid);
+                try {
+                    cuDF::Allocator::deallocate(map_key->data);
+                    if (map_key->valid != nullptr) {
+                        cuDF::Allocator::deallocate(map_key->valid);
+                    }
+                    delete map_key;
                 }
-                delete map_key;
+                catch (const cuDF::Allocator::Exception& exception) {
+                    std::cerr << exception.what() << std::endl;
+                    cudaDeviceReset();
+                    exit(EXIT_FAILURE);
+                }
             }
         }
     }

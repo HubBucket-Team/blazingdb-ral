@@ -6,7 +6,7 @@
  */
 
 #include "GDFColumn.cuh"
-
+#include "cuDF/Allocator.h"
 #include <gdf/utils.h>
 
 gdf_column_cpp::gdf_column_cpp()
@@ -86,12 +86,21 @@ gdf_column_cpp gdf_column_cpp::clone(std::string name)  // TODO clone needs to r
 	char * data_dev = nullptr;
 	char * valid_dev = nullptr;
 
-	CheckCudaErrors(cudaMalloc(&data_dev, this->allocated_size_data));
-	CheckCudaErrors(cudaMemcpy(data_dev, this->column->data, this->allocated_size_data, cudaMemcpyDeviceToDevice));
+    try {
+        cuDF::Allocator::allocate((void**)&data_dev, allocated_size_data);
+        if (column->valid != nullptr) {
+            cuDF::Allocator::allocate((void**)&valid_dev, allocated_size_valid);
+        }
+    }
+    catch (const cuDF::Allocator::Exception& exception) {
+        std::cerr << exception.what() << std::endl;
+        cudaDeviceReset();
+        exit(EXIT_FAILURE);
+    }
 
+    CheckCudaErrors(cudaMemcpy(data_dev, this->column->data, this->allocated_size_data, cudaMemcpyDeviceToDevice));
 	// print_gdf_column(this->get_gdf_column());
     if (this->column->valid != nullptr) {
-    	CheckCudaErrors(cudaMalloc(&valid_dev, this->allocated_size_valid));
 	    CheckCudaErrors(cudaMemcpy(valid_dev, this->column->valid, this->allocated_size_valid, cudaMemcpyDeviceToDevice));
     }
 
@@ -161,7 +170,14 @@ gdf_valid_type * gdf_column_cpp::allocate_valid(){
     gdf_valid_type * valid_device;
 	this->allocated_size_valid = ((((num_values + 7 ) / 8) + 63 ) / 64) * 64; //so allocations are supposed to be 64byte aligned
 
-    CheckCudaErrors(cudaMalloc(&valid_device, allocated_size_valid));
+    try {
+        cuDF::Allocator::allocate((void**)&valid_device, allocated_size_valid);
+    }
+    catch (const cuDF::Allocator::Exception& exception) {
+        std::cerr << exception.what() << std::endl;
+        cudaDeviceReset();
+        exit(EXIT_FAILURE);
+    }
 
     CheckCudaErrors(cudaMemset(valid_device, (gdf_valid_type)255, allocated_size_valid)); //assume all relevant bits are set to on
 	return valid_device;
@@ -194,7 +210,15 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
 
     gdf_valid_type * valid_device = allocate_valid();
     this->allocated_size_data = (((width_per_value * num_values) + 63) /64) * 64;
-    CheckCudaErrors(cudaMalloc(&data, this->allocated_size_data));
+
+    try {
+        cuDF::Allocator::allocate((void**)&data, allocated_size_data);
+    }
+    catch (const cuDF::Allocator::Exception& exception) {
+        std::cerr << exception.what() << std::endl;
+        cudaDeviceReset();
+        exit(EXIT_FAILURE);
+    }
 
     gdf_column_view(this->column, (void *) data, valid_device, num_values, type);
     this->set_name(column_name);

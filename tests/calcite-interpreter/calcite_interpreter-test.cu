@@ -12,8 +12,6 @@
 #include <GDFCounter.cuh>
 #include <Utils.cuh>
 
-
-#include <gdf/gdf.h>
 //#include <sqls_rtti_comp.hpp> //TODO build fails here it seems we need to export this header from libgdf
 
 class TestEnvironment : public testing::Environment {

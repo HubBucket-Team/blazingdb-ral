@@ -30,3 +30,8 @@ set(test_sources
 )
 
 configure_test(test-integration-aggregation-without-group-by "${test_sources}")
+
+target_link_libraries(test-integration-aggregation-without-group-by
+                      ${cuDF_adapter_testing_library}
+                      ${cuDF_adapter_testing_dependencies}
+)

@@ -18,7 +18,7 @@
 #ifndef GDF_TESTS_BINARY_OPERATION_UTIL_VECTOR_H
 #define GDF_TESTS_BINARY_OPERATION_UTIL_VECTOR_H
 
-#include "gdf/gdf.h"
+#include "gdf_wrapper/gdf_wrapper.cuh"
 #include "types.h"
 #include "field.h"
 

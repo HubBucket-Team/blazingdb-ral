@@ -55,7 +55,7 @@ Notes:
 - NVSTRINGS_HOME and LIBGDF_HOME always got together.
 - BLAZINGDB_PROTOCOL_HOME is optional (if you no pass this arg then the project will download a copy of blazingdb-protocol)
 - If you pass BLAZINGDB_PROTOCOL_HOME but not NVSTRINGS_HOME and LIBGDF_HOME, then the project will download a copy of nvstrings lib and cudf/libgdf.
-- If don't want to use conda and need the nvstrings library, just download https://anaconda.org/rapidsai/nvstrings/0.0.0.dev/download/linux-64/nvstrings-0.0.0.dev-cuda9.2_py35_0.tar.bz2 and uncompress the folder, this folder is the NVSTRINGS_HOME.
+- If don't want to use conda and need the nvstrings library, just download https://anaconda.org/nvidia/nvstrings/0.0.3/download/linux-64/nvstrings-0.0.3-cuda9.2_py35_0.tar.bz2 and uncompress the folder, this folder is the NVSTRINGS_HOME.
 
 # Integration Tests
 

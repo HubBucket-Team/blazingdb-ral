@@ -12,8 +12,6 @@
 #include <GDFCounter.cuh>
 #include <Utils.cuh>
 
-#include <gdf/gdf.h>
-
 #include <gdf/library/table_group.h>
 
 class TestEnvironment : public testing::Environment {

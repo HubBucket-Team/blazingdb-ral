@@ -64,3 +64,6 @@ google-flatbuffers_ep-prefix
 \.idea/
 
 resources/tpch-generator/__pycache__/
+
+#Qt Creator files
+CMakeLists.txt.user

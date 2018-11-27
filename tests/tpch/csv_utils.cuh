@@ -11,8 +11,6 @@
 #include <GDFCounter.cuh>
 #include "gdf/library/types.h"
 
-#include <gdf/cffi/functions.h>
-#include <gdf/gdf.h>
 using namespace gdf::library;
 
 

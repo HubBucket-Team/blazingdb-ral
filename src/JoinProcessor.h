@@ -8,8 +8,7 @@
 #ifndef JOINPROCESSOR_H_
 #define JOINPROCESSOR_H_
 
-
-#include <gdf/gdf.h>
+#include "gdf_wrapper/gdf_wrapper.cuh"
 #include "DataFrame.h"
 
 gdf_error evaluate_join(std::string condition,

@@ -62,6 +62,11 @@ include_directories(
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation)
 get_directory_property(binary_operation_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation DEFINITION source_files)
 
+## cuDF adapter source files
+add_subdirectory(${CMAKE_SOURCE_DIR}/src/cuDF)
+get_directory_property(cudf_adapter_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/cuDF DEFINITION source_files)
+
+## Target source files
 set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteInterpreter.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/ColumnManipulation.cu
@@ -75,6 +80,7 @@ set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/GDFCounter.cu
               ${CMAKE_CURRENT_SOURCE_DIR}/src/GDFColumn.cu
               ${CMAKE_CURRENT_SOURCE_DIR}/src/testing-libgdf.cu
+              ${cudf_adapter_source_files}
               ${binary_operation_source_files})
 
 cuda_add_executable(testing-libgdf ${SRC_FILES})

@@ -25,3 +25,8 @@ set(logical_filter_test_SRCS
 )
 
 configure_test(logical-filter-test "${logical_filter_test_SRCS}")
+
+target_link_libraries(logical-filter-test
+                      ${cuDF_adapter_testing_library}
+                      ${cuDF_adapter_testing_dependencies}
+)

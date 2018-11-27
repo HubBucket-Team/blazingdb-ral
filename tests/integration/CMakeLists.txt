@@ -31,4 +31,9 @@ set(integration_test_SRCS
 
 configure_test(integration-test "${integration_test_SRCS}")
 
+target_link_libraries(integration-test
+                      ${cuDF_adapter_testing_library}
+                      ${cuDF_adapter_testing_dependencies}
+)
+
 add_subdirectory(aggregation-without-group-by)

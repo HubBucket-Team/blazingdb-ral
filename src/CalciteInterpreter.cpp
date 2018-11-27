@@ -14,6 +14,7 @@
 #include "CalciteExpressionParsing.h"
 #include "CodeTimer.h"
 #include "Traits/RuntimeTraits.h"
+#include "cuDF/Allocator.h"
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 const std::string LOGICAL_UNION_TEXT = "LogicalUnion";
@@ -748,13 +749,19 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 	size_t num_sort_columns = count_string_occurrence(combined_expression,"sort");
 
 	void** d_cols;
-
+	int * d_types;
 	std::vector<gdf_column_cpp> output_columns;
 
+    try {
+        cuDF::Allocator::allocate((void**)&d_cols, sizeof(void*) * num_sort_columns);
+        cuDF::Allocator::allocate((void**)&d_types, sizeof(int) * num_sort_columns);
+    }
+    catch (const cuDF::Allocator::Exception& exception) {
+        std::cerr << exception.what() << std::endl;
+        cudaDeviceReset();
+        exit(EXIT_FAILURE);
+    }
 
-	cudaMalloc((void **) &d_cols,sizeof(void*) * num_sort_columns);
-	int * d_types;
-	cudaMalloc((void **)&d_types,sizeof(int) * num_sort_columns);
 	gdf_column * cols = new gdf_column[num_sort_columns];
 	std::vector<size_t> sort_column_indices(num_sort_columns);
 	gdf_column_cpp index_col;
@@ -787,7 +794,15 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 
 	size_t size_in_chars = ((sizeof(gdf_valid_type) * num_sort_columns )+ 7) / 8;
 	gdf_valid_type * asc_desc_bitmask;
-	cudaMalloc((void **) &asc_desc_bitmask,size_in_chars);
+
+    try {
+        cuDF::Allocator::allocate((void**)&asc_desc_bitmask, size_in_chars);
+    }
+    catch (const cuDF::Allocator::Exception& exception) {
+        std::cerr << exception.what() << std::endl;
+        cudaDeviceReset();
+        exit(EXIT_FAILURE);
+    }
 
 	//trying all ascending for now
 	cudaMemset	(	(char *) asc_desc_bitmask,255,size_in_chars	);
@@ -806,8 +821,15 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
                                  d_types,
                                  (size_t*)index_col.get_gdf_column()->data);
 
-	cudaFree(d_cols);
-	cudaFree(d_types);
+    try {
+        cuDF::Allocator::deallocate(d_cols);
+        cuDF::Allocator::deallocate(d_types);
+    }
+    catch (const cuDF::Allocator::Exception& exception) {
+        std::cerr << exception.what() << std::endl;
+        cudaDeviceReset();
+        exit(EXIT_FAILURE);
+    }
 
 	int widest_column = 0;
 	for(int i = 0; i < input.get_width();i++){

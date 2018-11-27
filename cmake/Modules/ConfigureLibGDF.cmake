@@ -6,6 +6,7 @@
 # BEGIN macros
 
 macro(CONFIGURE_GPU_LIBGDF_EXTERNAL_PROJECT)
+    set(ENV{CUDACXX} ${CUDA_SDK_ROOT_DIR}/bin/nvcc)
     set(ENV{NVSTRINGS_ROOT} ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-download/nvstrings-prefix/src/nvstrings/)
     set(NVSTRINGS_HOME $ENV{NVSTRINGS_ROOT})
 
@@ -63,7 +64,8 @@ if(NOT LIBGDF_FOUND)
 endif()
 
 message(STATUS "libgdf found in ${LIBGDF_ROOT}")
-include_directories(${LIBGDF_INCLUDEDIR})
+
+include_directories(${LIBGDF_INCLUDEDIR} ${LIBGDF_INCLUDE_DIR})
 # TODO percy seems cmake bug: we cannot define target dirs per cuda target
 # ... see if works in future cmake versions
 link_directories(${LIBGDF_LIBDIR})

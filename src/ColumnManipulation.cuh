@@ -8,7 +8,7 @@
 #ifndef COLUMNMANIPULATION_CUH_
 #define COLUMNMANIPULATION_CUH_
 
-#include <gdf/gdf.h>
+#include "gdf_wrapper/gdf_wrapper.cuh"
 
 //TODO: in theory  we want to get rid of this
 // we should be using permutation iterators when we can

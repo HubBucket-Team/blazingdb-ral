@@ -16,7 +16,7 @@
 #include "Types.h"
 #include <cuda_runtime.h>
 
-#include "gdf/gdf.h"
+#include "gdf_wrapper/gdf_wrapper.cuh"
 
 #include <tuple>
 #include <blazingdb/protocol/api.h>

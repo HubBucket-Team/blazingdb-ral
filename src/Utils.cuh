@@ -1,8 +1,8 @@
 #ifndef UTILS_CUH_
 #define UTILS_CUH_
 
-#include <gdf/gdf.h>
-#include <gdf/cffi/functions.h>
+#include "gdf_wrapper/gdf_wrapper.cuh"
+
 #include <iostream>
 #include <vector>
 #include <thrust/functional.h>

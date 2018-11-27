@@ -7,7 +7,6 @@
 #include <string>
 #include "DataFrame.h"
 #include "Types.h"
-#include <gdf/gdf.h>
 
 blazing_frame evalute_split_query(
 		std::vector<std::vector<gdf_column_cpp> > input_tables,

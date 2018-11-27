@@ -8,7 +8,7 @@
 #ifndef GDFCOLUMN_H_
 #define GDFCOLUMN_H_
 
-#include <gdf/gdf.h>
+#include "gdf_wrapper/gdf_wrapper.cuh"
 #include "GDFCounter.cuh"
 #include "Utils.cuh"
 #include <string>

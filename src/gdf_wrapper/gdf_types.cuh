@@ -1,7 +1,7 @@
 #ifndef _BZ_OPS_H_
 #define _BZ_OPS_H_
 
-#include <gdf/gdf.h>
+#include <cudf.h>
 
 /**
  * @enum gdf_binary_operator

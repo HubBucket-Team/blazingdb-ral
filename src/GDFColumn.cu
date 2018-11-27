@@ -6,8 +6,8 @@
  */
 
 #include "GDFColumn.cuh"
+#include "gdf_wrapper/gdf_wrapper.cuh"
 #include "cuDF/Allocator.h"
-#include <gdf/utils.h>
 
 gdf_column_cpp::gdf_column_cpp()
 {

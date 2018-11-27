@@ -1,7 +1,7 @@
 #ifndef TRAITS_RUNTIME_TRAITS
 #define TRAITS_RUNTIME_TRAITS
 
-#include <gdf/gdf.h>
+#include "gdf_wrapper/gdf_wrapper.cuh"
 
 namespace Ral {
 namespace Traits {

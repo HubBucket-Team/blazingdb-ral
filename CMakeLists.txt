@@ -33,21 +33,23 @@ include(ConfigureBlazingIO)
 
 
 # Locate the Apache Arrow package (Requires that you use ConfigureArrow module)
-message(STATUS "ARROW_ROOT: " ${ARROW_ROOT})
+message(STATUS "ARROW_HOME env var: $ENV{ARROW_HOME}")
 find_package(Arrow REQUIRED)
 set_package_properties(Arrow PROPERTIES TYPE REQUIRED
     PURPOSE "Apache Arrow is a cross-language development platform for in-memory data."
     URL "https://github.com/apache/arrow")
 
 if (ARROW_FOUND)
-    message(STATUS "Apache Arrow found in ${ARROW_ROOT}")
+    message(STATUS "Apache Arrow found in $ENV{ARROW_HOME}")
 else()
     message(FATAL_ERROR "Apache Arrow not found, please check your settings.")
 endif()
 
+message(STATUS "ARROW_INCLUDE_DIR env var: ${ARROW_INCLUDE_DIR}")
+
 include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
-    "${ARROW_INCLUDEDIR}"
+    "${ARROW_INCLUDE_DIR}"
 )
 
 # BEGIN MAIN #
@@ -77,7 +79,7 @@ set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
 
 cuda_add_executable(testing-libgdf ${SRC_FILES})
 
-target_link_libraries(testing-libgdf NVStrings gdf blazingdb-io rmm Google::Flatbuffers ${BLAZINGDB_PROTOCOL_STATIC_LIB} ${CUDA_CUDA_LIBRARY} ${CUDA_NVRTC_LIBRARY} ${CUDA_NVTX_LIBRARY})
+target_link_libraries(testing-libgdf NVStrings gdf blazingdb-io  "${ARROW_STATIC_LIB}" rmm Google::Flatbuffers ${BLAZINGDB_PROTOCOL_STATIC_LIB} ${CUDA_CUDA_LIBRARY} ${CUDA_NVRTC_LIBRARY} ${CUDA_NVTX_LIBRARY})
 
 # Print the project summary
 #TODO cmake bug, it says blazingdb-protocol was not deteected vut everything seems

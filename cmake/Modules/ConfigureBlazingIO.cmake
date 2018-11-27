@@ -29,7 +29,7 @@ set_package_properties(blazingdb-io PROPERTIES TYPE REQUIRED
     PURPOSE "blazingdb-io is a Cpp library for implementing System File IO."
     URL "")
 
-if(NOT LIBGDF_FOUND)
+if(NOT BLAZINGIO_HOME)
     message(FATAL_ERROR "blazingdb-io not found, please check your settings.")
 endif()
 

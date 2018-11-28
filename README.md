@@ -47,6 +47,7 @@ cmake -DCMAKE_BUILD_TYPE=Debug \
       -DNVSTRINGS_HOME=/path/to/nvstrings/home/install/ \
       -DLIBGDF_HOME=/path/to/cudf-libgdf/home/install/ \
       -DBLAZINGDB_PROTOCOL_HOME=/path/to/blazingdb-protocol-cpp/home/install/ \
+      -DCMAKE_INSTALL_PREFIX=/path/to/blazingdb-io/build/ ..
       ..
 make
 ```

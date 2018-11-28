@@ -26,6 +26,12 @@ git submodule update --init --recursive
 ```
 
 # Build
+Before build always update the gitsumbdule
+```bash
+cd blazingdb-ral
+git submodule update --init --recursive
+```
+
 There are two ways to build the RAL component (for both cases you don't need to have conda in your system).
 
 The first one will automagically download all the RAL dependencies as part of the cmake process.

@@ -35,22 +35,24 @@ using namespace blazingdb::protocol;
 #include <FileSystem/FileSystemRepository.h>
 #include <FileSystem/FileSystemCommandParser.h>
 #include <FileSystem/FileSystemManager.h>
+#include <blazingdb/protocol/message/io/file_system.h>
 
-bool loadFileSystems(std::shared_ptr<FileSystemManager> fileSystemManager) {
-	// const BlazingConfig* config = BlazingConfig::getInstance();
-	// if (config->getFSNamespacesFile().toString() != ""){
-	// 	const FileSystemRepository fileSystemRepository(config->getFSNamespacesFile().getPath(), true);
-	// 	const std::vector<FileSystemEntity> fileSystemEntities = fileSystemRepository.findAll();
-	// 	const bool ok = fileSystemManager->registerFileSystems(std::move(fileSystemEntities));
-	// 	return ok;
-	// } else {
-	// 	return true;
-	// }
-  return false;
-}  
 
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);
+
+static result_pair  registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
+  ZeroMessage response{};
+  std::cout << "registerFileSystem: " << accessToken << std::endl;
+  return std::make_pair(Status_Success, response.getBufferData());
+}
+
+static result_pair  deregisterFileSystem(uint64_t accessToken, Buffer&& buffer)  {
+  ZeroMessage response{};
+
+  std::cout << "deregisterFileSystem: " << accessToken << std::endl;
+  return std::make_pair(Status_Success, response.getBufferData());
+}
 
 static result_pair closeConnectionService(uint64_t accessToken, Buffer&& requestPayloadBuffer) {
   std::cout << "accessToken: " << accessToken << std::endl;
@@ -197,6 +199,9 @@ int main(void)
   services.insert(std::make_pair(interpreter::MessageType_CloseConnection, &closeConnectionService));
   services.insert(std::make_pair(interpreter::MessageType_GetResult, &getResultService));
   services.insert(std::make_pair(interpreter::MessageType_FreeResult, &freeResultService));
+
+  services.insert(std::make_pair(interpreter::MessageType_RegisterFileSystem, &registerFileSystem));
+  services.insert(std::make_pair(interpreter::MessageType_DeregisterFileSystem, &deregisterFileSystem));
 
   auto interpreterServices = [&services](const blazingdb::protocol::Buffer &requestPayloadBuffer) -> blazingdb::protocol::Buffer {
     RequestMessage request{requestPayloadBuffer.data()};

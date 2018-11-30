@@ -29,10 +29,13 @@ enable_testing()
 ## Helper libraries for TESTING
 # Static library (libcuDF_adapter_testing.a) - cuDF folder
 include(${CMAKE_SOURCE_DIR}/src/cuDF/CMakeLists.txt)
+include(ConfigureArrow)
+include(ConfigureBlazingIO)
 
+message(STATUS "static lib is ${BLAZINGIO_STATIC_LIB}")
 set(cuDF_adapter_testing_files ${source_files})
 set(cuDF_adapter_testing_library "cuDF_adapter_testing")
-set(cuDF_adapter_testing_dependencies "rmm")
+set(cuDF_adapter_testing_dependencies "rmm ${BLAZINGIO_STATIC_LIB}")
 
 add_library(${cuDF_adapter_testing_library} STATIC ${cuDF_adapter_testing_files})
 

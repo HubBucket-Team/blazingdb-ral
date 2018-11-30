@@ -10,7 +10,8 @@
 
 #include <FileSystem/Uri.h>
 
-
+#include <vector>
+#include "GDFColumn.cuh"
 
 namespace ral {
 namespace io {

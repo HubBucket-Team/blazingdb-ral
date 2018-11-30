@@ -57,6 +57,7 @@ include_directories(
     ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/thirdparty/jitify
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper)
+    
 
 ## Binary Operations
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation)
@@ -67,7 +68,11 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/src/cuDF)
 get_directory_property(cudf_adapter_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/cuDF DEFINITION source_files)
 
 ## Target source files
-set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
+set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
+			  ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_parser/ParquetParser.cpp
+			  ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_parser/CSVParser.cpp
+			  ${CMAKE_CURRENT_SOURCE_DIR}/src/io/DataLoader.cpp
+			  ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteInterpreter.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/ColumnManipulation.cu
               ${CMAKE_CURRENT_SOURCE_DIR}/src/ResultSetRepository.cpp

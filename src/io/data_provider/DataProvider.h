@@ -10,6 +10,7 @@
 
 #include <arrow/io/interfaces.h>
 #include <memory>
+#include <string>
 
 namespace ral {
 namespace io {
@@ -18,7 +19,7 @@ namespace io {
  */
 class data_provider {
 public:
-	virtual data_provider() = 0;
+
 	virtual ~data_provider();
 	/**
 	 * tells us if this provider can generate more arrow::io::RandomAccessFile instances
@@ -31,7 +32,9 @@ public:
 	/**
 	 * gets any errors that occured while opening the files
 	 */
-	virtual std::vector<std::string> get_errors();
+	virtual std::vector<std::string> get_errors() = 0;
+	virtual std::string get_current_user_readable_file_handle() = 0;
+private:
 
 
 };

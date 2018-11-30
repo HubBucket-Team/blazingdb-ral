@@ -11,6 +11,7 @@
 #include "DataProvider.h"
 #include <vector>
 #include <arrow/io/interfaces.h>
+#include "FileSystem/Uri.h"
 #include <memory>
 
 
@@ -33,6 +34,14 @@ public:
 	 * gets a randomaccessfile to the uri at file_uris[current_file] and advances current_file by 1
 	 */
 	std::shared_ptr<arrow::io::RandomAccessFile> get_next();
+	/**
+	 * returns any errors that were encountered when opening arrow::io::RandomAccessFile
+	 */
+	std::vector<std::string> get_errors();
+	/**
+	 * returns a string that the user should be able to use to identify which file is being referred to in error messages
+	 */
+	std::string get_current_user_readable_file_handle();
 private:
 	/**
 	 * stores the list of uris that will be used by the provider
@@ -41,11 +50,11 @@ private:
 	/**
 	 * stores an index to the current file being used
 	 */
-	size_t current_file = 0;
+	size_t current_file;
 	/**
 	 * stores the files that were opened by the provider to be closed when it goes out of scope
 	 */
-	std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > opened_files = {};
+	std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > opened_files;
 	//TODO: we should really be either handling exceptions up the call stack or
 	//storing something more elegant than just a string with an error message
 	/**

@@ -28,7 +28,7 @@
 
 using namespace blazingdb::protocol;
 
-#include "Util/StringUtil.h"
+#include <Util/StringUtil.h>
 
 #include <FileSystem/HadoopFileSystem.h>
 #include <FileSystem/S3FileSystem.h>

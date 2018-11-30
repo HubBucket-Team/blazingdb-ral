@@ -33,8 +33,11 @@ if(NOT BLAZINGIO_HOME)
     message(FATAL_ERROR "blazingdb-io not found, please check your settings.")
 endif()
 
-message(STATUS "blazingdb-io found in ${BLAZINGIO_ROOT}")
-include_directories("${LIB_BLAZINGIO_INCLUDEDIR}")
+message(STATUS "blazingdb-io found in ${BLAZINGIO_ROOT} , ${LIB_BLAZINGIO_INCLUDEDIR}, ${LIB_BLAZINGIO_LIBDIR}")
+
+include_directories(${LIB_BLAZINGIO_INCLUDEDIR} ${BLAZINGDB_PROTOCOL_INCLUDE_DIR})
+
+
 # TODO percy seems cmake bug: we cannot define target dirs per cuda target
 # ... see if works in future cmake versions
 link_directories("${LIB_BLAZINGIO_LIBDIR}")

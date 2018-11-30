@@ -1,5 +1,5 @@
 #include "CalciteInterpreter.h"
-#include "Util/StringUtil.h"
+#include <Util/StringUtil.h>
 
 #include <algorithm>
 #include <thread>

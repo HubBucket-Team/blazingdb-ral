@@ -14,8 +14,8 @@
 namespace ral {
 namespace io {
 
-uri_data_provider::uri_data_provider(std::vector<Uri> uris):
-		file_uris(uris), opened_files({}), current_file(0), errors({}) {
+uri_data_provider::uri_data_provider(std::vector<Uri> uris)
+	: data_provider(),  file_uris(uris), opened_files({}), current_file(0), errors({}) {
 	// thanks to c++11 we no longer have anything interesting to do here :)
 
 }

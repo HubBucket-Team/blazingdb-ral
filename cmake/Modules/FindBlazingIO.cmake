@@ -42,7 +42,7 @@ find_path(LIB_BLAZINGIO_INCLUDE_DIR FileSystem/Path.h
 #)
 
 #TODO percy change to libblazing_io.a once cudf supports static build
-find_library(BLAZINGIO_STATIC_LIB NAMES libblazing-io-lib.a
+find_library(BLAZINGIO_STATIC_LIB NAMES libblazing-io-lib.so
     PATHS ${LIB_BLAZINGIO_SEARCH_LIB_PATH}
     NO_DEFAULT_PATH 
     DOC "Path to libblazing_io static library"
@@ -57,7 +57,7 @@ else()
     set(LIB_BLAZINGIO_INCLUDEDIR ${BLAZINGIO_ROOT}/include/)
     set(LIB_BLAZINGIO_LIBDIR ${BLAZINGIO_ROOT}/lib) # TODO percy make this part cross platform
     set(LIB_BLAZINGIO_FOUND TRUE)
-    add_library(blazingdb-io STATIC IMPORTED)
+    add_library(blazingdb-io SHARED IMPORTED)
     set_target_properties(blazingdb-io PROPERTIES IMPORTED_LOCATION "${BLAZINGIO_STATIC_LIB}")
 endif ()
 

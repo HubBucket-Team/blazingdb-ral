@@ -19,8 +19,6 @@ namespace io {
  */
 class data_provider {
 public:
-
-	virtual ~data_provider();
 	/**
 	 * tells us if this provider can generate more arrow::io::RandomAccessFile instances
 	 */

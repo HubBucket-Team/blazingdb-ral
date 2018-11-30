@@ -3,10 +3,13 @@
 #include <iomanip>
 #include <regex>
 
+#include <FileSystem/S3FileSystem.h>
+
+#include <Util/StringUtil.h>
+
 #include "CalciteExpressionParsing.h"
 #include "DataFrame.h"
 
-#include <Util/StringUtil.h>
 
 bool is_type_signed(gdf_dtype type){
 	return (GDF_INT8 == type ||

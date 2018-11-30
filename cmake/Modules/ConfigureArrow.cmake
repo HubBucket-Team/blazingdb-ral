@@ -15,31 +15,45 @@
 # limitations under the License.
 #=============================================================================
 
-if (NOT ARROW_VERSION)
-    set(ARROW_VERSION "apache-arrow-0.11.1")
+
+
+macro(CONFIGURE_LIB_BLAZINGIO_EXTERNAL_PROJECT)
+    if (NOT ARROW_VERSION)
+        set(ARROW_VERSION "apache-arrow-0.11.1")
+    endif()
+
+    # Download and unpack arrow at configure time
+    configure_file(${CMAKE_SOURCE_DIR}/cmake/Templates/Arrow.CMakeLists.txt.cmake ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-download/CMakeLists.txt)
+
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} -F "${CMAKE_GENERATOR}" .
+        RESULT_VARIABLE result
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-download/
+    )
+
+    if(result)
+        message(FATAL_ERROR "CMake step for Arrow failed: ${result}")
+    endif()
+
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} --build .
+        RESULT_VARIABLE result
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-download)
+
+    if(result)
+        message(FATAL_ERROR "Build step for Arrow failed: ${result}")
+    endif()
+    
+
+    set(ENV{ARROW_HOME} ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-install/) 
+endmacro()
+
+if (ARROW_HOME)
+    message(STATUS "ARROW_HOME defined, it will use vendor version from ${ARROW_HOME}")
+    set(ARROW_ROOT "${ARROW_HOME}")
+    set(ENV{ARROW_HOME} ${ARROW_ROOT}) 
+
+else()
+    message(STATUS "ARROW_HOME not defined, it will be built from sources")
+    CONFIGURE_LIB_ARROW_EXTERNAL_PROJECT()
 endif()
-
-# Download and unpack arrow at configure time
-configure_file(${CMAKE_SOURCE_DIR}/cmake/Templates/Arrow.CMakeLists.txt.cmake ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-download/CMakeLists.txt)
-
-execute_process(
-    COMMAND ${CMAKE_COMMAND} -F "${CMAKE_GENERATOR}" .
-    RESULT_VARIABLE result
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-download/
-)
-
-if(result)
-    message(FATAL_ERROR "CMake step for Arrow failed: ${result}")
-endif()
-
-execute_process(
-    COMMAND ${CMAKE_COMMAND} --build .
-    RESULT_VARIABLE result
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-download)
-
-if(result)
-    message(FATAL_ERROR "Build step for Arrow failed: ${result}")
-endif()
- 
-
-set(ENV{ARROW_HOME} ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-install/)

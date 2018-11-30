@@ -425,7 +425,7 @@ static void print_gdf_column(gdf_column const * the_column)
 template <typename HostDataType>
 void print_column(gdf_column * column){
 	// @ todo : fix print column 
-	return ;
+
 
 	HostDataType * host_data_out = new HostDataType[column->size];
 	char * host_valid_out;

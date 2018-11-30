@@ -5,7 +5,7 @@
 
 #include "CalciteExpressionParsing.h"
 #include "DataFrame.h"
-#include <FileSystem/FileSystemManager.h>
+
 #include <Util/StringUtil.h>
 
 bool is_type_signed(gdf_dtype type){

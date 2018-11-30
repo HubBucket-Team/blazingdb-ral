@@ -78,7 +78,6 @@ set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_provider/UriDataProvider.c
               ${CMAKE_CURRENT_SOURCE_DIR}/src/ResultSetRepository.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/JoinProcessor.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/LogicalFilter.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/StringUtil.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/QueryState.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/CodeTimer.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/Utils.cu

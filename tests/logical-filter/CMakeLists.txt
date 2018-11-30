@@ -15,7 +15,6 @@ set(source_files
 
 set(logical_filter_test_SRCS
     ${CMAKE_SOURCE_DIR}/src/Utils.cu
-    ${CMAKE_SOURCE_DIR}/src/StringUtil.cpp
     ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
     ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
     ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp

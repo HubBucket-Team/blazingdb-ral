@@ -7,7 +7,7 @@
 #include <CalciteExpressionParsing.h>
 #include <CalciteInterpreter.h>
 #include <DataFrame.h>
-#include <StringUtil.h>
+#include <Util/StringUtil.h>
 #include <gtest/gtest.h>
 #include <GDFColumn.cuh>
 #include <GDFCounter.cuh>

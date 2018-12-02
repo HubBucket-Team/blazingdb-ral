@@ -30,10 +30,10 @@ include(CTest)
 include(ConfigureCUDA)
 include(ConfigureFlatBuffers)
 include(ConfigureArrow)
-#include(ConfigureLibGDF)
-#include(ConfigureBlazingDBProtocol)
+include(ConfigureLibGDF)
+include(ConfigureBlazingDBProtocol)
 include(ConfigureBlazingDBIO)
-#include(ConfigureGoogleTest)
+include(ConfigureGoogleTest)
 
 # BEGIN MAIN #
 include_directories(   

@@ -31,9 +31,9 @@ include(ConfigureCUDA)
 include(ConfigureFlatBuffers)
 include(ConfigureArrow)
 include(ConfigureLibGDF)
-#include(ConfigureBlazingDBProtocol)
-#include(ConfigureBlazingIO)
-#include(ConfigureGoogleTest)
+include(ConfigureBlazingDBProtocol)
+include(ConfigureBlazingIO)
+include(ConfigureGoogleTest)
 
 # BEGIN MAIN #
 include_directories(   

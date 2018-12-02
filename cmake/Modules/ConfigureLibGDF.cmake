@@ -10,6 +10,8 @@ macro(CONFIGURE_GPU_LIBGDF_EXTERNAL_PROJECT)
     set(ENV{NVSTRINGS_ROOT} ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-download/nvstrings-prefix/src/nvstrings/)
     set(NVSTRINGS_HOME $ENV{NVSTRINGS_ROOT})
 
+    # TODO pass ARROW_INSTALL_DIR when cudf support vendored arrow builds
+
     # Download and unpack libgdf at configure time
     configure_file(${CMAKE_SOURCE_DIR}/cmake/Templates/LibGDF.CMakeLists.txt.cmake ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-download/CMakeLists.txt)
 

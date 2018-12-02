@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.11)
 
 project(testing-cmake-libgdf)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 message(STATUS "Using C++ standard: c++${CMAKE_CXX_STANDARD}")
@@ -28,32 +28,12 @@ include(CTest)
 # NOTE Do not change the inclusion order
 # Configure dependencies
 include(ConfigureCUDA)
-include(ConfigureLibGDF)
 include(ConfigureFlatBuffers)
-include(ConfigureBlazingDBProtocol)
 include(ConfigureArrow)
-include(ConfigureGoogleTest)
+include(ConfigureLibGDF)
+include(ConfigureBlazingDBProtocol)
 include(ConfigureBlazingIO)
- 
-# Locate the Apache Arrow package (Requires that you use ConfigureArrow module)
-message(STATUS "ARROW_HOME env var: $ENV{ARROW_HOME}")
-find_package(Arrow REQUIRED)
-set_package_properties(Arrow PROPERTIES TYPE REQUIRED
-    PURPOSE "Apache Arrow is a cross-language development platform for in-memory data."
-    URL "https://github.com/apache/arrow")
-
-if (ARROW_FOUND)
-    message(STATUS "Apache Arrow found in $ENV{ARROW_HOME}")
-else()
-    message(FATAL_ERROR "Apache Arrow not found, please check your settings.")
-endif()
-
-message(STATUS "ARROW_INCLUDE_DIR env var: ${ARROW_INCLUDE_DIR}")
-message(STATUS "include dir blazing-io ${LIB_BLAZINGIO_INCLUDEDIR}")
-
-include_directories(
-    "${ARROW_INCLUDE_DIR}"
-)
+include(ConfigureGoogleTest)
 
 # BEGIN MAIN #
 include_directories(   
@@ -62,7 +42,6 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/thirdparty/jitify
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper)
-    
 
 ## Binary Operations
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation)
@@ -74,9 +53,9 @@ get_directory_property(cudf_adapter_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/s
 
 ## Target source files
 set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
-			  ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_parser/ParquetParser.cpp
-			  ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_parser/CSVParser.cpp
-			  ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
+              ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_parser/ParquetParser.cpp
+              ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_parser/CSVParser.cpp
+              ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteInterpreter.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/ColumnManipulation.cu
               ${CMAKE_CURRENT_SOURCE_DIR}/src/ResultSetRepository.cpp
@@ -91,13 +70,11 @@ set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_provider/UriDataProvider.c
               ${cudf_adapter_source_files}
               ${binary_operation_source_files})
 
-message (STATUS   "lib blazing-io ${BLAZINGIO_STATIC_LIB}")
-
 cuda_add_executable(testing-libgdf ${SRC_FILES})
-target_link_libraries(testing-libgdf NVStrings gdf Boost::filesystem "${ARROW_STATIC_LIB}" blazingdb-io rmm Google::Flatbuffers ${BLAZINGDB_PROTOCOL_STATIC_LIB} ${CUDA_CUDA_LIBRARY} ${CUDA_NVRTC_LIBRARY} ${CUDA_NVTX_LIBRARY})
+target_link_libraries(testing-libgdf NVStrings "${ARROW_STATIC_LIB}" blazingdb-io rmm Google::Flatbuffers ${BLAZINGDB_PROTOCOL_STATIC_LIB} ${CUDA_CUDA_LIBRARY} ${CUDA_NVRTC_LIBRARY} ${CUDA_NVTX_LIBRARY})
 
 # Print the project summary
-#TODO cmake bug, it says blazingdb-protocol was not deteected vut everything seems
+#TODO cmake bug, it says blazingdb-protocol was not deteected but everything seems
 #fine (cmake test fail with link issues with pthreads_create)
 #feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)
 

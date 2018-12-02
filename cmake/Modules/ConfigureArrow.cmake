@@ -18,7 +18,7 @@
 # BEGIN macros
 
 macro(CONFIGURE_ARROW_EXTERNAL_PROJECT)
-    set(ARROW_ROOT ${CMAKE_BINARY_DIR}/arrow)
+    set(ENV{FLATBUFFERS_HOME} ${FLATBUFFERS_INSTALL_DIR})
 
     #NOTE
     # libcudf.so` is now built with the old ABI `-D_GLIBCXX_USE_CXX11_ABI=0`
@@ -35,7 +35,7 @@ macro(CONFIGURE_ARROW_EXTERNAL_PROJECT)
                          " -DARROW_BUILD_TESTS=OFF"
                          " -DARROW_TEST_MEMCHECK=OFF"
                          " -DARROW_BUILD_BENCHMARKS=OFF"
-                         " -DARROW_IPC=OFF" # we don't need ipc for blazingdb-io
+                         " -DARROW_IPC=ON" # need ipc for blazingdb-ral (because cudf)
                          " -DARROW_COMPUTE=OFF"
                          " -DARROW_GPU=OFF"
                          " -DARROW_JEMALLOC=OFF"

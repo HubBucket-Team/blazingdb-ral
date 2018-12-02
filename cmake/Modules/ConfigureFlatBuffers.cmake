@@ -34,18 +34,18 @@ endmacro()
 
 # BEGIN MAIN #
 
-if (FLATBUFFERS_HOME AND FLATBUFFERS_BUILD )
-    message(STATUS "FLATBUFFERS_HOME defined, it will use vendor version from build ${FLATBUFFERS_HOME}")
-    message(STATUS "FLATBUFFERS_BUILD defined, it will use vendor version from build ${FLATBUFFERS_BUILD}")
+if (FLATBUFFERS_INSTALL_DIR AND FLATBUFFERS_BUILD_DIR)
+    message(STATUS "FLATBUFFERS_INSTALL_DIR defined, it will use vendor version from build ${FLATBUFFERS_INSTALL_DIR}")
+    message(STATUS "FLATBUFFERS_BUILD_DIR defined, it will use vendor version from build ${FLATBUFFERS_BUILD_DIR}")
 else()
-    message(STATUS "FLATBUFFERS_HOME and FLATBUFFERS_BUILD are not defined, it will be built from sources")
+    message(STATUS "FLATBUFFERS_INSTALL_DIR and FLATBUFFERS_BUILD_DIR are not defined, it will be built from sources")
     configure_flatbuffers_external_project()
-    set(FLATBUFFERS_HOME "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/flatbuffers-install/")
-    set(FLATBUFFERS_BUILD "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/flatbuffers-build/")
+    set(FLATBUFFERS_INSTALL_DIR "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/flatbuffers-install/")
+    set(FLATBUFFERS_BUILD_DIR "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/flatbuffers-build/")
 endif()
 
-message(STATUS "FLATBUFFERS_HOME: " ${FLATBUFFERS_HOME})
-message(STATUS "FLATBUFFERS_BUILD: " ${FLATBUFFERS_BUILD})
+message(STATUS "FLATBUFFERS_INSTALL_DIR: " ${FLATBUFFERS_INSTALL_DIR})
+message(STATUS "FLATBUFFERS_BUILD_DIR: " ${FLATBUFFERS_BUILD_DIR})
 
 find_package(FlatBuffers REQUIRED)
 set_package_properties(FlatBuffers
@@ -57,8 +57,8 @@ if (NOT FLATBUFFERS_FOUND)
     message(FATAL_ERROR "FlatBuffers not found, please check your settings.")
 endif()
 
-message(STATUS "flatbuffers installation found in ${FLATBUFFERS_HOME}")
-message(STATUS "flatbuffers compiler found in ${FLATBUFFERS_BUILD}")
+message(STATUS "flatbuffers installation found in ${FLATBUFFERS_INSTALL_DIR}")
+message(STATUS "flatbuffers compiler found in ${FLATBUFFERS_BUILD_DIR}")
 
 include_directories(${FLATBUFFERS_INCLUDEDIR})
 link_directories(${FLATBUFFERS_LIBDIR})

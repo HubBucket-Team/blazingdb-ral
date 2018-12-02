@@ -8,7 +8,7 @@
 macro(CONFIGURE_GPU_LIBGDF_EXTERNAL_PROJECT)
     set(ENV{CUDACXX} ${CUDA_SDK_ROOT_DIR}/bin/nvcc)
     set(ENV{NVSTRINGS_ROOT} ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-download/nvstrings-prefix/src/nvstrings/)
-    set(NVSTRINGS_HOME $ENV{NVSTRINGS_ROOT})
+    set(NVSTRINGS_INSTALL_DIR $ENV{NVSTRINGS_ROOT})
 
     # TODO pass ARROW_INSTALL_DIR when cudf support vendored arrow builds
 
@@ -40,20 +40,20 @@ endmacro()
 
 # BEGIN MAIN #
 
-if (LIBGDF_HOME)
-    if (NOT NVSTRINGS_HOME)
-        message(FATAL_ERROR "If you use the LIBGDF_HOME argument then you need pass the NVSTRINGS_HOME argument too (the home installation of nvstrings)")
+if (LIBGDF_INSTALL_DIR)
+    if (NOT NVSTRINGS_INSTALL_DIR)
+        message(FATAL_ERROR "If you use the LIBGDF_INSTALL_DIR argument then you need pass the NVSTRINGS_INSTALL_DIR argument too (the home installation of nvstrings)")
     endif()
 
-    message(STATUS "LIBGDF_HOME defined, it will use vendor version from ${LIBGDF_HOME}")
-    set(LIBGDF_ROOT "${LIBGDF_HOME}")
+    message(STATUS "LIBGDF_INSTALL_DIR defined, it will use vendor version from ${LIBGDF_INSTALL_DIR}")
+    set(LIBGDF_ROOT "${LIBGDF_INSTALL_DIR}")
 else()
-    message(STATUS "LIBGDF_HOME not defined, it will be built from sources")
+    message(STATUS "LIBGDF_INSTALL_DIR not defined, it will be built from sources")
     configure_gpu_libgdf_external_project()
     set(LIBGDF_ROOT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-install/")
 endif()
 
-set(NVSTRINGS_LIBDIR ${NVSTRINGS_HOME}/lib/)
+set(NVSTRINGS_LIBDIR ${NVSTRINGS_INSTALL_DIR}/lib/)
 link_directories(${NVSTRINGS_LIBDIR})
 
 find_package(LibGDF REQUIRED)

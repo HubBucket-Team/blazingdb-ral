@@ -50,18 +50,25 @@ So you just need to pass cmake arguments for nvstrings, cudf/libgdf and blazingd
 cd blazingdb-ral
 mkdir build
 cmake -DCMAKE_BUILD_TYPE=Debug \
-      -DNVSTRINGS_HOME=/path/to/nvstrings/home/install/ \
-      -DLIBGDF_HOME=/path/to/cudf-libgdf/home/install/ \
-      -DBLAZINGDB_PROTOCOL_HOME=/path/to/blazingdb-protocol-cpp/home/install/ \
+      -DFLATBUFFERS_INSTALL_DIR=/path/to/flatbuffers_install/ \
+      -DARROW_INSTALL_DIR=/path/to/arrow_install/ \
+      -DNVSTRINGS_INSTALL_DIR=/path/to/nvstrings_install/ \
+      -DLIBGDF_INSTALL_DIR=/path/to/cudf-libgdf_install/ \
+      -DBLAZINGDB_PROTOCOL_INSTALL_DIR=/path/to/blazingdb-protocol-cpp_install/ \
+      -DBLAZINGDB_IO_INSTALL_DIR=/path/to/blazingdb-io_install/ \
       ..
 make
 ```
 
-Notes:
-- NVSTRINGS_HOME and LIBGDF_HOME always got together.
-- BLAZINGDB_PROTOCOL_HOME is optional (if you no pass this arg then the project will download a copy of blazingdb-protocol)
-- If you pass BLAZINGDB_PROTOCOL_HOME but not NVSTRINGS_HOME and LIBGDF_HOME, then the project will download a copy of nvstrings lib and cudf/libgdf.
-- If don't want to use conda and need the nvstrings library, just download https://anaconda.org/nvidia/nvstrings/0.0.3/download/linux-64/nvstrings-0.0.3-cuda9.2_py35_0.tar.bz2 and uncompress the folder, this folder is the NVSTRINGS_HOME.
+Remember NVSTRINGS_INSTALL_DIR and LIBGDF_INSTALL_DIR always got together.
+
+If you don't define these optional arguments then the cmake process will resolve (download & build) each dependency:
+- FLATBUFFERS_INSTALL_DIR
+- ARROW_INSTALL_DIR
+- BLAZINGDB_PROTOCOL_INSTALL_DIR
+- BLAZINGDB_IO_INSTALL_DIR
+
+Finally, if don't want to use conda and need the nvstrings library, just download https://anaconda.org/nvidia/nvstrings/0.0.3/download/linux-64/nvstrings-0.0.3-cuda9.2_py35_0.tar.bz2 and uncompress the folder, this folder is the NVSTRINGS_HOME.
 
 # Integration Tests
 

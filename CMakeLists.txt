@@ -74,8 +74,8 @@ cuda_add_executable(testing-libgdf ${SRC_FILES})
 target_link_libraries(testing-libgdf
     NVStrings
     ${LIBGDF_STATIC_LIB}
+    ${BLAZINGDB_IO_STATIC_LIB}
     ${ARROW_STATIC_LIB}
-    blazingdb-io
     rmm
     ${FLATBUFFERS_STATIC_LIB}
     ${BLAZINGDB_PROTOCOL_STATIC_LIB}

@@ -58,7 +58,7 @@ endif()
 message(STATUS "flatbuffers installation found in ${FLATBUFFERS_INSTALL_DIR}")
 message(STATUS "flatbuffers compiler found in ${FLATBUFFERS_INSTALL_DIR}/bin")
 
-include_directories(${FLATBUFFERS_INCLUDEDIR})
+include_directories(${FLATBUFFERS_INCLUDEDIR} ${FLATBUFFERS_INCLUDE_DIR})
 link_directories(${FLATBUFFERS_LIBDIR})
 
 # END MAIN #

@@ -31,8 +31,8 @@ set(BLAZINGDB_IO_SEARCH_INCLUDE_DIR
   ${BLAZINGDB_IO_ROOT}/include/blazingdb/io/
 )
 
-find_path(BLAZINGDB_IO_INCLUDE_DIR FileSystem/FileSystemInterface.h
-    PATHS ${BLAZINGDB_IO_SEARCH_INCLUDE_DIR}
+find_path(BLAZINGDB_IO_INCLUDE_DIR FileSystemInterface.h
+    PATHS ${BLAZINGDB_IO_SEARCH_INCLUDE_DIR}/FileSystem/
     NO_DEFAULT_PATH
     DOC "Path to blazingdb-io headers"
 )

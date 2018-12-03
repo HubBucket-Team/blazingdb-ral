@@ -37,10 +37,10 @@ endmacro()
 # BEGIN MAIN #
 
 if (BLAZINGDB_IO_INSTALL_DIR)
-    message(STATUS "BLAZINGDB_IO_HOME defined, it will use vendor version from ${BLAZINGDB_IO_HOME}")
+    message(STATUS "BLAZINGDB_IO_INSTALL_DIR defined, it will use vendor version from ${BLAZINGDB_IO_INSTALL_DIR}")
     set(BLAZINGDB_IO_ROOT "${BLAZINGDB_IO_INSTALL_DIR}")
 else()
-    message(STATUS "BLAZINGDB_IO_HOME not defined, it will be built from sources")
+    message(STATUS "BLAZINGDB_IO_INSTALL_DIR not defined, it will be built from sources")
     configure_blazingdb_io_external_project()
     set(BLAZINGDB_IO_ROOT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/blazingdb-io-install/")
 endif()

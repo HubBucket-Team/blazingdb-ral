@@ -55,7 +55,8 @@ if(NOT BLAZINGDB_IO_FOUND)
 endif()
 
 message(STATUS "blazingdb-io found in ${BLAZINGDB_IO_ROOT}")
-include_directories(${BLAZINGDB_IO_INCLUDEDIR})
+
+include_directories(${BLAZINGDB_IO_INCLUDEDIR} ${BLAZINGDB_IO_INCLUDE_DIR})
 
 link_directories(${BLAZINGDB_IO_LIBDIR})
 

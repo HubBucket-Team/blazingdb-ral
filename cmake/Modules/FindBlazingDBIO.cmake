@@ -55,6 +55,7 @@ if (NOT BLAZINGDB_IO_STATIC_LIB)
       "and for libs in ${BLAZINGDB_IO_SEARCH_LIB_PATH}")
     set(BLAZINGDB_IO_FOUND FALSE)
 else()
+    set(BLAZINGDB_IO_INCLUDE_DIR ${BLAZINGDB_IO_ROOT}/include/blazingdb/io/)
     set(BLAZINGDB_IO_INCLUDEDIR ${BLAZINGDB_IO_ROOT}/include/)
     set(BLAZINGDB_IO_LIBDIR ${BLAZINGDB_IO_ROOT}/build) # TODO percy make this part cross platform
     set(BLAZINGDB_IO_FOUND TRUE)

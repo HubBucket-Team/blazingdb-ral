@@ -5,7 +5,6 @@
 
 # - Find FlatBuffers
 # FLATBUFFERS_HOME hints the install location (directory where you flatbuffers is installed)
-# FLATBUFFERS_BUILD hints the location (directory where you run cmake & build for flatbuffers project)
 #
 # This module defines
 # FLATBUFFERS_FOUND
@@ -20,11 +19,6 @@
 # If FLATBUFFERS_HOME is not defined try to search in the default system path
 if ("${FLATBUFFERS_HOME}" STREQUAL "")
     set(FLATBUFFERS_HOME "/usr")
-endif()
-
-# If FLATBUFFERS_BUILD is not defined try to search in the default system path
-if ("${FLATBUFFERS_BUILD}" STREQUAL "")
-    set(FLATBUFFERS_HOME "/usr/bin")
 endif()
 
 set(FLATBUFFERS_SEARCH_LIB_PATH
@@ -50,7 +44,7 @@ find_library(FLATBUFFERS_STATIC_LIB NAMES libflatbuffers.a
     DOC "Path to flatbuffers static library"
 )
 
-set(FLATBUFFERS_FLATC_EXECUTABLE ${FLATBUFFERS_BUILD}/flatc)
+set(FLATBUFFERS_FLATC_EXECUTABLE ${FLATBUFFERS_HOME}/bin/flatc)
 find_program(FLATBUFFERS_FLATC_EXECUTABLE NAMES flatc)
 
 if (NOT FLATBUFFERS_STATIC_LIB)

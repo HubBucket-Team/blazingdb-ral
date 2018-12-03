@@ -59,8 +59,8 @@ else()
     set(BLAZINGDB_IO_INCLUDEDIR ${BLAZINGDB_IO_ROOT}/include/)
     set(BLAZINGDB_IO_LIBDIR ${BLAZINGDB_IO_ROOT}/build) # TODO percy make this part cross platform
     set(BLAZINGDB_IO_FOUND TRUE)
-    add_library(blazingdb-io STATIC IMPORTED)
-    set_target_properties(blazingdb-io PROPERTIES IMPORTED_LOCATION "${BLAZINGDB_IO_STATIC_LIB}")
+    #add_library(blazingdb-io STATIC IMPORTED)
+    #set_target_properties(blazingdb-io PROPERTIES IMPORTED_LOCATION "${BLAZINGDB_IO_STATIC_LIB}")
 endif ()
 
 mark_as_advanced(
@@ -69,5 +69,5 @@ mark_as_advanced(
   BLAZINGDB_IO_INCLUDE_DIR
   #BLAZINGDB_IO_LIBS
   BLAZINGDB_IO_STATIC_LIB
-  blazingdb-io
+  #blazingdb-io
 )

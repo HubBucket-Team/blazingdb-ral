@@ -6,7 +6,7 @@
 cmake_minimum_required(VERSION 3.11)
 
 project(testing-cmake-libgdf)
-
+set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -71,18 +71,23 @@ set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_provider/UriDataProvider.c
               ${binary_operation_source_files})
 
 cuda_add_executable(testing-libgdf ${SRC_FILES})
+
+target_link_libraries(testing-libgdf "-Wl,--start-group")
+
 target_link_libraries(testing-libgdf
     NVStrings
     ${LIBGDF_STATIC_LIB}
     Boost::filesystem
     ${BLAZINGDB_IO_STATIC_LIB}
-    ${ARROW_STATIC_LIB}
+    ${ARROW_SHARED_LIB}
     rmm
     ${FLATBUFFERS_STATIC_LIB}
     ${BLAZINGDB_PROTOCOL_STATIC_LIB}
     ${CUDA_CUDA_LIBRARY}
     ${CUDA_NVRTC_LIBRARY}
     ${CUDA_NVTX_LIBRARY})
+
+target_link_libraries(testing-libgdf "-Wl,--end-group")
 
 # Print the project summary
 #TODO cmake bug, it says blazingdb-protocol was not deteected but everything seems

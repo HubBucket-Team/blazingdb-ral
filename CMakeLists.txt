@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.11)
 
 project(testing-cmake-libgdf)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 message(STATUS "Using C++ standard: c++${CMAKE_CXX_STANDARD}")
@@ -74,6 +74,7 @@ cuda_add_executable(testing-libgdf ${SRC_FILES})
 target_link_libraries(testing-libgdf
     NVStrings
     ${LIBGDF_STATIC_LIB}
+    Boost::filesystem
     ${BLAZINGDB_IO_STATIC_LIB}
     ${ARROW_STATIC_LIB}
     rmm

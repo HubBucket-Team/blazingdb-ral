@@ -22,6 +22,7 @@ function(configure_test TEST_NAME Tests_SRCS)
         ${ARROW_STATIC_LIB}
         blazingdb-io
         rmm
+        Boost::filesystem
         ${FLATBUFFERS_STATIC_LIB}
         ${BLAZINGDB_PROTOCOL_STATIC_LIB}
         ${CUDA_CUDA_LIBRARY}

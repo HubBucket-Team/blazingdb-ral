@@ -30,8 +30,8 @@ macro(CONFIGURE_ARROW_EXTERNAL_PROJECT)
                          " -DARROW_WITH_SNAPPY=OFF"
                          " -DARROW_WITH_ZLIB=OFF"
                          " -DARROW_BUILD_STATIC=ON"
-                         " -DARROW_BUILD_SHARED=OFF"
-                         " -DARROW_BOOST_USE_SHARED=OFF"
+                         " -DARROW_BUILD_SHARED=ON"
+                         " -DARROW_BOOST_USE_SHARED=ON"
                          " -DARROW_BUILD_TESTS=OFF"
                          " -DARROW_TEST_MEMCHECK=OFF"
                          " -DARROW_BUILD_BENCHMARKS=OFF"
@@ -93,5 +93,6 @@ set_package_properties(Arrow PROPERTIES TYPE REQUIRED
 set(ARROW_INCLUDEDIR ${ARROW_ROOT}/include/)
 
 include_directories(${ARROW_INCLUDEDIR})
+link_directories(${ARROW_ROOT}/lib/)
 
 # END MAIN #

@@ -43,7 +43,7 @@ find_path(BLAZINGDB_IO_INCLUDE_DIR FileSystemInterface.h
 #    DOC "Path to blazingdb-io library"
 #)
 
-find_library(BLAZINGDB_IO_STATIC_LIB NAMES libblazingdb-io.a
+find_library(BLAZINGDB_IO_STATIC_LIB NAMES libblazingdb-io.so
     PATHS ${BLAZINGDB_IO_SEARCH_LIB_PATH}
     NO_DEFAULT_PATH
     DOC "Path to blazingdb-io static library"

@@ -13,7 +13,23 @@ function(configure_test TEST_NAME Tests_SRCS)
     cuda_add_executable(${TEST_NAME} ${Tests_SRCS})
 
     # TODO percy do not use libgdf.so here and use gdf (the static lib) instead
-    target_link_libraries(${TEST_NAME} gmock_main gmock GTest::GTest ${LIBGDF_STATIC_LIB} ${CUDA_CUDA_LIBRARY} ${CUDA_NVRTC_LIBRARY} ${CUDA_NVTX_LIBRARY})
+    target_link_libraries(${TEST_NAME}
+        gmock_main
+        gmock 
+        GTest::GTest
+        NVStrings
+        ${LIBGDF_STATIC_LIB}
+        ${ARROW_STATIC_LIB}
+        blazingdb-io
+        rmm
+        ${FLATBUFFERS_STATIC_LIB}
+        ${BLAZINGDB_PROTOCOL_STATIC_LIB}
+        ${CUDA_CUDA_LIBRARY}
+        ${CUDA_NVRTC_LIBRARY}
+        ${CUDA_NVTX_LIBRARY}
+    )
+
+    
     set_target_properties(${TEST_NAME} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/gtests/")
 
@@ -24,23 +40,6 @@ endfunction()
 ## Main ##
 
 enable_testing()
-
-
-## Helper libraries for TESTING
-# Static library (libcuDF_adapter_testing.a) - cuDF folder
-include(${CMAKE_SOURCE_DIR}/src/cuDF/CMakeLists.txt)
-include(ConfigureArrow)
-include(ConfigureBlazingIO)
-
-message(STATUS "static lib is ${BLAZINGIO_STATIC_LIB}")
-set(cuDF_adapter_testing_files ${source_files})
-set(cuDF_adapter_testing_library "cuDF_adapter_testing")
-set(cuDF_adapter_testing_dependencies "rmm ${BLAZINGIO_STATIC_LIB}")
-
-add_library(${cuDF_adapter_testing_library} STATIC ${cuDF_adapter_testing_files})
-
-target_include_directories(${cuDF_adapter_testing_library} PRIVATE ${CMAKE_SOURCE_DIR}/src/)
-
 
 # Configure unit tests with Google Test
 # -------------------

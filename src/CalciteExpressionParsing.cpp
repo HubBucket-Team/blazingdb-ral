@@ -3,9 +3,7 @@
 #include <iomanip>
 #include <regex>
 
-#include <FileSystem/S3FileSystem.h>
-
-#include <Util/StringUtil.h>
+#include <blazingdb/io/Util/StringUtil.h>
 
 #include "CalciteExpressionParsing.h"
 #include "DataFrame.h"

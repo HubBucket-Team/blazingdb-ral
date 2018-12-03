@@ -7,7 +7,7 @@
 #include <CalciteExpressionParsing.h>
 #include <CalciteInterpreter.h>
 #include <DataFrame.h>
-#include <Util/StringUtil.h>
+#include <blazingdb/io/Util/StringUtil.h>
 #include <gtest/gtest.h>
 #include <GDFColumn.cuh>
 #include <GDFCounter.cuh>

@@ -57,6 +57,7 @@ CUDACXX=/usr/local/cuda-9.2/bin/nvcc cmake -DCMAKE_BUILD_TYPE=Debug \
       -DBLAZINGDB_PROTOCOL_INSTALL_DIR=/path/to/blazingdb-protocol-cpp_install/ \
       -DBLAZINGDB_IO_INSTALL_DIR=/path/to/blazingdb-io_install/ \
       -DGOOGLETEST_INSTALL_DIR=/path/to/googletest_install/ \
+      -DAWS_SDK_CPP_BUILD_DIR=/path/to/aws-sdk-cpp/build/
       ..
 make
 ```
@@ -69,6 +70,7 @@ If you don't define these optional arguments then the cmake process will resolve
 - BLAZINGDB_PROTOCOL_INSTALL_DIR
 - BLAZINGDB_IO_INSTALL_DIR
 - GOOGLETEST_INSTALL_DIR
+- AWS_SDK_CPP_BUILD_DIR
 
 Finally, if don't want to use conda and need the nvstrings library, just download https://anaconda.org/nvidia/nvstrings/0.0.3/download/linux-64/nvstrings-0.0.3-cuda9.2_py35_0.tar.bz2 and uncompress the folder, this folder is the NVSTRINGS_HOME.
 

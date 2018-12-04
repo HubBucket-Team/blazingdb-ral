@@ -1,5 +1,6 @@
 #include "CalciteInterpreter.h"
-#include "StringUtil.h"
+
+#include <blazingdb/io/Util/StringUtil.h>
 
 #include <algorithm>
 #include <thread>

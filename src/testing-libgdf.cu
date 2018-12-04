@@ -19,12 +19,35 @@
 #include "gdf_wrapper/gdf_wrapper.cuh"
 
 #include <tuple>
+
 #include <blazingdb/protocol/api.h>
 #include <blazingdb/protocol/message/messages.h>
 #include <blazingdb/protocol/message/interpreter/messages.h>
 #include "ral-message.cuh"
 
+
 using namespace blazingdb::protocol;
+
+#include <blazingdb/io/Util/StringUtil.h>
+
+#include <blazingdb/io/FileSystem/HadoopFileSystem.h>
+#include <blazingdb/io/FileSystem/S3FileSystem.h>
+#include <blazingdb/io/FileSystem/FileSystemRepository.h>
+#include <blazingdb/io/FileSystem/FileSystemCommandParser.h>
+#include <blazingdb/io/FileSystem/FileSystemManager.h>
+
+bool loadFileSystems(std::shared_ptr<FileSystemManager> fileSystemManager) {
+	// const BlazingConfig* config = BlazingConfig::getInstance();
+	// if (config->getFSNamespacesFile().toString() != ""){
+	// 	const FileSystemRepository fileSystemRepository(config->getFSNamespacesFile().getPath(), true);
+	// 	const std::vector<FileSystemEntity> fileSystemEntities = fileSystemRepository.findAll();
+	// 	const bool ok = fileSystemManager->registerFileSystems(std::move(fileSystemEntities));
+	// 	return ok;
+	// } else {
+	// 	return true;
+	// }
+  return false;
+}  
 
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);

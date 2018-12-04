@@ -15,27 +15,21 @@
 # limitations under the License.
 #=============================================================================
 
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.12)
 
 project(arrow-download NONE)
 
 include(ExternalProject)
 
-message(STATUS "Using Apache Arrow version: ${ARROW_VERSION}")
-
 ExternalProject_Add(arrow
-    CMAKE_ARGS
-        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-        -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-install
-        -DARROW_IPC=ON
-        -DARROW_HDFS=ON
-        -DARROW_PARQUET=OFF
-        -DARROW_TENSORFLOW=ON
     GIT_REPOSITORY    https://github.com/apache/arrow.git
-    GIT_TAG           ${ARROW_VERSION}
+    GIT_TAG           apache-arrow-0.11.1
+    SOURCE_DIR        "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-src"
+    SOURCE_SUBDIR     "cpp"
+    BINARY_DIR        "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-build"
+    INSTALL_DIR       "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-install"
     UPDATE_COMMAND    ""
-    SOURCE_SUBDIR     cpp
-    BINARY_DIR "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-build"
-    INSTALL_DIR "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-install"
-    SOURCE_DIR "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-src"
+    CMAKE_ARGS        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+                      ${ARROW_CMAKE_ARGS}
+                      -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-install
 )

@@ -3,9 +3,11 @@
 #include <iomanip>
 #include <regex>
 
+#include <blazingdb/io/Util/StringUtil.h>
+
 #include "CalciteExpressionParsing.h"
 #include "DataFrame.h"
-#include "StringUtil.h"
+
 
 bool is_type_signed(gdf_dtype type){
 	return (GDF_INT8 == type ||

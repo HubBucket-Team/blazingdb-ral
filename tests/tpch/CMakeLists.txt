@@ -21,7 +21,6 @@ cuda_add_library(tpch_interface
   ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
   ${CMAKE_SOURCE_DIR}/src/JoinProcessor.cpp
   ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp
-  ${CMAKE_SOURCE_DIR}/src/StringUtil.cpp
   ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
   ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
   ${source_files}

@@ -28,14 +28,13 @@
 
 using namespace blazingdb::protocol;
 
-#include "StringUtil.h"
+#include <blazingdb/io/Util/StringUtil.h>
 
-#include <FileSystem/HadoopFileSystem.h>
-#include <FileSystem/S3FileSystem.h>
-#include <FileSystem/FileSystemRepository.h>
-#include <FileSystem/FileSystemCommandParser.h>
-#include <FileSystem/FileSystemManager.h>
-#include <blazingdb/protocol/message/io/file_system.h>
+#include <blazingdb/io/FileSystem/HadoopFileSystem.h>
+#include <blazingdb/io/FileSystem/S3FileSystem.h>
+#include <blazingdb/io/FileSystem/FileSystemRepository.h>
+#include <blazingdb/io/FileSystem/FileSystemCommandParser.h>
+#include <blazingdb/io/FileSystem/FileSystemManager.h>
 
 
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;

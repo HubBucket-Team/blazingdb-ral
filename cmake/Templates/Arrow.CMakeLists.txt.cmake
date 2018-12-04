@@ -28,6 +28,7 @@ ExternalProject_Add(arrow
     SOURCE_SUBDIR     "cpp"
     BINARY_DIR        "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-build"
     INSTALL_DIR       "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-install"
+    UPDATE_COMMAND    ""
     CMAKE_ARGS        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                       ${ARROW_CMAKE_ARGS}
                       -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-install

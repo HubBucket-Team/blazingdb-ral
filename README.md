@@ -49,7 +49,7 @@ So you just need to pass cmake arguments for nvstrings, cudf/libgdf and blazingd
 ```bash
 cd blazingdb-ral
 mkdir build
-cmake -DCMAKE_BUILD_TYPE=Debug \
+CUDACXX=/usr/local/cuda-9.2/bin/nvcc cmake -DCMAKE_BUILD_TYPE=Debug \
       -DFLATBUFFERS_INSTALL_DIR=/path/to/flatbuffers_install/ \
       -DARROW_INSTALL_DIR=/path/to/arrow_install/ \
       -DNVSTRINGS_INSTALL_DIR=/path/to/nvstrings_install/ \

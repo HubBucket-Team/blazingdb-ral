@@ -1107,7 +1107,7 @@ query_token_t evaluate_query(
 		std::vector<void *> handles){
 
 	std::cout<<"Input\n";
-	print_column<int8_t>(input_tables[0][0].get_gdf_column());
+//	print_column<int8_t>(input_tables[0][0].get_gdf_column());
 
 	query_token_t token = result_set_repository::get_instance().register_query(connection); //register the query so we can receive result requests for it
 

@@ -43,7 +43,6 @@ include(ConfigureArrow)
 include(ConfigureLibGDF)
 include(ConfigureBlazingDBProtocol)
 include(ConfigureBlazingDBIO)
-include(ConfigureGoogleTest)
 
 # BEGIN MAIN #
 include_directories(   
@@ -98,6 +97,17 @@ target_link_libraries(testing-libgdf
     ${CUDA_NVTX_LIBRARY})
 
 target_link_libraries(testing-libgdf "-Wl,--end-group")
+
+# Tests
+if(BUILD_TESTING)
+    include(ConfigureGoogleTest)
+
+    if(GTEST_FOUND)
+        add_subdirectory(tests)
+    else()
+        message(AUTHOR_WARNING "Google C++ Testing Framework (Google Test) not found: automated tests are disabled.")
+    endif()
+endif()
 
 # Print the project summary
 #TODO cmake bug, it says blazingdb-protocol was not deteected but everything seems

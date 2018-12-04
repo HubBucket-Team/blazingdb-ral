@@ -37,6 +37,7 @@ include(ConfigureCUDA)
 # Configure dependencies
 include(ConfigureFlatBuffers)
 include(ConfigureArrow)
+include(ConfigureAWSSDK)
 include(ConfigureLibGDF)
 include(ConfigureBlazingDBProtocol)
 include(ConfigureBlazingDBIO)
@@ -79,11 +80,16 @@ set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_provider/UriDataProvider.c
 
 add_executable(testing-libgdf ${SRC_FILES})
 
+set(Boost_USE_STATIC_LIBS ON) # only find static libs
+find_package(Boost REQUIRED COMPONENTS filesystem)
+
 target_link_libraries(testing-libgdf
     NVStrings
     ${LIBGDF_STATIC_LIB}
     ${BLAZINGDB_IO_STATIC_LIB}
     ${ARROW_STATIC_LIB}
+    Boost::filesystem
+    aws-cpp-sdk-s3 aws-cpp-sdk-s3-encryption
     rmm
     ${FLATBUFFERS_STATIC_LIB}
     ${BLAZINGDB_PROTOCOL_STATIC_LIB}

@@ -6,31 +6,28 @@
 #pass the dependency libraries as optional arguments using ${ARGN}
 #NOTE the order of libraries matter, so try to link first with the most high level lib
 function(configure_test TEST_NAME Tests_SRCS)
-    message(STATUS "${TEST_NAME} will link against: gdf arrow")
-
     include_directories(${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/tests/utils)
 
-    cuda_add_executable(${TEST_NAME} ${Tests_SRCS})
+    add_executable(${TEST_NAME} ${Tests_SRCS})
 
     # TODO percy do not use libgdf.so here and use gdf (the static lib) instead
     target_link_libraries(${TEST_NAME}
-        gmock_main
-        gmock 
-        GTest::GTest
         NVStrings
         ${LIBGDF_STATIC_LIB}
+        ${BLAZINGDB_IO_STATIC_LIB}
         ${ARROW_STATIC_LIB}
-        blazingdb-io
-        rmm
         Boost::filesystem
+        aws-cpp-sdk-s3 aws-cpp-sdk-s3-encryption
+        rmm
         ${FLATBUFFERS_STATIC_LIB}
         ${BLAZINGDB_PROTOCOL_STATIC_LIB}
+        cudart
+        cuda
         ${CUDA_CUDA_LIBRARY}
         ${CUDA_NVRTC_LIBRARY}
         ${CUDA_NVTX_LIBRARY}
     )
 
-    
     set_target_properties(${TEST_NAME} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/gtests/")
 

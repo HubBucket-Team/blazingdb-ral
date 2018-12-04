@@ -1,5 +1,4 @@
-
-cuda_add_library(joint-test-utils
+add_library(joint-test-utils
 ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
   ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
   ${CMAKE_SOURCE_DIR}/src/ColumnManipulation.cu

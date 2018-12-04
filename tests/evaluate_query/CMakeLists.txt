@@ -13,7 +13,7 @@ set(source_files
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/util/type.cpp
 )
 
-cuda_add_library(evaluate_query_interface
+add_library(evaluate_query_interface
   ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
   ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
   ${CMAKE_SOURCE_DIR}/src/ColumnManipulation.cu

@@ -17,14 +17,14 @@
 
 # BEGIN macros
 
-macro(CONFIGURE_ARROW_EXTERNAL_PROJECT)
+macro(CONFIGURE_PARQUET_EXTERNAL_PROJECT)
     set(ENV{FLATBUFFERS_HOME} ${FLATBUFFERS_INSTALL_DIR})
 
     #NOTE
     # libcudf.so` is now built with the old ABI `-D_GLIBCXX_USE_CXX11_ABI=0`
-    # If you build Arrow from source, you can fix this by using `-DARROW_TENSORFLOW=ON`.
+    # If you build Arrow from source, you can fix this by using `-DPARQUET_TENSORFLOW=ON`.
     # This forces Arrow to use the old ABI.
-    set(ARROW_CMAKE_ARGS " -DPARQUET_WITH_LZ4=ON"
+    set(PARQUET_CMAKE_ARGS " -DPARQUET_WITH_LZ4=ON"
                          " -DPARQUET_WITH_ZSTD=ON"
                          " -DPARQUET_WITH_BROTLI=ON"
                          " -DPARQUET_WITH_SNAPPY=ON"
@@ -74,25 +74,28 @@ endmacro()
 
 # BEGIN MAIN #
 
-if (ARROW_INSTALL_DIR)
-    message(STATUS "ARROW_INSTALL_DIR defined, it will use vendor version from ${ARROW_INSTALL_DIR}")
-    set(ARROW_ROOT "${ARROW_INSTALL_DIR}")
+# NOTE since parquet and arrow are in the same repo is safe to pass the arrrow installation dir here
+set(PARQUET_INSTALL_DIR ${ARROW_INSTALL_DIR})
+
+if (PARQUET_INSTALL_DIR)
+    message(STATUS "PARQUET_INSTALL_DIR defined, it will use vendor version from ${PARQUET_INSTALL_DIR}")
+    set(PARQUET_ROOT "${PARQUET_INSTALL_DIR}")
 else()
-    message(STATUS "ARROW_INSTALL_DIR not defined, it will be built from sources")
-    configure_arrow_external_project()
-    set(ARROW_ROOT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-install/")
+    message(STATUS "PARQUET_INSTALL_DIR not defined, it will be built from sources")
+    configure_parquet_external_project()
+    set(PARQUET_ROOT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-install/")
 endif()
 
-set(ENV{ARROW_HOME} ${ARROW_ROOT})
+set(ENV{PARQUET_HOME} ${PARQUET_ROOT})
 
-find_package(Arrow REQUIRED)
-set_package_properties(Arrow PROPERTIES TYPE REQUIRED
-    PURPOSE "Apache Arrow is a cross-language development platform for in-memory data."
+find_package(Parquet REQUIRED)
+set_package_properties(Parquet PROPERTIES TYPE REQUIRED
+    PURPOSE "Apache Parquet CPP is a C++ library to read and write the Apache Parquet columnar data format."
     URL "https://arrow.apache.org")
 
-set(ARROW_INCLUDEDIR ${ARROW_ROOT}/include/)
+set(PARQUET_INCLUDEDIR ${PARQUET_ROOT}/include/)
 
-include_directories(${ARROW_INCLUDEDIR})
-link_directories(${ARROW_ROOT}/lib/)
+include_directories(${PARQUET_INCLUDEDIR})
+link_directories(${PARQUET_ROOT}/lib/)
 
 # END MAIN #

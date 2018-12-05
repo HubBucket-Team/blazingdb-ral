@@ -35,9 +35,10 @@ include(ConfigureCUDA)
 
 # NOTE Do not change the inclusion order
 # Configure dependencies
+include(ConfigureAWSSDK)
 include(ConfigureFlatBuffers)
 include(ConfigureArrow)
-include(ConfigureAWSSDK)
+include(ConfigureParquet)
 include(ConfigureLibGDF)
 include(ConfigureBlazingDBProtocol)
 include(ConfigureBlazingDBIO)
@@ -88,6 +89,7 @@ target_link_libraries(testing-libgdf
     ${LIBGDF_STATIC_LIB}
     ${BLAZINGDB_IO_STATIC_LIB}
     ${ARROW_STATIC_LIB}
+    ${PARQUET_STATIC_LIB}
     Boost::filesystem
     aws-cpp-sdk-s3 aws-cpp-sdk-s3-encryption
     rmm

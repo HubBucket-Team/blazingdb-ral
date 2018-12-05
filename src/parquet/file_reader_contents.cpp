@@ -47,7 +47,8 @@ FileReaderContents::GetRowGroup(int i) {
     std::unique_ptr<internal::RowGroupReaderContents> contents(
       new internal::RowGroupReaderContents(
         source_.get(), file_metadata_.get(), i, properties_));
-    return std::static_pointer_cast<::parquet::RowGroupReader>(std::make_shared<GdfRowGroupReader>(std::move(contents)));
+    return std::static_pointer_cast<::parquet::RowGroupReader>(
+      std::make_shared<GdfRowGroupReader>(std::move(contents)));
 }
 
 std::shared_ptr<::parquet::FileMetaData>
@@ -86,7 +87,7 @@ FileReaderContents::ParseMetaData() {
           "file metadata size.");
     }
 
-    std::shared_ptr<::parquet::PoolBuffer> metadata_buffer =
+    std::shared_ptr<::parquet::ResizableBuffer> metadata_buffer =
       ::parquet::AllocateBuffer(properties_.memory_pool(), metadata_len);
 
     if (footer_read_size >= (metadata_len + FOOTER_SIZE)) {

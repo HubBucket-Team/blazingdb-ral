@@ -44,7 +44,7 @@ include(ConfigureBlazingDBProtocol)
 include(ConfigureBlazingDBIO)
 
 # BEGIN MAIN #
-include_directories(   
+include_directories(
     ${LIB_BLAZINGIO_INCLUDEDIR}
     ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}
     ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
@@ -59,6 +59,10 @@ get_directory_property(binary_operation_source_files DIRECTORY ${CMAKE_SOURCE_DI
 ## cuDF adapter source files
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/cuDF)
 get_directory_property(cudf_adapter_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/cuDF DEFINITION source_files)
+
+## ParquetReader source files
+add_subdirectory(${CMAKE_SOURCE_DIR}/src/parquet)
+get_directory_property(parquet_reader_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/parquet DEFINITION source_files)
 
 ## Target source files
 set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
@@ -77,7 +81,8 @@ set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_provider/UriDataProvider.c
               ${CMAKE_CURRENT_SOURCE_DIR}/src/GDFColumn.cu
               ${CMAKE_CURRENT_SOURCE_DIR}/src/testing-libgdf.cu
               ${cudf_adapter_source_files}
-              ${binary_operation_source_files})
+              ${binary_operation_source_files}
+              ${parquet_reader_source_files})
 
 add_executable(testing-libgdf ${SRC_FILES})
 

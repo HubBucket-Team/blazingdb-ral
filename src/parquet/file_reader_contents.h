@@ -23,21 +23,21 @@ namespace internal {
 
 class FileReaderContents : public ::parquet::ParquetFileReader::Contents {
 public:
-    FileReaderContents(std::unique_ptr<::parquet::RandomAccessSource> source,
+    FileReaderContents(std::unique_ptr< ::parquet::RandomAccessSource> source,
                        const ::parquet::ReaderProperties &properties =
                          ::parquet::default_reader_properties());
 
     ~FileReaderContents() final;
-    void                                       Close() final;
-    std::shared_ptr<::parquet::RowGroupReader> GetRowGroup(int i) final;
-    std::shared_ptr<::parquet::FileMetaData>   metadata() const final;
+    void                                        Close() final;
+    std::shared_ptr< ::parquet::RowGroupReader> GetRowGroup(int i) final;
+    std::shared_ptr< ::parquet::FileMetaData>   metadata() const final;
 
     void ParseMetaData();
 
 private:
-    std::unique_ptr<::parquet::RandomAccessSource> source_;
-    std::shared_ptr<::parquet::FileMetaData>       file_metadata_;
-    ::parquet::ReaderProperties                    properties_;
+    std::unique_ptr< ::parquet::RandomAccessSource> source_;
+    std::shared_ptr< ::parquet::FileMetaData>       file_metadata_;
+    ::parquet::ReaderProperties                     properties_;
 
     const int64_t  DEFAULT_FOOTER_READ_SIZE = 64 * 1024;
     const uint32_t FOOTER_SIZE              = 8;

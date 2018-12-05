@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-#include <arrow/util/bit-stream-utils.h>
 #include "../arrow/bit-stream.h"
+#include <arrow/util/bit-stream-utils.h>
 #include <thrust/device_vector.h>
 
 namespace parquet {
@@ -45,8 +45,7 @@ public:
         }
     }
 
-    virtual void
-    SetData(int num_values, const std::uint8_t *data, int len) {
+    virtual void SetData(int num_values, const std::uint8_t *data, int len) {
         num_values_ = num_values;
         data_       = data;
         len_        = len;
@@ -62,12 +61,11 @@ private:
 };
 
 template <typename T>
-inline int
-DecodePlain(const std::uint8_t *data,
-            std::int64_t        data_size,
-            int                 num_values,
-            int,
-            T *out) {
+inline int DecodePlain(const std::uint8_t *data,
+                       std::int64_t        data_size,
+                       int                 num_values,
+                       int,
+                       T *out) {
     int bytes_to_decode = num_values * static_cast<int>(sizeof(T));
     if (data_size < bytes_to_decode) {
         ::parquet::ParquetException::EofException();
@@ -77,8 +75,7 @@ DecodePlain(const std::uint8_t *data,
 }
 
 template <typename DataType>
-inline int
-PlainDecoder<DataType>::Decode(T *buffer, int max_values) {
+inline int PlainDecoder<DataType>::Decode(T *buffer, int max_values) {
     max_values = std::min(max_values, num_values_);
     int bytes_consumed =
       DecodePlain<T>(data_, len_, max_values, type_length_, buffer);
@@ -89,22 +86,19 @@ PlainDecoder<DataType>::Decode(T *buffer, int max_values) {
 }
 
 template <>
-class PlainDecoder<::parquet::BooleanType>
-  : public ::parquet::Decoder<::parquet::BooleanType> {
+class PlainDecoder< ::parquet::BooleanType>
+  : public ::parquet::Decoder< ::parquet::BooleanType> {
 public:
     explicit PlainDecoder(const ::parquet::ColumnDescriptor *descr)
-      : ::parquet::Decoder<::parquet::BooleanType>(
-          descr,
-          ::parquet::Encoding::PLAIN) {}
+      : ::parquet::Decoder< ::parquet::BooleanType>(
+        descr, ::parquet::Encoding::PLAIN) {}
 
-    virtual void
-    SetData(int num_values, const std::uint8_t *data, int len) {
+    virtual void SetData(int num_values, const std::uint8_t *data, int len) {
         num_values_ = num_values;
         bit_reader_ = gdf::arrow::internal::BitReader(data, len);
     }
 
-    int
-    Decode(std::uint8_t *buffer, int max_values) {
+    int Decode(std::uint8_t *buffer, int max_values) {
         max_values = std::min(max_values, num_values_);
         bool val;
         for (int i = 0; i < max_values; ++i) {
@@ -117,30 +111,43 @@ public:
         return max_values;
     }
 
-    virtual int
-    Decode(bool *buffer, int max_values) {
+    virtual int Decode(bool *buffer, int max_values) {
         max_values = std::min(max_values, num_values_);
 
-        int literal_batch = max_values;
-        int values_read = 0;
+        int                   literal_batch = max_values;
+        int                   values_read   = 0;
         std::vector<uint32_t> rleRuns;
         std::vector<uint64_t> rleValues;
-        std::vector<int> unpack32InputOffsets, unpack32InputRunLengths, unpack32OutputOffsets;
-        std::vector<int> remainderInputOffsets, remainderBitOffsets, remainderSetSize,
-                remainderOutputOffsets;
+        std::vector<int>      unpack32InputOffsets, unpack32InputRunLengths,
+          unpack32OutputOffsets;
+        std::vector<int> remainderInputOffsets, remainderBitOffsets,
+          remainderSetSize, remainderOutputOffsets;
 
-        bit_reader_.SetGpuBatchMetadata(
-                1, buffer, literal_batch, values_read, unpack32InputOffsets, unpack32InputRunLengths,
-                unpack32OutputOffsets, remainderInputOffsets, remainderBitOffsets,
-                remainderSetSize, remainderOutputOffsets);
+        bit_reader_.SetGpuBatchMetadata(1,
+                                        buffer,
+                                        literal_batch,
+                                        values_read,
+                                        unpack32InputOffsets,
+                                        unpack32InputRunLengths,
+                                        unpack32OutputOffsets,
+                                        remainderInputOffsets,
+                                        remainderBitOffsets,
+                                        remainderSetSize,
+                                        remainderOutputOffsets);
 
-        gdf::arrow::internal::unpack_using_gpu<bool> (
-                bit_reader_.get_buffer(), bit_reader_.get_buffer_len(),
-                unpack32InputOffsets,
-				unpack32InputRunLengths,
-                unpack32OutputOffsets,
-                remainderInputOffsets, remainderBitOffsets, remainderSetSize,
-                remainderOutputOffsets, 1, buffer, literal_batch);
+        gdf::arrow::internal::unpack_using_gpu<bool>(
+          bit_reader_.get_buffer(),
+          bit_reader_.get_buffer_len(),
+          unpack32InputOffsets,
+          unpack32InputRunLengths,
+          unpack32OutputOffsets,
+          remainderInputOffsets,
+          remainderBitOffsets,
+          remainderSetSize,
+          remainderOutputOffsets,
+          1,
+          buffer,
+          literal_batch);
 
         num_values_ -= max_values;
         return max_values;

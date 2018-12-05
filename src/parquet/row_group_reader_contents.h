@@ -30,14 +30,14 @@ public:
 
     const ::parquet::RowGroupMetaData *metadata() const final;
     const ::parquet::ReaderProperties *properties() const final;
-    virtual std::unique_ptr<::parquet::PageReader>
+    virtual std::unique_ptr< ::parquet::PageReader>
     GetColumnPageReader(int i) final;
 
 private:
-    ::parquet::RandomAccessSource *              source_;
-    ::parquet::FileMetaData *                    file_metadata_;
-    std::unique_ptr<::parquet::RowGroupMetaData> row_group_metadata_;
-    ::parquet::ReaderProperties                  properties_;
+    ::parquet::RandomAccessSource *               source_;
+    ::parquet::FileMetaData *                     file_metadata_;
+    std::unique_ptr< ::parquet::RowGroupMetaData> row_group_metadata_;
+    ::parquet::ReaderProperties                   properties_;
 
     const std::int64_t kMaxDictHeaderSize = 100;
 };

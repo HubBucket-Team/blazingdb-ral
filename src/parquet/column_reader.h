@@ -19,9 +19,9 @@
 #ifndef _GDF_PARQUET_COLUMN_READER_H
 #define _GDF_PARQUET_COLUMN_READER_H
 
-#include <parquet/column_reader.h>
-#include <gdf/gdf.h>
 #include "decoder/cu_level_decoder.h"
+#include <gdf/gdf.h>
+#include <parquet/column_reader.h>
 
 namespace gdf {
 namespace parquet {
@@ -31,18 +31,19 @@ class ColumnReader : public ::parquet::ColumnReader {
 public:
     using T = typename DataType::c_type;
 
-     ColumnReader(const ::parquet::ColumnDescriptor* schema, std::unique_ptr<::parquet::PageReader> pager,
-                      ::arrow::MemoryPool* pool = ::arrow::default_memory_pool())
-            : ::parquet::ColumnReader(schema, std::move(pager), pool), current_decoder_(nullptr) {}
-
+    ColumnReader(const ::parquet::ColumnDescriptor *     schema,
+                 std::unique_ptr< ::parquet::PageReader> pager,
+                 ::arrow::MemoryPool *pool = ::arrow::default_memory_pool())
+      : ::parquet::ColumnReader(schema, std::move(pager), pool),
+        current_decoder_(nullptr) {}
 
     bool HasNext();
 
     std::int64_t ReadBatch(std::int64_t  batch_size,
-                          std::int16_t *def_levels,
-                          std::int16_t *rep_levels,
-                          T *           values,
-                          std::int64_t *values_read);
+                           std::int16_t *def_levels,
+                           std::int16_t *rep_levels,
+                           T *           values,
+                           std::int64_t *values_read);
 
     std::int64_t ReadBatchSpaced(std::int64_t  batch_size,
                                  std::int16_t *definition_levels,
@@ -54,37 +55,38 @@ public:
                                  std::int64_t *values_read,
                                  std::int64_t *nulls_count);
 
-    std::size_t ToGdfColumn(const gdf_column &  column, const std::ptrdiff_t offset = 0);
+    std::size_t ToGdfColumn(const gdf_column &   column,
+                            const std::ptrdiff_t offset = 0);
 
-    std::size_t ToGdfColumn(const gdf_column &  column, const std::ptrdiff_t offset, std::int16_t *d_definition_levels);
+    std::size_t ToGdfColumn(const gdf_column &   column,
+                            const std::ptrdiff_t offset,
+                            std::int16_t *       d_definition_levels);
 
-    std::size_t ToGdfColumn(const gdf_column & column, const std::ptrdiff_t offset, std::uint8_t & first_valid_byte, std::uint8_t & last_valid_byte);
+    std::size_t ToGdfColumn(const gdf_column &   column,
+                            const std::ptrdiff_t offset,
+                            std::uint8_t &       first_valid_byte,
+                            std::uint8_t &       last_valid_byte);
 
-
-    int64_t ReadDefinitionLevels(int64_t batch_size, int16_t* levels) {
-        if (descr_->max_definition_level() == 0) {
-            return 0;
-        }
+    int64_t ReadDefinitionLevels(int64_t batch_size, int16_t *levels) {
+        if (descr_->max_definition_level() == 0) { return 0; }
         return def_level_decoder_.Decode(static_cast<int>(batch_size), levels);
     }
- 
-
 
 private:
     bool ReadNewPage() final;
 
     using DecoderType = ::parquet::Decoder<DataType>;
 
-    std::unordered_map<int, std::shared_ptr<DecoderType>> decoders_;
-    DecoderType *                                         current_decoder_;
-    gdf::parquet::decoder::CUDALevelDecoder               def_level_decoder_;
+    std::unordered_map<int, std::shared_ptr<DecoderType> > decoders_;
+    DecoderType *                                          current_decoder_;
+    gdf::parquet::decoder::CUDALevelDecoder                def_level_decoder_;
 };
 
-using BoolReader              = ColumnReader<::parquet::BooleanType>;
-using Int32Reader             = ColumnReader<::parquet::Int32Type>;
-using Int64Reader             = ColumnReader<::parquet::Int64Type>;
-using FloatReader             = ColumnReader<::parquet::FloatType>;
-using DoubleReader            = ColumnReader<::parquet::DoubleType>;
+using BoolReader   = ColumnReader< ::parquet::BooleanType>;
+using Int32Reader  = ColumnReader< ::parquet::Int32Type>;
+using Int64Reader  = ColumnReader< ::parquet::Int64Type>;
+using FloatReader  = ColumnReader< ::parquet::FloatType>;
+using DoubleReader = ColumnReader< ::parquet::DoubleType>;
 
 }  // namespace parquet
 }  // namespace gdf

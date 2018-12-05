@@ -24,12 +24,12 @@ namespace internal {
 
 class PageReader : public ::parquet::PageReader {
 public:
-    PageReader(std::unique_ptr<::parquet::InputStream> stream,
-               std::int64_t                            total_num_rows,
-               ::parquet::Compression::type            codec,
-               arrow::MemoryPool *                     pool);
+    PageReader(std::unique_ptr< ::parquet::InputStream> stream,
+               std::int64_t                             total_num_rows,
+               ::parquet::Compression::type             codec,
+               arrow::MemoryPool *                      pool);
 
-    std::shared_ptr<::parquet::Page> NextPage() final;
+    std::shared_ptr< ::parquet::Page> NextPage() final;
 
     void set_max_page_header_size(std::uint32_t size) override;
 
@@ -37,10 +37,10 @@ private:
     static const std::uint32_t kDefaultMaxPageHeaderSize = 16 * 1024 * 1024;
     static const std::uint32_t kDefaultPageHeaderSize    = 16 * 1024;
 
-    std::unique_ptr<::parquet::InputStream> stream_;
+    std::unique_ptr< ::parquet::InputStream> stream_;
 
-    ::parquet::format::PageHeader    current_page_header_;
-    std::shared_ptr<::parquet::Page> current_page_;
+    ::parquet::format::PageHeader     current_page_header_;
+    std::shared_ptr< ::parquet::Page> current_page_;
 
     std::unique_ptr<arrow::Codec>      decompressor_;
     std::shared_ptr<arrow::PoolBuffer> decompression_buffer_;

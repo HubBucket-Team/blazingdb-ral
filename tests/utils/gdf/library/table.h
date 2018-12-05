@@ -12,7 +12,7 @@
 
 #include "any.h"
 #include "column.h"
-#include "gdf/gdf.h"
+#include "gdf_wrapper/gdf_wrapper.cuh"
 #include "hd.h"
 #include "vector.h"
 
@@ -243,7 +243,7 @@ public:
 
 private:
   std::vector<LiteralColumnBuilder>
-  ColumnBuildersFrom(const std::vector<gdf_column_cpp> column_cpps) {
+  ColumnBuildersFrom(const std::vector<gdf_column_cpp>& column_cpps) {
     std::vector<LiteralColumnBuilder> builders;
     builders.resize(column_cpps.size());
     std::transform(column_cpps.cbegin(),

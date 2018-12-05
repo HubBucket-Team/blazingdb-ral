@@ -66,6 +66,15 @@ public:
 
   std::string name() const { return name_; }
 
+public:
+    const std::vector<gdf_valid_type>& getValids() const {
+        return valids_;
+    }
+
+    void setValids(const std::vector<gdf_valid_type>&& valids) {
+        valids_ = std::move(valids);
+    }
+
 protected:
   static gdf_column_cpp Create(const std::string &name,
                                const gdf_dtype    dtype,
@@ -75,6 +84,7 @@ protected:
 
 protected:
   const std::string name_;
+  std::vector<gdf_valid_type> valids_;
 };
 
 Column::~Column() {}
@@ -173,6 +183,12 @@ public:
     : impl_{std::make_shared<Impl<Callback> >(
       std::move(name), std::forward<Callback>(callback))} {}
 
+  template <class Callback>
+  ColumnBuilder(const std::string& name, std::vector<gdf_valid_type>&& valids, Callback&& callback)
+    : impl_{std::make_shared<Impl<Callback>>
+             (std::move(name), std::move(valids), std::forward<Callback>(callback))}
+  { }
+
   ColumnBuilder() {}
   ColumnBuilder &operator=(const ColumnBuilder &other) {
     impl_ = other.impl_;
@@ -196,16 +212,25 @@ private:
     Impl(const std::string &&name, Callable &&callback)
       : name_{std::move(name)}, callback_{std::forward<Callable>(callback)} {}
 
+    Impl(const std::string&& name, const std::vector<gdf_valid_type>&& valids, Callable&& callback)
+      : name_{std::move(name)}, valids_{std::move(valids)}, callback_{std::forward<Callable>(callback)}
+    { }
+
     std::unique_ptr<Column> Build(const std::size_t length) final {
       auto *column =
         new TypedColumn<RangeTraits<decltype(callback_)>::r_type::value>(name_);
       column->range(length, callback_);
+      column->setValids(std::move(valids_));
       return std::unique_ptr<Column>(column);
     }
 
   private:
-    const std::string name_;
-    Callable          callback_;
+    using valid_vector = std::vector<gdf_valid_type>;
+
+  private:
+    const std::string  name_;
+    const valid_vector valids_;
+    Callable           callback_;
   };
 
   std::shared_ptr<ImplBase> impl_;
@@ -217,13 +242,23 @@ template <gdf_dtype id>
 class Literals {
 public:
   using value_type       = typename DType<id>::value_type;
+  using valid_type       = gdf_valid_type;
   using initializer_list = std::initializer_list<value_type>;
   using vector           = std::vector<value_type>;
+  using valid_vector     = std::vector<valid_type>;
 
   Literals(const vector &&values) : values_{std::move(values)} {}
   Literals(const initializer_list &values) : values_{values} {}
 
+  Literals(const vector&& values, valid_vector&& valids)
+   : values_ {std::move(values)}, valids_ {std::move(valids)}
+  { }
+
   const vector &values() const { return values_; }
+
+  valid_vector valids() {
+    return valids_;
+  }
 
   std::size_t size() const { return values_.size(); }
 
@@ -231,13 +266,24 @@ public:
 
 private:
   vector values_;
+  valid_vector valids_;
 };
 
 class LiteralColumnBuilder {
 public:
+  enum class Path {
+    Output
+  };
+
+public:
   template <gdf_dtype id>
   LiteralColumnBuilder(const std::string &name, Literals<id> values)
     : impl_{std::make_shared<Impl<id> >(name, values)} {}
+
+  template <gdf_dtype id>
+  LiteralColumnBuilder(Path path, const std::string& name, Literals<id> values)
+    : impl_{std::make_shared<OutImpl<id>>(name, values)}
+  { }
 
   LiteralColumnBuilder() {}
   LiteralColumnBuilder &operator=(const LiteralColumnBuilder &other) {
@@ -281,6 +327,40 @@ private:
     ColumnBuilder     builder_;
   };
 
+  template <gdf_dtype id>
+  class OutImpl : public ImplBase {
+  public:
+    OutImpl(const std::string& name, Literals<id>& literals)
+      : name_{name},
+        literals_{literals},
+        builder_ {
+          ColumnBuilder(
+            name_,
+            std::move(literals_.valids()),
+            [this](Index i) -> DType<id> {
+              return *(literals_.values().begin() + static_cast<std::ptrdiff_t>(i));
+            })
+        }
+        { }
+
+    std::unique_ptr<Column> Build() {
+      return builder_.Build(literals_.size());
+    }
+
+    operator ColumnBuilder() const {
+      return builder_;
+    }
+
+    virtual std::size_t length() const {
+      return literals_.size();
+    }
+
+  private:
+    const std::string name_;
+    Literals<id>      literals_;
+    ColumnBuilder     builder_;
+  };
+
   std::shared_ptr<ImplBase> impl_;
 };
 
@@ -305,18 +385,24 @@ public:
 #define CASE(D)                                                                \
   case GDF_##D:                                                                \
     return LiteralColumnBuilder {                                              \
-      name_, Literals<GDF_##D> {                                               \
-        std::move(HostVectorFrom<GDF_##D>(column_cpp))                         \
+      LiteralColumnBuilder::Path::Output,                                      \
+      name_,                                                                   \
+      Literals<GDF_##D> {                                                      \
+        std::move(HostVectorFrom<GDF_##D>(column_cpp)),                        \
+        std::move(HostValidFrom(column_cpp))                                   \
       }                                                                        \
     }
       CASE(INT8);
       CASE(INT16);
       CASE(INT32);
       CASE(INT64);
-      CASE(UINT8);
-      CASE(UINT16);
-      CASE(UINT32);
-      CASE(UINT64);
+
+      //TODO percy noboa see upgrade to uints
+//      CASE(UINT8);
+//      CASE(UINT16);
+//      CASE(UINT32);
+//      CASE(UINT64);
+
       CASE(FLOAT32);
       CASE(FLOAT64);
       CASE(DATE32);

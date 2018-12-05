@@ -7,7 +7,6 @@ ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
   ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
   ${CMAKE_SOURCE_DIR}/src/JoinProcessor.cpp
   ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp
-  ${CMAKE_SOURCE_DIR}/src/StringUtil.cpp
   ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
   
 )
@@ -23,3 +22,7 @@ configure_test(joint-test
 )
 target_link_libraries(joint-test joint-test-utils)
 
+target_link_libraries(joint-test
+                      ${cuDF_adapter_testing_library}
+                      ${cuDF_adapter_testing_dependencies}
+)

@@ -7,12 +7,10 @@
 
 #include <CalciteInterpreter.h>
 #include <GDFColumn.cuh>
-#include <gdf/gdf.h>
+#include "gdf_wrapper/gdf_wrapper.cuh"
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
-#include <gdf/gdf.h>
-#include <gdf/cffi/functions.h>
 
 #include "../utils/gdf/library/table.h"
 #include "../utils/gdf/library/table_group.h"

@@ -6,13 +6,11 @@
 #include "gtest/gtest.h"
 #include <CalciteExpressionParsing.h>
 #include <CalciteInterpreter.h>
-#include <StringUtil.h>
+#include <blazingdb/io/Util/StringUtil.h>
 #include <DataFrame.h>
 #include <GDFColumn.cuh>
 #include <GDFCounter.cuh>
 #include <Utils.cuh>
-
-#include <gdf/gdf.h>
 
 #include <gdf/library/table_group.h>
 

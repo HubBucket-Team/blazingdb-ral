@@ -13,7 +13,24 @@ function(configure_test TEST_NAME Tests_SRCS)
     cuda_add_executable(${TEST_NAME} ${Tests_SRCS})
 
     # TODO percy do not use libgdf.so here and use gdf (the static lib) instead
-    target_link_libraries(${TEST_NAME} gmock_main gmock GTest::GTest ${LIBGDF_STATIC_LIB} ${CUDA_CUDA_LIBRARY} ${CUDA_NVRTC_LIBRARY} ${CUDA_NVTX_LIBRARY})
+    target_link_libraries(${TEST_NAME}
+        gmock_main
+        gmock 
+        GTest::GTest
+        NVStrings
+        ${LIBGDF_STATIC_LIB}
+        ${ARROW_STATIC_LIB}
+        blazingdb-io
+        rmm
+        Boost::filesystem
+        ${FLATBUFFERS_STATIC_LIB}
+        ${BLAZINGDB_PROTOCOL_STATIC_LIB}
+        ${CUDA_CUDA_LIBRARY}
+        ${CUDA_NVRTC_LIBRARY}
+        ${CUDA_NVTX_LIBRARY}
+    )
+
+    
     set_target_properties(${TEST_NAME} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/gtests/")
 
@@ -40,6 +57,7 @@ add_subdirectory(evaluate_query)
 add_subdirectory(order-by)
 add_subdirectory(gdf-ref-counter)
 add_subdirectory(where)
+add_subdirectory(joins)
 add_subdirectory(tpch)
 
 message(STATUS "******** Tests are ready ********")

@@ -9,6 +9,7 @@
  */
 
 #include <cuda_runtime.h>
+#include <memory>
 #include "CalciteInterpreter.h"
 #include "ResultSetRepository.h"
 #include "DataFrame.h"
@@ -23,6 +24,7 @@
 #include <blazingdb/protocol/api.h>
 #include <blazingdb/protocol/message/messages.h>
 #include <blazingdb/protocol/message/interpreter/messages.h>
+#include <blazingdb/protocol/message/io/file_system.h>
 #include "ral-message.cuh"
 
 
@@ -35,21 +37,76 @@ using namespace blazingdb::protocol;
 #include <blazingdb/io/FileSystem/FileSystemRepository.h>
 #include <blazingdb/io/FileSystem/FileSystemCommandParser.h>
 #include <blazingdb/io/FileSystem/FileSystemManager.h>
+#include <blazingdb/io/Config/BlazingContext.h>
+#include <blazingdb/io/Library/Logging/Logger.h>
+#include <blazingdb/io/Library/Logging/CoutOutput.h>
+#include "blazingdb/io/Library/Logging/ServiceLogging.h"
 
 
+#include "Config/Config.h"
+
+const Path FS_NAMESPACES_FILE("/tmp/files_systems.bin.data");
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);
-
+  
 static result_pair  registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
-  ZeroMessage response{};
   std::cout << "registerFileSystem: " << accessToken << std::endl;
+  blazingdb::message::io::FileSystemRegisterRequestMessage message(buffer.data());
+
+  FileSystemConnection fileSystemConnection;
+  Path root("/");
+  const std::string authority =  message.getAuthority();
+  if (message.isLocal()) {
+    fileSystemConnection = FileSystemConnection(FileSystemType::LOCAL);
+  } else if (message.isHdfs()) {
+    auto hdfs = message.getHdfs();
+    fileSystemConnection = FileSystemConnection(hdfs.host, hdfs.port, hdfs.user, (HadoopFileSystemConnection::DriverType)hdfs.driverType, hdfs.kerberosTicket);
+  } else if (message.isS3()) {
+    auto s3 = message.getS3();
+    fileSystemConnection = FileSystemConnection(s3.bucketName, ( S3FileSystemConnection::EncryptionType )s3.encryptionType, s3.kmsKeyAmazonResourceName, s3.accessKeyId, s3.secretKey, s3.sessionToken);
+  }
+  root = message.getRoot();
+  if (root.isValid() == false) {
+    std::cout << "something went wrong when registering filesystem ..." << std::endl;
+    ResponseErrorMessage errorMessage{ std::string{ "ERROR: Invalid root provided when registering file system"} };
+    return std::make_pair(Status_Error, errorMessage.getBufferData());
+  }
+  FileSystemEntity fileSystemEntity(authority, fileSystemConnection, root);
+
+	const bool ok = BlazingContext::getInstance()->getFileSystemManager()->registerFileSystem(fileSystemEntity);
+	if (ok) { // then save the fs
+		const FileSystemRepository fileSystemRepository(FS_NAMESPACES_FILE, true);
+		const bool saved = fileSystemRepository.add(fileSystemEntity);
+
+		if (saved == false) {
+			std::cout << "WARNING: could not save the registered file system into ... the data file uri ..."; //TODO percy error message
+		}
+	} else {
+   	  std::cout << "something went wrong when registering filesystem ..." << std::endl;
+      ResponseErrorMessage errorMessage{ std::string{"ERROR: Something went wrong when registering file system"} };
+      return std::make_pair(Status_Error, errorMessage.getBufferData());
+	}
+  ZeroMessage response{};
   return std::make_pair(Status_Success, response.getBufferData());
 }
 
 static result_pair  deregisterFileSystem(uint64_t accessToken, Buffer&& buffer)  {
-  ZeroMessage response{};
-
   std::cout << "deregisterFileSystem: " << accessToken << std::endl;
+  blazingdb::message::io::FileSystemDeregisterRequestMessage message(buffer.data());
+  auto authority =  message.getAuthority();
+  if (authority.empty() == true) {
+     ResponseErrorMessage errorMessage{ std::string{"derigistering an empty authority"} };
+     return std::make_pair(Status_Error, errorMessage.getBufferData());
+  }
+  const bool ok = BlazingContext::getInstance()->getFileSystemManager()->deregisterFileSystem(authority);
+  if (ok) { // then save the fs
+    const FileSystemRepository fileSystemRepository(FS_NAMESPACES_FILE, true);
+    const bool deleted = fileSystemRepository.deleteByAuthority(authority);
+    if (deleted == false) {
+      std::cout << "WARNING: could not delete the registered file system into ... the data file uri ..."; //TODO percy error message
+    }
+  }
+  ZeroMessage response{};
   return std::make_pair(Status_Success, response.getBufferData());
 }
 
@@ -189,6 +246,8 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
 int main(void)
 {
 	std::cout << "RAL Engine starting"<< std::endl;
+  auto output = new Library::Logging::CoutOutput();
+  Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
 
   blazingdb::protocol::UnixSocketConnection connection({"/tmp/ral.socket", std::allocator<char>()});
   blazingdb::protocol::Server server(connection);

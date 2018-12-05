@@ -63,6 +63,7 @@ get_directory_property(cudf_adapter_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/s
 set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_parser/ParquetParser.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_parser/CSVParser.cpp
+              ${CMAKE_CURRENT_SOURCE_DIR}/src/Config/Config.cpp             
               ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteInterpreter.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/ColumnManipulation.cu

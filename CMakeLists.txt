@@ -88,7 +88,7 @@ set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
 add_executable(testing-libgdf ${SRC_FILES})
 
 set(Boost_USE_STATIC_LIBS ON) # only find static libs
-find_package(Boost REQUIRED COMPONENTS filesystem)
+find_package(Boost REQUIRED COMPONENTS filesystem regex)
 
 target_link_libraries(testing-libgdf
     NVStrings
@@ -98,6 +98,7 @@ target_link_libraries(testing-libgdf
     ${ARROW_STATIC_LIB}
     ${PARQUET_STATIC_LIB}
     Boost::filesystem
+    Boost::regex
     aws-cpp-sdk-s3 aws-cpp-sdk-s3-encryption
     rmm
     ${FLATBUFFERS_STATIC_LIB}

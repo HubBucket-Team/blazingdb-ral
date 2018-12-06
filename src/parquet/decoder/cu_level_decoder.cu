@@ -4,8 +4,8 @@
 
 #include "arrow/util/rle-encoding.h"
 #include <arrow/util/bit-util.h>
-#include "../../arrow/rle_decoder.h"
-#include "../../arrow/bit-stream.h"
+#include "../decoder/arrow/rle_decoder.h"
+#include "../decoder/arrow/bit-stream.h"
 
 #include "cu_level_decoder.h"
 
@@ -42,7 +42,7 @@ int CUDALevelDecoder::SetData(::parquet::Encoding::type encoding,
     }
     case ::parquet::Encoding::BIT_PACKED: {
         num_bytes = static_cast<int32_t>(
-            ::arrow::BitUtil::Ceil(num_buffered_values * bit_width_, 8));
+            ::arrow::BitUtil::CeilDiv(num_buffered_values * bit_width_, 8));
         if (!bit_packed_decoder_) {
             bit_packed_decoder_.reset(new gdf::arrow::internal::BitReader(data, num_bytes));
         } else {

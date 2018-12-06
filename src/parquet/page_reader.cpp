@@ -115,11 +115,11 @@ PageReader::NextPage() {
                 PARQUET_THROW_NOT_OK(
                   decompression_buffer_->Resize(uncompressed_len, false));
             }
-            PARQUET_THROW_NOT_OK(decompressor_->Decompress(
-              compressed_len,
-              buffer,
-              uncompressed_len,
-              decompression_buffer_->mutable_data()));
+            PARQUET_THROW_NOT_OK(
+              decompressor_->Decompress(compressed_len,
+                                        buffer,
+                                        uncompressed_len,
+                                        decompression_buffer_->mutable_data()));
             buffer = decompression_buffer_->data();
         }
 

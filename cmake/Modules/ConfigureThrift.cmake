@@ -86,7 +86,7 @@ set_package_properties(Parquet PROPERTIES TYPE REQUIRED
 
 set(THRIFT_INCLUDEDIR ${THRIFT_ROOT}/include/)
 
-include_directories(${THRIFT_INCLUDEDIR})
+include_directories(${THRIFT_INCLUDEDIR} ${THRIFT_INCLUDE_DIR})
 link_directories(${THRIFT_ROOT}/lib/)
 
 # END MAIN #

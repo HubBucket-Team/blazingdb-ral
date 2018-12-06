@@ -12,6 +12,7 @@ function(configure_test TEST_NAME Tests_SRCS)
 
     # TODO percy do not use libgdf.so here and use gdf (the static lib) instead
     target_link_libraries(${TEST_NAME}
+        gmock_main gmock GTest::GTest
         NVStrings
         ${LIBGDF_STATIC_LIB}
         ${BLAZINGDB_IO_STATIC_LIB}

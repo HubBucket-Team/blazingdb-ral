@@ -24,6 +24,7 @@ set(the-test_SRCS
   ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
   ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
   ${source_files}
+  ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
   fullouter_join.cu
 )
 

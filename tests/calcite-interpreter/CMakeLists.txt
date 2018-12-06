@@ -25,6 +25,7 @@ set(calcite_interpreter_test_SRCS
         ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
     ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
     ${source_files}
+    ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
     calcite_interpreter-test.cu
 )
 
@@ -40,13 +41,13 @@ set(calcite_interpreter_where_test_SRCS
         ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
     ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
     ${source_files}
+    ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
     calcite_interpreter-where-test.cu
 )
 
 configure_test(calcite-interpreter-test "${calcite_interpreter_test_SRCS}")
 configure_test(calcite-interpreter-where-test "${calcite_interpreter_where_test_SRCS}")
 
-target_link_libraries(calcite-interpreter-where-test ral-test-utils)
 
 target_link_libraries(calcite-interpreter-test
                       ${cuDF_adapter_testing_library}

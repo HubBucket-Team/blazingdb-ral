@@ -72,11 +72,10 @@ if (THRIFT_INSTALL_DIR)
 else()
     message(STATUS "THRIFT_INSTALL_DIR not defined, it will be built from sources")
     CONFIGURE_THRIFT_EXTERNAL_PROJECT()
-    set(THRIFT_ROOT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/Thrift-install/")
+    set(THRIFT_ROOT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/thrift-install/")
 endif()
 
-set(ENV{THRIFT_HOME} ${THRIFT_ROOT})
-
+set(Thrift_HOME ${THRIFT_ROOT})
 find_package(Thrift REQUIRED)
 set_package_properties(Thrift PROPERTIES TYPE REQUIRED
     PURPOSE "Apache Thrift."

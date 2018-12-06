@@ -28,6 +28,6 @@ ExternalProject_Add(thrift
     BINARY_DIR        "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/thrift-build"
     INSTALL_DIR       "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/thrift-install"
     UPDATE_COMMAND    ""
-    CMAKE_ARGS        ${ARROW_CMAKE_ARGS}
+    CMAKE_ARGS        ${THRIFT_CMAKE_ARGS}
                       -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/thrift-install
 )

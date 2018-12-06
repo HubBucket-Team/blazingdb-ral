@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-#include "../arrow/rle_decoder.h"
 #include "arrow/util/rle-encoding.h"
+#include "decoder/arrow/rle_decoder.h"
 #include <thrust/device_vector.h>
 
 namespace parquet {
@@ -37,9 +37,11 @@ public:
       : ::parquet::Decoder<Type>(descr, ::parquet::Encoding::RLE_DICTIONARY),
         dictionary_(0) {}
 
-    void SetDict(::parquet::Decoder<Type> *dictionary);
+    void
+    SetDict(::parquet::Decoder<Type> *dictionary);
 
-    void SetData(int num_values, const std::uint8_t *data, int len) override {
+    void
+    SetData(int num_values, const std::uint8_t *data, int len) override {
         num_values_ = num_values;
         if (len == 0) return;
         std::uint8_t bit_width = *data;
@@ -48,7 +50,8 @@ public:
         idx_decoder_ = RleDecoder(data, len, bit_width);
     }
 
-    int Decode(T *buffer, int max_values) override {
+    int
+    Decode(T *buffer, int max_values) override {
         max_values         = std::min(max_values, num_values_);
         int decoded_values = idx_decoder_.GetBatchWithDict(
           thrust::raw_pointer_cast(dictionary_.data()),
@@ -62,11 +65,12 @@ public:
         return max_values;
     }
 
-    int DecodeSpaced(T *                 buffer,
-                     int                 num_values,
-                     int                 null_count,
-                     const std::uint8_t *valid_bits,
-                     std::int64_t        valid_bits_offset) override {
+    int
+    DecodeSpaced(T *                 buffer,
+                 int                 num_values,
+                 int                 null_count,
+                 const std::uint8_t *valid_bits,
+                 std::int64_t        valid_bits_offset) override {
         int decoded_values = idx_decoder_.GetBatchWithDictSpaced(
           thrust::raw_pointer_cast(dictionary_.data()),
           num_dictionary_values_,
@@ -92,7 +96,8 @@ private:
 };
 
 template <typename Type, typename RleDecoder>
-inline void DictionaryDecoder<Type, RleDecoder>::SetDict(
+inline void
+DictionaryDecoder<Type, RleDecoder>::SetDict(
   ::parquet::Decoder<Type> *dictionary) {
     int num_dictionary_values = dictionary->values_left();
     num_dictionary_values_    = num_dictionary_values;
@@ -103,8 +108,8 @@ inline void DictionaryDecoder<Type, RleDecoder>::SetDict(
 
 template <>
 inline void
-DictionaryDecoder< ::parquet::BooleanType, ::arrow::RleDecoder>::SetDict(
-  ::parquet::Decoder< ::parquet::BooleanType> *) {
+DictionaryDecoder<::parquet::BooleanType, ::arrow::util::RleDecoder>::SetDict(
+  ::parquet::Decoder<::parquet::BooleanType> *) {
     ::parquet::ParquetException::NYI(
       "Dictionary encoding is not implemented for boolean values");
 }

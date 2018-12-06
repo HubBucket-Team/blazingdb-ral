@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#include "../arrow/bit-stream.h"
+#include "decoder/arrow/bit-stream.h"
 #include <arrow/util/bit-stream-utils.h>
 #include <thrust/device_vector.h>
 
@@ -45,13 +45,15 @@ public:
         }
     }
 
-    virtual void SetData(int num_values, const std::uint8_t *data, int len) {
+    virtual void
+    SetData(int num_values, const std::uint8_t *data, int len) {
         num_values_ = num_values;
         data_       = data;
         len_        = len;
     }
 
-    virtual int Decode(T *buffer, int max_values);
+    virtual int
+    Decode(T *buffer, int max_values);
 
 private:
     using ::parquet::Decoder<DataType>::descr_;
@@ -61,11 +63,12 @@ private:
 };
 
 template <typename T>
-inline int DecodePlain(const std::uint8_t *data,
-                       std::int64_t        data_size,
-                       int                 num_values,
-                       int,
-                       T *out) {
+inline int
+DecodePlain(const std::uint8_t *data,
+            std::int64_t        data_size,
+            int                 num_values,
+            int,
+            T *out) {
     int bytes_to_decode = num_values * static_cast<int>(sizeof(T));
     if (data_size < bytes_to_decode) {
         ::parquet::ParquetException::EofException();
@@ -75,7 +78,8 @@ inline int DecodePlain(const std::uint8_t *data,
 }
 
 template <typename DataType>
-inline int PlainDecoder<DataType>::Decode(T *buffer, int max_values) {
+inline int
+PlainDecoder<DataType>::Decode(T *buffer, int max_values) {
     max_values = std::min(max_values, num_values_);
     int bytes_consumed =
       DecodePlain<T>(data_, len_, max_values, type_length_, buffer);
@@ -86,32 +90,36 @@ inline int PlainDecoder<DataType>::Decode(T *buffer, int max_values) {
 }
 
 template <>
-class PlainDecoder< ::parquet::BooleanType>
-  : public ::parquet::Decoder< ::parquet::BooleanType> {
+class PlainDecoder<::parquet::BooleanType>
+  : public ::parquet::Decoder<::parquet::BooleanType> {
 public:
     explicit PlainDecoder(const ::parquet::ColumnDescriptor *descr)
-      : ::parquet::Decoder< ::parquet::BooleanType>(
-        descr, ::parquet::Encoding::PLAIN) {}
+      : ::parquet::Decoder<::parquet::BooleanType>(descr,
+                                                   ::parquet::Encoding::PLAIN) {
+    }
 
-    virtual void SetData(int num_values, const std::uint8_t *data, int len) {
+    virtual void
+    SetData(int num_values, const std::uint8_t *data, int len) {
         num_values_ = num_values;
         bit_reader_ = gdf::arrow::internal::BitReader(data, len);
     }
 
-    int Decode(std::uint8_t *buffer, int max_values) {
+    int
+    Decode(std::uint8_t *buffer, int max_values) {
         max_values = std::min(max_values, num_values_);
         bool val;
         for (int i = 0; i < max_values; ++i) {
             if (!bit_reader_.GetValue(1, &val)) {
                 ::parquet::ParquetException::EofException();
             }
-            ::arrow::BitUtil::SetArrayBit(buffer, i, val);
+            if (val) { ::arrow::BitUtil::SetBit(buffer, i); }
         }
         num_values_ -= max_values;
         return max_values;
     }
 
-    virtual int Decode(bool *buffer, int max_values) {
+    virtual int
+    Decode(bool *buffer, int max_values) {
         max_values = std::min(max_values, num_values_);
 
         int                   literal_batch = max_values;

@@ -19,31 +19,32 @@
 
 macro(CONFIGURE_ARROW_EXTERNAL_PROJECT)
     set(ENV{FLATBUFFERS_HOME} ${FLATBUFFERS_INSTALL_DIR})
+    set(ENV{THRIFT_HOME} ${THRIFT_INSTALL_DIR})
 
     #NOTE
     # libcudf.so` is now built with the old ABI `-D_GLIBCXX_USE_CXX11_ABI=0`
     # If you build Arrow from source, you can fix this by using `-DARROW_TENSORFLOW=ON`.
     # This forces Arrow to use the old ABI.
-    set(ARROW_CMAKE_ARGS " -DARROW_WITH_LZ4=OFF"
-                         " -DARROW_WITH_ZSTD=OFF"
-                         " -DARROW_WITH_BROTLI=OFF"
-                         " -DARROW_WITH_SNAPPY=OFF"
-                         " -DARROW_WITH_ZLIB=OFF"
-                         " -DARROW_BUILD_STATIC=ON"
-                         " -DARROW_BUILD_SHARED=ON"
-                         " -DARROW_BOOST_USE_SHARED=ON"
-                         " -DARROW_BUILD_TESTS=OFF"
-                         " -DARROW_TEST_MEMCHECK=OFF"
-                         " -DARROW_BUILD_BENCHMARKS=OFF"
-                         " -DARROW_IPC=ON" # need ipc for blazingdb-ral (because cudf)
-                         " -DARROW_COMPUTE=OFF"
-                         " -DARROW_GPU=OFF"
-                         " -DARROW_JEMALLOC=OFF"
-                         " -DARROW_BOOST_VENDORED=OFF"
-                         " -DARROW_PYTHON=OFF"
-                         " -DARROW_HDFS=ON" # disable when blazingdb-io don't use arrow for hdfs
-                         " -DARROW_TENSORFLOW=ON" # enable old ABI for C/C++
-                         " -DARROW_PARQUET=OFF" # we don't need parquet for blazingdb-io
+    set(ARROW_CMAKE_ARGS " -DPARQUET_WITH_LZ4=ON"
+                         " -DPARQUET_WITH_ZSTD=ON"
+                         " -DPARQUET_WITH_BROTLI=ON"
+                         " -DPARQUET_WITH_SNAPPY=ON"
+                         " -DPARQUET_WITH_ZLIB=ON"
+                         " -DPARQUET_BUILD_STATIC=ON"
+                         " -DPARQUET_BUILD_SHARED=OFF"
+                         " -DPARQUET_BOOST_USE_SHARED=OFF"
+                         " -DPARQUET_BUILD_TESTS=OFF"
+                         " -DPARQUET_TEST_MEMCHECK=OFF"
+                         " -DPARQUET_BUILD_BENCHMARKS=OFF"
+                         " -DPARQUET_IPC=ON" # need ipc for blazingdb-ral (because cudf)
+                         " -DPARQUET_COMPUTE=OFF"
+                         " -DPARQUET_GPU=OFF"
+                         " -DPARQUET_JEMALLOC=OFF"
+                         " -DPARQUET_BOOST_VENDORED=OFF"
+                         " -DPARQUET_PYTHON=OFF"
+                         " -DPARQUET_HDFS=ON" # disable when blazingdb-io don't use arrow for hdfs
+                         " -DPARQUET_TENSORFLOW=ON" # enable old ABI for C/C++
+                         " -DPARQUET_PARQUET=ON"
     )
 
     # Download and unpack arrow at configure time

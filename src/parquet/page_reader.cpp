@@ -20,6 +20,8 @@
 #include <thrift/protocol/TCompactProtocol.h>
 #include <thrift/transport/TBufferTransports.h>
 
+#include <arrow/util/compression.h>
+
 namespace gdf {
 namespace parquet {
 namespace internal {

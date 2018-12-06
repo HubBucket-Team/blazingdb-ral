@@ -37,6 +37,7 @@ include(ConfigureCUDA)
 # Configure dependencies
 include(ConfigureAWSSDK)
 include(ConfigureFlatBuffers)
+include(ConfigureThrift)
 include(ConfigureArrow)
 include(ConfigureParquet)
 include(ConfigureLibGDF)

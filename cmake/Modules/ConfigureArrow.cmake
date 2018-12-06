@@ -19,6 +19,7 @@
 
 macro(CONFIGURE_ARROW_EXTERNAL_PROJECT)
     set(ENV{FLATBUFFERS_HOME} ${FLATBUFFERS_INSTALL_DIR})
+    set(ENV{THRIFT_HOME} ${THRIFT_INSTALL_DIR})
 
     #NOTE
     # libcudf.so` is now built with the old ABI `-D_GLIBCXX_USE_CXX11_ABI=0`

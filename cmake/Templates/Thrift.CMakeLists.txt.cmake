@@ -30,4 +30,6 @@ ExternalProject_Add(thrift
     UPDATE_COMMAND    ""
     CMAKE_ARGS        ${THRIFT_CMAKE_ARGS}
                       -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/thrift-install
+                      -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
+                      -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
 )

@@ -752,11 +752,12 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 	}
 
 	std::vector<char> asc_desc(num_sort_columns, 0); //TODO: get ascending or descending but right now thats not being used. for now setting them all to ascending
+	int flag_nulls_are_smallest = 0;  // TODO: need to be able to specify this based on the query
 	gdf_column_cpp index_col;
 	index_col.create_gdf_column(GDF_INT64,input.get_column(0).size(),nullptr,8, "");
 
 	gdf_error err = gdf_order_by_asc_desc(&cols[0], &asc_desc[0], num_sort_columns,
-			index_col.get_gdf_column());
+			index_col.get_gdf_column(), flag_nulls_are_smallest);
 
 	if (err != GDF_SUCCESS)
 		return err;
@@ -811,10 +812,6 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 
 		//free_gdf_column(&empty);*/
 	}
-	//TODO: handle errors
-	//cudaFree(indices);
-	delete[] cols;
-	//free_gdf_column(&temp_output);
 	return GDF_SUCCESS;
 }
 

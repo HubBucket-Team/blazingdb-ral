@@ -25,6 +25,7 @@ set(integration_test_SRCS
     ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
     ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
     ${source_files}
+    ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
     integration-test.cu
 )
 

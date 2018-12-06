@@ -24,7 +24,8 @@ set(dtypes-test_SRCS
   ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
   ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
   ${source_files}
+  ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
   dtypes-test.cu)
 
 configure_test(dtypes-test "${dtypes-test_SRCS}")
-target_link_libraries(dtypes-test ral-test-utils)
+

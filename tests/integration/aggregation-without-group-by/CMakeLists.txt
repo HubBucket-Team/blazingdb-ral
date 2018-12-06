@@ -25,6 +25,7 @@ set(test_sources
     ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
     ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
     ${source_files}
+    ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
     test-aggregation-without-group-by.cpp
 )
 

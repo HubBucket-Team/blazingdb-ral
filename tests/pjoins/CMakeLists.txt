@@ -1,6 +1,5 @@
-
-cuda_add_library(joint-test-utils
-${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
+set(jsource_files_SRC
+  ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
   ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
   ${CMAKE_SOURCE_DIR}/src/ColumnManipulation.cu
   ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
@@ -8,21 +7,10 @@ ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
   ${CMAKE_SOURCE_DIR}/src/JoinProcessor.cpp
   ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp
   ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
-  
-)
-target_link_libraries(joint-test-utils
-  ${LIBGDF_STATIC_LIB}
-  ${CUDA_CUDA_LIBRARY}
-  ${CUDA_NVRTC_LIBRARY}
-  ${CUDA_NVTX_LIBRARY}
-)
-
-configure_test(joint-test
+  ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
+  ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
+  ${binary_operation_source_files}
   pjoins.cu
 )
-target_link_libraries(joint-test joint-test-utils)
 
-target_link_libraries(joint-test
-                      ${cuDF_adapter_testing_library}
-                      ${cuDF_adapter_testing_dependencies}
-)
+configure_test(joint-test "${jsource_files_SRC}")

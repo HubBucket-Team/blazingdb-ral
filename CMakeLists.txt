@@ -66,21 +66,21 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/src/parquet)
 get_directory_property(parquet_reader_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/parquet DEFINITION source_files)
 
 ## Target source files
-set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_parser/ParquetParser.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_parser/CSVParser.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteInterpreter.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/ColumnManipulation.cu
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/ResultSetRepository.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/JoinProcessor.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/LogicalFilter.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/QueryState.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/CodeTimer.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/Utils.cu
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/GDFCounter.cu
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/GDFColumn.cu
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/testing-libgdf.cu
+set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
+              ${CMAKE_SOURCE_DIR}/src/io/data_parser/ParquetParser.cpp
+              ${CMAKE_SOURCE_DIR}/src/io/data_parser/CSVParser.cpp
+              ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
+              ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
+              ${CMAKE_SOURCE_DIR}/src/ColumnManipulation.cu
+              ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
+              ${CMAKE_SOURCE_DIR}/src/JoinProcessor.cpp
+              ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp
+              ${CMAKE_SOURCE_DIR}/src/QueryState.cpp
+              ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
+              ${CMAKE_SOURCE_DIR}/src/Utils.cu
+              ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
+              ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
+              ${CMAKE_SOURCE_DIR}/src/testing-libgdf.cu
               ${cudf_adapter_source_files}
               ${binary_operation_source_files}
               ${parquet_reader_source_files})
@@ -114,7 +114,7 @@ if(BUILD_TESTING)
     include(ConfigureGoogleTest)
 
     if(GTEST_FOUND)
-        #add_subdirectory(tests)
+        add_subdirectory(tests)
     else()
         message(AUTHOR_WARNING "Google C++ Testing Framework (Google Test) not found: automated tests are disabled.")
     endif()

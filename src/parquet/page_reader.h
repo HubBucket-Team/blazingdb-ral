@@ -44,8 +44,8 @@ private:
     ::parquet::format::PageHeader    current_page_header_;
     std::shared_ptr<::parquet::Page> current_page_;
 
-    std::unique_ptr<arrow::Codec>      decompressor_;
-    std::shared_ptr<arrow::PoolBuffer> decompression_buffer_;
+    std::unique_ptr<arrow::util::Codec>     decompressor_;
+    std::shared_ptr<arrow::ResizableBuffer> decompression_buffer_;
 
     std::uint32_t max_page_header_size_;
 

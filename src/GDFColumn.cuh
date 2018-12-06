@@ -8,7 +8,7 @@
 #ifndef GDFCOLUMN_H_
 #define GDFCOLUMN_H_
 
-#include <gdf/gdf.h>
+#include "gdf_wrapper/gdf_wrapper.cuh"
 #include "GDFCounter.cuh"
 #include "Utils.cuh"
 #include <string>
@@ -68,6 +68,9 @@ class gdf_column_cpp
 
 	void resize(size_t new_size);
 	gdf_error compact();
+
+public:
+    std::size_t get_valid_size() const;
 };
 
 #endif /* GDFCOLUMN_H_ */

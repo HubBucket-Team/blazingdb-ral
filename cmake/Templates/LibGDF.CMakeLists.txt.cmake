@@ -11,11 +11,20 @@ project(libgdf-download NONE)
 
 include(ExternalProject)
 
+ExternalProject_Add(nvstrings
+    URL               https://anaconda.org/nvidia/nvstrings/0.0.3/download/linux-64/nvstrings-0.0.3-cuda9.2_py35_0.tar.bz2
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND     ""
+    INSTALL_COMMAND   ""
+)
+
 ExternalProject_Add(libgdf
-    GIT_REPOSITORY    https://github.com/BlazingDB/libgdf.git
-    GIT_TAG           binary-operators-draft
+    GIT_REPOSITORY    https://github.com/BlazingDB/cudf.git
+    GIT_TAG           develop
+    SOURCE_SUBDIR     libgdf
     SOURCE_DIR        "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-src"
     BINARY_DIR        "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-build"
     INSTALL_DIR       "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-install"
-    CMAKE_ARGS        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DLIBGDF_STATIC_LIB=ON -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-install
+    UPDATE_COMMAND    ""
+    CMAKE_ARGS        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-install
 )

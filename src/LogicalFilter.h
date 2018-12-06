@@ -9,7 +9,7 @@
 #define LOGICALFILTER_H_
 
 #include <vector>
-#include <gdf/gdf.h>
+#include "gdf_wrapper/gdf_wrapper.cuh"
 #include <string>
 #include "DataFrame.h"
 #include "Utils.cuh"

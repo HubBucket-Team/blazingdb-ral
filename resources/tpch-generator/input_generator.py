@@ -16,7 +16,7 @@ def get_table_occurrences(query):
 
 def replace_all(text, dic):
     for i, j in dic.items():
-        text = re.sub(r"\s%s\s" % i, j, text)
+        text = re.sub(r"\s%s(\s|$)" % i, j, text)
     return text
 
 
@@ -85,7 +85,7 @@ def get_reference_result(drill, table, query_str):
     df = query_result.to_dataframe()
     items = []
     for column in query_result.columns:
-        s = '[%s]' % (','.join([item for item in np.asarray(df[column])]))
+        s = '[%s]' % (','.join(['-1' if item is None else '1' if item is True else '0' if item is False else item for item in np.asarray(df[column])]))
         items.append(s)
 
     return '[%s]' % (','.join(items))
@@ -161,7 +161,7 @@ def gdf_type(type_name):
         'short': 'GDF_INT32',
         'char': 'GDF_INT8',
         'date': 'GDF_INT64',
-        'string': 'GDF_INT64',
+        'string': 'GDF_STRING',
     }[type_name]
 
 

@@ -4,7 +4,6 @@
 
 #include <CalciteInterpreter.h>
 #include <GDFColumn.cuh>
-#include <gdf/gdf.h>
 
 #include "../utils/gdf/library/table_group.h"
 
@@ -38,10 +37,13 @@ DTYPE_FACTORY(std::int8_t, INT8);
 DTYPE_FACTORY(std::int16_t, INT16);
 DTYPE_FACTORY(std::int32_t, INT32);
 DTYPE_FACTORY(std::int64_t, INT64);
-DTYPE_FACTORY(std::uint8_t, UINT8);
-DTYPE_FACTORY(std::uint16_t, UINT16);
-DTYPE_FACTORY(std::uint32_t, UINT32);
-DTYPE_FACTORY(std::uint64_t, UINT64);
+
+//TODO percy noboa gonzales see upgrade to uints
+//DTYPE_FACTORY(std::uint8_t, UINT8);
+//DTYPE_FACTORY(std::uint16_t, UINT16);
+//DTYPE_FACTORY(std::uint32_t, UINT32);
+//DTYPE_FACTORY(std::uint64_t, UINT64);
+
 DTYPE_FACTORY(float, FLOAT32);
 DTYPE_FACTORY(double, FLOAT64);
 
@@ -51,10 +53,13 @@ using DTypesTestTypes = ::testing::Types<std::int8_t,
                                          std::int16_t,
                                          std::int32_t,
                                          std::int64_t,
-                                         std::uint8_t,
-                                         std::uint16_t,
-                                         std::uint32_t,
-                                         std::uint64_t,
+
+                                         //TODO percy noboa gonzales see upgrade to uints
+//                                         std::uint8_t,
+//                                         std::uint16_t,
+//                                         std::uint32_t,
+//                                         std::uint64_t,
+
                                          float,
                                          double>;
 TYPED_TEST_CASE(DTypesTest, DTypesTestTypes);

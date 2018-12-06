@@ -1,4 +1,4 @@
 #include <gtest/gtest.h>
 
 #include <GDFCounter.cuh>
-#include <gdf/gdf.h>
+#include "gdf_wrapper/gdf_wrapper.cuh"

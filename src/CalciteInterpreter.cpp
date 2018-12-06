@@ -1,5 +1,6 @@
 #include "CalciteInterpreter.h"
-#include "StringUtil.h"
+
+#include <blazingdb/io/Util/StringUtil.h>
 
 #include <algorithm>
 #include <thread>
@@ -14,6 +15,7 @@
 #include "CalciteExpressionParsing.h"
 #include "CodeTimer.h"
 #include "Traits/RuntimeTraits.h"
+#include "cuDF/Allocator.h"
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 const std::string LOGICAL_UNION_TEXT = "LogicalUnion";
@@ -120,6 +122,26 @@ bool contains_evaluation(std::string expression){
 	return (expression.find("(") != std::string::npos);
 }
 
+gdf_error create_null_value_gdf_column(int64_t output_value,
+                                       gdf_dtype output_type,
+                                       std::size_t output_size,
+                                       std::string&& output_name,
+                                       gdf_column_cpp& output_column,
+                                       std::vector<gdf_column_cpp>& output_vector) {
+    output_column.create_gdf_column(output_type,
+                                    output_size,
+                                    &output_value,
+                                    get_width_dtype(output_type),
+                                    output_name);
+
+    int invalid = 0;
+    CheckCudaErrors(cudaMemcpy(output_column.valid(), &invalid, 1, cudaMemcpyHostToDevice));
+
+    output_vector.pop_back();
+    output_vector.emplace_back(output_column);
+
+    return GDF_SUCCESS;
+}
 
 gdf_error perform_avg(gdf_column* column_output, gdf_column* column_input) {
     gdf_error error;
@@ -152,10 +174,11 @@ gdf_error perform_avg(gdf_column* column_output, gdf_column* column_input) {
                 int64_t result = (int64_t) avg_sum / (int64_t) avg_count;
                 CheckCudaErrors(cudaMemcpy(column_output->data, &result, dtype_size, cudaMemcpyHostToDevice));
             }
-            else if (Ral::Traits::is_dtype_unsigned(dtype)) {
-                uint64_t result = (uint64_t) avg_sum / (uint64_t) avg_count;
-                CheckCudaErrors(cudaMemcpy(column_output->data, &result, dtype_size, cudaMemcpyHostToDevice));
-            }
+            //TODO felipe percy noboa see upgrade to uints
+//            else if (Ral::Traits::is_dtype_unsigned(dtype)) {
+//                uint64_t result = (uint64_t) avg_sum / (uint64_t) avg_count;
+//                CheckCudaErrors(cudaMemcpy(column_output->data, &result, dtype_size, cudaMemcpyHostToDevice));
+//            }
         }
         else {
             error = GDF_UNSUPPORTED_DTYPE;
@@ -529,11 +552,18 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 
 		switch(aggregation_types[i]){
 		case GDF_SUM:
-			if(group_columns.size() == 0){
-
-				err = gdf_sum_generic(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
-
-
+            if (group_columns.size() == 0) {
+                if (aggregation_input.get_gdf_column()->size != 0) {
+                    err = gdf_sum_generic(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
+                }
+                else {
+                    err = create_null_value_gdf_column(0,
+                                                       output_type,
+                                                       aggregation_size,
+                                                       aggregator_to_string(aggregation_types[i]),
+                                                       output_column,
+                                                       output_columns_aggregations);
+                }
 			}else{
 //				std::cout<<"before"<<std::endl;
 //				print_gdf_column(output_columns_group[0].get_gdf_column());
@@ -558,10 +588,17 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 			break;
 		case GDF_MIN:
 			if(group_columns.size() == 0){
-
-				err = gdf_min_generic(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
-
-
+                if (aggregation_input.get_gdf_column()->size != 0) {
+                    err = gdf_min_generic(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
+                }
+                else {
+                    err = create_null_value_gdf_column(0,
+                                                       output_type,
+                                                       aggregation_size,
+                                                       aggregator_to_string(aggregation_types[i]),
+                                                       output_column,
+                                                       output_columns_aggregations);
+                }
 			}else{
 				err = gdf_group_by_min(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
 						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);
@@ -575,10 +612,17 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 			break;
 		case GDF_MAX:
 			if(group_columns.size() == 0){
-
-				err = gdf_max_generic(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
-
-
+                if (aggregation_input.get_gdf_column()->size != 0) {
+                    err = gdf_max_generic(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
+                }
+                else {
+                    err = create_null_value_gdf_column(0,
+                                                       output_type,
+                                                       aggregation_size,
+                                                       aggregator_to_string(aggregation_types[i]),
+                                                       output_column,
+                                                       output_columns_aggregations);
+                }
 			}else{
 				err = gdf_group_by_max(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
 						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);
@@ -591,10 +635,20 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 			}
 			break;
 		case GDF_AVG:
-			if(group_columns.size() == 0){
-                err = perform_avg(output_column.get_gdf_column(), aggregation_input.get_gdf_column());
-				//err = gdf_avg_generic(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
-			}else{
+            if(group_columns.size() == 0){
+                if (aggregation_input.get_gdf_column()->size != 0) {
+                    err = perform_avg(output_column.get_gdf_column(), aggregation_input.get_gdf_column());
+                }
+                else {
+                    err = create_null_value_gdf_column(0,
+                                                       output_type,
+                                                       aggregation_size,
+                                                       aggregator_to_string(aggregation_types[i]),
+                                                       output_column,
+                                                       output_columns_aggregations);
+                }
+            }
+			else{
 				err = gdf_group_by_avg(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
 						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);
 			}
@@ -696,17 +750,25 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 	size_t num_sort_columns = count_string_occurrence(combined_expression,"sort");
 
 	void** d_cols;
-
+	int * d_types;
 	std::vector<gdf_column_cpp> output_columns;
 
+    try {
+        cuDF::Allocator::allocate((void**)&d_cols, sizeof(void*) * num_sort_columns);
+        cuDF::Allocator::allocate((void**)&d_types, sizeof(int) * num_sort_columns);
+    }
+    catch (const cuDF::Allocator::Exception& exception) {
+        std::cerr << exception.what() << std::endl;
+        cudaDeviceReset();
+        exit(EXIT_FAILURE);
+    }
 
-	cudaMalloc((void **) &d_cols,sizeof(void*) * num_sort_columns);
-	int * d_types;
-	cudaMalloc((void **)&d_types,sizeof(int) * num_sort_columns);
 	gdf_column * cols = new gdf_column[num_sort_columns];
 	std::vector<size_t> sort_column_indices(num_sort_columns);
 	gdf_column_cpp index_col;
-	index_col.create_gdf_column(GDF_UINT64,input.get_column(0).size(),nullptr,8, "");
+	//index_col.create_gdf_column(GDF_UINT64,input.get_column(0).size(),nullptr,8, "");
+	//WARNING TODO felipe percy noboa see upgrade to uints
+	index_col.create_gdf_column(GDF_INT64,input.get_column(0).size(),nullptr,8, "");
 	for(int i = 0; i < num_sort_columns; i++){
 		int sort_column_index = get_index(
 				get_named_expression(
@@ -733,28 +795,42 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 
 	size_t size_in_chars = ((sizeof(gdf_valid_type) * num_sort_columns )+ 7) / 8;
 	gdf_valid_type * asc_desc_bitmask;
-	cudaMalloc((void **) &asc_desc_bitmask,size_in_chars);
+
+    try {
+        cuDF::Allocator::allocate((void**)&asc_desc_bitmask, size_in_chars);
+    }
+    catch (const cuDF::Allocator::Exception& exception) {
+        std::cerr << exception.what() << std::endl;
+        cudaDeviceReset();
+        exit(EXIT_FAILURE);
+    }
 
 	//trying all ascending for now
 	cudaMemset	(	(char *) asc_desc_bitmask,255,size_in_chars	);
 
-	gdf_error err = gdf_order_by_asc_desc(
-			cols,
-			num_sort_columns,
-			index_col.get_gdf_column(),
-			asc_desc_bitmask);
-	/*
-	gdf_error err = gdf_order_by(
-			input.get_column(0).size(),
-			cols,
-			num_sort_columns,
-			d_cols,
-			d_types,
-			indices
-	);*/
+	//WARNING TODO felipe percy noboa see group_by
+//	gdf_error err = gdf_order_by_asc_desc(
+//			cols,
+//			num_sort_columns,
+//			index_col.get_gdf_column(),
+//			asc_desc_bitmask);
 
-	cudaFree(d_cols);
-	cudaFree(d_types);
+    gdf_error err = gdf_order_by(input.get_column(0).size(),
+                                 cols,
+                                 num_sort_columns,
+                                 d_cols,
+                                 d_types,
+                                 (size_t*)index_col.get_gdf_column()->data);
+
+    try {
+        cuDF::Allocator::deallocate(d_cols);
+        cuDF::Allocator::deallocate(d_types);
+    }
+    catch (const cuDF::Allocator::Exception& exception) {
+        std::cerr << exception.what() << std::endl;
+        cudaDeviceReset();
+        exit(EXIT_FAILURE);
+    }
 
 	int widest_column = 0;
 	for(int i = 0; i < input.get_width();i++){
@@ -1031,7 +1107,7 @@ query_token_t evaluate_query(
 		std::vector<void *> handles){
 
 	std::cout<<"Input\n";
-	print_column<int8_t>(input_tables[0][0].get_gdf_column());
+//	print_column<int8_t>(input_tables[0][0].get_gdf_column());
 
 	query_token_t token = result_set_repository::get_instance().register_query(connection); //register the query so we can receive result requests for it
 

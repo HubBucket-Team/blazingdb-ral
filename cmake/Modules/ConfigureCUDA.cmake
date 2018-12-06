@@ -6,6 +6,7 @@
 
 # BEGIN macros
 
+# TODO percy fix CONFIGURE_GPU_COMPUTE_CAPABILITY impl
 # check the cmake arg -DGPU_COMPUTE_CAPABILITY and if not present defines its default value
 macro(CONFIGURE_GPU_COMPUTE_CAPABILITY)
     #GPU_COMPUTE_CAPABILITY 30 means GPU compute capability version 3.0
@@ -45,31 +46,25 @@ macro(CONFIGURE_CUDA_LIBRARIES)
 
     # TODO percy seems cmake bug: we cannot define target dirs per cuda target
     # ... see if works in future cmake versions
-    link_directories(${CUDA_LIBRARY_DIR} ${CUDA_LIBRARY_STUBS_DIR})
+    link_directories(${CUDA_LIBRARY_DIR} ${CUDA_LIBRARY_STUBS_DIR} ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES})
 endmacro()
 
 # compute_capability is a int value (e.g. 30 means compute capability 3.0)
 macro(CONFIGURE_CUDA_COMPILER compute_capability)
     include_directories(${CUDA_INCLUDE_DIRS})
 
-    # Host compiler flags
-    # WARNING never add "-std=c++11" to APPEND CMAKE_CXX_FLAGS since it will be redundant and causes build issues
-    #list(APPEND CMAKE_CXX_FLAGS "")
+    #set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -gencode=arch=compute_60,code=sm_60 -gencode=arch=compute_61,code=sm_61")
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -gencode=arch=compute_60,code=sm_60")
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -gencode=arch=compute_70,code=sm_70 -gencode=arch=compute_70,code=compute_70")
 
-    set(HOST_COMPILER_DEBUG_FLAGS "-g -O0")
-    list(APPEND CMAKE_CXX_FLAGS "${HOST_COMPILER_DEBUG_FLAGS}")
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda --expt-relaxed-constexpr")
 
-    # Device (GPU) compiler flags
-    set(DEVICE_COMPILER_DEBUG_FLAGS "-G")
-    list(APPEND CUDA_NVCC_FLAGS "${DEVICE_COMPILER_DEBUG_FLAGS}")
+    # suppress SHFL warnings caused by Modern GPU
+    # TODO: remove this when Modern GPU is removed or fixed to use shfl_sync
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Werror cross-execution-space-call -Wno-deprecated-declarations -Xptxas --disable-warnings")
 
-    list(APPEND CUDA_NVCC_FLAGS "-std=c++11")
-    list(APPEND CUDA_NVCC_FLAGS "--expt-extended-lambda")
-    list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_${compute_capability},code=compute_${compute_capability}") # virtual architecture (code=compute_X)
-    list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_${compute_capability},code=sm_${compute_capability}") # real architecture (code=sm_X)
-    #list(APPEND CUDA_NVCC_FLAGS "--use_fast_math -prec-div false -prec-sqrt false -fmad false")
-    #list(APPEND CUDA_NVCC_FLAGS "--cudart static --relocatable-device-code=false")
-    #list(APPEND CUDA_NVCC_FLAGS "--default-stream per-thread")
+    # set warnings
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Werror cross-execution-space-call -Xcompiler -Wall")
 
     message(STATUS "Default C++ compiler flags for all targets: ${CMAKE_CXX_FLAGS}")
     message(STATUS "Default CUDA compiler flags for all targets: ${CUDA_NVCC_FLAGS}")
@@ -80,16 +75,16 @@ endmacro()
 
 # BEGIN MAIN #
 
-set(CUDA_SDK_ROOT_DIR "/usr/local/cuda") # /usr/local/cuda is the standard installation directory
-find_package(CUDA REQUIRED)
-set_package_properties(CUDA PROPERTIES TYPE REQUIRED
-    PURPOSE "NVIDIA CUDA® parallel computing platform and programming model."
-    URL "https://developer.nvidia.com/cuda-zone"
-)
+# set(CUDA_SDK_ROOT_DIR "/usr/local/cuda") # /usr/local/cuda is the standard installation directory
+# find_package(CUDA REQUIRED)
+# set_package_properties(CUDA PROPERTIES TYPE REQUIRED
+#     PURPOSE "NVIDIA CUDA® parallel computing platform and programming model."
+#     URL "https://developer.nvidia.com/cuda-zone"
+# )
 
-if(NOT CUDA_FOUND)
-    message(FATAL_ERROR "CUDA not found, please check your settings.")
-endif()
+#if(NOT CUDA_FOUND)
+#    message(FATAL_ERROR "CUDA not found, please check your settings.")
+#endif()
 
 message(STATUS "CUDA ${CUDA_VERSION} found in ${CUDA_TOOLKIT_ROOT_DIR}")
 

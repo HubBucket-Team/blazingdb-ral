@@ -152,7 +152,7 @@ gdf_error perform_avg(gdf_column* column_output, gdf_column* column_input) {
         auto dtype = column_input->dtype;
         auto dtype_size = get_width_dtype(dtype);
         column_avg.create_gdf_column(dtype, 1, nullptr, dtype_size);
-        error = gdf_sum_generic(column_input, column_avg.get_gdf_column()->data, dtype_size);
+        error = gdf_sum(column_input, column_avg.get_gdf_column()->data, dtype_size);
         if (error != GDF_SUCCESS) {
             return error;
         }
@@ -529,7 +529,7 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		gdf_dtype output_type = get_aggregation_output_type(aggregation_input.dtype(),aggregation_types[i], group_columns.size());
 
         /*
-        // The 'gdf_sum_generic' libgdf function requires that all input operands have the same dtype.
+        // The 'gdf_sum' libgdf function requires that all input operands have the same dtype.
         if ((group_columns.size() == 0) && (aggregation_types[i] == GDF_SUM)) {
             output_type = aggregation_input.dtype();
         }
@@ -554,7 +554,7 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		case GDF_SUM:
             if (group_columns.size() == 0) {
                 if (aggregation_input.get_gdf_column()->size != 0) {
-                    err = gdf_sum_generic(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
+                    err = gdf_sum(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
                 }
                 else {
                     err = create_null_value_gdf_column(0,
@@ -589,7 +589,7 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		case GDF_MIN:
 			if(group_columns.size() == 0){
                 if (aggregation_input.get_gdf_column()->size != 0) {
-                    err = gdf_min_generic(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
+                    err = gdf_min(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
                 }
                 else {
                     err = create_null_value_gdf_column(0,
@@ -613,7 +613,7 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		case GDF_MAX:
 			if(group_columns.size() == 0){
                 if (aggregation_input.get_gdf_column()->size != 0) {
-                    err = gdf_max_generic(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
+                    err = gdf_max(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
                 }
                 else {
                     err = create_null_value_gdf_column(0,

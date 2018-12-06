@@ -21,8 +21,6 @@ macro(CONFIGURE_THRIFT_EXTERNAL_PROJECT)
     set(THRIFT_CMAKE_ARGS "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}"
                         "-DCMAKE_CXX_FLAGS=${EP_CXX_FLAGS}"
                         "-DCMAKE_C_FLAGS=${EP_C_FLAGS}"
-                        "-DCMAKE_INSTALL_PREFIX=${THRIFT_PREFIX}"
-                        "-DCMAKE_INSTALL_RPATH=${THRIFT_PREFIX}/lib"
                         "-DBUILD_SHARED_LIBS=OFF"
                         "-DBUILD_TESTING=OFF"
                         "-DBUILD_EXAMPLES=OFF"
@@ -38,12 +36,12 @@ macro(CONFIGURE_THRIFT_EXTERNAL_PROJECT)
                         )
 
     # Download and unpack Thrift at configure time
-    configure_file(${CMAKE_SOURCE_DIR}/cmake/Templates/Thrift.CMakeLists.txt.cmake ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/Thrift-download/CMakeLists.txt)
+    configure_file(${CMAKE_SOURCE_DIR}/cmake/Templates/Thrift.CMakeLists.txt.cmake ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/thrift-download/CMakeLists.txt)
 
     execute_process(
         COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
         RESULT_VARIABLE result
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/Thrift-download/
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/thrift-download/
     )
 
     if(result)
@@ -53,7 +51,7 @@ macro(CONFIGURE_THRIFT_EXTERNAL_PROJECT)
     execute_process(
         COMMAND ${CMAKE_COMMAND} --build . -- -j8
         RESULT_VARIABLE result
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/Thrift-download/
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/thrift-download/
     )
 
     if(result)
@@ -73,15 +71,15 @@ if (THRIFT_INSTALL_DIR)
     set(THRIFT_ROOT "${THRIFT_INSTALL_DIR}")
 else()
     message(STATUS "THRIFT_INSTALL_DIR not defined, it will be built from sources")
-    configure_THRIFT_external_project()
+    CONFIGURE_THRIFT_EXTERNAL_PROJECT()
     set(THRIFT_ROOT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/Thrift-install/")
 endif()
 
 set(ENV{THRIFT_HOME} ${THRIFT_ROOT})
 
-find_package(Parquet REQUIRED)
-set_package_properties(Parquet PROPERTIES TYPE REQUIRED
-    PURPOSE "Apache Parquet CPP is a C++ library to read and write the Apache Parquet columnar data format."
+find_package(Thrift REQUIRED)
+set_package_properties(Thrift PROPERTIES TYPE REQUIRED
+    PURPOSE "Apache Thrift."
     URL "https://Thrift.apache.org")
 
 set(THRIFT_INCLUDEDIR ${THRIFT_ROOT}/include/)

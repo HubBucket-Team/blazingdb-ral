@@ -19,6 +19,7 @@ set(logical_filter_test_SRCS
     ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
     ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
     ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp
+    ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
     ${source_files}
     logical_filter-test.cu
 )

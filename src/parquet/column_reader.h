@@ -20,7 +20,7 @@
 #define _GDF_PARQUET_COLUMN_READER_H
 
 #include "decoder/cu_level_decoder.h"
-#include <gdf/gdf.h>
+#include <cudf.h>
 #include <parquet/column_reader.h>
 
 namespace gdf {

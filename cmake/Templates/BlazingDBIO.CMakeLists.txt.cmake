@@ -20,4 +20,6 @@ ExternalProject_Add(blazingdb-io
     CMAKE_ARGS      -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                     ${BLAZINGDB_IO_CMAKE_ARGS}
                     -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/blazingdb-io-install
+                    -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
+                    -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
 )

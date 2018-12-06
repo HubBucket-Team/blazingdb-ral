@@ -19,8 +19,6 @@
 
 macro(CONFIGURE_THRIFT_EXTERNAL_PROJECT)
     set(THRIFT_CMAKE_ARGS "-DCMAKE_BUILD_TYPE=Release"
-                        "-DCMAKE_CXX_FLAGS=${EP_CXX_FLAGS}"
-                        "-DCMAKE_C_FLAGS=${EP_C_FLAGS}"
                         "-DBUILD_SHARED_LIBS=OFF"
                         "-DBUILD_TESTING=OFF"
                         "-DBUILD_EXAMPLES=OFF"

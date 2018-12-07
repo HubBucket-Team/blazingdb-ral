@@ -95,8 +95,8 @@ target_link_libraries(testing-libgdf
     ${LIBGDF_STATIC_LIB}
     ${BLAZINGDB_IO_STATIC_LIB}
     ${THRIFT_STATIC_LIB}
-    ${ARROW_STATIC_LIB}
     ${PARQUET_STATIC_LIB}
+    ${ARROW_STATIC_LIB}
     Boost::filesystem
     Boost::regex
     aws-cpp-sdk-s3 aws-cpp-sdk-s3-encryption

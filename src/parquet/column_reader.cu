@@ -32,7 +32,6 @@
 #include "plain_decoder.cuh"
 
 #include "util/bit_util.cuh"
-#include <gdf/utils.h>
 
 namespace gdf {
 namespace parquet {
@@ -314,6 +313,16 @@ transform_valid_kernel(uint8_t *     valid,
         i += step;
     }
 }
+
+/// See #transform_valid
+namespace {
+
+inline gdf_size_type
+gdf_get_num_chars_bitmask(gdf_size_type size) {
+    return ((size + (GDF_VALID_BITSIZE - 1)) / GDF_VALID_BITSIZE);
+}
+
+}  // namespace
 
 template <typename Functor>
 void

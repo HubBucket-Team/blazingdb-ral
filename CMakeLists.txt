@@ -37,6 +37,7 @@ include(ConfigureCUDA)
 # Configure dependencies
 include(ConfigureAWSSDK)
 include(ConfigureFlatBuffers)
+include(ConfigureSnappy)
 include(ConfigureThrift)
 include(ConfigureArrow)
 include(ConfigureParquet)
@@ -90,25 +91,40 @@ add_executable(testing-libgdf ${SRC_FILES})
 set(Boost_USE_STATIC_LIBS ON) # only find static libs
 find_package(Boost REQUIRED COMPONENTS filesystem regex)
 
+#target_link_libraries(testing-libgdf "-Xlinker --start-group")
+
 target_link_libraries(testing-libgdf
-    NVStrings
-    ${LIBGDF_STATIC_LIB}
     ${BLAZINGDB_IO_STATIC_LIB}
-    ${THRIFT_STATIC_LIB}
-    ${PARQUET_STATIC_LIB}
-    ${ARROW_STATIC_LIB}
-    Boost::filesystem
-    Boost::regex
-    aws-cpp-sdk-s3 aws-cpp-sdk-s3-encryption
-    rmm
-    ${FLATBUFFERS_STATIC_LIB}
     ${BLAZINGDB_PROTOCOL_STATIC_LIB}
+
+    ${LIBGDF_STATIC_LIB}
+    NVStrings
+    rmm
     cudart
     cuda
     ${CUDA_CUDA_LIBRARY}
     ${CUDA_NVRTC_LIBRARY}
     ${CUDA_NVTX_LIBRARY}
-    ${PARQUET_STATIC_LIB})
+
+    ${PARQUET_STATIC_LIB}
+    ${ARROW_STATIC_LIB}
+    ${THRIFT_STATIC_LIB}
+    ${SNAPPY_STATIC_LIB}
+    ${FLATBUFFERS_STATIC_LIB}
+
+    aws-cpp-sdk-s3
+    aws-cpp-sdk-s3-encryption
+
+    Boost::filesystem
+    Boost::regex
+)
+
+#TODO percy
+#/home/percy/Desktop/s/ins/lib/libboost_filesystem.a
+#/home/percy/Desktop/s/ins/lib/libboost_system.a
+#/home/percy/Desktop/s/ins/lib/libboost_regex.a
+
+#target_link_libraries(testing-libgdf "-Xlinker ---end-group")
 
 # Tests
 if(BUILD_TESTING)

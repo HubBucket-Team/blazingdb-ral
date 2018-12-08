@@ -37,6 +37,7 @@ include(ConfigureCUDA)
 # Configure dependencies
 include(ConfigureAWSSDK)
 include(ConfigureFlatBuffers)
+include(ConfigureZSTD)
 include(ConfigureBrotli)
 include(ConfigureSnappy)
 include(ConfigureThrift)
@@ -112,6 +113,7 @@ target_link_libraries(testing-libgdf
     ${THRIFT_STATIC_LIB}
     ${SNAPPY_STATIC_LIB}
     ${BROTLI_STATIC_LIB}
+    ${ZSTD_STATIC_LIB}
     ${FLATBUFFERS_STATIC_LIB}
 
     aws-cpp-sdk-s3

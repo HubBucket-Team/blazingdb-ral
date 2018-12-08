@@ -37,6 +37,7 @@ include(ConfigureCUDA)
 # Configure dependencies
 include(ConfigureAWSSDK)
 include(ConfigureFlatBuffers)
+include(ConfigureBrotli)
 include(ConfigureSnappy)
 include(ConfigureThrift)
 include(ConfigureArrow)
@@ -110,13 +111,15 @@ target_link_libraries(testing-libgdf
     ${ARROW_STATIC_LIB}
     ${THRIFT_STATIC_LIB}
     ${SNAPPY_STATIC_LIB}
+    ${BROTLI_STATIC_LIB}
     ${FLATBUFFERS_STATIC_LIB}
 
     aws-cpp-sdk-s3
     aws-cpp-sdk-s3-encryption
 
-    Boost::filesystem
-    Boost::regex
+/home/percy/Desktop/s/ins/lib/libboost_filesystem.a
+/home/percy/Desktop/s/ins/lib/libboost_system.a
+/home/percy/Desktop/s/ins/lib/libboost_regex.a
 )
 
 #TODO percy

@@ -35,6 +35,7 @@ include(ConfigureCUDA)
 
 # NOTE Do not change the inclusion order
 # Configure dependencies
+include(ConfigureBoost)
 include(ConfigureAWSSDK)
 include(ConfigureFlatBuffers)
 include(ConfigureLz4)
@@ -91,11 +92,6 @@ set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
 
 add_executable(testing-libgdf ${SRC_FILES})
 
-set(Boost_USE_STATIC_LIBS ON) # only find static libs
-find_package(Boost REQUIRED COMPONENTS filesystem regex)
-
-#target_link_libraries(testing-libgdf "-Xlinker --start-group")
-
 target_link_libraries(testing-libgdf
     ${BLAZINGDB_IO_STATIC_LIB}
     ${BLAZINGDB_PROTOCOL_STATIC_LIB}
@@ -121,17 +117,10 @@ target_link_libraries(testing-libgdf
     aws-cpp-sdk-s3
     aws-cpp-sdk-s3-encryption
 
-/home/percy/Desktop/s/ins/lib/libboost_filesystem.a
-/home/percy/Desktop/s/ins/lib/libboost_system.a
-/home/percy/Desktop/s/ins/lib/libboost_regex.a
+    Boost::filesystem
+    Boost::system
+    Boost::regex
 )
-
-#TODO percy
-#/home/percy/Desktop/s/ins/lib/libboost_filesystem.a
-#/home/percy/Desktop/s/ins/lib/libboost_system.a
-#/home/percy/Desktop/s/ins/lib/libboost_regex.a
-
-#target_link_libraries(testing-libgdf "-Xlinker ---end-group")
 
 # Tests
 if(BUILD_TESTING)

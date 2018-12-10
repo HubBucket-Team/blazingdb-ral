@@ -485,6 +485,53 @@ gdf_error get_aggregation_operation(std::string operator_string, gdf_agg_op * op
 	return GDF_SUCCESS;
 }
 
+gdf_error get_operation(
+		std::string operator_string,
+		gdf_unary_operator * operation
+){
+	if(operator_string == "NOT"){
+		*operation = GDF_NOT;
+	}else if(operator_string == "SIN"){
+		*operation = GDF_SIN;
+	}else if(operator_string == "ASIN"){
+		*operation = GDF_ASIN;
+	}else if(operator_string == "COS"){
+		*operation = GDF_COS;
+	}else if(operator_string == "ACOS"){
+		*operation = GDF_ACOS;
+	}else if(operator_string == "TAN"){
+		*operation = GDF_TAN;
+	}else if(operator_string == "ATAN"){
+		*operation = GDF_ATAN;
+	}else if(operator_string == "COT"){
+		*operation = GDF_COTAN;
+	}else if(operator_string == "FLOOR"){
+		*operation = GDF_FLOOR;
+	}else if(operator_string == "CEIL"){
+		*operation = GDF_CEIL;
+	}else if(operator_string == "ABS"){
+		*operation = GDF_ABS;
+	}else if(operator_string == "LOG10"){
+		*operation = GDF_LOG;
+	}else if(operator_string == "LN"){
+		*operation = GDF_LN;
+	}else if(operator_string == "BL_YEAR"){
+		*operation = GDF_YEAR;
+	}else if(operator_string == "BL_MONTH"){
+		*operation = GDF_MONTH;
+	}else if(operator_string == "BL_DAY"){
+		*operation = GDF_DAY;
+	}else if(operator_string == "BL_HOUR"){
+		*operation = GDF_HOUR;
+	}else if(operator_string == "BL_MINUTE"){
+		*operation = GDF_MINUTE;
+	}else if(operator_string == "BL_SECOND"){
+		*operation = GDF_SECOND;
+	}else {
+		return GDF_UNSUPPORTED_DTYPE;
+	}
+	return GDF_SUCCESS;
+}
 
 gdf_error get_operation(
 		std::string operator_string,
@@ -522,6 +569,16 @@ gdf_error get_operation(
 		return GDF_UNSUPPORTED_DTYPE;
 	}
 	return GDF_SUCCESS;
+}
+
+bool is_binary_operator_token(std::string token){
+	gdf_binary_operator op;
+	return get_operation(token,&op) == GDF_SUCCESS;
+}
+
+bool is_unary_operator_token(std::string token){
+	gdf_unary_operator op;
+	return get_operation(token,&op) == GDF_SUCCESS;
 }
 
 bool is_literal(std::string operand){
@@ -653,6 +710,11 @@ std::string clean_calcite_expression(std::string expression){
 	StringUtil::findAndReplaceAll(expression," NOT NULL","");
 	StringUtil::findAndReplaceAll(expression,"):DOUBLE","");
 	StringUtil::findAndReplaceAll(expression,"CAST(","");
+	StringUtil::findAndReplaceAll(expression,"EXTRACT(FLAG(YEAR), ","BL_YEAR(");
+	StringUtil::findAndReplaceAll(expression,"EXTRACT(FLAG(MONTH), ","BL_MONTH(");
+	StringUtil::findAndReplaceAll(expression,"EXTRACT(FLAG(DAY), ","BL_DAY(");
+
+
 
 	expression = expand_if_logical_op(expression);
 

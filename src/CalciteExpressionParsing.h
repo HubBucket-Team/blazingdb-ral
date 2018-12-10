@@ -20,6 +20,15 @@ gdf_error get_operation(
 		gdf_binary_operator * operation
 );
 
+gdf_error get_operation(
+		std::string operator_string,
+		gdf_unary_operator * operation
+);
+
+bool is_binary_operator_token(std::string token);
+
+bool is_unary_operator_token(std::string token);
+
 bool is_literal(std::string operand);
 
 bool is_digits(const std::string &str);

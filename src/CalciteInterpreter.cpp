@@ -24,6 +24,8 @@ const std::string LOGICAL_AGGREGATE_TEXT = "LogicalAggregate";
 const std::string LOGICAL_PROJECT_TEXT = "LogicalProject";
 const std::string LOGICAL_SORT_TEXT = "LogicalSort";
 const std::string LOGICAL_FILTER_TEXT = "LogicalFilter";
+const std::string ASCENDING_ORDER_SORT_TEXT = "ASC";
+const std::string DESCENDING_ORDER_SORT_TEXT = "DESC";
 
 
 bool is_join(std::string query_part){
@@ -731,33 +733,37 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 
 gdf_error process_sort(blazing_frame & input, std::string query_part){
 
-
 	std::cout<<"about to process sort"<<std::endl;
-	std::string combined_expression = query_part.substr(
-			query_part.find("("),
-			(query_part.rfind(")") - query_part.find("(")) - 1
-	);
+
+	auto rangeStart = query_part.find("(");
+	auto rangeEnd = query_part.rfind(")") - rangeStart - 1;
+	std::string combined_expression = query_part.substr(rangeStart + 1, rangeEnd - 1);
+	
 	//LogicalSort(sort0=[$4], sort1=[$7], dir0=[ASC], dir1=[ASC])
 	size_t num_sort_columns = count_string_occurrence(combined_expression,"sort");
 
+	std::vector<char> sort_order_types(num_sort_columns);
 	std::vector<gdf_column*> cols(num_sort_columns);
 	for(int i = 0; i < num_sort_columns; i++){
-		int sort_column_index = get_index(
-				get_named_expression(
-						combined_expression,
-						"sort" + std::to_string(i)
-				)
-		);
+		int sort_column_index = get_index(get_named_expression(combined_expression, "sort" + std::to_string(i)));
 		cols[i] = input.get_column(sort_column_index).get_gdf_column();
+
+		sort_order_types[i] = (get_named_expression(combined_expression, "dir" + std::to_string(i)) == DESCENDING_ORDER_SORT_TEXT);
 	}
 
-	std::vector<char> asc_desc(num_sort_columns, 0); //TODO: get ascending or descending but right now thats not being used. for now setting them all to ascending
+	gdf_column_cpp asc_desc_col;
+	asc_desc_col.create_gdf_column(GDF_INT8,num_sort_columns,nullptr,1, "");
+	CheckCudaErrors(cudaMemcpy(asc_desc_col.get_gdf_column()->data, sort_order_types.data(), sort_order_types.size() * sizeof(char), cudaMemcpyHostToDevice));
+
 	int flag_nulls_are_smallest = 0;  // TODO: need to be able to specify this based on the query
 	gdf_column_cpp index_col;
-	index_col.create_gdf_column(GDF_INT64,input.get_column(0).size(),nullptr,8, "");
+	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,8, "");
 
-	gdf_error err = gdf_order_by_asc_desc(&cols[0], &asc_desc[0], num_sort_columns,
-			index_col.get_gdf_column(), flag_nulls_are_smallest);
+	gdf_error err = gdf_order_by_asc_desc(cols.data(),
+									(char*)(asc_desc_col.get_gdf_column()->data),
+									num_sort_columns,
+									index_col.get_gdf_column(),
+									flag_nulls_are_smallest);
 
 	if (err != GDF_SUCCESS)
 		return err;

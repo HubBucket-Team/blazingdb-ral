@@ -462,4 +462,6 @@ void print_column(gdf_column * column){
 
 void free_gdf_column(gdf_column * column);
 
+void update_null_count(gdf_column * column);
+
 #endif /* UTILS_CUH_ */

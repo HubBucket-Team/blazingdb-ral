@@ -18,16 +18,9 @@
 # BEGIN MAIN #
 
 # NOTE since parquet and arrow are in the same repo is safe to pass the arrrow installation dir here
-set(PARQUET_INSTALL_DIR ${ARROW_ROOT})
+set(PARQUET_ROOT ${ARROW_ROOT})
 
-if (PARQUET_INSTALL_DIR)
-    message(STATUS "PARQUET_INSTALL_DIR defined, it will use vendor version from ${PARQUET_INSTALL_DIR}")
-    set(PARQUET_ROOT "${PARQUET_INSTALL_DIR}")
-else()
-    message(STATUS "PARQUET_INSTALL_DIR not defined, it will be built from sources")
-    configure_parquet_external_project()
-    set(PARQUET_ROOT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/arrow-install/")
-endif()
+message(STATUS "PARQUET_ROOT is pointed to ARROW_ROOT: ${ARROW_ROOT}")
 
 set(ENV{PARQUET_HOME} ${PARQUET_ROOT})
 

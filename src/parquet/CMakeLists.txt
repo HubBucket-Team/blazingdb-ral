@@ -9,4 +9,5 @@ set(source_files
     ${PARQUET_DIR}/page_reader.cpp
     ${PARQUET_DIR}/decoder/arrow/cu_decoder.cu
     ${PARQUET_DIR}/decoder/arrow/util/pinned_allocator.cu
+    ${PARQUET_DIR}/api.cpp
 )

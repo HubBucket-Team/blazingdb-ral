@@ -18,6 +18,7 @@
 # BEGIN macros
 
 macro(CONFIGURE_THRIFT_EXTERNAL_PROJECT)
+    # NOTE percy c.gonzales if you want to pass other RAL CMAKE_CXX_FLAGS into this dependency add it by harcoding
     # NOTE build with CMAKE_POSITION_INDEPENDENT_CODE (akka -fPIC)
     set(THRIFT_CMAKE_ARGS
                         " -DCMAKE_BUILD_TYPE=Release"
@@ -34,7 +35,8 @@ macro(CONFIGURE_THRIFT_EXTERNAL_PROJECT)
                         " -DWITH_STATIC_LIB=ON"
                         " -DWITH_LIBEVENT=OFF"
                         " -DCMAKE_POSITION_INDEPENDENT_CODE=ON"
-                        )
+                        " -DCMAKE_C_FLAGS=-D_GLIBCXX_USE_CXX11_ABI=0"      # enable old ABI for C/C++
+                        " -DCMAKE_CXX_FLAGS=-D_GLIBCXX_USE_CXX11_ABI=0")   # enable old ABI for C/C++
 
     # Download and unpack Thrift at configure time
     configure_file(${CMAKE_SOURCE_DIR}/cmake/Templates/Thrift.CMakeLists.txt.cmake ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/thrift-download/CMakeLists.txt)

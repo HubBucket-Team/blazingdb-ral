@@ -6,6 +6,13 @@
 # BEGIN macros
 
 macro(CONFIGURE_BLAZINGDB_PROTOCOL_EXTERNAL_PROJECT)
+    # NOTE percy c.gonzales if you want to pass other RAL CMAKE_CXX_FLAGS into this dependency add it by harcoding
+    set(BLAZINGDB_PROTOCOL_CMAKE_ARGS
+        " -DFLATBUFFERS_INSTALL_DIR=${FLATBUFFERS_ROOT}"
+        " -DCMAKE_C_FLAGS=-D_GLIBCXX_USE_CXX11_ABI=0"
+        " -DCMAKE_CXX_FLAGS=-D_GLIBCXX_USE_CXX11_ABI=0"
+    )
+
     # Download and unpack blazingdb-protocol at configure time
     configure_file(${CMAKE_SOURCE_DIR}/cmake/Templates/BlazingDBProtocol.CMakeLists.txt.cmake ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/blazingdb-protocol-download/CMakeLists.txt)
 

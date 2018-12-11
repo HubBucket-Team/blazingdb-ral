@@ -99,6 +99,7 @@ target_link_libraries(testing-libgdf
     ${LIBGDF_STATIC_LIB}
     NVStrings
     rmm
+
     cudart
     cuda
     ${CUDA_CUDA_LIBRARY}

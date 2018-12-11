@@ -6,6 +6,13 @@
 # BEGIN macros
 
 macro(CONFIGURE_FLATBUFFERS_EXTERNAL_PROJECT)
+    # NOTE percy c.gonzales if you want to pass other RAL CMAKE_CXX_FLAGS into this dependency add it by harcoding
+    set(FLATBUFFERS_CMAKE_ARGS
+                        " -DCMAKE_C_FLAGS=-D_GLIBCXX_USE_CXX11_ABI=0"
+                        " -DCMAKE_CXX_FLAGS=-D_GLIBCXX_USE_CXX11_ABI=0"
+                        " -DCMAKE_POSITION_INDEPENDENT_CODE=ON"
+                        )
+
     # Download and unpack flatbuffers at configure time
     configure_file(${CMAKE_SOURCE_DIR}/cmake/Templates/FlatBuffers.CMakeLists.txt.cmake ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/flatbuffers-download/CMakeLists.txt)
 
@@ -43,9 +50,7 @@ else()
     set(FLATBUFFERS_ROOT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/flatbuffers-install/")
 endif()
 
-message(STATUS "FLATBUFFERS_INSTALL_DIR: " ${FLATBUFFERS_INSTALL_DIR})
-
-set(FLATBUFFERS_HOME ${FLATBUFFERS_INSTALL_DIR})
+set(FLATBUFFERS_HOME ${FLATBUFFERS_ROOT})
 find_package(FlatBuffers REQUIRED)
 set_package_properties(FlatBuffers
     PROPERTIES TYPE REQUIRED
@@ -56,8 +61,8 @@ if (NOT FLATBUFFERS_FOUND)
     message(FATAL_ERROR "FlatBuffers not found, please check your settings.")
 endif()
 
-message(STATUS "flatbuffers installation found in ${FLATBUFFERS_INSTALL_DIR}")
-message(STATUS "flatbuffers compiler found in ${FLATBUFFERS_INSTALL_DIR}/bin")
+message(STATUS "flatbuffers installation found in ${FLATBUFFERS_ROOT}")
+message(STATUS "flatbuffers compiler found in ${FLATBUFFERS_ROOT}/bin")
 
 include_directories(${FLATBUFFERS_INCLUDEDIR} ${FLATBUFFERS_INCLUDE_DIR})
 link_directories(${FLATBUFFERS_LIBDIR})

@@ -4,7 +4,7 @@
 #=============================================================================
 
 # - Find FlatBuffers
-# FLATBUFFERS_ROOT hints the install location (directory where you flatbuffers is installed)
+# FLATBUFFERS_HOME hints the install location (directory where you flatbuffers is installed)
 #
 # This module defines
 # FLATBUFFERS_FOUND
@@ -16,20 +16,20 @@
 # FLATBUFFERS_STATIC_LIB, path to flatbuffers.a
 # flatbuffers - static library
 
-# If FLATBUFFERS_ROOT is not defined try to search in the default system path
-if ("${FLATBUFFERS_ROOT}" STREQUAL "")
-    set(FLATBUFFERS_ROOT "/usr")
+# If FLATBUFFERS_HOME is not defined try to search in the default system path
+if ("${FLATBUFFERS_HOME}" STREQUAL "")
+    set(FLATBUFFERS_HOME "/usr")
 endif()
 
 set(FLATBUFFERS_SEARCH_LIB_PATH
-  ${FLATBUFFERS_ROOT}/lib
-  ${FLATBUFFERS_ROOT}/lib/x86_64-linux-gnu
-  ${FLATBUFFERS_ROOT}/lib64
-  ${FLATBUFFERS_ROOT}/build
+  ${FLATBUFFERS_HOME}/lib
+  ${FLATBUFFERS_HOME}/lib/x86_64-linux-gnu
+  ${FLATBUFFERS_HOME}/lib64
+  ${FLATBUFFERS_HOME}/build
 )
 
 set(FLATBUFFERS_SEARCH_INCLUDE_DIR
-  ${FLATBUFFERS_ROOT}/include/flatbuffers/
+  ${FLATBUFFERS_HOME}/include/flatbuffers/
 )
 
 find_path(FLATBUFFERS_INCLUDE_DIR flatbuffers.h
@@ -44,7 +44,7 @@ find_library(FLATBUFFERS_STATIC_LIB NAMES libflatbuffers.a
     DOC "Path to flatbuffers static library"
 )
 
-set(FLATBUFFERS_FLATC_EXECUTABLE ${FLATBUFFERS_ROOT}/bin/flatc)
+set(FLATBUFFERS_FLATC_EXECUTABLE ${FLATBUFFERS_HOME}/bin/flatc)
 find_program(FLATBUFFERS_FLATC_EXECUTABLE NAMES flatc)
 
 if (NOT FLATBUFFERS_STATIC_LIB)
@@ -53,8 +53,8 @@ if (NOT FLATBUFFERS_STATIC_LIB)
       "and for libs in ${FLATBUFFERS_SEARCH_LIB_PATH}")
     set(FLATBUFFERS_FOUND FALSE)
 else()
-    set(FLATBUFFERS_INCLUDEDIR ${FLATBUFFERS_ROOT}/include/)
-    set(FLATBUFFERS_LIBDIR ${FLATBUFFERS_ROOT}/lib)
+    set(FLATBUFFERS_INCLUDEDIR ${FLATBUFFERS_HOME}/include/)
+    set(FLATBUFFERS_LIBDIR ${FLATBUFFERS_HOME}/lib)
     set(FLATBUFFERS_FOUND TRUE)
     add_library(flatbuffers STATIC IMPORTED)
     set_target_properties(flatbuffers PROPERTIES IMPORTED_LOCATION "${FLATBUFFERS_STATIC_LIB}")

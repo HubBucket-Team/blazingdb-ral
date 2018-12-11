@@ -6,6 +6,17 @@
 # BEGIN macros
 
 macro(CONFIGURE_GPU_LIBGDF_EXTERNAL_PROJECT)
+    # NOTE Reset arrow env vars since libgdf has its own arrow dependency
+    set(ENV{BOOST_ROOT} ${BOOST_ROOT})
+    set(ENV{FLATBUFFERS_HOME} "")
+    set(ENV{LZ4_HOME} "")
+    set(ENV{ZSTD_HOME} "")
+    set(ENV{BROTLI_HOME} "")
+    set(ENV{SNAPPY_HOME} "")
+    set(ENV{THRIFT_HOME} "")
+    set(ENV{PARQUET_HOME} "")
+
+    # NOTE Define basic env vars to build libgdf
     set(ENV{CUDACXX} $ENV{CUDACXX})
     set(ENV{NVSTRINGS_ROOT} ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-download/nvstrings-prefix/src/nvstrings/)
     set(NVSTRINGS_INSTALL_DIR $ENV{NVSTRINGS_ROOT})

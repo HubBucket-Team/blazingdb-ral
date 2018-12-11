@@ -6,6 +6,14 @@
 # BEGIN macros
 
 macro(CONFIGURE_BLAZINGDB_IO_EXTERNAL_PROJECT)
+    # NOTE percy c.gonzales if you want to pass other RAL CMAKE_CXX_FLAGS into this dependency add it by harcoding
+    set(BLAZINGDB_IO_CMAKE_ARGS
+        " -DARROW_INSTALL_DIR=${ARROW_ROOT}"
+        " -DAWS_SDK_CPP_BUILD_DIR=${AWS_SDK_CPP_ROOT}"
+        " -DCMAKE_C_FLAGS=-D_GLIBCXX_USE_CXX11_ABI=0"
+        " -DCMAKE_CXX_FLAGS=-D_GLIBCXX_USE_CXX11_ABI=0"
+    )
+
     # Download and unpack blazingdb-io at configure time
     configure_file(${CMAKE_SOURCE_DIR}/cmake/Templates/BlazingDBIO.CMakeLists.txt.cmake ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/blazingdb-io-download/CMakeLists.txt)
 

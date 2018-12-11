@@ -1,6 +1,7 @@
 #=============================================================================
 # Copyright 2018 BlazingDB, Inc.
 #     Copyright 2018 Cristhian Alberto Gonzales Castillo <cristhian@blazingdb.com>
+#     Copyright 2018 Percy Camilo Triveño Aucahuasi <percy@blazingdb.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,8 +16,6 @@
 # limitations under the License.
 #=============================================================================
 
-find_package(Boost REQUIRED COMPONENTS filesystem)
-
 set(file_reader_SRCS single_column_file-test.cpp)
 
 configure_test(file_reader-test "${file_reader_SRCS}")
@@ -26,5 +25,3 @@ set(parquet_file_PATH
 
 target_compile_definitions(file_reader-test
     PUBLIC -DPARQUET_FILE_PATH="${parquet_file_PATH}")
-
-target_link_libraries(file_reader-test Boost::filesystem)

@@ -6,8 +6,6 @@
 # BEGIN macros
 
 macro(CONFIGURE_BLAZINGDB_IO_EXTERNAL_PROJECT)
-    set(BLAZINGDB_IO_CMAKE_ARGS  " -DARROW_INSTALL_DIR=${ARROW_ROOT} -DAWS_SDK_CPP_BUILD_DIR=${AWS_SDK_CPP_ROOT}")
-
     # Download and unpack blazingdb-io at configure time
     configure_file(${CMAKE_SOURCE_DIR}/cmake/Templates/BlazingDBIO.CMakeLists.txt.cmake ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/blazingdb-io-download/CMakeLists.txt)
 

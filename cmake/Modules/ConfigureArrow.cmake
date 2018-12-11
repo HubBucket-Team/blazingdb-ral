@@ -47,7 +47,7 @@ macro(CONFIGURE_ARROW_EXTERNAL_PROJECT)
                          " -DARROW_JEMALLOC=OFF"
                          " -DARROW_BOOST_VENDORED=OFF"
                          " -DARROW_PYTHON=OFF"
-                         " -DARROW_HDFS=ON" # disable when blazingdb-io don't use arrow for hdfs
+                         " -DARROW_HDFS=ON"
                          " -DARROW_TENSORFLOW=ON" # enable old ABI for C/C++
                          " -DARROW_PARQUET=ON"
     )

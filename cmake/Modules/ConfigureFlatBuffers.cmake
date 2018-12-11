@@ -36,10 +36,11 @@ endmacro()
 
 if (FLATBUFFERS_INSTALL_DIR)
     message(STATUS "FLATBUFFERS_INSTALL_DIR defined, it will use vendor version from build ${FLATBUFFERS_INSTALL_DIR}")
+    set(FLATBUFFERS_ROOT "${FLATBUFFERS_INSTALL_DIR}")
 else()
     message(STATUS "FLATBUFFERS_INSTALL_DIR not defined, it will be built from sources")
     configure_flatbuffers_external_project()
-    set(FLATBUFFERS_INSTALL_DIR "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/flatbuffers-install/")
+    set(FLATBUFFERS_ROOT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/flatbuffers-install/")
 endif()
 
 message(STATUS "FLATBUFFERS_INSTALL_DIR: " ${FLATBUFFERS_INSTALL_DIR})

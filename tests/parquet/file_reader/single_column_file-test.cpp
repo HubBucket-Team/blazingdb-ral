@@ -22,43 +22,57 @@
 #include <arrow/io/file.h>
 #include <arrow/util/logging.h>
 
-#include <parquet/column_writer.h>
-#include <parquet/file/writer.h>
 #include <parquet/properties.h>
 #include <parquet/schema.h>
 #include <parquet/types.h>
 
 #include <gtest/gtest.h>
 
-#include "column_reader.h"
-#include "file_reader.h"
+#include "src/parquet/file_reader.h"
+#include "src/parquet/column_reader.h"
 
-#include <gdf/gdf.h>
+#include <cudf.h>
 
-template <class DataType>
-class SingleColumnFileTest : public ::testing::Test {
+
+//file:reader-test.parquet
+//Total RowCount: 50000
+
+/* NOTE Meta info for file:reader-test.parquet
+file:          file:reader-test.parquet 
+creator:       parquet-cpp version 1.4.0 
+
+file schema:   schema 
+--------------------------------------------------------------------------------
+boolean_field: REQUIRED BOOLEAN R:0 D:0
+int64_field:   REQUIRED INT64 R:0 D:0
+double_field:  REQUIRED DOUBLE R:0 D:0
+
+row group 1:   RC:50000 TS:767525 OFFSET:4 
+--------------------------------------------------------------------------------
+boolean_field:  BOOLEAN SNAPPY DO:0 FPO:4 SZ:329/6281/19.09 VC:50000 ENC:PLAIN,RLE
+int64_field:    INT64 SNAPPY DO:393 FPO:354318 SZ:454082/500168/1.10 VC:50000 ENC:PLAIN,RLE,PLAIN_DICTIONARY
+double_field:   DOUBLE SNAPPY DO:454570 FPO:667527 SZ:313114/500168/1.60 VC:50000 ENC:PLAIN,RLE,PLAIN_DICTIONARY
+*/
+
+/* NOTE Schema for file:reader-test.parquet
+message schema {
+  required boolean boolean_field;
+  required int64 int64_field;
+  required double double_field;
+}
+
+*/
+
+class SingleColumnFileTest : public testing::Test {
 protected:
-    using TYPE = typename DataType::c_type;
-
     SingleColumnFileTest();
 
-    void
-    GenerateFile();
-    TYPE
-    GenerateValue(std::size_t i);
-
-    virtual void
-    SetUp() override;
-    virtual void
-    TearDown() override;
+    virtual void SetUp() override;
+    virtual void TearDown() override;
 
     static constexpr std::size_t kRowsPerGroup = 100;
 
-    const std::string filename;
-
-private:
-    std::shared_ptr<::parquet::schema::GroupNode>
-    CreateSchema();
+    std::string filename;
 };
 
 using Types = ::testing::Types<::parquet::BooleanType,
@@ -66,115 +80,59 @@ using Types = ::testing::Types<::parquet::BooleanType,
                                ::parquet::Int64Type,
                                ::parquet::FloatType,
                                ::parquet::DoubleType>;
+
 TYPED_TEST_CASE(SingleColumnFileTest, Types);
 
-template <class DataType>
-void
-SingleColumnFileTest<DataType>::SetUp() {
-    GenerateFile();
+SingleColumnFileTest::SingleColumnFileTest() {
 }
 
-template <class DataType>
-void
-SingleColumnFileTest<DataType>::TearDown() {
-    if (std::remove(filename.c_str())) { FAIL() << "Remove file"; }
+void SingleColumnFileTest::SetUp() {
+    filename = std::string(PARQUET_FILE_PATH);
+    
+    std::cout << "READING PARQUET FILE: " << filename << std::endl;
 }
 
-template <class DataType>
-SingleColumnFileTest<DataType>::SingleColumnFileTest()
-  : filename(boost::filesystem::unique_path().native()) {}
-
-template <class DataType>
-void
-SingleColumnFileTest<DataType>::GenerateFile() {
-    try {
-        std::shared_ptr<::arrow::io::FileOutputStream> stream;
-        PARQUET_THROW_NOT_OK(
-          ::arrow::io::FileOutputStream::Open(filename, &stream));
-
-        std::shared_ptr<::parquet::schema::GroupNode> schema = CreateSchema();
-
-        ::parquet::WriterProperties::Builder builder;
-        builder.compression(::parquet::Compression::SNAPPY);
-        std::shared_ptr<::parquet::WriterProperties> properties =
-          builder.build();
-
-        std::shared_ptr<::parquet::ParquetFileWriter> file_writer =
-          ::parquet::ParquetFileWriter::Open(stream, schema, properties);
-
-        ::parquet::RowGroupWriter *row_group_writer =
-          file_writer->AppendRowGroup(kRowsPerGroup);
-
-        ::parquet::TypedColumnWriter<DataType> *writer =
-          static_cast<::parquet::TypedColumnWriter<DataType> *>(
-            row_group_writer->NextColumn());
-        std::int16_t repetition_level = 0;
-        for (std::size_t i = 0; i < kRowsPerGroup; i++) {
-            TYPE         value            = GenerateValue(i);
-            std::int16_t definition_level = i % 2 ? 1 : 0;
-            writer->WriteBatch(1, &definition_level, &repetition_level, &value);
-        }
-
-        file_writer->Close();
-
-        DCHECK(stream->Close().ok());
-    } catch (const std::exception &e) { FAIL() << "Generate file" << e.what(); }
+void SingleColumnFileTest::TearDown() {
 }
 
-template <class DataType>
-std::shared_ptr<::parquet::schema::GroupNode>
-SingleColumnFileTest<DataType>::CreateSchema() {
-    return std::static_pointer_cast<::parquet::schema::GroupNode>(
-      ::parquet::schema::GroupNode::Make(
-        "schema",
-        ::parquet::Repetition::REQUIRED,
-        ::parquet::schema::NodeVector{::parquet::schema::PrimitiveNode::Make(
-          "field",
-          ::parquet::Repetition::OPTIONAL,
-          DataType::type_num,
-          ::parquet::LogicalType::NONE)}));
-}
-
-template <class DataType>
-typename SingleColumnFileTest<DataType>::TYPE
-SingleColumnFileTest<DataType>::GenerateValue(std::size_t i) {
-    return static_cast<TYPE>(i) * 1000000000000;
-}
-
-TYPED_TEST(SingleColumnFileTest, ReadAll) {
+TEST_F(SingleColumnFileTest, ReadAll) {
     std::unique_ptr<gdf::parquet::FileReader> reader =
       gdf::parquet::FileReader::OpenFile(this->filename);
 
-    std::shared_ptr<gdf::parquet::ColumnReader<TypeParam>> column_reader =
-      std::static_pointer_cast<gdf::parquet::ColumnReader<TypeParam>>(
+    std::shared_ptr<gdf::parquet::ColumnReader<parquet::DoubleType>> column_reader =
+      std::static_pointer_cast<gdf::parquet::ColumnReader<parquet::DoubleType>>(
         reader->RowGroup(0)->Column(0));
 
     ASSERT_TRUE(column_reader->HasNext());
 
-    using value_type = typename TypeParam::c_type;
-
     const std::size_t rowsPerGroup = this->kRowsPerGroup;
 
     gdf_column column{
-      .data       = new std::uint8_t[rowsPerGroup * sizeof(value_type)],
+      .data       = new std::uint8_t[rowsPerGroup * sizeof(double)],
       .valid      = new std::uint8_t[rowsPerGroup],
       .size       = 0,
       .dtype      = GDF_invalid,
       .null_count = 0,
       .dtype_info = {},
     };
+
     std::int16_t definition_levels[rowsPerGroup];
     std::int16_t repetition_levels[rowsPerGroup];
 
-    const std::size_t total_read =
-      column_reader->ToGdfColumn(definition_levels, repetition_levels, column);
+    const std::size_t total_read = column_reader->ToGdfColumn(column);
 
     EXPECT_EQ(rowsPerGroup, total_read);
 
+    double val = 0.001;
+    const double h = 0.001;
+
     for (std::size_t i = 0; i < rowsPerGroup; i++) {
-        value_type   expected = this->GenerateValue(i);
-        std::int64_t value    = static_cast<value_type *>(column.data)[i];
-        if (i % 2) { EXPECT_EQ(expected, value); }
+        double expected = val;
+        std::int64_t value = static_cast<double *>(column.data)[i];
+       
+        EXPECT_EQ(expected, value);
+        
+        val += h;
     }
 
     delete[] static_cast<std::uint8_t *>(column.data);

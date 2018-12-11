@@ -12,21 +12,38 @@ function(configure_test TEST_NAME Tests_SRCS)
 
     # TODO percy do not use libgdf.so here and use gdf (the static lib) instead
     target_link_libraries(${TEST_NAME}
-        gmock_main gmock GTest::GTest
-        NVStrings
-        ${LIBGDF_STATIC_LIB}
+        gmock_main
+        gmock
+        GTest::GTest
+
         ${BLAZINGDB_IO_STATIC_LIB}
-        ${ARROW_STATIC_LIB}
-        Boost::filesystem
-        aws-cpp-sdk-s3 aws-cpp-sdk-s3-encryption
-        rmm
-        ${FLATBUFFERS_STATIC_LIB}
         ${BLAZINGDB_PROTOCOL_STATIC_LIB}
+
+        ${LIBGDF_STATIC_LIB}
+        NVStrings
+        rmm
+
         cudart
         cuda
         ${CUDA_CUDA_LIBRARY}
         ${CUDA_NVRTC_LIBRARY}
         ${CUDA_NVTX_LIBRARY}
+
+        ${PARQUET_STATIC_LIB}
+        ${ARROW_STATIC_LIB}
+        ${THRIFT_STATIC_LIB}
+        ${SNAPPY_STATIC_LIB}
+        ${BROTLI_STATIC_LIB}
+        ${ZSTD_STATIC_LIB}
+        ${LZ4_STATIC_LIB}
+        ${FLATBUFFERS_STATIC_LIB}
+
+        aws-cpp-sdk-s3
+        aws-cpp-sdk-s3-encryption
+
+        Boost::filesystem
+        Boost::system
+        Boost::regex
     )
 
     set_target_properties(${TEST_NAME} PROPERTIES

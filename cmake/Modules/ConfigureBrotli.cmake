@@ -58,7 +58,7 @@ else()
     set(BROTLI_ROOT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/brotli-install/")
 endif()
 
-set(Brotli_HOME ${BROTLI_ROOT})
+set(BROTLI_HOME ${BROTLI_ROOT})
 find_package(Brotli REQUIRED)
 set_package_properties(Brotli PROPERTIES TYPE REQUIRED
     PURPOSE " Brotli."

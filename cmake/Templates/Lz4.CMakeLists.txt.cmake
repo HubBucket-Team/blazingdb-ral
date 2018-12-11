@@ -28,6 +28,6 @@ ExternalProject_Add(lz4
     BUILD_IN_SOURCE   1
     INSTALL_DIR       "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/lz4-install"
     CONFIGURE_COMMAND ""
-    UPDATE_COMMAND    ${CMAKE_MAKE_PROGRAM} clean
+    UPDATE_COMMAND    ""
     BUILD_COMMAND     ${CMAKE_MAKE_PROGRAM} -j4 install
 )

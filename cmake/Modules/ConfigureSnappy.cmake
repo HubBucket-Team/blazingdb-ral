@@ -18,8 +18,8 @@
 # BEGIN macros
 
 macro(CONFIGURE_SNAPPY_EXTERNAL_PROJECT)
-    set(ENV{CFLAGS} "${CMAKE_C_FLAGS}")
-    set(ENV{CXXFLAGS} "${CMAKE_CXX_FLAGS}")
+    set(ENV{CFLAGS} "${CMAKE_C_FLAGS} -fPIC")
+    set(ENV{CXXFLAGS} "${CMAKE_CXX_FLAGS} -fPIC")
 
     # Download and unpack Snappy at configure time
     configure_file(${CMAKE_SOURCE_DIR}/cmake/Templates/Snappy.CMakeLists.txt.cmake ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/snappy-download/CMakeLists.txt)
@@ -58,7 +58,7 @@ else()
     set(SNAPPY_ROOT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/snappy-install/")
 endif()
 
-set(Snappy_HOME ${SNAPPY_ROOT})
+set(SNAPPY_HOME ${SNAPPY_ROOT})
 find_package(Snappy REQUIRED)
 set_package_properties(Snappy PROPERTIES TYPE REQUIRED
     PURPOSE " Snappy."

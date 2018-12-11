@@ -18,7 +18,8 @@
 # BEGIN macros
 
 macro(CONFIGURE_ZSTD_EXTERNAL_PROJECT)
-    set(ZSTD_CMAKE_ARGS "-DZSTD_BUILD_STATIC=ON")
+    # NOTE build with CMAKE_POSITION_INDEPENDENT_CODE (akka -fPIC)
+    set(ZSTD_CMAKE_ARGS "-DZSTD_BUILD_STATIC=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON")
 
     # Download and unpack ZSTD at configure time
     configure_file(${CMAKE_SOURCE_DIR}/cmake/Templates/ZSTD.CMakeLists.txt.cmake ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/zstd-download/CMakeLists.txt)

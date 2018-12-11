@@ -6,7 +6,7 @@
 # BEGIN macros
 
 macro(CONFIGURE_GPU_LIBGDF_EXTERNAL_PROJECT)
-    set(ENV{CUDACXX} ${CUDA_SDK_ROOT_DIR}/bin/nvcc)
+    set(ENV{CUDACXX} $ENV{CUDACXX})
     set(ENV{NVSTRINGS_ROOT} ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-download/nvstrings-prefix/src/nvstrings/)
     set(NVSTRINGS_INSTALL_DIR $ENV{NVSTRINGS_ROOT})
 
@@ -73,4 +73,3 @@ include_directories(${LIBGDF_INCLUDEDIR} ${LIBGDF_INCLUDE_DIR})
 link_directories(${LIBGDF_LIBDIR})
 
 # END MAIN #
-

@@ -21,7 +21,7 @@ project(boost-download NONE)
 
 include(ExternalProject)
 
-# NOTE build Boost with old C++ ABI _GLIBCXX_USE_CXX11_ABI=0
+# NOTE build Boost with old C++ ABI _GLIBCXX_USE_CXX11_ABI=0 and with -fPIC
 ExternalProject_Add(boost
     URL               http://archive.ubuntu.com/ubuntu/pool/main/b/boost1.58/boost1.58_1.58.0+dfsg.orig.tar.gz
     DOWNLOAD_DIR      "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/boost-download"
@@ -29,7 +29,7 @@ ExternalProject_Add(boost
     BUILD_IN_SOURCE   1
     INSTALL_DIR       "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/boost-install"
     CONFIGURE_COMMAND ./bootstrap.sh --with-libraries=system,filesystem,regex,atomic,chrono,container,context,thread --with-icu --prefix=${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/boost-install
-    BUILD_COMMAND     ./b2 install variant=release define=_GLIBCXX_USE_CXX11_ABI=0 stage link=static runtime-link=static threading=multi --exec-prefix=${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/boost-install --prefix=${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/boost-install -a
+    BUILD_COMMAND     ./b2 install variant=release define=_GLIBCXX_USE_CXX11_ABI=0 stage cxxflags=-fPIC cflags=-fPIC link=static runtime-link=static threading=multi --exec-prefix=${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/boost-install --prefix=${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/boost-install -a
     INSTALL_COMMAND   ""
     UPDATE_COMMAND    ""
 )

@@ -378,6 +378,8 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 			//return err;
 		}
 		//free_gdf_column(input.get_column(column_index));
+		update_null_count(output.get_gdf_column());
+
 		new_columns[column_index] = output;
 	}
 	input.clear();

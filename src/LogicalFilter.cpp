@@ -162,7 +162,7 @@ gdf_error evaluate_expression(
 		}
 	}
 
-
+	update_null_count(output.get_gdf_column());
 
 	return GDF_SUCCESS;
 }

@@ -51,6 +51,10 @@ else()
     message(STATUS "LIBGDF_INSTALL_DIR not defined, it will be built from sources")
     configure_gpu_libgdf_external_project()
     set(LIBGDF_ROOT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-install/")
+
+    # TODO percy remove these lines when cudf properly install rmm headers
+    configure_file(${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-src/cpp/src/rmm/memory.h ${LIBGDF_ROOT}/include/memory.h COPYONLY)
+    configure_file(${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-src/cpp/src/rmm/rmm.h ${LIBGDF_ROOT}/include/rmm.h COPYONLY)
 endif()
 
 set(NVSTRINGS_LIBDIR ${NVSTRINGS_INSTALL_DIR}/lib/)

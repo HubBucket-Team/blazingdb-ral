@@ -18,19 +18,22 @@
 # BEGIN macros
 
 macro(CONFIGURE_THRIFT_EXTERNAL_PROJECT)
-    set(THRIFT_CMAKE_ARGS "-DCMAKE_BUILD_TYPE=Release"
-                        "-DBUILD_SHARED_LIBS=OFF"
-                        "-DBUILD_TESTING=OFF"
-                        "-DBUILD_EXAMPLES=OFF"
-                        "-DBUILD_TUTORIALS=OFF"
-                        "-DWITH_QT4=OFF"
-                        "-DWITH_C_GLIB=OFF"
-                        "-DWITH_JAVA=OFF"
-                        "-DWITH_PYTHON=OFF"
-                        "-DWITH_HASKELL=OFF"
-                        "-DWITH_CPP=ON"
-                        "-DWITH_STATIC_LIB=ON"
-                        "-DWITH_LIBEVENT=OFF"
+    # NOTE build with CMAKE_POSITION_INDEPENDENT_CODE (akka -fPIC)
+    set(THRIFT_CMAKE_ARGS
+                        " -DCMAKE_BUILD_TYPE=Release"
+                        " -DBUILD_SHARED_LIBS=OFF"
+                        " -DBUILD_TESTING=OFF"
+                        " -DBUILD_EXAMPLES=OFF"
+                        " -DBUILD_TUTORIALS=OFF"
+                        " -DWITH_QT4=OFF"
+                        " -DWITH_C_GLIB=OFF"
+                        " -DWITH_JAVA=OFF"
+                        " -DWITH_PYTHON=OFF"
+                        " -DWITH_HASKELL=OFF"
+                        " -DWITH_CPP=ON"
+                        " -DWITH_STATIC_LIB=ON"
+                        " -DWITH_LIBEVENT=OFF"
+                        " -DCMAKE_POSITION_INDEPENDENT_CODE=ON"
                         )
 
     # Download and unpack Thrift at configure time
@@ -73,7 +76,7 @@ else()
     set(THRIFT_ROOT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/thrift-install/")
 endif()
 
-set(Thrift_HOME ${THRIFT_ROOT})
+set(THRIFT_HOME ${THRIFT_ROOT})
 find_package(Thrift REQUIRED)
 set_package_properties(Thrift PROPERTIES TYPE REQUIRED
     PURPOSE "Apache Thrift."

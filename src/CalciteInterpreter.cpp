@@ -24,6 +24,8 @@ const std::string LOGICAL_AGGREGATE_TEXT = "LogicalAggregate";
 const std::string LOGICAL_PROJECT_TEXT = "LogicalProject";
 const std::string LOGICAL_SORT_TEXT = "LogicalSort";
 const std::string LOGICAL_FILTER_TEXT = "LogicalFilter";
+const std::string ASCENDING_ORDER_SORT_TEXT = "ASC";
+const std::string DESCENDING_ORDER_SORT_TEXT = "DESC";
 
 
 bool is_join(std::string query_part){
@@ -731,66 +733,37 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 
 gdf_error process_sort(blazing_frame & input, std::string query_part){
 
-	//oh yah lets get weird!
-
-
-
-	/*gdf_error gdf_order_by(size_t nrows,     //in: # rows
-		       gdf_column* cols, //in: host-side array of gdf_columns
-		       size_t ncols,     //in: # cols
-		       void** d_cols,    //out: pre-allocated device-side array to be filled with gdf_column::data for each column; slicing of gdf_column array (host)
-		       int* d_types,     //out: pre-allocated device-side array to be filled with gdf_colum::dtype for each column; slicing of gdf_column array (host)
-		       size_t* d_indx);*/
 	std::cout<<"about to process sort"<<std::endl;
-	std::string combined_expression = query_part.substr(
-			query_part.find("("),
-			(query_part.rfind(")") - query_part.find("(")) - 1
-	);
+
+	auto rangeStart = query_part.find("(");
+	auto rangeEnd = query_part.rfind(")") - rangeStart - 1;
+	std::string combined_expression = query_part.substr(rangeStart + 1, rangeEnd - 1);
+	
 	//LogicalSort(sort0=[$4], sort1=[$7], dir0=[ASC], dir1=[ASC])
 	size_t num_sort_columns = count_string_occurrence(combined_expression,"sort");
 
-	void** d_cols;
-	int * d_types;
-	std::vector<gdf_column_cpp> output_columns;
-
-    try {
-        cuDF::Allocator::allocate((void**)&d_cols, sizeof(void*) * num_sort_columns);
-        cuDF::Allocator::allocate((void**)&d_types, sizeof(int) * num_sort_columns);
-    }
-    catch (const cuDF::Allocator::Exception& exception) {
-        std::cerr << exception.what() << std::endl;
-        cudaDeviceReset();
-        exit(EXIT_FAILURE);
-    }
-
-	gdf_column * cols = new gdf_column[num_sort_columns];
-	std::vector<size_t> sort_column_indices(num_sort_columns);
-	gdf_column_cpp index_col;
-	//index_col.create_gdf_column(GDF_UINT64,input.get_column(0).size(),nullptr,8, "");
-	//WARNING TODO felipe percy noboa see upgrade to uints
-	index_col.create_gdf_column(GDF_INT64,input.get_column(0).size(),nullptr,8, "");
+	std::vector<char> sort_order_types(num_sort_columns);
+	std::vector<gdf_column*> cols(num_sort_columns);
 	for(int i = 0; i < num_sort_columns; i++){
-		int sort_column_index = get_index(
-				get_named_expression(
-						combined_expression,
-						"sort" + std::to_string(i)
-				)
-		);
+		int sort_column_index = get_index(get_named_expression(combined_expression, "sort" + std::to_string(i)));
+		cols[i] = input.get_column(sort_column_index).get_gdf_column();
 
-		cols[i] = *input.get_column(sort_column_index).get_gdf_column();
-		//TODO: get ascending or descending but right now thats not being used
-		/*
-		gdf_column_cpp other_column = input.get_column(sort_column_index);
-		cols[i].data = input.get_column(sort_column_index).data();
-		cols[i].dtype = other_column.dtype();
-		cols[i].dtype_info = other_column.dtype_info();
-		cols[i].null_count = other_column.null_count();
-		cols[i].size = other_column.size();
-		cols[i].valid = other_column.valid();*/
+		sort_order_types[i] = (get_named_expression(combined_expression, "dir" + std::to_string(i)) == DESCENDING_ORDER_SORT_TEXT);
 	}
 
+	gdf_column_cpp asc_desc_col;
+	asc_desc_col.create_gdf_column(GDF_INT8,num_sort_columns,nullptr,1, "");
+	CheckCudaErrors(cudaMemcpy(asc_desc_col.get_gdf_column()->data, sort_order_types.data(), sort_order_types.size() * sizeof(char), cudaMemcpyHostToDevice));
 
-	//TODO de donde saco el nombre de la columna aqui???
+	int flag_nulls_are_smallest = 0;  // TODO: need to be able to specify this based on the query
+	gdf_column_cpp index_col;
+	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,8, "");
+
+	gdf_error err = gdf_order_by_asc_desc(cols.data(),
+									(char*)(asc_desc_col.get_gdf_column()->data),
+									num_sort_columns,
+									index_col.get_gdf_column(),
+									flag_nulls_are_smallest);
 
 
 	size_t size_in_chars = ((sizeof(gdf_valid_type) * num_sort_columns )+ 7) / 8;

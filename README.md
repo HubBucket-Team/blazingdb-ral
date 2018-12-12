@@ -7,9 +7,36 @@ BlazingDB Relational Algebra Interpreter
 - Boost libs
 
 # Dependencies
-- cudf/libgdf development branch from BlazingDB fork https://github.com/BlazingDB/cudf/tree/develop/libgdf
-- blazingdb-protocol/cpp development branch from https://github.com/BlazingDB/blazingdb-protocol/tree/develop/cpp
-- Google Tests
+Setup your workspace and output folders:
+```bash
+mkdir workspace
+mkdir output
+cd workspace
+wget https://github.com/BlazingDB/blazingdb-automation/blob/develop/docker/blazingsql-build/blazingsql-build.properties
+```
+
+The blazingsql-build.properties describes how you want to build BlazingSQL, if you want to build only the dependencies then disable the unnecessary modules:
+```bash
+...
+#optional: enable build (default is true)
+cudf_enable=true
+blazingdb_protocol_enable=true
+blazingdb_io_enable=true
+blazingdb_ral_enable=false
+blazingdb_orchestrator_enable=false
+blazingdb_calcite_enable=false
+pyblazing_enable=false
+...
+```
+
+Finally run the build.sh script: 
+```bash
+wget https://github.com/BlazingDB/blazingdb-automation/blob/develop/docker/blazingsql-build/build.sh
+chmod +x build.sh
+./build.sh /path/to/workspace /path/to/output
+```
+
+All the dependencies will be inside /path/to/workspace/
 
 # Clone
 This repo uses submodules. Make sure you cloned recursively:
@@ -45,39 +72,6 @@ make
 ```
 
 ## Custom build with dependencies
-### Building the dependencies
-Setup your workspace and output folders:
-```bash
-mkdir workspace
-mkdir output
-cd workspace
-wget https://github.com/BlazingDB/blazingdb-automation/blob/develop/docker/blazingsql-build/blazingsql-build.properties
-```
-
-The blazingsql-build.properties describes how you want to build BlazingSQL, if you want to build only the dependencies then disable all modules:
-```bash
-...
-#optional: enable build (default is true)
-cudf_enable=false
-blazingdb_protocol_enable=false
-blazingdb_io_enable=false
-blazingdb_ral_enable=false
-blazingdb_orchestrator_enable=false
-blazingdb_calcite_enable=false
-pyblazing_enable=false
-...
-```
-
-Finally run the build.sh script: 
-```bash
-wget https://github.com/BlazingDB/blazingdb-automation/blob/develop/docker/blazingsql-build/build.sh
-chmod +x build.sh
-./build.sh /path/to/workspace /path/to/output
-```
-
-All the dependencies will be inside /path/to/workspace/dependencies/
-
-### Build with dependencies
 This second approach will reuse your development environment.
 So you just need to pass cmake arguments for installation paths of nvstrings, cudf/libgdf, blazingdb-protocol/cpp, etc.
 
@@ -96,8 +90,8 @@ CUDACXX=/usr/local/cuda-9.2/bin/nvcc cmake -DCMAKE_BUILD_TYPE=Debug \
       -DTHRIFT_INSTALL_DIR=/path/to/workspace/dependencies/thrift_install_dir \
       -DARROW_INSTALL_DIR=/path/to/workspace/dependencies/_install_dir \
       -DLIBGDF_INSTALL_DIR=/path/to/workspace/dependencies/libgdf_install_dir \
-      -DBLAZINGDB_PROTOCOL_INSTALL_DIR=/path/to/workspace/dependencies/blazingdb_protocol_install_dir \
-      -DBLAZINGDB_IO_INSTALL_DIR=/path/to/workspace/dependencies/blazingdb_io_install_dir \
+      -DBLAZINGDB_PROTOCOL_INSTALL_DIR=/path/to/workspace/blazingdb-protocol_project/$branch/install \
+      -DBLAZINGDB_IO_INSTALL_DIR=/path/to/workspace/blazingdb-io_project/$branch/install \
       -DDGOOGLETEST_INSTALL_DIR=/path/to/workspace/dependencies/googletest_install_dir \
       ..
 make

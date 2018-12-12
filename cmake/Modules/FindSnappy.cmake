@@ -20,7 +20,7 @@
 # Variables used by this module, they can change the default behaviour and need
 # to be set before calling find_package:
 #
-#  Snappy_HOME - When set, this path is inspected instead of standard library
+#  SNAPPY_HOME - When set, this path is inspected instead of standard library
 #                locations as the root of the Snappy installation.
 #                The environment variable SNAPPY_HOME overrides this variable.
 #
@@ -34,8 +34,8 @@
 if( NOT "${SNAPPY_HOME}" STREQUAL "")
     file( TO_CMAKE_PATH "${SNAPPY_HOME}" _native_path )
     list( APPEND _snappy_roots ${_native_path} )
-elseif ( Snappy_HOME )
-    list( APPEND _snappy_roots ${Snappy_HOME} )
+elseif ( SNAPPY_HOME )
+    list( APPEND _snappy_roots ${SNAPPY_HOME} )
 endif()
 
 message(STATUS "SNAPPY_HOME: ${SNAPPY_HOME}")

@@ -23,6 +23,20 @@ BlazingDB Relational Algebra Interpreter
 - GoogleTest
 
 # Build the dependencies
+
+## System dependencies
+```bash
+# Install common dev tools
+apt-get install -y build-essential ssh wget curl git
+
+# Install AWS C++ SDK dependencies
+apt-get install -y --no-install-recommends libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev
+
+# Install Apache Arrow / Thrift dependencies
+apt-get install -y libssl-dev libtool bison flex pkg-config
+```
+
+## Project dependencies
 Setup your workspace and output folders:
 ```bash
 mkdir workspace

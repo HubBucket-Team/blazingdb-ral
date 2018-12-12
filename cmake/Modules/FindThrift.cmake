@@ -17,7 +17,7 @@
 # Variables used by this module, they can change the default behaviour and need
 # to be set before calling find_package:
 #
-#  Thrift_HOME - When set, this path is inspected instead of standard library
+#  THRIFT_HOME - When set, this path is inspected instead of standard library
 #                locations as the root of the Thrift installation.
 #                The environment variable THRIFT_HOME overrides this variable.
 #
@@ -32,8 +32,8 @@
 if( NOT "${THRIFT_HOME}" STREQUAL "")
     file( TO_CMAKE_PATH "${THRIFT_HOME}" _native_path )
     list( APPEND _thrift_roots ${_native_path} )
-elseif ( Thrift_HOME )
-    list( APPEND _thrift_roots ${Thrift_HOME} )
+elseif ( THRIFT_HOME )
+    list( APPEND _thrift_roots ${THRIFT_HOME} )
 endif()
 
 message(STATUS "THRIFT_HOME: ${THRIFT_HOME}")

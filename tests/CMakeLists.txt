@@ -57,5 +57,6 @@ add_subdirectory(gdf-ref-counter)
 add_subdirectory(where)
 add_subdirectory(joins)
 add_subdirectory(tpch)
+add_subdirectory(union)
 
 message(STATUS "******** Tests are ready ********")

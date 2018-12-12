@@ -6,7 +6,18 @@
 # BEGIN macros
 
 macro(CONFIGURE_GPU_LIBGDF_EXTERNAL_PROJECT)
-    set(ENV{CUDACXX} ${CUDA_SDK_ROOT_DIR}/bin/nvcc)
+    # NOTE Reset arrow env vars since libgdf has its own arrow dependency
+    set(ENV{BOOST_ROOT} ${BOOST_ROOT})
+    set(ENV{FLATBUFFERS_HOME} "")
+    set(ENV{LZ4_HOME} "")
+    set(ENV{ZSTD_HOME} "")
+    set(ENV{BROTLI_HOME} "")
+    set(ENV{SNAPPY_HOME} "")
+    set(ENV{THRIFT_HOME} "")
+    set(ENV{PARQUET_HOME} "")
+
+    # NOTE Define basic env vars to build libgdf
+    set(ENV{CUDACXX} $ENV{CUDACXX})
     set(ENV{NVSTRINGS_ROOT} ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-download/nvstrings-prefix/src/nvstrings/)
     set(NVSTRINGS_INSTALL_DIR $ENV{NVSTRINGS_ROOT})
 
@@ -51,6 +62,10 @@ else()
     message(STATUS "LIBGDF_INSTALL_DIR not defined, it will be built from sources")
     configure_gpu_libgdf_external_project()
     set(LIBGDF_ROOT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-install/")
+
+    # TODO percy remove these lines when cudf properly install rmm headers
+    configure_file(${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-src/cpp/src/rmm/memory.h ${LIBGDF_ROOT}/include/memory.h COPYONLY)
+    configure_file(${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-src/cpp/src/rmm/rmm.h ${LIBGDF_ROOT}/include/rmm.h COPYONLY)
 endif()
 
 set(NVSTRINGS_LIBDIR ${NVSTRINGS_INSTALL_DIR}/lib/)
@@ -73,4 +88,3 @@ include_directories(${LIBGDF_INCLUDEDIR} ${LIBGDF_INCLUDE_DIR})
 link_directories(${LIBGDF_LIBDIR})
 
 # END MAIN #
-

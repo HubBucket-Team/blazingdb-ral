@@ -102,7 +102,7 @@ CUDACXX=/usr/local/cuda-9.2/bin/nvcc cmake -DCMAKE_BUILD_TYPE=Debug \
       -DLIBGDF_INSTALL_DIR=/path/to/workspace/dependencies/libgdf_install_dir \
       -DBLAZINGDB_PROTOCOL_INSTALL_DIR=/path/to/workspace/blazingdb-protocol_project/$branch/install \
       -DBLAZINGDB_IO_INSTALL_DIR=/path/to/workspace/blazingdb-io_project/$branch/install \
-      -DDGOOGLETEST_INSTALL_DIR=/path/to/workspace/dependencies/googletest_install_dir \
+      -DGOOGLETEST_INSTALL_DIR=/path/to/workspace/dependencies/googletest_install_dir \
       ..
 make
 ```
@@ -110,20 +110,20 @@ make
 Remember NVSTRINGS_INSTALL_DIR and LIBGDF_INSTALL_DIR always got together.
 
 Also, if you don't define these optional arguments then the cmake process will resolve (download & build) each dependency:
-- DNVSTRINGS_INSTALL_DIR
-- DBOOST_INSTALL_DIR
-- DAWS_SDK_CPP_BUILD_DIR
-- DFLATBUFFERS_INSTALL_DIR
-- DLZ4_INSTALL_DIR
-- DZSTD_INSTALL_DIR
-- DBROTLI_INSTALL_DIR
-- DSNAPPY_INSTALL_DIR
-- DTHRIFT_INSTALL_DIR
-- DARROW_INSTALL_DIR
-- DLIBGDF_INSTALL_DIR
-- DBLAZINGDB_PROTOCOL_INSTALL_DIR
-- DBLAZINGDB_IO_INSTALL_DIR
-- DDGOOGLETEST_INSTALL_DIR
+- NVSTRINGS_INSTALL_DIR
+- BOOST_INSTALL_DIR
+- AWS_SDK_CPP_BUILD_DIR
+- FLATBUFFERS_INSTALL_DIR
+- LZ4_INSTALL_DIR
+- ZSTD_INSTALL_DIR
+- BROTLI_INSTALL_DIR
+- SNAPPY_INSTALL_DIR
+- THRIFT_INSTALL_DIR
+- ARROW_INSTALL_DIR
+- LIBGDF_INSTALL_DIR
+- BLAZINGDB_PROTOCOL_INSTALL_DIR
+- BLAZINGDB_IO_INSTALL_DIR
+- GOOGLETEST_INSTALL_DIR
 
 Finally, if don't want to use conda and need the nvstrings library, just download https://anaconda.org/nvidia/nvstrings/0.0.3/download/linux-64/nvstrings-0.0.3-cuda9.2_py35_0.tar.bz2 and uncompress the folder, this folder is the NVSTRINGS_HOME.
 

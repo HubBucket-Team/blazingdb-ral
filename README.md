@@ -119,7 +119,7 @@ CUDACXX=/usr/local/cuda-9.2/bin/nvcc cmake -DCMAKE_BUILD_TYPE=Debug \
 make
 ```
 
-Remember NVSTRINGS_INSTALL_DIR and LIBGDF_INSTALL_DIR always got together.
+Remember NVSTRINGS_INSTALL_DIR and LIBGDF_INSTALL_DIR always go together.
 
 Also, if you don't define these optional arguments then the cmake process will resolve (download & build) each dependency:
 - NVSTRINGS_INSTALL_DIR

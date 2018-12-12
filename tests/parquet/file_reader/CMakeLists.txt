@@ -19,7 +19,6 @@
 set(file_reader_SRCS
     ${parquet_reader_source_files}
     utils.cu
-    single_column_file-test.cpp
     api-test.cu)
 
 configure_test(file_reader-test "${file_reader_SRCS}")

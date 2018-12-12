@@ -330,7 +330,15 @@ TEST_F(EvaluateQueryTest, TEST_09) {
   CHECK_RESULT(output_table, input.resultTable);
 }
 
-TEST_F(EvaluateQueryTest, TEST_UNARY) {auto input = InputTestItem{.query = "select floor(double_value), floor(float_value)  from main.emps", .logicalPlan ="LogicalProject(EXPR$0=[FLOOR($1)], EXPR$1=[FLOOR($2)])\n  EnumerableTableScan(table=[[main, emps]])", .tableGroup = LiteralTableGroupBuilder{{"main.emps", {{"id", Literals<GDF_INT32>{1,2,3,4,5,6,7,8,9,1} },{"double_value", Literals<GDF_FLOAT64>{10.5,20.5,30.4,40.6,50.1,60.5,70.4,80.9,90.1,10.11} },{"float_value", Literals<GDF_FLOAT32>{10.5,20.5,30.4,40.6,50.1,60.5,70.4,80.9,90.1,10.11} }}}}.Build(), .resultTable = LiteralTableBuilder{"ResultSet", {{"GDF_INT8", Literals<GDF_INT8>{1,2,3,4,5,6,7,8,9,1} },{"GDF_FLOAT64", Literals<GDF_FLOAT64>{10,20,30,40,50,60,70,80,90,10} },{"GDF_FLOAT32", Literals<GDF_FLOAT32>{10,20,30,40,50,60,70,80,90,10} }}}.Build()};auto logical_plan = input.logicalPlan;auto input_tables = input.tableGroup.ToBlazingFrame();auto table_names = input.tableGroup.table_names();auto column_names = input.tableGroup.column_names();std::vector<gdf_column_cpp> outputs;
+TEST_F(EvaluateQueryTest, TEST_UNARY) {
+	auto input = InputTestItem{.query = "select floor(double_value), floor(float_value)  from main.emps", .logicalPlan ="LogicalProject(EXPR$0=[FLOOR($1)], EXPR$1=[FLOOR($2)])\n  EnumerableTableScan(table=[[main, emps]])", .tableGroup = LiteralTableGroupBuilder{{"main.emps", {{"id", Literals<GDF_INT32>{1,2,3,4,5,6,7,8,9,1} },{"double_value", Literals<GDF_FLOAT64>{10.5,20.5,30.4,40.6,50.1,60.5,70.4,80.9,90.1,10.11} },{"float_value", Literals<GDF_FLOAT32>{10.5,20.5,30.4,40.6,50.1,60.5,70.4,80.9,90.1,10.11} }}}}.Build(), .resultTable = LiteralTableBuilder{"ResultSet", {{"GDF_FLOAT64", Literals<GDF_FLOAT64>{10.0,20.0,30.0,40.0,50.0,60.0,70.0,80.0,90.0,10.0} },{"GDF_FLOAT32", Literals<GDF_FLOAT32>{10.0,20.0,30.0,40.0,50.0,60.0,70.0,80.0,90.0,10.0} }}}.Build()};
+	auto logical_plan = input.logicalPlan;
+	auto input_tables = input.tableGroup.ToBlazingFrame();
+	auto table_names = input.tableGroup.table_names();
+	auto column_names = input.tableGroup.column_names();
+	std::vector<gdf_column_cpp> outputs;
 gdf_error err = evaluate_query(input_tables, table_names, column_names, logical_plan, outputs);
-EXPECT_TRUE(err == GDF_SUCCESS);auto output_table = GdfColumnCppsTableBuilder{"output_table", outputs}.Build();CHECK_RESULT(output_table, input.resultTable);}
+EXPECT_TRUE(err == GDF_SUCCESS);
+auto output_table = GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+CHECK_RESULT(output_table, input.resultTable);}
 

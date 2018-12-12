@@ -46,7 +46,7 @@ macro(CONFIGURE_CUDA_LIBRARIES)
 
     # TODO percy seems cmake bug: we cannot define target dirs per cuda target
     # ... see if works in future cmake versions
-    link_directories(${CUDA_LIBRARY_DIR} ${CUDA_LIBRARY_STUBS_DIR})
+    link_directories(${CUDA_LIBRARY_DIR} ${CUDA_LIBRARY_STUBS_DIR} ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES})
 endmacro()
 
 # compute_capability is a int value (e.g. 30 means compute capability 3.0)

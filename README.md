@@ -81,7 +81,7 @@ cmake -DCMAKE_BUILD_TYPE=Debug ..
 make
 ```
 
-## First approach: Custom build with dependencies
+## Second approach: Custom build with dependencies
 This second approach will reuse your development environment.
 So you just need to pass cmake arguments for installation paths of the dependencies you want.
 

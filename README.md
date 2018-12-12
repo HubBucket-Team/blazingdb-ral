@@ -34,7 +34,7 @@ apt-get install -y libssl-dev libtool bison flex pkg-config
 - blazingdb-io
 - GoogleTest
 
-# Build the dependencies
+## Build the dependencies
 Setup your workspace and output folders:
 ```bash
 mkdir workspace

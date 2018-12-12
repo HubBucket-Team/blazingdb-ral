@@ -25,9 +25,10 @@ set(where-test_SRCS
   ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
   ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
   ${source_files}
+  ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
   where-test.cpp
 )
 
 configure_test(where-test "${where-test_SRCS}")
 
-target_link_libraries(where-test ral-test-utils)
+

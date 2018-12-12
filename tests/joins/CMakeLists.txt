@@ -13,7 +13,7 @@ set(source_files
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/util/type.cpp
 )
 
-set(the-test_SRCS
+set(full-test_SRCS
   ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
   ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
   ${CMAKE_SOURCE_DIR}/src/ColumnManipulation.cu
@@ -24,14 +24,36 @@ set(the-test_SRCS
   ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
   ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
   ${source_files}
+  ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
   fullouter_join.cu
 )
 
-configure_test(fullouter_join-test "${the-test_SRCS}")
+configure_test(fullouter_join-test "${full-test_SRCS}")
 
 target_link_libraries(fullouter_join-test
                       ${cuDF_adapter_testing_library}
                       ${cuDF_adapter_testing_dependencies}
 )
 
+set(left-test_SRCS
+  ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
+  ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
+  ${CMAKE_SOURCE_DIR}/src/ColumnManipulation.cu
+  ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
+  ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
+  ${CMAKE_SOURCE_DIR}/src/JoinProcessor.cpp
+  ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp
+  ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
+  ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
+  ${source_files}
+  ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
+  leftouter_join.cu
+)
+
+configure_test(leftouter_join-test "${left-test_SRCS}")
+
+target_link_libraries(leftouter_join-test
+                      ${cuDF_adapter_testing_library}
+                      ${cuDF_adapter_testing_dependencies}
+)
 #target_link_libraries(where-test ral-test-utils)

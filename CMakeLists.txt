@@ -105,7 +105,7 @@ if(BUILD_TESTING)
     include(ConfigureGoogleTest)
 
     if(GTEST_FOUND)
-        #add_subdirectory(tests)
+        add_subdirectory(tests)
     else()
         message(AUTHOR_WARNING "Google C++ Testing Framework (Google Test) not found: automated tests are disabled.")
     endif()

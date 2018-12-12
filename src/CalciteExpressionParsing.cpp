@@ -533,7 +533,7 @@ gdf_error get_operation(
 		*operation = GDF_ATAN;
 	}else if(operator_string == "COT"){
 		*operation = GDF_COTAN;
-	}else if(operator_string == "FLOOR"){
+	}else if(operator_string == "BL_FLOUR"){
 		*operation = GDF_FLOOR;
 	}else if(operator_string == "CEIL"){
 		*operation = GDF_CEIL;
@@ -741,6 +741,8 @@ std::string clean_calcite_expression(std::string expression){
 	StringUtil::findAndReplaceAll(expression,"EXTRACT(FLAG(YEAR), ","BL_YEAR(");
 	StringUtil::findAndReplaceAll(expression,"EXTRACT(FLAG(MONTH), ","BL_MONTH(");
 	StringUtil::findAndReplaceAll(expression,"EXTRACT(FLAG(DAY), ","BL_DAY(");
+	StringUtil::findAndReplaceAll(expression,"FLOOR(","BL_FLOUR(");
+
 
 
 

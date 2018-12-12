@@ -170,5 +170,26 @@
     [90000, 70000]
   ],
   "resultTypes": ["GDF_INT32"]
-}
+},{
+        "testName": "TEST_UNARY",
+        "query": "select floor(double_value), floor(float_value)  from main.emps",
+        "schema": {
+            "dbName": "main",
+            "tableName": "emps",
+            "columnNames": ["id","double_value", "float_value"],
+            "columnTypes": ["GDF_INT32", "GDF_FLOAT64","GDF_FLOAT32"]
+        },
+        "data": [
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
+            [10.5, 20.5, 30.4, 40.6, 50.1, 60.5, 70.4, 80.9, 90.1, 10.11],
+            [10.5, 20.5, 30.4, 40.6, 50.1, 60.5, 70.4, 80.9, 90.1, 10.11]
+        ],
+        "result": [
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
+            [10, 20, 30, 40, 50, 60, 70, 80, 90, 10],
+        [10, 20, 30, 40, 50, 60, 70, 80, 90, 10]
+        ],
+        "resultTypes": ["GDF_INT8", "GDF_FLOAT64","GDF_FLOAT32"]
+    }
+
 ]

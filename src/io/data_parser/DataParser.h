@@ -18,7 +18,12 @@ namespace io {
 
 class data_parser {
 public:
-	
+	/**
+	 * columns should be the full size of the schema, if for example, some of the columns
+	 * are not oing to be parsed, we will still want a gdf_column_cpp of size 0
+	 * in there so we can preserve column index like access e.g. $3 $1 from the logical plan
+	 *
+	 */
 	virtual gdf_error parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 			std::vector<gdf_column_cpp> & columns,
 			std::vector<bool> include_column) = 0;

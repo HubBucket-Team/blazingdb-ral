@@ -69,15 +69,9 @@ git submodule update --init --recursive
 ```
 
 # Build
-Before build always update the gitsumbdule
-```bash
-cd blazingdb-ral
-git submodule update --init --recursive
-```
-
 There are two ways to build the RAL component (for both cases you don't need to have conda in your system).
 
-## Basic build
+## First approach: Basic build
 The first one will automagically download all the RAL dependencies as part of the cmake process.
 
 ```bash
@@ -87,9 +81,9 @@ cmake -DCMAKE_BUILD_TYPE=Debug ..
 make
 ```
 
-## Custom build with dependencies
+## First approach: Custom build with dependencies
 This second approach will reuse your development environment.
-So you just need to pass cmake arguments for installation paths of nvstrings, cudf/libgdf, blazingdb-protocol/cpp, etc.
+So you just need to pass cmake arguments for installation paths of the dependencies you want.
 
 ```bash
 cd blazingdb-ral
@@ -115,7 +109,7 @@ make
 
 Remember NVSTRINGS_INSTALL_DIR and LIBGDF_INSTALL_DIR always got together.
 
-If you don't define these optional arguments then the cmake process will resolve (download & build) each dependency:
+Also, if you don't define these optional arguments then the cmake process will resolve (download & build) each dependency:
 - DNVSTRINGS_INSTALL_DIR
 - DBOOST_INSTALL_DIR
 - DAWS_SDK_CPP_BUILD_DIR

@@ -25,8 +25,8 @@
 if( NOT "${ZSTD_HOME}" STREQUAL "")
     file( TO_CMAKE_PATH "${ZSTD_HOME}" _native_path )
     list( APPEND _zstd_roots ${_native_path} )
-elseif ( ZStd_HOME )
-    list( APPEND _zstd_roots ${ZStd_HOME} )
+elseif ( ZSTD_HOME )
+    list( APPEND _zstd_roots ${ZSTD_HOME} )
 endif()
 
 if (MSVC AND NOT DEFINED ZSTD_MSVC_STATIC_LIB_SUFFIX)

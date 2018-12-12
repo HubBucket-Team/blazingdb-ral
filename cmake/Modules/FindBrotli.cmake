@@ -20,7 +20,7 @@
 # Variables used by this module, they can change the default behaviour and need
 # to be set before calling find_package:
 #
-#  Brotli_HOME - When set, this path is inspected instead of standard library
+#  BROTLI_HOME - When set, this path is inspected instead of standard library
 #                locations as the root of the Brotli installation.
 #                The environment variable BROTLI_HOME overrides this veriable.
 #
@@ -34,8 +34,8 @@
 if( NOT "${BROTLI_HOME}" STREQUAL "")
     file( TO_CMAKE_PATH "${BROTLI_HOME}" _native_path )
     list( APPEND _brotli_roots ${_native_path} )
-elseif ( Brotli_HOME )
-    list( APPEND _brotli_roots ${Brotli_HOME} )
+elseif ( BROTLI_HOME )
+    list( APPEND _brotli_roots ${BROTLI_HOME} )
 endif()
 
 find_path( BROTLI_INCLUDE_DIR NAMES brotli/decode.h

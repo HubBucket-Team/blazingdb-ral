@@ -2,11 +2,27 @@
 BlazingDB Relational Algebra Interpreter
 
 # Requirements
-- C++11 compiler
+- g++-5.4
 - CMake 3.11+
-- Boost libs
+- Make
 
 # Dependencies
+- nvstrings
+- boost
+- aws_sdk_cpp
+- flatbuffers
+- lz4
+- zstd
+- brotli
+- snappy
+- thrift
+- arrow
+- libgdf (cudf/cpp)
+- blazingdb-protocol
+- blazingdb-io
+- GoogleTest
+
+# Build the dependencies
 Setup your workspace and output folders:
 ```bash
 mkdir workspace

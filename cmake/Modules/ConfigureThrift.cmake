@@ -20,9 +20,7 @@
 macro(CONFIGURE_THRIFT_EXTERNAL_PROJECT)
     # NOTE percy c.gonzales if you want to pass other RAL CMAKE_CXX_FLAGS into this dependency add it by harcoding
     # NOTE build with CMAKE_POSITION_INDEPENDENT_CODE (akka -fPIC)
-    set(THRIFT_CMAKE_ARGS
-                        " -DCMAKE_BUILD_TYPE=Release"
-                        " -DBUILD_SHARED_LIBS=OFF"
+    set(THRIFT_CMAKE_ARGS " -DBUILD_SHARED_LIBS=OFF"
                         " -DBUILD_TESTING=OFF"
                         " -DBUILD_EXAMPLES=OFF"
                         " -DBUILD_TUTORIALS=OFF"

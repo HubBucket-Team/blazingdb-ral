@@ -6,6 +6,18 @@ BlazingDB Relational Algebra Interpreter
 - CMake 3.11+
 - Make
 
+And also make sure to install these system requirements:
+```bash
+# Install common dev tools
+apt-get install -y build-essential ssh wget curl git
+
+# Install AWS C++ SDK dependencies
+apt-get install -y --no-install-recommends libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev
+
+# Install Apache Arrow / Thrift dependencies
+apt-get install -y libssl-dev libtool bison flex pkg-config
+```
+
 # Dependencies
 - nvstrings
 - boost
@@ -23,20 +35,6 @@ BlazingDB Relational Algebra Interpreter
 - GoogleTest
 
 # Build the dependencies
-
-## System dependencies
-```bash
-# Install common dev tools
-apt-get install -y build-essential ssh wget curl git
-
-# Install AWS C++ SDK dependencies
-apt-get install -y --no-install-recommends libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev
-
-# Install Apache Arrow / Thrift dependencies
-apt-get install -y libssl-dev libtool bison flex pkg-config
-```
-
-## Project dependencies
 Setup your workspace and output folders:
 ```bash
 mkdir workspace
@@ -91,7 +89,7 @@ The first one will automagically download all the RAL dependencies as part of th
 ```bash
 cd blazingdb-ral
 mkdir build
-cmake -DCMAKE_BUILD_TYPE=Debug ..
+CUDACXX=/usr/local/cuda-9.2/bin/nvcc cmake -DCMAKE_BUILD_TYPE=Debug ..
 make
 ```
 

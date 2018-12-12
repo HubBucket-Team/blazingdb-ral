@@ -36,70 +36,9 @@ parquet_parser::parquet_parser() {
 parquet_parser::~parquet_parser() {
 	// TODO Auto-generated destructor stub
 }
-
-//@todo, replace with new c++14
-int dtype_size(gdf_dtype col_type) {
-  switch( col_type )
-    {
-    case GDF_INT8:
-      {
-        using ColType = int8_t;
-
-        return sizeof(ColType);
-      }
-    case GDF_INT16:
-      {
-        using ColType = int16_t;
-
-        return sizeof(ColType);
-      }
-    case GDF_INT32:
-      {
-        using ColType = int32_t;
-
-        return sizeof(ColType);
-      }
-    case GDF_INT64:
-      {
-        using ColType = int64_t;
-
-        return sizeof(ColType);
-      }
-    case GDF_FLOAT32:
-      {
-        using ColType = float;
-
-        return sizeof(ColType);
-      }
-    case GDF_FLOAT64:
-      {
-        using ColType = double;
-
-        return sizeof(ColType);
-      }
-
-    default:
-      assert( false );//type not handled
-    }
-    return 0;
-}
-
-
-gdf_column_cpp ToGdfColumnCpp(const std::string &name,
-                              const gdf_dtype    dtype,
-                              const std::size_t  length,
-                              const void *       data,
-                              const std::size_t  size) {
-  gdf_column_cpp column_cpp;
-  column_cpp.create_gdf_column(dtype, length, const_cast<void *>(data), size);
-  column_cpp.delete_set_name(name);
-  return column_cpp;
-}
-
-
-
+ 
 gdf_error parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
-			std::vector<gdf_column_cpp> & gdfColumnsCpps,
+			std::vector<gdf_column_cpp> & gdf_columns_out,
 			std::vector<bool> include_column){
 
 	gdf_error error;
@@ -113,11 +52,13 @@ gdf_error parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> fil
 	}
     std::vector<gdf_column *> columns_out;
 	gdf_error error_code = gdf::parquet::read_parquet_by_ids(file, row_group_indices, column_indices, columns_out);	
-	size_t index = 0;
-	for (auto column : columns_out) {
-	    size_t type_size = dtype_size(column->dtype);
-    	gdfColumnsCpps.push_back(ToGdfColumnCpp(std::to_string(index) + "_col", column->dtype, column->size, column->data, type_size));
-		index++;
+	auto n_cols = columns_out.size();
+	gdf_columns_out.resize(n_cols);
+
+ 	for(size_t i = 0; i < n_cols; i++ ){
+	    gdf_column	*column = columns_out[i];
+		column->col_name = nullptr;
+		gdf_columns_out[i].create_gdf_column(column);
 	}
 	return error;
 }

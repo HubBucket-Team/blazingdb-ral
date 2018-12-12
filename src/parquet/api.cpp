@@ -307,7 +307,7 @@ static inline gdf_error
 _ReadFileMultiThread(const std::unique_ptr<FileReader> &file_reader,
                      const std::vector<std::size_t> &   row_group_indices,
                      const std::vector<std::size_t> &   column_indices,
-                     gdf_column *const                  gdf_columns) {
+                     gdf_column **const                  gdf_columns) {  //use RMM instead
     const std::shared_ptr<::parquet::FileMetaData> &metadata =
       file_reader->metadata();
     const std::size_t num_rows = static_cast<std::size_t>(metadata->num_rows());
@@ -330,7 +330,7 @@ _ReadFileMultiThread(const std::unique_ptr<FileReader> &file_reader,
         for (std::size_t column_reader_index = 0;
              column_reader_index < column_indices.size();
              column_reader_index++) {
-            const gdf_column &_gdf_column = gdf_columns[column_reader_index];
+            const gdf_column &_gdf_column = *gdf_columns[column_reader_index]; //use RMM instead
             const std::shared_ptr<::parquet::ColumnReader> column_reader =
               row_group_reader->Column(
                 static_cast<int>(column_indices[column_reader_index]));
@@ -376,7 +376,7 @@ _ReadFileMultiThread(const std::unique_ptr<FileReader> &file_reader,
                 std::size_t merged_byte_offset =
                   (offsets[row_group_index_in_set + 1] / 8);
 
-                cudaMemcpy(gdf_columns[column_reader_index].valid
+                cudaMemcpy((*gdf_columns[column_reader_index]).valid
                              + merged_byte_offset,
                            &merged,
                            sizeof(gdf_valid_type),
@@ -439,7 +439,7 @@ static inline gdf_error
 _AllocateGdfColumns(const std::unique_ptr<FileReader> &file_reader,
                     const std::vector<std::size_t> &   row_group_indices,
                     const std::vector<std::size_t> &   column_indices,
-                    gdf_column *const                  gdf_columns) {
+                    gdf_column **const                  gdf_columns) {  //use RMM instead
     const std::vector<const ::parquet::ColumnDescriptor *> column_descriptors =
       _ColumnDescriptorsFrom(file_reader, column_indices);
 
@@ -465,7 +465,7 @@ _AllocateGdfColumns(const std::unique_ptr<FileReader> &file_reader,
         break
 
     for (std::size_t i = 0; i < num_columns; i++) {
-        gdf_column &                             _gdf_column = gdf_columns[i];
+        gdf_column &                             _gdf_column = *gdf_columns[i];//use RMM instead
         const ::parquet::ColumnDescriptor *const column_descriptor =
           column_descriptors[i];
 
@@ -486,9 +486,13 @@ _AllocateGdfColumns(const std::unique_ptr<FileReader> &file_reader,
     return GDF_SUCCESS;
 }
 
-static inline gdf_column *
+//@fix!!@todo, use RMM memory manager!
+static inline gdf_column **
 _CreateGdfColumns(const std::size_t num_columns) try {
-    return new gdf_column[num_columns];
+    auto pp =  new gdf_column*[num_columns];  //use RMM instead
+    for (size_t i = 0; i < num_columns; i++ )  //use RMM instead
+        pp[i] = new gdf_column;  //use RMM instead
+    return pp;  //use RMM instead
 } catch (const std::bad_alloc &e) {
 #ifdef GDF_DEBUG
     std::cerr << "Allocation error for gdf columns\n" << e.what() << std::endl;
@@ -581,7 +585,7 @@ static inline gdf_error
 _read_parquet_by_ids(const std::unique_ptr<FileReader> &file_reader,
                      const std::vector<std::size_t> &   row_group_indices,
                      const std::vector<std::size_t> &   column_indices,
-                     gdf_column *const                  gdf_columns) {
+                     gdf_column **const                  gdf_columns) {
 
     if (gdf_columns == nullptr) { return GDF_FILE_ERROR; }
 
@@ -614,13 +618,13 @@ read_parquet_by_ids(const std::string &             filename,
         return GDF_FILE_ERROR;
     }
 
-    gdf_column *const gdf_columns = _CreateGdfColumns(column_indices.size());
+    gdf_column **gdf_columns = _CreateGdfColumns(column_indices.size());
 
     gdf_error status = _read_parquet_by_ids(
       std::move(file_reader), row_group_indices, column_indices, gdf_columns);
 
     for (std::size_t i = 0; i < column_indices.size(); i++) {
-        out_gdf_columns.push_back(&gdf_columns[i]);
+        out_gdf_columns.push_back(gdf_columns[i]);
     }
 
     return status;
@@ -640,13 +644,13 @@ read_parquet_by_ids(std::shared_ptr<::arrow::io::RandomAccessFile> file,
         return GDF_FILE_ERROR;
     }
 
-    gdf_column *const gdf_columns = _CreateGdfColumns(column_indices.size());
+    gdf_column ** gdf_columns = _CreateGdfColumns(column_indices.size());
 
     gdf_error status = _read_parquet_by_ids(
       std::move(file_reader), row_group_indices, column_indices, gdf_columns);
 
     for (std::size_t i = 0; i < column_indices.size(); i++) {
-        out_gdf_columns.push_back(&gdf_columns[i]);
+        out_gdf_columns.push_back(gdf_columns[i]);
     }
 
     return status;
@@ -657,7 +661,7 @@ extern "C" {
 gdf_error
 read_parquet(const char *const        filename,
              const char *const *const columns,
-             gdf_column **const       out_gdf_columns,
+             gdf_column **            out_gdf_columns,  //use RMM instead
              size_t *const            out_gdf_columns_length) {
 
     const std::unique_ptr<FileReader> file_reader = _OpenFile(filename);
@@ -681,12 +685,12 @@ read_parquet(const char *const        filename,
 
     const std::vector<std::size_t> row_group_indices(row_group_ind);
 
-    gdf_column *const gdf_columns = _CreateGdfColumns(column_indices.size());
+    gdf_column ** gdf_columns = _CreateGdfColumns(column_indices.size());
 
     gdf_error status = _read_parquet_by_ids(
       std::move(file_reader), row_group_indices, column_indices, gdf_columns);
 
-    *out_gdf_columns        = gdf_columns;
+    out_gdf_columns        = gdf_columns;  //use RMM instead
     *out_gdf_columns_length = column_indices.size();
 
     return status;

@@ -39,6 +39,11 @@ protected:
 	}
 
 
+	virtual void SetUp() {
+	  	auto output = new Library::Logging::CoutOutput();
+  		Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
+	}
+
 
 
 	template<typename T, typename Functor>
@@ -67,6 +72,7 @@ void generate_csv_file_int32(size_t num_rows, size_t num_cols, std::string path 
 	// 0|0|0|0|0
 	// 0|3|6|9|12
 	// 0|6|12|18|24
+	// \n  //@check always last endofline 
 
 	for(size_t row_index = 0; row_index  < num_rows; row_index++){
 		if(row_index > 0)	csv_file<<"\n";
@@ -74,9 +80,9 @@ void generate_csv_file_int32(size_t num_rows, size_t num_cols, std::string path 
 			if(column_index > 0)	csv_file << "|";
 			csv_file<< functor (row_index,column_index);
 		}
-
 	}
-
+	csv_file<<"\n";
+	
 	csv_file.close();
 
 }
@@ -85,7 +91,7 @@ void generate_csv_file_int32(size_t num_rows, size_t num_cols, std::string path 
 TEST_F(ParseCSVTest, parse_small_csv_file_int32) {
 
 	{
-		size_t num_rows = 1000;
+		size_t num_rows = 10;
 		size_t num_cols = 5;
 		std::vector<gdf_dtype> types(num_cols,GDF_INT32);
 		std::vector<std::string> names(num_cols);
@@ -100,7 +106,6 @@ TEST_F(ParseCSVTest, parse_small_csv_file_int32) {
 				num_rows,num_cols,path,cell_generator);
 
 		std::vector<std::vector<int> > host_data(num_cols);
-		std::vector<gdf_column_cpp> columns(num_cols);
 		for(size_t column_index = 0; column_index < num_cols; column_index++){
 			names[column_index] = std::string("col_") + std::to_string(column_index);
 			host_data[column_index] = get_generated_column<int>(
@@ -110,21 +115,19 @@ TEST_F(ParseCSVTest, parse_small_csv_file_int32) {
 
 		std::vector<Uri> uris(1);
 		uris[0] = Uri(path);
-
-
-
-
 		std::vector<bool> include_column(num_cols,true);
-
 		std::unique_ptr<ral::io::data_provider> provider = std::make_unique<ral::io::uri_data_provider>(uris);
 		std::unique_ptr<ral::io::data_parser> parser = std::make_unique<ral::io::csv_parser>("|","\n",0,names,types);
 
 
 		EXPECT_TRUE(provider->has_next());
+		std::vector<gdf_column_cpp> columns;
 		parser->parse(provider->get_next(),columns,include_column);
 
 		for(size_t column_index = 0; column_index < num_cols; column_index++){
 			Check(columns[column_index], &host_data[column_index][0]);
+			
+			print_gdf_column(columns[column_index].get_gdf_column());
 		}
 
 	}

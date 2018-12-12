@@ -66,24 +66,24 @@ csv_parser::csv_parser(const std::string & delimiter,
 		const std::vector<gdf_dtype> & dtypes) {
 
 
-	args.windowslinetermination = false;
-	args.delimiter 		= ',';
-
-	if(names.size() != dtypes.size()){
-		//TODO: something graceful, like a swan diving in a pristine lake, not this duck flinging feces in a coop
-	}
+	// args.windowslinetermination = false;
+	
+	// if(names.size() != dtypes.size()){
+	// 	//TODO: something graceful, like a swan diving in a pristine lake, not this duck flinging feces in a coop
+	// }
 	int num_columns = names.size();
-	if(delimiter.size() == 1){
-		args.lineterminator = '\n';
-	}else{
-		if(delimiter[0] == '\n' && delimiter[1] == '\r'){
-			args.lineterminator = '\n';
-			args.windowslinetermination = true;
-		}else{
-			//god knows what to do, set an invalid flag in this class?
-			//i guess this is why factories are good
-		}
-	}
+	// if(delimiter.size() == 1){
+	// 	args.lineterminator = '\n';
+	// }else{
+	// 	if(delimiter[0] == '\n' && delimiter[1] == '\r'){
+	// 		args.lineterminator = '\n';
+	// 		args.windowslinetermination = true;
+	// 	}else{
+	// 		//god knows what to do, set an invalid flag in this class?
+	// 		//i guess this is why factories are good
+	// 	}
+	// }
+
 	this->column_names.resize(num_columns);
 	this->dtype_strings.resize(num_columns);
 	std::cout<<"made it here"<<std::endl;
@@ -95,23 +95,34 @@ csv_parser::csv_parser(const std::string & delimiter,
 		args.names[column_index] = this->column_names[column_index].c_str();
 	}
 	std::cout<<"made it here too"<<std::endl;
-	args.delim_whitespace = 0;
-	args.skipinitialspace = 0;
-	args.skiprows 		= skip_rows;
-	args.skipfooter 	= 0;
-	args.dayfirst 		= 0;
-	args.use_cols_int 	= NULL;
-	args.use_cols_char 	= NULL;
-	args.use_cols_char_len  = 0;
-	args.use_cols_int_len   = 0;
-	args.nrows = -1;
-	args.parse_dates = true;
-	args.encoding = NULL;
-	std::cout<<"if im last it was me"<<std::endl;
-	args.quotechar = &this->quote_character;
-	std::cout<<"nope still good"<<std::endl;
+	// args.num_cols = num_columns; //why not?
+	// args.delim_whitespace = 0;
+	// args.skipinitialspace = 0;
+	// args.skiprows 		= skip_rows;
+	// args.skipfooter 	= 0;
+	// args.dayfirst 		= 0;
 
+	// args.mangle_dupe_cols=true;
+	// args.num_cols_out=0;
 
+	// args.use_cols_int       = NULL;
+	// args.use_cols_char      = NULL;
+	// args.use_cols_char_len  = 0;
+	// args.use_cols_int_len   = 0;
+	// // args.parse_dates = true; @check
+	// std::cout<<"if im last it was me"<<std::endl;
+	// args.quotechar = this->quote_character;
+	// std::cout<<"nope still good"<<std::endl;
+
+	args.num_cols		= num_columns;
+	args.names = new const char *[num_columns];
+	args.dtype = new const char *[num_columns];
+	for(int column_index = 0; column_index < num_columns; column_index++){
+		args.dtype[column_index] = this->dtype_strings[column_index].c_str();
+		args.names[column_index] = this->column_names[column_index].c_str();
+	}
+	args.delimiter 		= delimiter[0];
+	args.lineterminator = line_terminator[0];
 }
 
 
@@ -120,9 +131,10 @@ csv_parser::csv_parser(csv_read_arg args) {
 }
 
 csv_parser::~csv_parser() {
-	delete args.dtype;
-	delete args.names;
+	delete []args.dtype;
+	delete []args.names;
 }
+
 
 gdf_error csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		std::vector<gdf_column_cpp> & columns,
@@ -132,21 +144,30 @@ gdf_error csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 
 	size_t num_columns = columns.size();
 
-	create_csv_args(num_columns,
-
-			args,
-			include_column );
+	// create_csv_args(num_columns,
+	// 		args,
+	// 		include_column );
 
 	gdf_error error = read_csv_arrow(&this->args,file);
 
+
+	std::cout << args.num_cols_out << std::endl;
+	std::cout << args.num_rows_out << std::endl;
+
 	//This is kind of legacy but we need to copy the name to gdf_column_cpp
 	//TODO: make it so we dont have to do this
-	for(size_t output_column_index = 0; output_column_index < args.use_cols_int_len; output_column_index++){
-		size_t index_in_original_columns = args.use_cols_int[output_column_index];
-		columns[index_in_original_columns].create_gdf_column(
-				args.data[output_column_index]);
+	// for(size_t output_column_index = 0; output_column_index < args.use_cols_int_len; output_column_index++){
+	// 	size_t index_in_original_columns = args.use_cols_int[output_column_index];
+	// 	columns[index_in_original_columns].create_gdf_column(
+	// 			args.data[output_column_index]);
+	// }
+ 	for(size_t i = 0; i < args.num_cols_out; i++ ){
+		if(include_column[i]) {
+			gdf_column_cpp c;
+			c.create_gdf_column(args.data[i]); //@check memory leak
+			columns.push_back(c);
+		}
 	}
-
 	return error;
 }
 

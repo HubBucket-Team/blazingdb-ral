@@ -39,7 +39,7 @@ BEGIN_NAMESPACE_GDF_PARQUET
 extern "C" gdf_error
 read_parquet(const char *const        filename,
              const char *const *const columns,
-             gdf_column **const       out_gdf_columns,
+             gdf_column **            out_gdf_columns,  //use RMM instead
              size_t *const            out_gdf_columns_length);
 
 END_NAMESPACE_GDF_PARQUET

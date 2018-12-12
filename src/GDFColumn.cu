@@ -245,7 +245,8 @@ void gdf_column_cpp::create_gdf_column(gdf_column * column){
 		this->allocated_size_valid = (column->size - 7) / 8;
 	}
 	this->is_ipc_column = false;
-	this->column_name = std::string(column->col_name);
+    if (column->col_name)
+    	this->column_name = std::string(column->col_name);
 
     GDFRefCounter::getInstance()->register_column(this->column);
 }

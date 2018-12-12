@@ -5,7 +5,7 @@
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+  # You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
@@ -16,23 +16,11 @@
 # limitations under the License.
 #=============================================================================
 
-set(PARQUET_DIR ${CMAKE_SOURCE_DIR}/src/parquet)
-
-
 set(file_reader_SRCS
-
-    ${PARQUET_DIR}/file_reader.cpp
-    ${PARQUET_DIR}/file_reader_contents.cpp
-    ${PARQUET_DIR}/row_group_reader_contents.cpp
-    ${PARQUET_DIR}/column_reader.cu
-    ${PARQUET_DIR}/decoder/cu_level_decoder.cu
-    ${PARQUET_DIR}/page_reader.cpp
-    ${PARQUET_DIR}/decoder/arrow/cu_decoder.cu
-    ${PARQUET_DIR}/decoder/arrow/util/pinned_allocator.cu
-    ${PARQUET_DIR}/api.cpp
-    
+    ${parquet_reader_source_files}
+    utils.cu
     single_column_file-test.cpp
-)
+    api-test.cu)
 
 configure_test(file_reader-test "${file_reader_SRCS}")
 
@@ -41,3 +29,6 @@ set(parquet_file_PATH
 
 target_compile_definitions(file_reader-test
     PUBLIC -DPARQUET_FILE_PATH="${parquet_file_PATH}")
+
+target_include_directories(file_reader-test
+    PUBLIC ${CMAKE_SOURCE_DIR}/src)

@@ -23,7 +23,7 @@
 #include <arrow/util/logging.h>
 
 #include <parquet/column_writer.h>
-#include <parquet/file/writer.h>
+#include <parquet/file_writer.h>
 #include <parquet/properties.h>
 #include <parquet/schema.h>
 #include <parquet/types.h>
@@ -33,7 +33,7 @@
 #include "column_reader.h"
 #include "file_reader.h"
 
-#include <gdf/gdf.h>
+#include <cudf.h>
 
 template <class DataType>
 class SingleColumnFileTest : public ::testing::Test {

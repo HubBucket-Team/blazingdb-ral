@@ -21,7 +21,7 @@ ExternalProject_Add(nvstrings
 ExternalProject_Add(libgdf
     GIT_REPOSITORY    https://github.com/BlazingDB/cudf.git
     GIT_TAG           develop
-    SOURCE_SUBDIR     libgdf
+    SOURCE_SUBDIR     cpp
     SOURCE_DIR        "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-src"
     BINARY_DIR        "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-build"
     INSTALL_DIR       "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-install"

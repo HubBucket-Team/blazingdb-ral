@@ -89,6 +89,109 @@ gdf_error process__binary_operation_column_column(
 
 }
 
+gdf_error process_unary_operation(
+		std::string operator_string,
+		std::stack<std::string> & operands,
+		blazing_frame & inputs,
+		gdf_column_cpp final_output,
+		gdf_column_cpp temp,
+		bool is_last //set to true if we write to output
+){
+	gdf_column_cpp output;
+	if(is_last){
+		output = final_output;
+	}else{
+		output = temp;
+	}
+
+	gdf_unary_operator operation; //need to define this
+
+	gdf_error err = get_operation(operator_string,&operation);
+	if(err != GDF_SUCCESS){
+		return err;
+	}
+
+	std::string left_operand = operands.top();
+	operands.pop();
+
+	if(is_literal(left_operand)){
+
+
+		return GDF_INVALID_API_CALL;
+	}else{
+		size_t left_index = get_index(left_operand);
+
+		gdf_error err;
+		switch (operation){
+		case GDF_FLOOR:
+			err = gdf_floor_generic(inputs.get_column(left_index).get_gdf_column(), output.get_gdf_column());
+			break;
+		case GDF_CEIL:
+			err = gdf_ceil_generic(inputs.get_column(left_index).get_gdf_column(), output.get_gdf_column());
+			break;
+		case GDF_SIN:
+			err = gdf_sin_generic(inputs.get_column(left_index).get_gdf_column(), output.get_gdf_column());
+			break;
+		case GDF_COS:
+			err = gdf_cos_generic(inputs.get_column(left_index).get_gdf_column(), output.get_gdf_column());
+			break;
+		case GDF_ASIN:
+			err = gdf_asin_generic(inputs.get_column(left_index).get_gdf_column(), output.get_gdf_column());
+			break;
+		case GDF_ACOS:
+			err = gdf_acos_generic(inputs.get_column(left_index).get_gdf_column(), output.get_gdf_column());
+			break;
+		case GDF_TAN:
+			err = gdf_tan_generic(inputs.get_column(left_index).get_gdf_column(), output.get_gdf_column());
+			break;
+		case GDF_ATAN:
+			err = gdf_atan_generic(inputs.get_column(left_index).get_gdf_column(), output.get_gdf_column());
+			break;
+		case GDF_LN:
+			err = gdf_log_generic(inputs.get_column(left_index).get_gdf_column(), output.get_gdf_column());
+			break;
+		case GDF_YEAR:
+			err = gdf_extract_datetime_year(inputs.get_column(left_index).get_gdf_column(), output.get_gdf_column());
+			break;
+		case GDF_MONTH:
+			err = gdf_extract_datetime_month(inputs.get_column(left_index).get_gdf_column(), output.get_gdf_column());
+			break;
+		case GDF_DAY:
+			err = gdf_extract_datetime_day(inputs.get_column(left_index).get_gdf_column(), output.get_gdf_column());
+			break;
+		case GDF_HOUR:
+			err = gdf_extract_datetime_hour(inputs.get_column(left_index).get_gdf_column(), output.get_gdf_column());
+			break;
+		case GDF_MINUTE:
+			err = gdf_extract_datetime_minute(inputs.get_column(left_index).get_gdf_column(), output.get_gdf_column());
+			break;
+		case GDF_SECOND:
+			err = gdf_extract_datetime_second(inputs.get_column(left_index).get_gdf_column(), output.get_gdf_column());
+			break;
+		case GDF_LOG:
+			err = GDF_INVALID_API_CALL;
+			break;
+		case GDF_ABS:
+			err = GDF_INVALID_API_CALL;
+			break;
+		case GDF_NOT:
+			err = GDF_INVALID_API_CALL;
+			break;
+		default:
+			err = GDF_INVALID_API_CALL;
+		}
+
+
+		if(err == GDF_SUCCESS){
+			inputs.add_column(temp.clone());
+			operands.push("$" + std::to_string(inputs.get_size_column()-1));
+		}
+		return err;
+	}
+}
+
+
+
 template <typename T>
 gdf_error process__binary_operation_column_literal(
 		gdf_binary_operator operation,
@@ -147,14 +250,26 @@ gdf_error evaluate_expression(
 				continue;
 			}*/
 
-			process__binary_operation_column_column(
-					token,
-					operand_stack,
-					inputs,
-					output,
-					temp,
-					position == 0 ? true : false  //set to true if we write to output
-			);
+			if(is_binary_operator_token(token)){
+				process__binary_operation_column_column(
+						token,
+						operand_stack,
+						inputs,
+						output,
+						temp,
+						position == 0 ? true : false  //set to true if we write to output
+				);
+
+			}else if(is_unary_operator_token(token)){
+				process_unary_operation(
+						token,
+						operand_stack,
+						inputs,
+						output,
+						temp,
+						position == 0 ? true : false  //set to true if we write to output
+				);
+			}
 
 
 		}else{

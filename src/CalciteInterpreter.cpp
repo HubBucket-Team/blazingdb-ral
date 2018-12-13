@@ -387,6 +387,56 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 	return input;
 }
 
+blazing_frame process_union(blazing_frame& left, blazing_frame& right, std::string query_part){
+	bool isUnionAll = (get_named_expression(query_part, "all") == "true");
+	if (!isUnionAll) {
+		// throw std::domain_error("UNION is not supported, use UNION ALL");
+		return blazing_frame{};
+	}	
+
+	// Check same number of columns
+	if (left.get_size_column(0) != right.get_size_column(0)) {
+		return blazing_frame{};
+	}
+
+	// Check columns have the same data type
+	size_t ncols = left.get_size_column(0);
+	for(size_t i = 0; i < ncols; i++)
+	{
+		if (left.get_column(i).get_gdf_column()->dtype != right.get_column(i).get_gdf_column()->dtype) {
+			return blazing_frame{};
+		}
+	}
+	
+	std::vector<gdf_column_cpp> new_table;
+	for(size_t i = 0; i < ncols; i++)
+	{
+		auto gdf_col_left = left.get_column(i).get_gdf_column();
+		auto gdf_col_right = right.get_column(i).get_gdf_column();
+		
+		std::vector<gdf_column*> columns;
+		columns.push_back(gdf_col_left);
+		columns.push_back(gdf_col_right);
+
+		size_t col_total_size = gdf_col_left->size + gdf_col_right->size;
+		gdf_column_cpp output_col;
+		output_col.create_gdf_column(gdf_col_left->dtype, col_total_size, nullptr, get_width_dtype(gdf_col_left->dtype), left.get_column(i).name());
+
+		gdf_error err = gdf_column_concat(output_col.get_gdf_column(),
+										  columns.data(),
+										  columns.size());
+		if (err != GDF_SUCCESS)
+			return blazing_frame{};
+		
+		new_table.push_back(output_col);
+	}
+	
+	blazing_frame result_frame;
+	result_frame.add_table(new_table);
+	
+	return result_frame;
+}
+
 std::vector<size_t> get_group_columns(std::string query_part){
 
 	std::string temp_column_string = get_named_expression(query_part,"group");
@@ -746,7 +796,7 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 	//LogicalSort(sort0=[$4], sort1=[$7], dir0=[ASC], dir1=[ASC])
 	size_t num_sort_columns = count_string_occurrence(combined_expression,"sort");
 
-	std::vector<char> sort_order_types(num_sort_columns);
+	std::vector<int8_t> sort_order_types(num_sort_columns);
 	std::vector<gdf_column*> cols(num_sort_columns);
 	for(int i = 0; i < num_sort_columns; i++){
 		int sort_column_index = get_index(get_named_expression(combined_expression, "sort" + std::to_string(i)));
@@ -757,17 +807,17 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 
 	gdf_column_cpp asc_desc_col;
 	asc_desc_col.create_gdf_column(GDF_INT8,num_sort_columns,nullptr,1, "");
-	CheckCudaErrors(cudaMemcpy(asc_desc_col.get_gdf_column()->data, sort_order_types.data(), sort_order_types.size() * sizeof(char), cudaMemcpyHostToDevice));
+	CheckCudaErrors(cudaMemcpy(asc_desc_col.get_gdf_column()->data, sort_order_types.data(), sort_order_types.size() * sizeof(int8_t), cudaMemcpyHostToDevice));
 
 	int flag_nulls_are_smallest = 0;  // TODO: need to be able to specify this based on the query
 	gdf_column_cpp index_col;
-	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,8, "");
+	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
 
-	gdf_error err = gdf_order_by_asc_desc(cols.data(),
-									(char*)(asc_desc_col.get_gdf_column()->data),
-									num_sort_columns,
-									index_col.get_gdf_column(),
-									flag_nulls_are_smallest);
+	gdf_error err = gdf_order_by(cols.data(),
+								 (int8_t*)(asc_desc_col.get_gdf_column()->data),
+								 num_sort_columns,
+								 index_col.get_gdf_column(),
+								 flag_nulls_are_smallest);
 
 	if (err != GDF_SUCCESS)
 		return err;
@@ -995,7 +1045,7 @@ blazing_frame evaluate_split_query(
 		}else if(is_union(query[0])){
 			//TODO: append the frames to each other
 			//return right_frame;//!!
-			//return process_union(left_frame,right_frame,query[0]);
+			return process_union(left_frame,right_frame,query[0]);
 		}else{
 			//probably an error here
 		}

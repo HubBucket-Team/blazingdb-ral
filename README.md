@@ -70,7 +70,23 @@ chmod +x build.sh
 ./build.sh /path/to/workspace /path/to/output
 ```
 
-All the dependencies will be inside /path/to/workspace/
+All the dependencies will be inside /path/to/workspace/ where:
+
+| BlazingSQL dependencies | Low level dependencies |
+| /path/to/workspace/  | /path/to/workspace/dependencies |
+| ------------- | ------------- |
+| blazingdb_protocol_install_dir | nvstrings_install_dir |
+| blazingdb_io_install_dir | boost_install_dir |
+|  | aws_sdk_cpp_build_dir |
+|  | flatbuffers_install_dir |
+|  | lz4_install_dir |
+|  | zstd_install_dir |
+|  | brotli_install_dir |
+|  | snappy_install_dir |
+|  | thrift_install_dir |
+|  | arrow_install_dir |
+|  | libgdf_install_dir |
+|  | googletest_install_dir |
 
 # Clone
 This repo uses submodules. Make sure you cloned recursively:

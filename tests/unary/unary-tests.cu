@@ -24,14 +24,14 @@ struct EvaluateQueryTest : public ::testing::Test {
     gdf::library::Table resultTable;
   };
 
-  void CHECK_RESULT(gdf::library::Table &computed_solution,
-                    gdf::library::Table &reference_solution) {
+  void CHECK_RESULT(gdf::library::Table& computed_solution,
+                    gdf::library::Table& reference_solution) {
     computed_solution.print(std::cout);
     reference_solution.print(std::cout);
 
     for (size_t index = 0; index < reference_solution.size(); index++) {
-      const auto &reference_column = reference_solution[index];
-      const auto &computed_column = computed_solution[index];
+      const auto& reference_column = reference_solution[index];
+      const auto& computed_column = computed_solution[index];
       auto a = reference_column.to_string();
       auto b = computed_column.to_string();
       EXPECT_EQ(a, b);
@@ -53,9 +53,9 @@ TEST_F(EvaluateQueryTest, TEST_00) {
           .tableGroup =
               LiteralTableGroupBuilder{
                   {"main.emps",
-                   {{"id", Literals<GDF_INT32>{1,  2,  3,  4,  5,  6,  7,
-                                               8,  9,  10, 11, 12, 13, 14,
-                                               15, 16, 17, 18, 19, 20}},
+               {{"id", Literals<GDF_INT32>{1,  2,  3,  4,  5,  6,  7,  8,  9,
+                                           10, 11, 12, 13, 14, 15, 16, 17, 18,
+                                           19, 20, 21, 22, 23, 24, 25}},
                     {"value_", Literals<GDF_FLOAT64>{0,
                                                      0.4188790205,
                                                      0.837758041,
@@ -75,7 +75,12 @@ TEST_F(EvaluateQueryTest, TEST_00) {
                                                      208.4706077733,
                                                      379.980656048,
                                                      450.4093141932,
-                                                     253.964754701}},
+                                                     253.964754701,
+                                                     -5.4169921017,
+                                                     -78.5231677362,
+                                                     -136.9926093898,
+                                                     -376.069367015,
+                                                     -445.3764402335}},
                     {"sin_value", Literals<GDF_FLOAT64>{0,
                                                         0.4067366431,
                                                         0.7431448255,
@@ -95,7 +100,12 @@ TEST_F(EvaluateQueryTest, TEST_00) {
                                                         0.9024798978,
                                                         0.151469776,
                                                         -0.9174268447,
-                                                        0.4831511334}},
+                                                        0.4831511334,
+                                                        0.7618686826,
+                                                        -0.0166478344,
+                                                        0.9449583777,
+                                                        0.7966614422,
+                                                        0.6666584081}},
                     {"cos_value", Literals<GDF_FLOAT64>{1,
                                                         0.9135454576,
                                                         0.6691306064,
@@ -115,7 +125,12 @@ TEST_F(EvaluateQueryTest, TEST_00) {
                                                         0.4307319747,
                                                         -0.9884618895,
                                                         -0.3979044919,
-                                                        -0.875536968}},
+                                                        -0.875536968,
+                                                        0.6477315111,
+                                                        -0.9998614152,
+                                                        0.3271905629,
+                                                        0.604425799,
+                                                        0.7453633791}},
                     {"tan_value", Literals<GDF_FLOAT64>{0,
                                                         0.4452286853,
                                                         1.1106125148,
@@ -135,7 +150,12 @@ TEST_F(EvaluateQueryTest, TEST_00) {
                                                         2.0952238303,
                                                         -0.1532378513,
                                                         2.3056458608,
-                                                        -0.5518340756}}}}}
+                                                        -0.5518340756,
+                                                        1.1762106204,
+                                                        0.0166501419,
+                                                        2.8880979003,
+                                                        1.3180467207,
+                                                        0.8944072472}}}}}
                   .Build(),
           .resultTable =
               LiteralTableBuilder{
@@ -159,7 +179,12 @@ TEST_F(EvaluateQueryTest, TEST_00) {
                                                          0.9024798978,
                                                          0.151469776,
                                                          -0.9174268447,
-                                                         0.4831511334}},
+                                                         0.4831511334,
+                                                         0.7618686826,
+                                                         -0.0166478344,
+                                                         0.9449583777,
+                                                         0.7966614422,
+                                                         0.6666584081}},
                    {"GDF_FLOAT64", Literals<GDF_FLOAT64>{1,
                                                          0.9135454576,
                                                          0.6691306064,
@@ -179,7 +204,12 @@ TEST_F(EvaluateQueryTest, TEST_00) {
                                                          0.4307319747,
                                                          -0.9884618895,
                                                          -0.3979044919,
-                                                         -0.875536968}},
+                                                         -0.875536968,
+                                                         0.6477315111,
+                                                         -0.9998614152,
+                                                         0.3271905629,
+                                                         0.604425799,
+                                                         0.7453633791}},
                    {"GDF_FLOAT64", Literals<GDF_FLOAT64>{0,
                                                          0.4452286853,
                                                          1.1106125148,
@@ -199,7 +229,12 @@ TEST_F(EvaluateQueryTest, TEST_00) {
                                                          2.0952238303,
                                                          -0.1532378513,
                                                          2.3056458608,
-                                                         -0.5518340756}},
+                                                         -0.5518340756,
+                                                         1.1762106204,
+                                                         0.0166501419,
+                                                         2.8880979003,
+                                                         1.3180467207,
+                                                         0.8944072472}},
                    {"GDF_FLOAT64", Literals<GDF_FLOAT64>{0,
                                                          0.4188790205,
                                                          0.837758041,
@@ -219,7 +254,12 @@ TEST_F(EvaluateQueryTest, TEST_00) {
                                                          1.1254926363,
                                                          0.1520550363,
                                                          -1.1615647299,
-                                                         0.5042502398}},
+                                                         0.5042502398,
+                                                         0.8661932055,
+                                                         -0.0166486035,
+                                                         1.2374673682,
+                                                         0.9217514158,
+                                                         0.7297165762}},
                    {"GDF_FLOAT64", Literals<GDF_FLOAT64>{0,
                                                          0.4188790205,
                                                          0.837758041,
@@ -239,7 +279,12 @@ TEST_F(EvaluateQueryTest, TEST_00) {
                                                          1.1254926363,
                                                          2.9895376172,
                                                          1.9800279237,
-                                                         2.6373424138}},
+                                                         2.6373424138,
+                                                         0.8661932055,
+                                                         3.1249440501,
+                                                         1.2374673682,
+                                                         0.9217514158,
+                                                         0.7297165762}},
                    {"GDF_FLOAT64", Literals<GDF_FLOAT64>{0,
                                                          0.4188790205,
                                                          0.837758041,
@@ -259,7 +304,12 @@ TEST_F(EvaluateQueryTest, TEST_00) {
                                                          1.1254926363,
                                                          -0.1520550363,
                                                          1.1615647299,
-                                                         -0.5042502398}}}}
+                                                         -0.5042502398,
+                                                         0.8661932055,
+                                                         0.0166486035,
+                                                         1.2374673682,
+                                                         0.9217514158,
+                                                         0.7297165762}}}}
                   .Build()};
   auto logical_plan = input.logicalPlan;
   auto input_tables = input.tableGroup.ToBlazingFrame();

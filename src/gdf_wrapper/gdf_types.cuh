@@ -36,6 +36,30 @@ typedef enum {
     //GDF_DOT
 } gdf_binary_operator;
 
+typedef enum{
+	GDF_FLOOR,
+	GDF_CEIL,
+	GDF_SIN,
+	GDF_COS,
+	GDF_ASIN,
+	GDF_ACOS,
+	GDF_TAN,
+	GDF_COTAN,
+	GDF_ATAN,
+	GDF_ABS,
+	GDF_NOT,
+	GDF_LN,
+	GDF_LOG,
+	GDF_YEAR,
+	GDF_MONTH,
+	GDF_DAY,
+	GDF_HOUR,
+	GDF_MINUTE,
+	GDF_SECOND
+
+} gdf_unary_operator;
+
+
 /**
  * @union gdf_data
  * @brief Union used for scalar type.

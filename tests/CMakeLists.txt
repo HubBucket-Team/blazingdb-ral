@@ -75,5 +75,6 @@ add_subdirectory(where)
 add_subdirectory(joins)
 add_subdirectory(tpch)
 add_subdirectory(parquet)
+add_subdirectory(unary)
 
 message(STATUS "******** Tests are ready ********")

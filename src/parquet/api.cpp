@@ -593,6 +593,14 @@ _read_parquet_by_ids(const std::unique_ptr<FileReader> &file_reader,
     if (gdf_columns == nullptr) { return GDF_FILE_ERROR; }
 
     cudaStream_t cudaStream;
+    cudaError_t  cudaError = cudaStreamCreate(&cudaStream);
+
+    if (cudaError != cudaSuccess) {
+#ifdef GDF_DEBUG
+        std::cerr << "CUDA Stream creation error" << std::endl;
+#endif
+        return GDF_FILE_ERROR;
+    }
 
     if (_AllocateGdfColumns(file_reader,
                             row_group_indices,
@@ -606,6 +614,14 @@ _read_parquet_by_ids(const std::unique_ptr<FileReader> &file_reader,
     if (_ReadFileMultiThread(
           file_reader, row_group_indices, column_indices, gdf_columns)
         != GDF_SUCCESS) {
+        return GDF_FILE_ERROR;
+    }
+
+    cudaStreamDestroy(cudaStream);
+    if (cudaError != cudaSuccess) {
+#ifdef GDF_DEBUG
+        std::cerr << "CUDA Stream destroying error" << std::endl;
+#endif
         return GDF_FILE_ERROR;
     }
 

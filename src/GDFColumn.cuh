@@ -68,6 +68,7 @@ class gdf_column_cpp
 
 	void resize(size_t new_size);
 	gdf_error compact();
+	void update_null_count();
 
 public:
     std::size_t get_valid_size() const;

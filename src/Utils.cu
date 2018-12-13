@@ -16,11 +16,3 @@ void free_gdf_column(gdf_column * column){
 	//delete column;
 	//column = nullptr;
 }
-
-void update_null_count(gdf_column * column)
-{
-    int count;
-    gdf_error result = gdf_count_nonzero_mask(column->valid, column->size, &count);
-    assert(result == GDF_SUCCESS);
-    column->null_count = column->size - static_cast<gdf_size_type>(count);
-}

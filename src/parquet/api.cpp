@@ -648,8 +648,11 @@ read_parquet_by_ids(const std::string &             filename,
       std::move(file_reader), row_group_indices, column_indices, gdf_columns);
 
     for (std::size_t i = 0; i < column_indices.size(); i++) {
-        out_gdf_columns.push_back(&gdf_columns[i]);
+        gdf_column * gdf_column_ptr = new gdf_column{};
+        *gdf_column_ptr = gdf_columns[i];
+        out_gdf_columns.push_back(gdf_column_ptr);
     }
+    delete [] gdf_columns;
 
     return status;
 }
@@ -674,8 +677,11 @@ read_parquet_by_ids(std::shared_ptr<::arrow::io::RandomAccessFile> file,
       std::move(file_reader), row_group_indices, column_indices, gdf_columns);
 
     for (std::size_t i = 0; i < column_indices.size(); i++) {
-        out_gdf_columns.push_back(&gdf_columns[i]);
+        gdf_column * gdf_column_ptr = new gdf_column{};
+        *gdf_column_ptr = gdf_columns[i];
+        out_gdf_columns.push_back(gdf_column_ptr);
     }
+    delete [] gdf_columns;
 
     return status;
 }

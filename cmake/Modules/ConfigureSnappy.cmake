@@ -19,8 +19,8 @@
 
 macro(CONFIGURE_SNAPPY_EXTERNAL_PROJECT)
     # NOTE percy c.gonzales if you want to pass other RAL CMAKE_CXX_FLAGS into this dependency add it by harcoding
-    set(ENV{CFLAGS} "-D_GLIBCXX_USE_CXX11_ABI=0 -fPIC")
-    set(ENV{CXXFLAGS} "-D_GLIBCXX_USE_CXX11_ABI=0 -fPIC")
+    set(ENV{CFLAGS} "-D_GLIBCXX_USE_CXX11_ABI=0 -fPIC -O2")
+    set(ENV{CXXFLAGS} "-D_GLIBCXX_USE_CXX11_ABI=0 -fPIC -O2")
 
     # Download and unpack Snappy at configure time
     configure_file(${CMAKE_SOURCE_DIR}/cmake/Templates/Snappy.CMakeLists.txt.cmake ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/snappy-download/CMakeLists.txt)

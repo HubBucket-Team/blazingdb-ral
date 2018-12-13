@@ -531,8 +531,6 @@ gdf_error get_operation(
 		*operation = GDF_TAN;
 	}else if(operator_string == "ATAN"){
 		*operation = GDF_ATAN;
-	}else if(operator_string == "COT"){
-		*operation = GDF_COTAN;
 	}else if(operator_string == "BL_FLOUR"){
 		*operation = GDF_FLOOR;
 	}else if(operator_string == "CEIL"){

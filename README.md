@@ -70,7 +70,26 @@ chmod +x build.sh
 ./build.sh /path/to/workspace /path/to/output
 ```
 
-All the dependencies will be inside /path/to/workspace/
+All the dependencies will be inside /path/to/workspace/ where:
+
+- Low level dependencies are located in /path/to/workspace/dependencies
+- BlazingSQL & RAPIDS dependencies are located in /path/to/workspace/$component_project/$branch/install
+
+| /path/to/workspace/dependencies | /path/to/workspace/blazingdb-$component_project/$branch/install |
+| ------------- | ------------- |
+| nvstrings_install_dir | libgdf_install_dir |
+| boost_install_dir | blazingdb_protocol_install_dir |
+| aws_sdk_cpp_build_dir | blazingdb_io_install_dir |
+| flatbuffers_install_dir |
+| lz4_install_dir | |
+| zstd_install_dir | |
+| brotli_install_dir | |
+| snappy_install_dir | |
+| thrift_install_dir | |
+| arrow_install_dir | |
+| googletest_install_dir | |
+
+Note: The $branch is based on blazingsql-build.properties but usually $branch is develop 
 
 # Clone
 This repo uses submodules. Make sure you cloned recursively:
@@ -127,7 +146,7 @@ make
 
 Remember NVSTRINGS_INSTALL_DIR and LIBGDF_INSTALL_DIR always go together.
 
-Also, if you don't define these optional arguments then the cmake process will resolve (download & build) each dependency:
+Also, if you don't define any of these optional arguments then the cmake process will resolve (download & build) each dependency:
 - NVSTRINGS_INSTALL_DIR
 - BOOST_INSTALL_DIR
 - AWS_SDK_CPP_BUILD_DIR
@@ -143,7 +162,7 @@ Also, if you don't define these optional arguments then the cmake process will r
 - BLAZINGDB_IO_INSTALL_DIR
 - GOOGLETEST_INSTALL_DIR
 
-Finally, if don't want to use conda and need the nvstrings library, just download https://anaconda.org/nvidia/nvstrings/0.0.3/download/linux-64/nvstrings-0.0.3-cuda9.2_py35_0.tar.bz2 and uncompress the folder, this folder is the NVSTRINGS_HOME.
+Finally, if don't want to use conda and need the nvstrings library, just download https://anaconda.org/nvidia/nvstrings/0.0.3/download/linux-64/nvstrings-0.0.3-cuda9.2_py35_0.tar.bz2 and uncompress the folder, this folder is the NVSTRINGS_INSTALL_DIR.
 
 # Integration Tests
 

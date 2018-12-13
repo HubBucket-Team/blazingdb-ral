@@ -6,4 +6,4 @@ set(uu_test_SRCS
     utils-test.cpp
 )
 
-configure_test(utils-test ${uu_test_SRCS})
+#configure_test(utils-test ${uu_test_SRCS})

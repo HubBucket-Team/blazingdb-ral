@@ -25,8 +25,8 @@
 if( NOT "${LZ4_HOME}" STREQUAL "")
     file( TO_CMAKE_PATH "${LZ4_HOME}" _native_path )
     list( APPEND _lz4_roots ${_native_path} )
-elseif ( Lz4_HOME )
-    list( APPEND _lz4_roots ${Lz4_HOME} )
+elseif ( LZ4_HOME )
+    list( APPEND _lz4_roots ${LZ4_HOME} )
 endif()
 
 if (MSVC AND NOT DEFINED LZ4_MSVC_STATIC_LIB_SUFFIX)

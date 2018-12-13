@@ -33,6 +33,36 @@
 
 #include "utils.cuh"
 
+// NOTE c.gonzales percy para el parquet file reader aqui los detalles del file 
+//file:reader-test.parquet
+//Total RowCount: 50000
+
+/* NOTE Meta info for file:reader-test.parquet
+file:          file:reader-test.parquet 
+creator:       parquet-cpp version 1.4.0 
+
+file schema:   schema 
+--------------------------------------------------------------------------------
+boolean_field: REQUIRED BOOLEAN R:0 D:0
+int64_field:   REQUIRED INT64 R:0 D:0
+double_field:  REQUIRED DOUBLE R:0 D:0
+
+row group 1:   RC:50000 TS:767525 OFFSET:4 
+--------------------------------------------------------------------------------
+boolean_field:  BOOLEAN SNAPPY DO:0 FPO:4 SZ:329/6281/19.09 VC:50000 ENC:PLAIN,RLE
+int64_field:    INT64 SNAPPY DO:393 FPO:354318 SZ:454082/500168/1.10 VC:50000 ENC:PLAIN,RLE,PLAIN_DICTIONARY
+double_field:   DOUBLE SNAPPY DO:454570 FPO:667527 SZ:313114/500168/1.60 VC:50000 ENC:PLAIN,RLE,PLAIN_DICTIONARY
+*/
+
+/* NOTE Schema for file:reader-test.parquet
+message schema {
+  required boolean boolean_field;
+  required int64 int64_field;
+  required double double_field;
+}
+
+*/
+
 class ParquetReaderAPITest : public testing::Test {
 protected:
     ParquetReaderAPITest()

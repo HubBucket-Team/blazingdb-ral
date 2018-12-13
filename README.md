@@ -12,7 +12,10 @@ And also make sure to install these system requirements:
 apt-get install -y build-essential ssh wget curl git
 
 # Add autotools suite to build some Apache Parquet dependencies
-RUN apt-get -y install libtool automake autoconf
+apt-get -y install libtool automake autoconf
+
+# Install Boost regex dependency
+apt-get install -y libicu-dev
 
 # Install AWS C++ SDK dependencies
 apt-get install -y --no-install-recommends libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev

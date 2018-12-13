@@ -17,6 +17,10 @@
 #include <fstream>
 
 
+#include <blazingdb/io/Library/Logging/Logger.h>
+#include <blazingdb/io/Library/Logging/CoutOutput.h>
+#include "blazingdb/io/Library/Logging/ServiceLogging.h"
+
 #include <GDFColumn.cuh>
 
 
@@ -94,7 +98,7 @@ TEST_F(ParseCSVTest, parse_small_csv_file_int32) {
 		size_t num_rows = 10;
 		size_t num_cols = 5;
 		std::vector<gdf_dtype> types(num_cols,GDF_INT32);
-		std::vector<std::string> names(num_cols);
+		std::vector<std::string> names = {"a", "b", "c", "d", "e"};
 
 		auto cell_generator= [](size_t row_index, size_t column_index) {
 			return (int) (row_index * ((column_index) * 3));
@@ -107,10 +111,7 @@ TEST_F(ParseCSVTest, parse_small_csv_file_int32) {
 
 		std::vector<std::vector<int> > host_data(num_cols);
 		for(size_t column_index = 0; column_index < num_cols; column_index++){
-			names[column_index] = std::string("col_") + std::to_string(column_index);
-			host_data[column_index] = get_generated_column<int>(
-					num_rows, column_index,cell_generator);
-
+			host_data[column_index] = get_generated_column<int>(num_rows, column_index,cell_generator);
 		}
 
 		std::vector<Uri> uris(1);

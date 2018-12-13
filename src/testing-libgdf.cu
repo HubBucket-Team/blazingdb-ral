@@ -57,7 +57,7 @@ const Path FS_NAMESPACES_FILE("/tmp/file_system.bin");
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);
   
-static result_pair  registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
+static result_pair  registerFileSystem(uint64_t accessToken, Buffer&& buffer) {
   std::cout << "registerFileSystem: " << accessToken << std::endl;
   blazingdb::message::io::FileSystemRegisterRequestMessage message(buffer.data());
 
@@ -80,12 +80,11 @@ static result_pair  registerFileSystem(uint64_t accessToken, Buffer&& buffer)  {
     return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   FileSystemEntity fileSystemEntity(authority, fileSystemConnection, root);
-
-	const bool ok = BlazingContext::getInstance()->getFileSystemManager()->registerFileSystem(fileSystemEntity);
+  bool ok = BlazingContext::getInstance()->getFileSystemManager()->deregisterFileSystem(authority);
+  ok = BlazingContext::getInstance()->getFileSystemManager()->registerFileSystem(fileSystemEntity);
 	if (ok) { // then save the fs
 		const FileSystemRepository fileSystemRepository(FS_NAMESPACES_FILE, true);
 		const bool saved = fileSystemRepository.add(fileSystemEntity);
-
 		if (saved == false) {
 			std::cout << "WARNING: could not save the registered file system into ... the data file uri ..."; //TODO percy error message
 		}
@@ -155,16 +154,13 @@ query_token_t loadParquetAndInsertToResultRepository(std::string path, connectio
 }
 
 static result_pair loadParquet(uint64_t accessToken, Buffer&& buffer) {
-  blazingdb::message::io::LoadCsvFileRequestMessage message(buffer.data());
-
-  std::vector<gdf_dtype> types;
-  for(auto val : message.dtypes)
-    types.push_back( (gdf_dtype) val );
-
+  blazingdb::message::io::LoadParquetFileRequestMessage message(buffer.data());
 
  uint64_t resultToken = 0L;
   try {
-    // resultToken = loadCsvAndInsertToResultRepository(message.path, message.names, types, message.delimiter, message.line_terminator, message.skip_rows, accessToken);
+
+    // resultToken = loadParquetAndInsertToResultRepository(message.path);
+
   } catch (std::exception& error) {
      std::cout << error.what() << std::endl;
      ResponseErrorMessage errorMessage{ std::string{error.what()} };
@@ -178,6 +174,71 @@ static result_pair loadParquet(uint64_t accessToken, Buffer&& buffer) {
   return std::make_pair(Status_Success, responsePayload.getBufferData());
 }
 
+query_token_t loadCsvAndInsertToResultRepository(std::string path, std::vector<std::string> names, std::vector<gdf_dtype> dtypes, std::string delimiter, std::string line_terminator, int skip_rows, connection_id_t connection) {
+	std::cout<<"loadCsv\n";
+
+	query_token_t token = result_set_repository::get_instance().register_query(connection); //register the query so we can receive result requests for it
+  Path  csvFile(path);
+	Uri directory(csvFile.getParentPath().toString());
+  const bool existsParquetDir = BlazingContext::getInstance()->getFileSystemManager()->exists(directory);
+	const bool isS3Dir = (directory.getFileSystemType() == FileSystemType::S3);
+	if ((existsParquetDir == false) && (isS3Dir == false)) {
+    auto error = "parquet table folder doesn't exists: " + directory.toString(false);
+    throw std::runtime_error{error};
+  }
+	std::thread t = std::thread([=]{
+		CodeTimer blazing_timer;
+
+		std::vector<Uri> uris(1);
+		uris[0] = Uri(path);
+
+		auto provider = std::make_unique<ral::io::uri_data_provider>(uris);
+		auto parser = std::make_unique<ral::io::csv_parser>(delimiter, line_terminator, skip_rows, names, dtypes);
+		provider->has_next();
+
+		size_t num_cols = names.size();
+		std::vector<bool> include_column(num_cols, true);
+
+		std::vector<gdf_column_cpp> columns;
+		parser->parse(provider->get_next(), columns, include_column);
+
+    // tests
+    std::cout << "###tests###\n";
+	  for(size_t column_index = 0; column_index < num_cols; column_index++){
+			print_gdf_column(columns[column_index].get_gdf_column());
+		}
+    blazing_frame output_frame;
+  	output_frame.add_table(columns);
+
+		double duration = blazing_timer.getDuration();
+		result_set_repository::get_instance().update_token(token, output_frame, duration);
+	 });
+	 t.detach();
+	return token;
+}
+
+static result_pair loadCsv(uint64_t accessToken, Buffer&& buffer) {
+  blazingdb::message::io::LoadCsvFileRequestMessage message(buffer.data());
+
+  std::vector<gdf_dtype> types;
+  for(auto val : message.dtypes)
+    types.push_back( (gdf_dtype) val );
+
+  uint64_t resultToken = 0L;
+  try {
+    resultToken = loadCsvAndInsertToResultRepository(message.path, message.names, types, message.delimiter, message.line_terminator, message.skip_rows, accessToken);
+  } catch (std::exception& error) {
+     std::cout << error.what() << std::endl;
+     ResponseErrorMessage errorMessage{ std::string{error.what()} };
+     return std::make_pair(Status_Error, errorMessage.getBufferData());
+  }
+  interpreter::NodeConnectionDTO nodeInfo {
+      .path = "/tmp/ral.socket",
+      .type = NodeConnectionType {NodeConnectionType_IPC}
+  };
+  interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
+  return std::make_pair(Status_Success, responsePayload.getBufferData());
+}
 
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);
@@ -223,6 +284,8 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
   //TODO WARNING why 0 why multitables?
   for(int i = 0; i < std::get<0>(result).get_columns()[0].size(); ++i) {
 	  fieldNames.push_back(std::get<0>(result).get_columns()[0][i].name());
+    
+    std::cout << "col_name: " << std::get<0>(result).get_columns()[0][i].name() << std::endl;
 
 	  auto data = libgdf::BuildCudaIpcMemHandler(std::get<0>(result).get_columns()[0][i].get_gdf_column()->data);
 	  auto valid = libgdf::BuildCudaIpcMemHandler(std::get<0>(result).get_columns()[0][i].get_gdf_column()->valid);
@@ -331,6 +394,9 @@ int main(void)
   services.insert(std::make_pair(interpreter::MessageType_FreeResult, &freeResultService));
   services.insert(std::make_pair(interpreter::MessageType_RegisterFileSystem, &registerFileSystem));
   services.insert(std::make_pair(interpreter::MessageType_DeregisterFileSystem, &deregisterFileSystem));
+
+  services.insert(std::make_pair(interpreter::MessageType_LoadCSV, &loadCsv));
+  services.insert(std::make_pair(interpreter::MessageType_LoadParquet, &loadParquet));
 
   auto interpreterServices = [&services](const blazingdb::protocol::Buffer &requestPayloadBuffer) -> blazingdb::protocol::Buffer {
     RequestMessage request{requestPayloadBuffer.data()};

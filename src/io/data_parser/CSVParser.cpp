@@ -84,7 +84,7 @@ csv_parser::csv_parser(const std::string & delimiter,
 	// 	}
 	// }
 
-	this->column_names.resize(num_columns);
+	this->column_names = names;
 	this->dtype_strings.resize(num_columns);
 	std::cout<<"made it here"<<std::endl;
 	args.names = new const char *[num_columns];
@@ -114,13 +114,7 @@ csv_parser::csv_parser(const std::string & delimiter,
 	// args.quotechar = this->quote_character;
 	// std::cout<<"nope still good"<<std::endl;
 
-	args.num_cols		= num_columns;
-	args.names = new const char *[num_columns];
-	args.dtype = new const char *[num_columns];
-	for(int column_index = 0; column_index < num_columns; column_index++){
-		args.dtype[column_index] = this->dtype_strings[column_index].c_str();
-		args.names[column_index] = this->column_names[column_index].c_str();
-	}
+	args.num_cols		= num_columns; 
 	args.delimiter 		= delimiter[0];
 	args.lineterminator = line_terminator[0];
 }
@@ -164,7 +158,8 @@ gdf_error csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
  	for(size_t i = 0; i < args.num_cols_out; i++ ){
 		if(include_column[i]) {
 			gdf_column_cpp c;
-			c.create_gdf_column(args.data[i]); //@check memory leak
+			c.create_gdf_column(args.data[i]); 
+			c.delete_set_name(std::string{args.names[i]});
 			columns.push_back(c);
 		}
 	}

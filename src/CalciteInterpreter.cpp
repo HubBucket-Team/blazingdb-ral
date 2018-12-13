@@ -798,6 +798,7 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 				index_col.get_gdf_column()
 		);
 
+		temp_output.update_null_count();
 		input.set_column(i,temp_output.clone(input.get_column(i).name()));
 
 		/*gdf_column_cpp empty;

@@ -33,6 +33,8 @@
 
 #include "api.h"
 
+#include <rmm.h>
+
 BEGIN_NAMESPACE_GDF_PARQUET
 
 namespace {
@@ -392,22 +394,26 @@ template <::parquet::Type::type TYPE>
 static inline gdf_error
 _AllocateGdfColumn(const std::size_t                        num_rows,
                    const ::parquet::ColumnDescriptor *const column_descriptor,
+                   const cudaStream_t &                     cudaStream,
                    gdf_column &                             _gdf_column) {
     const std::size_t value_byte_size =
       static_cast<std::size_t>(::parquet::type_traits<TYPE>::value_byte_size);
 
-    cudaError_t status =
-      cudaMalloc(&_gdf_column.data, num_rows * value_byte_size);
-    if (status != cudaSuccess) {
+    rmmError_t rmmError =
+      RMM_ALLOC(&_gdf_column.data, num_rows * value_byte_size, cudaStream);
+
+    if (rmmError != RMM_SUCCESS) {
 #ifdef GDF_DEBUG
         std::cerr << "Allocation error for data\n" << e.what() << std::endl;
 #endif
         return GDF_FILE_ERROR;
     }
 
-    status = cudaMalloc(reinterpret_cast<void **>(&_gdf_column.valid),
-                        ::arrow::BitUtil::BytesForBits(num_rows));
-    if (status != cudaSuccess) {
+    rmmError = RMM_ALLOC(reinterpret_cast<void **>(&_gdf_column.valid),
+                         ::arrow::BitUtil::BytesForBits(num_rows),
+                         cudaStream);
+
+    if (rmmError != RMM_SUCCESS) {
 #ifdef GDF_DEBUG
         std::cerr << "Allocation error for valid\n" << e.what() << std::endl;
 #endif
@@ -585,8 +591,13 @@ _read_parquet_by_ids(const std::unique_ptr<FileReader> &file_reader,
 
     if (gdf_columns == nullptr) { return GDF_FILE_ERROR; }
 
-    if (_AllocateGdfColumns(
-          file_reader, row_group_indices, column_indices, gdf_columns)
+    cudaStream_t cudaStream;
+
+    if (_AllocateGdfColumns(file_reader,
+                            row_group_indices,
+                            column_indices,
+                            cudaStream,
+                            gdf_columns)
         != GDF_SUCCESS) {
         return GDF_FILE_ERROR;
     }

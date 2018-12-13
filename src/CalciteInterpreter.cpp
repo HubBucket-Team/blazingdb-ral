@@ -788,9 +788,24 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 	auto rangeStart = query_part.find("(");
 	auto rangeEnd = query_part.rfind(")") - rangeStart - 1;
 	std::string combined_expression = query_part.substr(rangeStart + 1, rangeEnd - 1);
+	//LogicalSort(sort0=[$4], sort1=[$7], dir0=[ASC], dir1=[ASC], fetch=[2])
+
+	// Parse limit statement
+	std::string limit_rows_str = get_named_expression(combined_expression, "fetch");
+	size_t limit_rows = limit_rows_str.empty() ? std::numeric_limits<size_t>::max() : stoul(limit_rows_str);
 	
-	//LogicalSort(sort0=[$4], sort1=[$7], dir0=[ASC], dir1=[ASC])
+	size_t total_rows = input.get_column(0).size();
+	size_t ncols = input.get_size_column(0);
+	for(size_t i = 0; i < ncols; i++)
+	{
+		input.get_column(i).resize(std::min(total_rows, limit_rows));
+	}
+
+	// Parse order by statements
 	size_t num_sort_columns = count_string_occurrence(combined_expression,"sort");
+	if (num_sort_columns == 0) {
+		return GDF_SUCCESS;
+	}
 
 	std::vector<int8_t> sort_order_types(num_sort_columns);
 	std::vector<gdf_column*> cols(num_sort_columns);

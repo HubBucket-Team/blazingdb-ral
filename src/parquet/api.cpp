@@ -445,6 +445,7 @@ static inline gdf_error
 _AllocateGdfColumns(const std::unique_ptr<FileReader> &file_reader,
                     const std::vector<std::size_t> &   row_group_indices,
                     const std::vector<std::size_t> &   column_indices,
+                    const cudaStream_t &               cudaStream,
                     gdf_column *const                  gdf_columns) {
     const std::vector<const ::parquet::ColumnDescriptor *> column_descriptors =
       _ColumnDescriptorsFrom(file_reader, column_indices);
@@ -467,7 +468,7 @@ _AllocateGdfColumns(const std::unique_ptr<FileReader> &file_reader,
 #define WHEN(TYPE)                                                             \
     case ::parquet::Type::TYPE:                                                \
         _AllocateGdfColumn<::parquet::Type::TYPE>(                             \
-          num_rows, column_descriptor, _gdf_column);                           \
+          num_rows, column_descriptor, cudaStream, _gdf_column);               \
         break
 
     for (std::size_t i = 0; i < num_columns; i++) {

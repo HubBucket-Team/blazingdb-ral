@@ -11,6 +11,9 @@ And also make sure to install these system requirements:
 # Install common dev tools
 apt-get install -y build-essential ssh wget curl git
 
+# Add autotools suite to build some Apache Parquet dependencies
+RUN apt-get -y install libtool automake autoconf
+
 # Install AWS C++ SDK dependencies
 apt-get install -y --no-install-recommends libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev
 

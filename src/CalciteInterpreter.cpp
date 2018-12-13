@@ -378,7 +378,7 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 			//return err;
 		}
 		//free_gdf_column(input.get_column(column_index));
-		update_null_count(output.get_gdf_column());
+		output.update_null_count();
 
 		new_columns[column_index] = output;
 	}
@@ -715,12 +715,14 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 
 		output_columns_aggregations[i].resize(aggregation_size);
 		output_columns_aggregations[i].compact();
+		output_columns_aggregations[i].update_null_count();
 	}
 
 	for(int i = 0; i < output_columns_group.size(); i++){
 		print_gdf_column(output_columns_group[i].get_gdf_column());
 		output_columns_group[i].resize(aggregation_size);
 		output_columns_group[i].compact();
+		output_columns_group[i].update_null_count();
 	}
 
 	input.clear();

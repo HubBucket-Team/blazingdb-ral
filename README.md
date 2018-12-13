@@ -72,7 +72,7 @@ chmod +x build.sh
 
 All the dependencies will be inside /path/to/workspace/ where:
 
-- BlazingSQL dependencies are located in /path/to/workspace/$component_project/$branch/install
+- BlazingSQL & RAPIDS dependencies are located in /path/to/workspace/$component_project/$branch/install
 - Low level dependencies are located in /path/to/workspace/dependencies
 
 | /path/to/workspace/dependencies | /path/to/workspace/blazingdb-$component_project/$branch/install |

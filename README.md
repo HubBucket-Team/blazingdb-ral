@@ -72,14 +72,14 @@ chmod +x build.sh
 
 All the dependencies will be inside /path/to/workspace/ where:
 
-- BlazingSQL dependencies are located in /path/to/workspace/
+- BlazingSQL dependencies are located in /path/to/workspace/$component_project/$branch/install
 - Low level dependencies are located in /path/to/workspace/dependencies
 
-| /path/to/workspace/  | /path/to/workspace/dependencies |
+| /path/to/workspace/dependencies | /path/to/workspace/blazingdb-$component_project/$branch/install |
 | ------------- | ------------- |
-| nvstrings_install_dir | blazingdb_protocol_install_dir |
-| boost_install_dir | blazingdb_io_install_dir |
-| aws_sdk_cpp_build_dir | |
+| nvstrings_install_dir | libgdf_install_dir |
+| boost_install_dir | blazingdb_protocol_install_dir |
+| aws_sdk_cpp_build_dir | blazingdb_io_install_dir |
 | flatbuffers_install_dir |
 | lz4_install_dir | |
 | zstd_install_dir | |
@@ -87,8 +87,9 @@ All the dependencies will be inside /path/to/workspace/ where:
 | snappy_install_dir | |
 | thrift_install_dir | |
 | arrow_install_dir | |
-| libgdf_install_dir | |
 | googletest_install_dir | |
+
+Note: The $branch is based on blazingsql-build.properties but usually $branch is develop 
 
 # Clone
 This repo uses submodules. Make sure you cloned recursively:

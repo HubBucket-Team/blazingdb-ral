@@ -19,8 +19,7 @@
 
 macro(CONFIGURE_BROTLI_EXTERNAL_PROJECT)
     # NOTE percy c.gonzales if you want to pass other RAL CMAKE_CXX_FLAGS into this dependency add it by harcoding
-    set(BROTLI_CMAKE_ARGS " -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}"
-                          " -DBUILD_SHARED_LIBS=OFF"
+    set(BROTLI_CMAKE_ARGS " -DBUILD_SHARED_LIBS=OFF"
                           " -DCMAKE_POSITION_INDEPENDENT_CODE=ON"
                           " -DCMAKE_C_FLAGS=-D_GLIBCXX_USE_CXX11_ABI=0"
                           " -DCMAKE_CXX_FLAGS=-D_GLIBCXX_USE_CXX11_ABI=0")

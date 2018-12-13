@@ -17,6 +17,7 @@ macro(CONFIGURE_GPU_LIBGDF_EXTERNAL_PROJECT)
     set(ENV{PARQUET_HOME} "")
 
     # NOTE Define basic env vars to build libgdf
+    set(ENV{BOOST_ROOT} ${BOOST_ROOT})
     set(ENV{CUDACXX} $ENV{CUDACXX})
     set(ENV{NVSTRINGS_ROOT} ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/libgdf-download/nvstrings-prefix/src/nvstrings/)
     set(NVSTRINGS_INSTALL_DIR $ENV{NVSTRINGS_ROOT})

@@ -792,7 +792,7 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 	//LogicalSort(sort0=[$4], sort1=[$7], dir0=[ASC], dir1=[ASC])
 	size_t num_sort_columns = count_string_occurrence(combined_expression,"sort");
 
-	std::vector<char> sort_order_types(num_sort_columns);
+	std::vector<int8_t> sort_order_types(num_sort_columns);
 	std::vector<gdf_column*> cols(num_sort_columns);
 	for(int i = 0; i < num_sort_columns; i++){
 		int sort_column_index = get_index(get_named_expression(combined_expression, "sort" + std::to_string(i)));
@@ -803,17 +803,17 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 
 	gdf_column_cpp asc_desc_col;
 	asc_desc_col.create_gdf_column(GDF_INT8,num_sort_columns,nullptr,1, "");
-	CheckCudaErrors(cudaMemcpy(asc_desc_col.get_gdf_column()->data, sort_order_types.data(), sort_order_types.size() * sizeof(char), cudaMemcpyHostToDevice));
+	CheckCudaErrors(cudaMemcpy(asc_desc_col.get_gdf_column()->data, sort_order_types.data(), sort_order_types.size() * sizeof(int8_t), cudaMemcpyHostToDevice));
 
 	int flag_nulls_are_smallest = 0;  // TODO: need to be able to specify this based on the query
 	gdf_column_cpp index_col;
 	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
 
-	gdf_error err = gdf_order_by_asc_desc(cols.data(),
-									(char*)(asc_desc_col.get_gdf_column()->data),
-									num_sort_columns,
-									index_col.get_gdf_column(),
-									flag_nulls_are_smallest);
+	gdf_error err = gdf_order_by(cols.data(),
+								 (int8_t*)(asc_desc_col.get_gdf_column()->data),
+								 num_sort_columns,
+								 index_col.get_gdf_column(),
+								 flag_nulls_are_smallest);
 
 	if (err != GDF_SUCCESS)
 		return err;

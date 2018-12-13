@@ -26,6 +26,12 @@ bool is_type_float(gdf_dtype type){
 			GDF_FLOAT64 == type);
 }
 
+bool is_date_type(gdf_dtype type){
+	return (GDF_DATE32 == type ||
+			GDF_DATE64 == type ||
+			GDF_TIMESTAMP == type);
+}
+
 //TODO percy noboa see upgrade to uints
 //bool is_type_unsigned_numeric(gdf_dtype type){
 //	return (GDF_UINT8 == type ||
@@ -41,23 +47,23 @@ bool is_numeric_type(gdf_dtype type){
 }
 
 gdf_dtype get_next_biggest_type(gdf_dtype type){
-//	if(type == GDF_INT8){
-//		return GDF_INT16;
-//	}else if(type == GDF_INT16){
-//		return GDF_INT32;
-//	}else if(type == GDF_INT32){
-//		return GDF_INT64;
-//	}else if(type == GDF_UINT8){
-//		return GDF_UINT16;
-//	}else if(type == GDF_UINT16){
-//		return GDF_UINT32;
-//	}else if(type == GDF_UINT32){
-//		return GDF_UINT64;
-//	}else if(type == GDF_FLOAT32){
-//		return GDF_FLOAT64;
-//	}else{
-//		return type;
-//	}
+	//	if(type == GDF_INT8){
+	//		return GDF_INT16;
+	//	}else if(type == GDF_INT16){
+	//		return GDF_INT32;
+	//	}else if(type == GDF_INT32){
+	//		return GDF_INT64;
+	//	}else if(type == GDF_UINT8){
+	//		return GDF_UINT16;
+	//	}else if(type == GDF_UINT16){
+	//		return GDF_UINT32;
+	//	}else if(type == GDF_UINT32){
+	//		return GDF_UINT64;
+	//	}else if(type == GDF_FLOAT32){
+	//		return GDF_FLOAT64;
+	//	}else{
+	//		return type;
+	//	}
 	//TODO felipe percy noboa see upgrade to uints
 	if(type == GDF_INT8){
 		return GDF_INT16;
@@ -81,9 +87,9 @@ gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregat
 		return GDF_INT64;
 	}else if(aggregation == GDF_SUM){
 		return input_type;
-        if (group_size == 0) {
-            return input_type;
-        }
+		if (group_size == 0) {
+			return input_type;
+		}
 
 		//we can assume it is numeric based on the oepration
 		//here we are in an interseting situation
@@ -94,7 +100,7 @@ gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregat
 
 		//TODO felipe percy noboa see upgrade to uints
 		//if(is_type_signed(input_type)){
-			return GDF_INT64;
+		return GDF_INT64;
 		//}
 		//else{
 		//	return GDF_UINT64;
@@ -133,16 +139,16 @@ size_t get_width_dtype(gdf_dtype type){
 		return 4;
 	}else if(type == GDF_INT64){
 		return 8;
-	//}
-	//TODO felipe percy noboa see upgrade to uints
-//	else if(type == GDF_UINT8){
-//		return 1;
-//	}else if(type == GDF_UINT16){
-//		return 2;
-//	}else if(type == GDF_UINT32){
-//		return 4;
-//	}else if(type == GDF_UINT64){
-//		return 8;
+		//}
+		//TODO felipe percy noboa see upgrade to uints
+		//	else if(type == GDF_UINT8){
+		//		return 1;
+		//	}else if(type == GDF_UINT16){
+		//		return 2;
+		//	}else if(type == GDF_UINT32){
+		//		return 4;
+		//	}else if(type == GDF_UINT64){
+		//		return 8;
 	}else if(type == GDF_FLOAT32)
 	{
 		return 4;
@@ -187,17 +193,25 @@ bool is_comparison_operation(gdf_binary_operator operation){
 gdf_dtype get_signed_type_from_unsigned(gdf_dtype type){
 	return type;
 	//TODO felipe percy noboa see upgrade to uints
-//	if(type == GDF_UINT8){
-//		return GDF_INT16;
-//	}else if(type == GDF_UINT16){
-//		return GDF_INT32;
-//	}else if(type == GDF_UINT32){
-//		return GDF_INT64;
-//	}else if(type == GDF_UINT64){
-//		return GDF_INT64;
-//	}else{
-//		return GDF_INT64;
-//	}
+	//	if(type == GDF_UINT8){
+	//		return GDF_INT16;
+	//	}else if(type == GDF_UINT16){
+	//		return GDF_INT32;
+	//	}else if(type == GDF_UINT32){
+	//		return GDF_INT64;
+	//	}else if(type == GDF_UINT64){
+	//		return GDF_INT64;
+	//	}else{
+	//		return GDF_INT64;
+	//	}
+}
+
+gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_unary_operator operation){
+	if(is_date_type(input_left_type)){
+		return GDF_INT16;
+	}else{
+		return input_left_type;
+	}
 }
 
 gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type, gdf_binary_operator operation){
@@ -263,8 +277,8 @@ gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type,
 
 		if(is_type_float(input_left_type) || is_type_float(input_right_type) ){
 			return GDF_FLOAT64;
-//		}else if(is_type_signed(input_left_type)){
-//			return GDF_INT64;
+			//		}else if(is_type_signed(input_left_type)){
+			//			return GDF_INT64;
 		}else{
 			//TODO felipe percy noboa see upgrade to uints
 			//return GDF_UINT64;
@@ -360,23 +374,23 @@ int64_t  tmst;  // GDF_TIMESTAMP
 		data.si64 = stoll(scalar_string);
 		return {data, GDF_INT64, true};
 	}
-//	else if(type == GDF_UINT8){
-//		gdf_data data;
-//		data.ui08 = stoull(scalar_string);
-//		return {data, GDF_UINT8, true};
-//	}else if(type == GDF_UINT16){
-//		gdf_data data;
-//		data.ui16 = stoull(scalar_string);
-//		return {data, GDF_UINT16, true};
-//	}else if(type == GDF_UINT32){
-//		gdf_data data;
-//		data.ui32 = stoull(scalar_string);
-//		return {data, GDF_UINT32, true};
-//	}else if(type == GDF_UINT64){
-//		gdf_data data;
-//		data.ui64 = stoull(scalar_string);
-//		return {data, GDF_UINT64, true};
-//	}
+	//	else if(type == GDF_UINT8){
+	//		gdf_data data;
+	//		data.ui08 = stoull(scalar_string);
+	//		return {data, GDF_UINT8, true};
+	//	}else if(type == GDF_UINT16){
+	//		gdf_data data;
+	//		data.ui16 = stoull(scalar_string);
+	//		return {data, GDF_UINT16, true};
+	//	}else if(type == GDF_UINT32){
+	//		gdf_data data;
+	//		data.ui32 = stoull(scalar_string);
+	//		return {data, GDF_UINT32, true};
+	//	}else if(type == GDF_UINT64){
+	//		gdf_data data;
+	//		data.ui64 = stoull(scalar_string);
+	//		return {data, GDF_UINT64, true};
+	//	}
 	else if(type == GDF_FLOAT32){
 		gdf_data data;
 		data.fp32 = stof(scalar_string);
@@ -417,8 +431,8 @@ gdf_error get_output_type_expression(blazing_frame * input, gdf_dtype * output_t
 		//std::cout<<"Token is ==> "<<token<<"\n";
 
 		if(is_operator_token(token)){
-
-			gdf_dtype left_operand = operands.top();
+			if(is_binary_operator_token(token)){
+				gdf_dtype left_operand = operands.top();
 				operands.pop();
 				gdf_dtype right_operand = operands.top();
 				operands.pop();
@@ -440,10 +454,24 @@ gdf_error get_output_type_expression(blazing_frame * input, gdf_dtype * output_t
 				}
 				gdf_binary_operator operation;
 				gdf_error err = get_operation(token,&operation);
+
 				operands.push(get_output_type(left_operand,right_operand,operation));
 				if(position > 0 && get_width_dtype(operands.top()) > get_width_dtype(*max_temp_type)){
 					*max_temp_type = operands.top();
 				}
+			}else if(is_unary_operator_token(token)){
+				gdf_dtype left_operand = operands.top();
+				operands.pop();
+
+				gdf_unary_operator operation;
+				gdf_error err = get_operation(token,&operation);
+
+				operands.push(get_output_type(left_operand,operation));
+				if(position > 0 && get_width_dtype(operands.top()) > get_width_dtype(*max_temp_type)){
+					*max_temp_type = operands.top();
+				}
+			}
+
 		}else{
 			if(is_literal(token)){
 				operands.push(GDF_invalid);
@@ -463,7 +491,7 @@ gdf_error get_aggregation_operation(std::string operator_string, gdf_agg_op * op
 	operator_string = operator_string.substr(
 			operator_string.find("=[") + 2,
 			(operator_string.find("]") - (operator_string.find("=[") + 2))
-			);
+	);
 	operator_string = StringUtil::replace(operator_string,"COUNT(DISTINCT","COUNT_DISTINCT");
 	//remove expression
 	operator_string = operator_string.substr(0,operator_string.find("("));
@@ -485,6 +513,51 @@ gdf_error get_aggregation_operation(std::string operator_string, gdf_agg_op * op
 	return GDF_SUCCESS;
 }
 
+gdf_error get_operation(
+		std::string operator_string,
+		gdf_unary_operator * operation
+){
+	if(operator_string == "NOT"){
+		*operation = GDF_NOT;
+	}else if(operator_string == "SIN"){
+		*operation = GDF_SIN;
+	}else if(operator_string == "ASIN"){
+		*operation = GDF_ASIN;
+	}else if(operator_string == "COS"){
+		*operation = GDF_COS;
+	}else if(operator_string == "ACOS"){
+		*operation = GDF_ACOS;
+	}else if(operator_string == "TAN"){
+		*operation = GDF_TAN;
+	}else if(operator_string == "ATAN"){
+		*operation = GDF_ATAN;
+	}else if(operator_string == "BL_FLOUR"){
+		*operation = GDF_FLOOR;
+	}else if(operator_string == "CEIL"){
+		*operation = GDF_CEIL;
+	}else if(operator_string == "ABS"){
+		*operation = GDF_ABS;
+	}else if(operator_string == "LOG10"){
+		*operation = GDF_LOG;
+	}else if(operator_string == "LN"){
+		*operation = GDF_LN;
+	}else if(operator_string == "BL_YEAR"){
+		*operation = GDF_YEAR;
+	}else if(operator_string == "BL_MONTH"){
+		*operation = GDF_MONTH;
+	}else if(operator_string == "BL_DAY"){
+		*operation = GDF_DAY;
+	}else if(operator_string == "BL_HOUR"){
+		*operation = GDF_HOUR;
+	}else if(operator_string == "BL_MINUTE"){
+		*operation = GDF_MINUTE;
+	}else if(operator_string == "BL_SECOND"){
+		*operation = GDF_SECOND;
+	}else {
+		return GDF_UNSUPPORTED_DTYPE;
+	}
+	return GDF_SUCCESS;
+}
 
 gdf_error get_operation(
 		std::string operator_string,
@@ -524,6 +597,16 @@ gdf_error get_operation(
 	return GDF_SUCCESS;
 }
 
+bool is_binary_operator_token(std::string token){
+	gdf_binary_operator op;
+	return get_operation(token,&op) == GDF_SUCCESS;
+}
+
+bool is_unary_operator_token(std::string token){
+	gdf_unary_operator op;
+	return get_operation(token,&op) == GDF_SUCCESS;
+}
+
 bool is_literal(std::string operand){
 	return operand[0] != '$';
 }
@@ -534,8 +617,8 @@ bool is_digits(const std::string &str)
 }
 
 bool is_integer(const std::string &s) {
-  static const std::regex re{"-?\\d+"};
-  return std::regex_match(s, re);
+	static const std::regex re{"-?\\d+"};
+	return std::regex_match(s, re);
 }
 
 std::string get_last_token(std::string expression, int * position){
@@ -551,34 +634,34 @@ std::string get_last_token(std::string expression, int * position){
 }
 
 bool is_operator_token(std::string operand) {
-  return (operand[0] != '$' && !is_digits(operand) && !is_date(operand)
-          && !is_integer(operand));
+	return (operand[0] != '$' && !is_digits(operand) && !is_date(operand)
+			&& !is_integer(operand));
 }
 
 size_t get_index(std::string operand_string){
-    if (operand_string.length() == 0) {
-        return 0;
-    }
+	if (operand_string.length() == 0) {
+		return 0;
+	}
 	size_t start = 1;
 	return std::stoull (operand_string.substr(1,operand_string.size()-1),0);
 }
 
 std::string aggregator_to_string(gdf_agg_op aggregation){
 	if(aggregation == GDF_COUNT){
-			return "count";
-		}else if(aggregation == GDF_SUM){
-			return "sum";
-		}else if(aggregation == GDF_MIN){
-			return "min";
-		}else if(aggregation == GDF_MAX){
-			return "max";
-		}else if(aggregation == GDF_AVG){
-			return "avg";
-		}else if(aggregation == GDF_COUNT_DISTINCT){
-			return "count_distinct";
-		}else{
-			return "";
-		}
+		return "count";
+	}else if(aggregation == GDF_SUM){
+		return "sum";
+	}else if(aggregation == GDF_MIN){
+		return "min";
+	}else if(aggregation == GDF_MAX){
+		return "max";
+	}else if(aggregation == GDF_AVG){
+		return "avg";
+	}else if(aggregation == GDF_COUNT_DISTINCT){
+		return "count_distinct";
+	}else{
+		return "";
+	}
 }
 
 //interprets the expression and if is n-ary and logical, then returns their corresponding binary version
@@ -653,6 +736,13 @@ std::string clean_calcite_expression(std::string expression){
 	StringUtil::findAndReplaceAll(expression," NOT NULL","");
 	StringUtil::findAndReplaceAll(expression,"):DOUBLE","");
 	StringUtil::findAndReplaceAll(expression,"CAST(","");
+	StringUtil::findAndReplaceAll(expression,"EXTRACT(FLAG(YEAR), ","BL_YEAR(");
+	StringUtil::findAndReplaceAll(expression,"EXTRACT(FLAG(MONTH), ","BL_MONTH(");
+	StringUtil::findAndReplaceAll(expression,"EXTRACT(FLAG(DAY), ","BL_DAY(");
+	StringUtil::findAndReplaceAll(expression,"FLOOR(","BL_FLOUR(");
+
+
+
 
 	expression = expand_if_logical_op(expression);
 

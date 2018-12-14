@@ -686,6 +686,41 @@ read_parquet_by_ids(std::shared_ptr<::arrow::io::RandomAccessFile> file,
     return status;
 }
 
+
+gdf_error read_schema(std::shared_ptr<::arrow::io::RandomAccessFile> file, size_t &num_row_groups, size_t &num_cols, std::vector< ::parquet::Type::type> &parquet_dtypes, std::vector< std::string> &column_names ) {
+	gdf_error error;
+	auto parquet_reader = FileReader::OpenFile(file);
+	auto file_metadata = parquet_reader->metadata();
+
+	auto schema = file_metadata->schema();
+	
+    num_row_groups = file_metadata->num_row_groups();
+	std::vector<unsigned long long> numRowsPerGroup(num_row_groups);
+
+	for (int j = 0; j < num_row_groups; j++) {
+		auto groupReader = parquet_reader->RowGroup(j);
+		auto rowGroupMetadata = groupReader->metadata();
+		numRowsPerGroup[j] = rowGroupMetadata->num_rows();
+	}
+
+	for (int rowGroupIndex = 0; rowGroupIndex < num_row_groups; rowGroupIndex++) {
+		auto groupReader = parquet_reader->RowGroup(rowGroupIndex);
+		auto rowGroupMetadata = groupReader->metadata();
+		
+        num_cols = file_metadata->num_columns();
+		for (int columnIndex = 0; columnIndex < file_metadata->num_columns(); columnIndex++) {
+			auto column = schema->Column(columnIndex);
+			auto columnMetaData = rowGroupMetadata->ColumnChunk(columnIndex);
+			auto type = column->physical_type();
+            parquet_dtypes.push_back(type);
+            column_names.push_back(column->name()); //@todo, not found a column name
+
+		}
+	}
+    
+	return error;
+}
+
 extern "C" {
 
 gdf_error

@@ -85,6 +85,7 @@ const std::
       {::parquet::LogicalType::NA, GDF_invalid},
     };
 
+//! \returns the gdf_type by column_descriptor.
 static inline gdf_dtype
 _DTypeFrom(const ::parquet::ColumnDescriptor *const column_descriptor) {
     const ::parquet::LogicalType::type logical_type =
@@ -100,6 +101,11 @@ _DTypeFrom(const ::parquet::ColumnDescriptor *const column_descriptor) {
     return dtype_from_physical_type_map.at(physical_type);
 }
 
+//! \brief Append read data from a row group to the gdf column.
+/// \param[in] row_group_reader with the data to be read.
+/// \param[in] column_indices to be filtered on reading row group.
+/// \param[in] offsets of the i-th column with data in `gdf_columns`.
+/// \param[out] gdf_columns where to append the read data.
 static inline gdf_error
 _ReadColumn(const std::shared_ptr<GdfRowGroupReader> &row_group_reader,
             const std::vector<std::size_t> &          column_indices,
@@ -390,6 +396,7 @@ _ReadFileMultiThread(const std::unique_ptr<FileReader> &file_reader,
     return gdf_error_out;
 }
 
+//! Allocate the gdf column attributes on GPU.
 template <::parquet::Type::type TYPE>
 static inline gdf_error
 _AllocateGdfColumn(const std::size_t                        num_rows,
@@ -426,6 +433,8 @@ _AllocateGdfColumn(const std::size_t                        num_rows,
     return GDF_SUCCESS;
 }  // namespace
 
+//! \returns the `ColumnDescriptor`'s of each column in the `indices` vector
+//  from `file_reader`
 static inline std::vector<const ::parquet::ColumnDescriptor *>
 _ColumnDescriptorsFrom(const std::unique_ptr<FileReader> &file_reader,
                        const std::vector<std::size_t> &   indices) {
@@ -441,6 +450,8 @@ _ColumnDescriptorsFrom(const std::unique_ptr<FileReader> &file_reader,
     return column_descriptors;
 }
 
+//! Allocate a array of gdf columns to `gdf_columns` of `file_reade` filtering
+//  by row group indices and column indices
 static inline gdf_error
 _AllocateGdfColumns(const std::unique_ptr<FileReader> &file_reader,
                     const std::vector<std::size_t> &   row_group_indices,
@@ -493,6 +504,7 @@ _AllocateGdfColumns(const std::unique_ptr<FileReader> &file_reader,
     return GDF_SUCCESS;
 }
 
+//! Allocate a gdf columns (on CPU)
 static inline gdf_column *
 _CreateGdfColumns(const std::size_t num_columns) try {
     return new gdf_column[num_columns];
@@ -503,6 +515,7 @@ _CreateGdfColumns(const std::size_t num_columns) try {
     return nullptr;
 }
 
+//! \returns a vector with the column indices of `raw_names` in `file_reader`
 static inline std::vector<std::size_t>
 _GetColumnIndices(const std::unique_ptr<FileReader> &file_reader,
                   const char *const *const           raw_names) {
@@ -550,6 +563,7 @@ _GetColumnIndices(const std::unique_ptr<FileReader> &file_reader,
     return indices;
 }
 
+//! Avoid crash when use a empty parquet file
 static inline gdf_error
 _CheckMinimalData(const std::unique_ptr<FileReader> &file_reader) {
     const std::shared_ptr<const ::parquet::FileMetaData> &metadata =
@@ -693,7 +707,7 @@ gdf_error read_schema(std::shared_ptr<::arrow::io::RandomAccessFile> file, size_
 	auto file_metadata = parquet_reader->metadata();
 
 	auto schema = file_metadata->schema();
-	
+
     num_row_groups = file_metadata->num_row_groups();
 	std::vector<unsigned long long> numRowsPerGroup(num_row_groups);
 
@@ -706,7 +720,7 @@ gdf_error read_schema(std::shared_ptr<::arrow::io::RandomAccessFile> file, size_
 	for (int rowGroupIndex = 0; rowGroupIndex < num_row_groups; rowGroupIndex++) {
 		auto groupReader = parquet_reader->RowGroup(rowGroupIndex);
 		auto rowGroupMetadata = groupReader->metadata();
-		
+
         num_cols = file_metadata->num_columns();
 		for (int columnIndex = 0; columnIndex < file_metadata->num_columns(); columnIndex++) {
 			auto column = schema->Column(columnIndex);
@@ -717,7 +731,7 @@ gdf_error read_schema(std::shared_ptr<::arrow::io::RandomAccessFile> file, size_
 
 		}
 	}
-    
+
 	return error;
 }
 

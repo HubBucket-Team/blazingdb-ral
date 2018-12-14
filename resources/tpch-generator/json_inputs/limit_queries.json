@@ -1,0 +1,46 @@
+[
+  {
+      "testName": "TEST_00",
+      "query": "select c_custkey, c_nationkey, c_acctbal from main.customer limit 5",
+      "tables": [{
+        "dbName": "main",
+        "tableName": "customer",
+        "filePath": "/mnt/nvmefiles/blazingdb/workspace/blazingdb-ral_project/develop/blazingdb-ral/resources/tpch-generator/tpch/1mb/customer.psv",
+        "columnNames": ["c_custkey","c_name","c_address","c_nationkey","c_phone","c_acctbal","c_mktsegment","c_comment"],
+        "columnTypes": ["GDF_INT32","GDF_STRING","GDF_STRING","GDF_INT32","GDF_STRING","GDF_FLOAT64","GDF_STRING","GDF_STRING"]
+      }],
+      "result":  [[1,2,3,4,5],[15,13,1,4,3],[711.56,121.65,7498.12,2866.83,794.47]],
+      "resultTypes": ["GDF_INT64","GDF_INT64","GDF_FLOAT64"],
+      "resultColumnNames": ["c_custkey","c_nationkey","c_acctbal"]
+  }
+  ,
+  {
+      "testName": "TEST_01",
+      "query": "select c_custkey, c_nationkey, c_acctbal from main.customer where c_nationkey=1 limit 50",
+      "tables": [{
+        "dbName": "main",
+        "tableName": "customer",
+        "filePath": "/mnt/nvmefiles/blazingdb/workspace/blazingdb-ral_project/develop/blazingdb-ral/resources/tpch-generator/tpch/1mb/customer.psv",
+        "columnNames": ["c_custkey","c_name","c_address","c_nationkey","c_phone","c_acctbal","c_mktsegment","c_comment"],
+        "columnTypes": ["GDF_INT32","GDF_STRING","GDF_STRING","GDF_INT32","GDF_STRING","GDF_FLOAT64","GDF_STRING","GDF_STRING"]
+      }],
+      "result":  [[3,14,30,59,106,141,144],[1,1,1,1,1,1,1],[7498.12,5266.3,9321.01,3458.6,3288.42,6706.14,6417.31]],
+      "resultTypes": ["GDF_INT64","GDF_INT64","GDF_FLOAT64"],
+      "resultColumnNames": ["c_custkey","c_nationkey","c_acctbal"]
+  }
+  ,
+  {
+      "testName": "TEST_02",
+      "query": "select c_custkey, c_nationkey, c_acctbal from main.customer order by c_nationkey asc, c_acctbal desc limit 30",
+      "tables": [{
+        "dbName": "main",
+        "tableName": "customer",
+        "filePath": "/mnt/nvmefiles/blazingdb/workspace/blazingdb-ral_project/develop/blazingdb-ral/resources/tpch-generator/tpch/1mb/customer.psv",
+        "columnNames": ["c_custkey","c_name","c_address","c_nationkey","c_phone","c_acctbal","c_mktsegment","c_comment"],
+        "columnTypes": ["GDF_INT32","GDF_STRING","GDF_STRING","GDF_INT32","GDF_STRING","GDF_FLOAT64","GDF_STRING","GDF_STRING"]
+      }],
+      "result":  [[29,80,76,73,48,86,30,3,141,144,14,59,106,101,39,92,47,17,72,122,27,13,23,146,40,5,22,64,140,4],[0,0,0,0,0,0,1,1,1,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,4,4],[7618.27,7383.53,5745.33,4288.5,3792.5,3306.32,9321.01,7498.12,6706.14,6417.31,5266.3,3458.6,3288.42,7470.96,6264.31,1182.91,274.58,6.34,-362.86,7865.46,5679.84,3857.34,3332.02,3328.68,1335.3,794.47,591.98,-646.64,9963.15,2866.83]],
+      "resultTypes": ["GDF_INT64","GDF_INT64","GDF_FLOAT64"],
+      "resultColumnNames": ["c_custkey","c_nationkey","c_acctbal"]
+  }
+  ]

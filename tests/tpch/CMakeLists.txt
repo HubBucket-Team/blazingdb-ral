@@ -22,6 +22,8 @@ set(source_files
   ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
   ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
   tpch-tests.cu 
+  groupby_no_agg_tests.cu
 )
 
 configure_test(tpch-test "${source_files}")
+configure_test(groupby_no_agg_tests "${source_files}")

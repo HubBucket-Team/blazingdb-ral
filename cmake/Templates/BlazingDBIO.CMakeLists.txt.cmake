@@ -18,6 +18,6 @@ ExternalProject_Add(blazingdb-io
     BINARY_DIR      "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/blazingdb-io-build"
     INSTALL_DIR     "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/blazingdb-io-install"
     CMAKE_ARGS      -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-                    ${BLAZINGDB_IO_CMAKE_ARGS}
                     -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/blazingdb-io-install
+                    ${BLAZINGDB_IO_CMAKE_ARGS}
 )

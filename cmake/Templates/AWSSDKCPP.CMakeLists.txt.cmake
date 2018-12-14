@@ -18,6 +18,6 @@ ExternalProject_Add(aws-sdk-cpp
     UPDATE_COMMAND  ""
     CMAKE_ARGS      -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                     -DBUILD_ONLY=${AWS_MODULES_STR}
-                    ${AWS_SDK_CPP_CMAKE_ARGS}
                     -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/aws-sdk-cpp-install
+                    ${AWS_SDK_CPP_CMAKE_ARGS}
 )

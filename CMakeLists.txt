@@ -35,15 +35,22 @@ include(ConfigureCUDA)
 
 # NOTE Do not change the inclusion order
 # Configure dependencies
-include(ConfigureFlatBuffers)
-include(ConfigureArrow)
+include(ConfigureBoost)
 include(ConfigureAWSSDK)
+include(ConfigureFlatBuffers)
+include(ConfigureLz4)
+include(ConfigureZSTD)
+include(ConfigureBrotli)
+include(ConfigureSnappy)
+include(ConfigureThrift)
+include(ConfigureArrow)
+include(ConfigureParquet)
 include(ConfigureLibGDF)
 include(ConfigureBlazingDBProtocol)
 include(ConfigureBlazingDBIO)
 
 # BEGIN MAIN #
-include_directories(   
+include_directories(
     ${LIB_BLAZINGIO_INCLUDEDIR}
     ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}
     ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
@@ -59,52 +66,69 @@ get_directory_property(binary_operation_source_files DIRECTORY ${CMAKE_SOURCE_DI
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/cuDF)
 get_directory_property(cudf_adapter_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/cuDF DEFINITION source_files)
 
+## ParquetReader source files
+add_subdirectory(${CMAKE_SOURCE_DIR}/src/parquet)
+get_directory_property(parquet_reader_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/parquet DEFINITION source_files)
+
 ## Target source files
-set(SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_parser/ParquetParser.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/io/data_parser/CSVParser.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/CalciteInterpreter.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/ColumnManipulation.cu
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/ResultSetRepository.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/JoinProcessor.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/LogicalFilter.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/QueryState.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/CodeTimer.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/Utils.cu
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/GDFCounter.cu
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/GDFColumn.cu
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/testing-libgdf.cu
+set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
+              ${CMAKE_SOURCE_DIR}/src/io/data_parser/ParquetParser.cpp
+              ${CMAKE_SOURCE_DIR}/src/io/data_parser/CSVParser.cpp
+              ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
+              ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
+              ${CMAKE_SOURCE_DIR}/src/ColumnManipulation.cu
+              ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
+              ${CMAKE_SOURCE_DIR}/src/JoinProcessor.cpp
+              ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp
+              ${CMAKE_SOURCE_DIR}/src/QueryState.cpp
+              ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
+              ${CMAKE_SOURCE_DIR}/src/Utils.cu
+              ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
+              ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
+              ${CMAKE_SOURCE_DIR}/src/testing-libgdf.cu
               ${cudf_adapter_source_files}
-              ${binary_operation_source_files})
+              ${binary_operation_source_files}
+              ${parquet_reader_source_files})
 
 add_executable(testing-libgdf ${SRC_FILES})
 
-set(Boost_USE_STATIC_LIBS ON) # only find static libs
-find_package(Boost REQUIRED COMPONENTS filesystem)
-
 target_link_libraries(testing-libgdf
-    NVStrings
-    ${LIBGDF_STATIC_LIB}
     ${BLAZINGDB_IO_STATIC_LIB}
-    ${ARROW_STATIC_LIB}
-    Boost::filesystem
-    aws-cpp-sdk-s3 aws-cpp-sdk-s3-encryption
-    rmm
-    ${FLATBUFFERS_STATIC_LIB}
     ${BLAZINGDB_PROTOCOL_STATIC_LIB}
+
+    ${LIBGDF_STATIC_LIB}
+    NVStrings
+    rmm
+
     cudart
     cuda
     ${CUDA_CUDA_LIBRARY}
     ${CUDA_NVRTC_LIBRARY}
-    ${CUDA_NVTX_LIBRARY})
+    ${CUDA_NVTX_LIBRARY}
+
+    ${PARQUET_STATIC_LIB}
+    ${ARROW_STATIC_LIB}
+    ${THRIFT_STATIC_LIB}
+    ${SNAPPY_STATIC_LIB}
+    ${BROTLI_STATIC_LIB}
+    ${ZSTD_STATIC_LIB}
+    ${LZ4_STATIC_LIB}
+    ${FLATBUFFERS_STATIC_LIB}
+
+    aws-cpp-sdk-s3
+    aws-cpp-sdk-s3-encryption
+
+    Boost::filesystem
+    Boost::system
+    Boost::regex
+)
 
 # Tests
 if(BUILD_TESTING)
     include(ConfigureGoogleTest)
 
     if(GTEST_FOUND)
-        #add_subdirectory(tests)
+        add_subdirectory(tests)
     else()
         message(AUTHOR_WARNING "Google C++ Testing Framework (Google Test) not found: automated tests are disabled.")
     endif()

@@ -6,31 +6,46 @@
 #pass the dependency libraries as optional arguments using ${ARGN}
 #NOTE the order of libraries matter, so try to link first with the most high level lib
 function(configure_test TEST_NAME Tests_SRCS)
-    message(STATUS "${TEST_NAME} will link against: gdf arrow")
+    include_directories(${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/tests/utils)
 
-    include_directories(${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/tests/utils)
-
-    cuda_add_executable(${TEST_NAME} ${Tests_SRCS})
+    add_executable(${TEST_NAME} ${Tests_SRCS})
 
     # TODO percy do not use libgdf.so here and use gdf (the static lib) instead
     target_link_libraries(${TEST_NAME}
         gmock_main
-        gmock 
+        gmock
         GTest::GTest
-        NVStrings
-        ${LIBGDF_STATIC_LIB}
-        ${ARROW_STATIC_LIB}
-        blazingdb-io
-        rmm
-        Boost::filesystem
-        ${FLATBUFFERS_STATIC_LIB}
+
+        ${BLAZINGDB_IO_STATIC_LIB}
         ${BLAZINGDB_PROTOCOL_STATIC_LIB}
+
+        ${LIBGDF_STATIC_LIB}
+        NVStrings
+        rmm
+
+        cudart
+        cuda
         ${CUDA_CUDA_LIBRARY}
         ${CUDA_NVRTC_LIBRARY}
         ${CUDA_NVTX_LIBRARY}
+
+        ${PARQUET_STATIC_LIB}
+        ${ARROW_STATIC_LIB}
+        ${THRIFT_STATIC_LIB}
+        ${SNAPPY_STATIC_LIB}
+        ${BROTLI_STATIC_LIB}
+        ${ZSTD_STATIC_LIB}
+        ${LZ4_STATIC_LIB}
+        ${FLATBUFFERS_STATIC_LIB}
+
+        aws-cpp-sdk-s3
+        aws-cpp-sdk-s3-encryption
+
+        Boost::filesystem
+        Boost::system
+        Boost::regex
     )
 
-    
     set_target_properties(${TEST_NAME} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/gtests/")
 
@@ -59,5 +74,9 @@ add_subdirectory(gdf-ref-counter)
 add_subdirectory(where)
 add_subdirectory(joins)
 add_subdirectory(tpch)
+add_subdirectory(parquet)
+add_subdirectory(union)
+add_subdirectory(unary)
+
 
 message(STATUS "******** Tests are ready ********")

@@ -107,30 +107,30 @@ BlazingFrame ToBlazingFrame(std::vector<std::string> filePaths, std::vector<std:
   for(size_t index = 0; index < filePaths.size(); index++) {
     auto file_path = filePaths[index];
     gdf_error error = GDF_SUCCESS;
-    csv_read_arg args;
+  
 
     std::vector<const char*> columnNamesPointers;
     std::transform(columnNames[index].begin(), columnNames[index].end(), std::back_inserter(columnNamesPointers),
                    [](std::string &s)  { return s.c_str(); });
 
+    const char* names[]	= { "c_custkey", "c_name", "c_address", "c_nationkey",
+                       "c_phone", "c_acctbal", "c_mktsegment", "c_comment"};
+	  const char* types[]	= {"int32", "int64", "int64", "int32", "int64", "float32",
+                       "int64", "int64"};
 
-    args.num_cols = columnNames[index].size();
-    args.names = columnNamesPointers.data();
-    args.dtype =  columnDTypes[index].data();
-    args.file_path = (char*)file_path.c_str();
-
-    if (checkFile(args.file_path)) {
-      args.delimiter = '|';
+    if (checkFile(file_path.c_str())) {
+    	csv_read_arg args{};
+      args.file_path		= file_path.c_str();
+      args.num_cols		= std::extent<decltype(names)>::value;
+      args.names			= columnNamesPointers.data();
+      args.dtype			= columnDTypes[index].data();
+      args.delimiter		= '|';
       args.lineterminator = '\n';
-      args.delim_whitespace = 0;
-      args.skipinitialspace = 0;
-      args.skiprows = 0;
-      args.skipfooter = 0;
-      args.dayfirst = 0;
 
       error = read_csv(&args);
       assert(error == GDF_SUCCESS);
 
+      std::cout << "CSV output" << std::endl;
       std::cout << args.num_cols_out << std::endl;
       std::cout << args.num_rows_out << std::endl;
 

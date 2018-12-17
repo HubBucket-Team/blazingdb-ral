@@ -277,7 +277,7 @@ gdf_error evaluate_expression(
 		}
 	}
 
-
+	output.update_null_count();
 
 	return GDF_SUCCESS;
 }

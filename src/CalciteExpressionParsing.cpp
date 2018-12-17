@@ -639,11 +639,12 @@ bool is_operator_token(std::string operand) {
 }
 
 size_t get_index(std::string operand_string){
-	if (operand_string.length() == 0) {
+	std::string cleaned_expression = clean_calcite_expression(operand_string);
+	if (cleaned_expression.length() == 0) {
 		return 0;
 	}
 	size_t start = 1;
-	return std::stoull (operand_string.substr(1,operand_string.size()-1),0);
+	return std::stoull (cleaned_expression.substr(1,cleaned_expression.size()-1),0);
 }
 
 std::string aggregator_to_string(gdf_agg_op aggregation){
@@ -729,6 +730,15 @@ std::string expand_if_logical_op(std::string expression){
 	}
 
 	return output;
+}
+
+// Different of clean_calcite_expression, this function only remove casting tokens
+std::string clean_project_expression(std::string expression){
+	//TODO: this is very hacky, the proper way is to remove this in calcite
+	StringUtil::findAndReplaceAll(expression,"CAST(","");
+	StringUtil::findAndReplaceAll(expression,"):BIGINT","");
+
+	return expression;
 }
 
 std::string clean_calcite_expression(std::string expression){

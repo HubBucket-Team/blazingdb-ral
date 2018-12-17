@@ -121,7 +121,8 @@ std::string get_condition_expression(std::string query_part){
 }
 
 bool contains_evaluation(std::string expression){
-	return (expression.find("(") != std::string::npos);
+	std::string cleaned_expression = clean_project_expression(expression);
+	return (cleaned_expression.find("(") != std::string::npos);
 }
 
 gdf_error create_null_value_gdf_column(int64_t output_value,

@@ -1137,7 +1137,10 @@ gdf_error evaluate_query(
 		std::string logicalPlan,
 		std::vector<gdf_column_cpp> & outputs){
 
-	std::vector<std::string> splitted = StringUtil::split(logicalPlan, '\n');
+	std::vector<std::string> splitted = StringUtil::split(logicalPlan, "\n");
+	if (splitted[splitted.size() - 1].length() == 0) {
+		splitted.erase(splitted.end() -1);
+	}
 	blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
 
 	for(size_t i=0;i<output_frame.get_width();i++){

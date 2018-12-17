@@ -39,13 +39,14 @@ BEGIN_NAMESPACE_GDF_PARQUET
 extern "C" gdf_error
 read_parquet(const char *const        filename,
              const char *const *const columns,
-             gdf_column **            out_gdf_columns,  //use RMM instead
+             gdf_column **const       out_gdf_columns,
              size_t *const            out_gdf_columns_length);
 
 END_NAMESPACE_GDF_PARQUET
 
 #ifdef __cplusplus
 
+#include <parquet/types.h>
 #include <arrow/io/file.h>
 #include <string>
 #include <vector>
@@ -75,6 +76,12 @@ read_parquet_by_ids(std::shared_ptr<::arrow::io::RandomAccessFile> file,
                     const std::vector<std::size_t> &column_indices,
                     std::vector<gdf_column *> &     out_gdf_columns);
 
+
+gdf_error read_schema(std::shared_ptr<::arrow::io::RandomAccessFile> file,
+                     size_t &num_row_groups,
+                     size_t &num_cols,
+                     std::vector< ::parquet::Type::type> &parquet_dtypes,
+                     std::vector< std::string> &column_names);
 }  // namespace parquet
 }  // namespace gdf
 

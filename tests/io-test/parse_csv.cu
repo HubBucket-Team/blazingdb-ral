@@ -135,4 +135,39 @@ TEST_F(ParseCSVTest, parse_small_csv_file_int32) {
 }
 
 
+TEST_F(ParseCSVTest, nation_csv) {
+	std::cout << "nation_csv\n";
+	std::vector<gdf_dtype> types{GDF_INT32, GDF_INT64, GDF_INT32, GDF_INT64};
+	std::vector<std::string> names{"n_nationkey", "n_name", "n_regionkey", "n_comment"};
+	size_t num_cols = names.size();
+	
+	// ('n_nationkey', 'short'),
+	// ('n_name', 'string(32)'),
+	// ('n_regionkey', 'short'),
+	// ('n_comment', 'string(152)')
+	std::string path = "/tmp/tpch/1mb/nation.psv";
+
+	std::vector<gdf_column_cpp> columns(num_cols);
+
+	std::vector<Uri> uris(3);
+	uris[0] = Uri(path);
+	uris[1] = Uri(path);
+	uris[2] = Uri(path);
+
+	std::vector<bool> include_column(num_cols,true);
+
+	std::cout << "config provider\n";
+	std::unique_ptr<ral::io::data_provider> provider = std::make_unique<ral::io::uri_data_provider>(uris);
+	while(provider->has_next()) {
+		std::cout << "\nparsing csv\n";
+		std::unique_ptr<ral::io::data_parser> parser = std::make_unique<ral::io::csv_parser>("|", "\n", 0, names, types);
+		parser->parse(provider->get_next(),columns,include_column);
+
+		std::cout << "\nsz: " << columns.size() << std::endl;
+	}
+}
+
+
+
+
 

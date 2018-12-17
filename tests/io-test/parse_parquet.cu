@@ -244,8 +244,6 @@ protected:
  
 
 TEST_F(ParquetReaderAPITest, ByIdsInFromInterface) {
-    const std::vector<std::size_t> row_group_indices = {0, 1};
-    // const std::vector<std::size_t> column_indices    = {0, 1, 2, 3};
 
     std::shared_ptr<::arrow::io::ReadableFile> file;
     const ::parquet::ReaderProperties          properties =
@@ -253,9 +251,8 @@ TEST_F(ParquetReaderAPITest, ByIdsInFromInterface) {
     ::arrow::io::ReadableFile::Open(filename, properties.memory_pool(), &file);
 
     
-    size_t num_cols = 4;
-    std::vector<Uri> uris = {Uri{this->filename}};
-    std::vector<bool> include_column(num_cols, true);
+     std::vector<Uri> uris = {Uri{this->filename}};
+    std::vector<bool> include_column = {true, false, true, false};
     std::unique_ptr<ral::io::data_provider> provider = std::make_unique<ral::io::uri_data_provider>(uris);
     std::unique_ptr<ral::io::data_parser> parser = std::make_unique<ral::io::parquet_parser>();
 
@@ -264,7 +261,8 @@ TEST_F(ParquetReaderAPITest, ByIdsInFromInterface) {
     std::vector<gdf_column_cpp> gdf_columns_cpp;
     parser->parse(provider->get_next(), gdf_columns_cpp, include_column);
 
-    for(size_t column_index = 0; column_index < num_cols; column_index++){
+    for(size_t column_index = 0; column_index < gdf_columns_cpp.size(); column_index++){
+        std::cout << "col_name: " << gdf_columns_cpp[column_index].get_gdf_column()->col_name << std::endl;
         print_gdf_column(gdf_columns_cpp[column_index].get_gdf_column());
     }
 }

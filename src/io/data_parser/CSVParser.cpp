@@ -129,14 +129,21 @@ csv_parser::~csv_parser() {
 	delete []args.names;
 }
 
+gdf_error csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file, std::vector<gdf_column_cpp> & columns) {
+
+	gdf_error error = read_csv_arrow(&this->args,file);
+
+	for(size_t i = 0; i < args.num_cols_out; i++ ){
+		gdf_column_cpp c;
+		c.create_gdf_column(args.data[i]); 
+		c.delete_set_name(std::string{args.names[i]});
+		columns.push_back(c);
+	}
+}
 
 gdf_error csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		std::vector<gdf_column_cpp> & columns,
 		std::vector<bool> include_column){
-
-
-
-	size_t num_columns = columns.size();
 
 	// create_csv_args(num_columns,
 	// 		args,
@@ -144,9 +151,9 @@ gdf_error csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 
 	gdf_error error = read_csv_arrow(&this->args,file);
 
-
-	std::cout << args.num_cols_out << std::endl;
-	std::cout << args.num_rows_out << std::endl;
+	std::cout << "args.num_cols_out " << args.num_cols_out << std::endl;
+	std::cout << "args.num_rows_out " <<args.num_rows_out << std::endl;
+	assert(args.num_cols_out > 0);
 
 	//This is kind of legacy but we need to copy the name to gdf_column_cpp
 	//TODO: make it so we dont have to do this

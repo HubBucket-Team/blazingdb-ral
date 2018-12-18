@@ -121,7 +121,8 @@ std::string get_condition_expression(std::string query_part){
 }
 
 bool contains_evaluation(std::string expression){
-	return (expression.find("(") != std::string::npos);
+	std::string cleaned_expression = clean_project_expression(expression);
+	return (cleaned_expression.find("(") != std::string::npos);
 }
 
 gdf_error create_null_value_gdf_column(int64_t output_value,
@@ -378,6 +379,8 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 			//return err;
 		}
 		//free_gdf_column(input.get_column(column_index));
+		output.update_null_count();
+
 		new_columns[column_index] = output;
 	}
 	input.clear();
@@ -763,12 +766,14 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 
 		output_columns_aggregations[i].resize(aggregation_size);
 		output_columns_aggregations[i].compact();
+		output_columns_aggregations[i].update_null_count();
 	}
 
 	for(int i = 0; i < output_columns_group.size(); i++){
 		print_gdf_column(output_columns_group[i].get_gdf_column());
 		output_columns_group[i].resize(aggregation_size);
 		output_columns_group[i].compact();
+		output_columns_group[i].update_null_count();
 	}
 
 	input.clear();
@@ -844,6 +849,7 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 				index_col.get_gdf_column()
 		);
 
+		temp_output.update_null_count();
 		input.set_column(i,temp_output.clone(input.get_column(i).name()));
 
 		/*gdf_column_cpp empty;

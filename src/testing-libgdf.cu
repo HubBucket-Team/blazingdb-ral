@@ -357,16 +357,55 @@ static result_pair freeResultService(uint64_t accessToken, Buffer&& requestPaylo
   }
 
 }
+ 
+gdf_column_cpp concat_gdf_columns(gdf_column_cpp &lhs, gdf_column_cpp &rhs) {
+  gdf_column_cpp output_cpp;
+  gdf_error error;
+  gdf_column* output;
+  switch (lhs.dtype()) {
+      #define WHEN(DTYPE, NativeType)                                                 \
+        case DTYPE: {                                                                 \
+              output = init_gdb_column<NativeType, DTYPE>(lhs.size() + rhs.size());   \
+              error = gpu_concat(lhs.get_gdf_column(), rhs.get_gdf_column(), output); \
+              output_cpp.create_gdf_column(output);                                   \
+              } break
+
+      WHEN(GDF_INT8, int8_t);
+      WHEN(GDF_INT32, int32_t);
+      WHEN(GDF_INT64, int64_t);
+      WHEN(GDF_FLOAT32, float);
+      WHEN(GDF_FLOAT64, double);
+      default:
+            std::cerr << "Column type not supported" << std::endl;
+            break;
+      #undef WHEN
+  }
+  return output_cpp;
+}
 
 template<class ParserType>
-void load_files(std::vector<Uri> uris, std::vector<gdf_column_cpp>& columns) {
+void load_files(std::vector<Uri> uris, std::vector<gdf_column_cpp>& out_columns) {
 		auto provider = std::make_unique<ral::io::uri_data_provider>(uris);
-		auto parser = std::make_unique<ParserType>();
-		
-    //@todo, change to while, concat to gdf_columns
-    if (provider->has_next()) {
-      parser->parse(provider->get_next(), columns);
-      //output_frame.add_table(columns);
+		std::vector<std::vector<gdf_column_cpp>> all_parts;
+    while (provider->has_next()) {
+      auto parser = std::make_unique<ParserType>();
+      std::vector<gdf_column_cpp> columns;
+		  parser->parse(provider->get_next(), columns);
+      all_parts.push_back(columns);
+    }
+    if (all_parts.size() > 0) {
+      std::vector<gdf_column_cpp>& part_left = all_parts[0];
+      for(size_t index_col = 1; index_col < part_left.size(); index_col++) { //iterate each one of the columns
+        for(size_t index_part = 1; index_part < all_parts.size(); index_part++) { //iterate each one of the parts 
+          std::vector<gdf_column_cpp> &part_right = all_parts[index_part];
+          auto &lhs = part_left[index_col];
+          auto &rhs = part_right[index_col];
+          gdf_column_cpp new_col = concat_gdf_columns(lhs, rhs);
+          //@todo, check if gdf_conter_ref clean tje  memory for part_left[index_col] 
+          part_left[index_col] = new_col; 
+        }
+      }
+      out_columns = part_left;
     }
 }
 
@@ -391,7 +430,10 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
     std::cout << "\n SchemaType: " << table_info.schemaType << std::endl;  
     std::vector<gdf_column_cpp> table_cpp;
     if (table_info.schemaType ==  blazingdb::protocol::io::FileSchemaType_PARQUET) {
-      std::vector<Uri> uris = { Uri{table_info.files[0]} }; //@todo, concat many files in one single table
+      std::vector<Uri> uris; 
+      for (auto file_path : table_info.files) {
+        uris.push_back(Uri{file_path});
+      }
       load_files<ral::io::parquet_parser>(uris, table_cpp);
     } else {
       std::vector<Uri> uris = { Uri{table_info.files[0]} }; //@todo, concat many files in one single table

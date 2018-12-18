@@ -367,12 +367,12 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 			//materialize with left_indices
 			err = materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),left_indices.get_gdf_column());
 			std::cout<<"left table output"<<std::endl;
-			print_gdf_column(output.get_gdf_column());
+			// print_gdf_column(output.get_gdf_column());
 		}else{
 			//materialize with right indices
 			err = materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),right_indices.get_gdf_column());
 			std::cout<<"right table output"<<std::endl;
-			print_gdf_column(output.get_gdf_column());
+			// print_gdf_column(output.get_gdf_column());
 		}
 		if(err != GDF_SUCCESS){
 			//TODO: clean up all the resources

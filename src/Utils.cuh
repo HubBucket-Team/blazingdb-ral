@@ -340,7 +340,7 @@ auto init_device_vector(gdf_size_type num_elements) -> std::tuple<RawType *, thr
 }
 
 template <typename ValueType, gdf_dtype Dtype>
-gdf_column* init_gdb_column(size_t column_size) {
+gdf_column* init_gdf_column(size_t column_size) {
   char *raw_pointer;
   auto gdf_enum_type_value = Dtype;
   thrust::device_ptr<ValueType> device_pointer;

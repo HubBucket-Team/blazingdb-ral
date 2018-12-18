@@ -44,6 +44,7 @@ using namespace blazingdb::protocol;
 #include <blazingdb/io/Library/Logging/CoutOutput.h>
 #include "blazingdb/io/Library/Logging/ServiceLogging.h"
 
+#include "CalciteExpressionParsing.h"
 #include "io/data_parser/CSVParser.h"
 #include "io/data_parser/ParquetParser.h"
 
@@ -149,11 +150,6 @@ query_token_t loadParquetAndInsertToResultRepository(std::string path, connectio
 		std::vector<gdf_column_cpp> columns;
 		parser->parse(provider->get_next(), columns);
 
-    // tests
-    std::cout << "###tests###\n";
-	  for(size_t column_index = 0; column_index < num_cols; column_index++){
-			print_gdf_column(columns[column_index].get_gdf_column());
-		}
     blazing_frame output_frame;
   	output_frame.add_table(columns);
 
@@ -214,11 +210,6 @@ query_token_t loadCsvAndInsertToResultRepository(std::string path, std::vector<s
 		std::vector<gdf_column_cpp> columns;
 		parser->parse(provider->get_next(), columns, include_column);
 
-    // tests
-    std::cout << "###tests###\n";
-	  for(size_t column_index = 0; column_index < num_cols; column_index++){
-			print_gdf_column(columns[column_index].get_gdf_column());
-		}
     blazing_frame output_frame;
   	output_frame.add_table(columns);
 
@@ -357,31 +348,7 @@ static result_pair freeResultService(uint64_t accessToken, Buffer&& requestPaylo
   }
 
 }
- 
-gdf_column_cpp concat_gdf_columns(gdf_column_cpp &lhs, gdf_column_cpp &rhs) {
-  gdf_column_cpp output_cpp;
-  gdf_error error;
-  gdf_column* output;
-  switch (lhs.dtype()) {
-      #define WHEN(DTYPE, NativeType)                                                 \
-        case DTYPE: {                                                                 \
-              output = init_gdb_column<NativeType, DTYPE>(lhs.size() + rhs.size());   \
-              error = gpu_concat(lhs.get_gdf_column(), rhs.get_gdf_column(), output); \
-              output_cpp.create_gdf_column(output);                                   \
-              } break
-
-      WHEN(GDF_INT8, int8_t);
-      WHEN(GDF_INT32, int32_t);
-      WHEN(GDF_INT64, int64_t);
-      WHEN(GDF_FLOAT32, float);
-      WHEN(GDF_FLOAT64, double);
-      default:
-            std::cerr << "Column type not supported" << std::endl;
-            break;
-      #undef WHEN
-  }
-  return output_cpp;
-}
+  
 
 template<class ParserType>
 void load_files(std::vector<Uri> uris, std::vector<gdf_column_cpp>& out_columns) {
@@ -393,19 +360,32 @@ void load_files(std::vector<Uri> uris, std::vector<gdf_column_cpp>& out_columns)
 		  parser->parse(provider->get_next(), columns);
       all_parts.push_back(columns);
     }
-    if (all_parts.size() > 0) {
+    if (all_parts.size() == 1) {
+        out_columns = all_parts[0];
+    } 
+    else if (all_parts.size() > 1) {
       std::vector<gdf_column_cpp>& part_left = all_parts[0];
-      for(size_t index_col = 1; index_col < part_left.size(); index_col++) { //iterate each one of the columns
-        for(size_t index_part = 1; index_part < all_parts.size(); index_part++) { //iterate each one of the parts 
-          std::vector<gdf_column_cpp> &part_right = all_parts[index_part];
-          auto &lhs = part_left[index_col];
-          auto &rhs = part_right[index_col];
-          gdf_column_cpp new_col = concat_gdf_columns(lhs, rhs);
-          //@todo, check if gdf_conter_ref clean tje  memory for part_left[index_col] 
-          part_left[index_col] = new_col; 
+      for(size_t index_col = 0; index_col < part_left.size(); index_col++) { //iterate each one of the columns
+        
+        std::vector<gdf_column*> columns;
+        size_t col_total_size = 0;
+
+        for(size_t index_part = 0; index_part < all_parts.size(); index_part++) { //iterate each one of the parts 
+          std::vector<gdf_column_cpp> &part = all_parts[index_part];
+          auto &gdf_col = part[index_col];
+          columns.push_back(gdf_col.get_gdf_column());
+          col_total_size+= gdf_col.size();
+        }
+        gdf_column_cpp output_col;
+        auto & lhs = all_parts[0][index_col];
+        output_col.create_gdf_column(lhs.dtype(), col_total_size, nullptr, get_width_dtype(lhs.dtype()), lhs.name());
+        gdf_error err = gdf_column_concat(output_col.get_gdf_column(), columns.data(), columns.size());
+        if (err == GDF_SUCCESS) {
+          out_columns.push_back(output_col);
+        } else {
+          std::cerr << "ERROR: gdf_column_concat\n";
         }
       }
-      out_columns = part_left;
     }
 }
 
@@ -473,11 +453,6 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
         std::vector<gdf_column_cpp> columns;
         gdf_error error = evaluate_query(input_tables, table_names, all_column_names, requestPayload.statement, columns);
         
-        std::cout << "query result\n";        
-        for(size_t i = 0; i < columns.size(); i++)
-        {
-          print_gdf_column(columns[i].get_gdf_column());
-        }
         output_frame.add_table(columns);
 
         double duration = blazing_timer.getDuration();

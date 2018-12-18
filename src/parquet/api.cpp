@@ -33,6 +33,8 @@
 
 #include "api.h"
 
+#include <rmm.h>
+
 BEGIN_NAMESPACE_GDF_PARQUET
 
 namespace {
@@ -83,6 +85,7 @@ const std::
       {::parquet::LogicalType::NA, GDF_invalid},
     };
 
+//! \returns the gdf_type by column_descriptor.
 static inline gdf_dtype
 _DTypeFrom(const ::parquet::ColumnDescriptor *const column_descriptor) {
     const ::parquet::LogicalType::type logical_type =
@@ -98,6 +101,11 @@ _DTypeFrom(const ::parquet::ColumnDescriptor *const column_descriptor) {
     return dtype_from_physical_type_map.at(physical_type);
 }
 
+//! \brief Append read data from a row group to the gdf column.
+/// \param[in] row_group_reader with the data to be read.
+/// \param[in] column_indices to be filtered on reading row group.
+/// \param[in] offsets of the i-th column with data in `gdf_columns`.
+/// \param[out] gdf_columns where to append the read data.
 static inline gdf_error
 _ReadColumn(const std::shared_ptr<GdfRowGroupReader> &row_group_reader,
             const std::vector<std::size_t> &          column_indices,
@@ -388,26 +396,31 @@ _ReadFileMultiThread(const std::unique_ptr<FileReader> &file_reader,
     return gdf_error_out;
 }
 
+//! Allocate the gdf column attributes on GPU.
 template <::parquet::Type::type TYPE>
 static inline gdf_error
 _AllocateGdfColumn(const std::size_t                        num_rows,
                    const ::parquet::ColumnDescriptor *const column_descriptor,
+                   const cudaStream_t &                     cudaStream,
                    gdf_column &                             _gdf_column) {
     const std::size_t value_byte_size =
       static_cast<std::size_t>(::parquet::type_traits<TYPE>::value_byte_size);
 
-    cudaError_t status =
-      cudaMalloc(&_gdf_column.data, num_rows * value_byte_size);
-    if (status != cudaSuccess) {
+    rmmError_t rmmError =
+      RMM_ALLOC(&_gdf_column.data, num_rows * value_byte_size, cudaStream);
+
+    if (rmmError != RMM_SUCCESS) {
 #ifdef GDF_DEBUG
         std::cerr << "Allocation error for data\n" << e.what() << std::endl;
 #endif
         return GDF_FILE_ERROR;
     }
 
-    status = cudaMalloc(reinterpret_cast<void **>(&_gdf_column.valid),
-                        ::arrow::BitUtil::BytesForBits(num_rows));
-    if (status != cudaSuccess) {
+    rmmError = RMM_ALLOC(reinterpret_cast<void **>(&_gdf_column.valid),
+                         ::arrow::BitUtil::BytesForBits(num_rows),
+                         cudaStream);
+
+    if (rmmError != RMM_SUCCESS) {
 #ifdef GDF_DEBUG
         std::cerr << "Allocation error for valid\n" << e.what() << std::endl;
 #endif
@@ -420,6 +433,8 @@ _AllocateGdfColumn(const std::size_t                        num_rows,
     return GDF_SUCCESS;
 }  // namespace
 
+//! \returns the `ColumnDescriptor`'s of each column in the `indices` vector
+//  from `file_reader`
 static inline std::vector<const ::parquet::ColumnDescriptor *>
 _ColumnDescriptorsFrom(const std::unique_ptr<FileReader> &file_reader,
                        const std::vector<std::size_t> &   indices) {
@@ -435,10 +450,13 @@ _ColumnDescriptorsFrom(const std::unique_ptr<FileReader> &file_reader,
     return column_descriptors;
 }
 
+//! Allocate a array of gdf columns to `gdf_columns` of `file_reade` filtering
+//  by row group indices and column indices
 static inline gdf_error
 _AllocateGdfColumns(const std::unique_ptr<FileReader> &file_reader,
                     const std::vector<std::size_t> &   row_group_indices,
                     const std::vector<std::size_t> &   column_indices,
+                    const cudaStream_t &               cudaStream,
                     gdf_column *const                  gdf_columns) {
     const std::vector<const ::parquet::ColumnDescriptor *> column_descriptors =
       _ColumnDescriptorsFrom(file_reader, column_indices);
@@ -461,7 +479,7 @@ _AllocateGdfColumns(const std::unique_ptr<FileReader> &file_reader,
 #define WHEN(TYPE)                                                             \
     case ::parquet::Type::TYPE:                                                \
         _AllocateGdfColumn<::parquet::Type::TYPE>(                             \
-          num_rows, column_descriptor, _gdf_column);                           \
+          num_rows, column_descriptor, cudaStream, _gdf_column);               \
         break
 
     for (std::size_t i = 0; i < num_columns; i++) {
@@ -486,6 +504,7 @@ _AllocateGdfColumns(const std::unique_ptr<FileReader> &file_reader,
     return GDF_SUCCESS;
 }
 
+//! Allocate a gdf columns (on CPU)
 static inline gdf_column *
 _CreateGdfColumns(const std::size_t num_columns) try {
     return new gdf_column[num_columns];
@@ -496,6 +515,7 @@ _CreateGdfColumns(const std::size_t num_columns) try {
     return nullptr;
 }
 
+//! \returns a vector with the column indices of `raw_names` in `file_reader`
 static inline std::vector<std::size_t>
 _GetColumnIndices(const std::unique_ptr<FileReader> &file_reader,
                   const char *const *const           raw_names) {
@@ -543,6 +563,7 @@ _GetColumnIndices(const std::unique_ptr<FileReader> &file_reader,
     return indices;
 }
 
+//! Avoid crash when use a empty parquet file
 static inline gdf_error
 _CheckMinimalData(const std::unique_ptr<FileReader> &file_reader) {
     const std::shared_ptr<const ::parquet::FileMetaData> &metadata =
@@ -585,8 +606,21 @@ _read_parquet_by_ids(const std::unique_ptr<FileReader> &file_reader,
 
     if (gdf_columns == nullptr) { return GDF_FILE_ERROR; }
 
-    if (_AllocateGdfColumns(
-          file_reader, row_group_indices, column_indices, gdf_columns)
+    cudaStream_t cudaStream;
+    cudaError_t  cudaError = cudaStreamCreate(&cudaStream);
+
+    if (cudaError != cudaSuccess) {
+#ifdef GDF_DEBUG
+        std::cerr << "CUDA Stream creation error" << std::endl;
+#endif
+        return GDF_FILE_ERROR;
+    }
+
+    if (_AllocateGdfColumns(file_reader,
+                            row_group_indices,
+                            column_indices,
+                            cudaStream,
+                            gdf_columns)
         != GDF_SUCCESS) {
         return GDF_FILE_ERROR;
     }
@@ -594,6 +628,14 @@ _read_parquet_by_ids(const std::unique_ptr<FileReader> &file_reader,
     if (_ReadFileMultiThread(
           file_reader, row_group_indices, column_indices, gdf_columns)
         != GDF_SUCCESS) {
+        return GDF_FILE_ERROR;
+    }
+
+    cudaStreamDestroy(cudaStream);
+    if (cudaError != cudaSuccess) {
+#ifdef GDF_DEBUG
+        std::cerr << "CUDA Stream destroying error" << std::endl;
+#endif
         return GDF_FILE_ERROR;
     }
 
@@ -620,8 +662,11 @@ read_parquet_by_ids(const std::string &             filename,
       std::move(file_reader), row_group_indices, column_indices, gdf_columns);
 
     for (std::size_t i = 0; i < column_indices.size(); i++) {
-        out_gdf_columns.push_back(&gdf_columns[i]);
+        gdf_column * gdf_column_ptr = new gdf_column{};
+        *gdf_column_ptr = gdf_columns[i];
+        out_gdf_columns.push_back(gdf_column_ptr);
     }
+    delete [] gdf_columns;
 
     return status;
 }
@@ -646,10 +691,48 @@ read_parquet_by_ids(std::shared_ptr<::arrow::io::RandomAccessFile> file,
       std::move(file_reader), row_group_indices, column_indices, gdf_columns);
 
     for (std::size_t i = 0; i < column_indices.size(); i++) {
-        out_gdf_columns.push_back(&gdf_columns[i]);
+        gdf_column * gdf_column_ptr = new gdf_column{};
+        *gdf_column_ptr = gdf_columns[i];
+        out_gdf_columns.push_back(gdf_column_ptr);
     }
+    delete [] gdf_columns;
 
     return status;
+}
+
+
+gdf_error read_schema(std::shared_ptr<::arrow::io::RandomAccessFile> file, size_t &num_row_groups, size_t &num_cols, std::vector< ::parquet::Type::type> &parquet_dtypes, std::vector< std::string> &column_names ) {
+	gdf_error error;
+	auto parquet_reader = FileReader::OpenFile(file);
+	auto file_metadata = parquet_reader->metadata();
+
+	auto schema = file_metadata->schema();
+
+    num_row_groups = file_metadata->num_row_groups();
+	std::vector<unsigned long long> numRowsPerGroup(num_row_groups);
+
+	for (int j = 0; j < num_row_groups; j++) {
+		auto groupReader = parquet_reader->RowGroup(j);
+		auto rowGroupMetadata = groupReader->metadata();
+		numRowsPerGroup[j] = rowGroupMetadata->num_rows();
+	}
+
+	for (int rowGroupIndex = 0; rowGroupIndex < num_row_groups; rowGroupIndex++) {
+		auto groupReader = parquet_reader->RowGroup(rowGroupIndex);
+		auto rowGroupMetadata = groupReader->metadata();
+
+        num_cols = file_metadata->num_columns();
+		for (int columnIndex = 0; columnIndex < file_metadata->num_columns(); columnIndex++) {
+			auto column = schema->Column(columnIndex);
+			auto columnMetaData = rowGroupMetadata->ColumnChunk(columnIndex);
+			auto type = column->physical_type();
+            parquet_dtypes.push_back(type);
+            column_names.push_back(column->name()); //@todo, not found a column name
+
+		}
+	}
+
+	return error;
 }
 
 extern "C" {

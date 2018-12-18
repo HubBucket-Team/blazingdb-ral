@@ -11,17 +11,24 @@ set(source_files
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/core/launcher.cpp
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/util/operator.cpp
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/util/type.cpp
-   ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
-  ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
-  ${CMAKE_SOURCE_DIR}/src/ColumnManipulation.cu
-  ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
-  ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
-  ${CMAKE_SOURCE_DIR}/src/JoinProcessor.cpp
-  ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp
-  ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
-  ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
-  ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
-  tpch-tests.cu 
 )
 
-configure_test(tpch-test "${source_files}")
+set(groupbywoagg-test_SRCS
+  ${CMAKE_SOURCE_DIR}/src/Utils.cu
+  ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
+  ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
+  ${CMAKE_SOURCE_DIR}/src/ColumnManipulation.cu
+  ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
+  ${CMAKE_SOURCE_DIR}/src/JoinProcessor.cpp
+  ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp
+  ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
+  ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
+  ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
+  ${source_files}
+  ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
+  groupbywoagg-tests.cu
+)
+
+configure_test(groupbywoagg-test "${groupbywoagg-test_SRCS}")
+
+

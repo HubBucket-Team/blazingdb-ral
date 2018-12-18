@@ -77,6 +77,7 @@ add_subdirectory(tpch)
 add_subdirectory(parquet)
 add_subdirectory(union)
 add_subdirectory(unary)
+add_subdirectory(groupbywoagg)
 
 
 message(STATUS "******** Tests are ready ********")

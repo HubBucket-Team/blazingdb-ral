@@ -55,9 +55,17 @@ public:
                                  std::int64_t *values_read,
                                  std::int64_t *nulls_count);
 
+    /// \brief Append data from column to gdf column
+    /// \param[in,out] column with data appended
+    /// \param[in] offset of `column` to start append data
     std::size_t ToGdfColumn(const gdf_column &   column,
                             const std::ptrdiff_t offset = 0);
 
+    /// \brief Append data from column to gdf column
+    /// \param[in,out] column with data appended
+    /// \param[in] offset of `column` to start append data
+    /// \param[out] d_definition_levels array with the definition level
+    //              of each item appended to `column` from parquet file
     std::size_t ToGdfColumn(const gdf_column &   column,
                             const std::ptrdiff_t offset,
                             std::int16_t *       d_definition_levels);

@@ -611,13 +611,8 @@ bool is_literal(std::string operand){
 	return operand[0] != '$';
 }
 
-bool is_digits(const std::string &str)
-{
-	return str.find_first_not_of("0123456789.") == std::string::npos;
-}
-
-bool is_integer(const std::string &s) {
-	static const std::regex re{"-?\\d+"};
+bool is_number(const std::string &s) {
+	static const std::regex re{R""(^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$)""};
 	return std::regex_match(s, re);
 }
 
@@ -634,16 +629,16 @@ std::string get_last_token(std::string expression, int * position){
 }
 
 bool is_operator_token(std::string operand) {
-	return (operand[0] != '$' && !is_digits(operand) && !is_date(operand)
-			&& !is_integer(operand));
+	return (operand[0] != '$' && !is_number(operand) && !is_date(operand));
 }
 
 size_t get_index(std::string operand_string){
-	if (operand_string.length() == 0) {
+	std::string cleaned_expression = clean_calcite_expression(operand_string);
+	if (cleaned_expression.length() == 0) {
 		return 0;
 	}
 	size_t start = 1;
-	return std::stoull (operand_string.substr(1,operand_string.size()-1),0);
+	return std::stoull (cleaned_expression.substr(1,cleaned_expression.size()-1),0);
 }
 
 std::string aggregator_to_string(gdf_agg_op aggregation){
@@ -729,6 +724,15 @@ std::string expand_if_logical_op(std::string expression){
 	}
 
 	return output;
+}
+
+// Different of clean_calcite_expression, this function only remove casting tokens
+std::string clean_project_expression(std::string expression){
+	//TODO: this is very hacky, the proper way is to remove this in calcite
+	StringUtil::findAndReplaceAll(expression,"CAST(","");
+	StringUtil::findAndReplaceAll(expression,"):BIGINT","");
+
+	return expression;
 }
 
 std::string clean_calcite_expression(std::string expression){

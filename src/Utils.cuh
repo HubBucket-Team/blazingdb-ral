@@ -327,38 +327,7 @@ static bool get_bit(const gdf_valid_type* const bits, size_t i)
 {
   return  bits == nullptr? true :  bits[i >> size_t(3)] & (1 << (i & size_t(7)));
 }
-
-
-template <typename RawType, typename PointerType>
-auto init_device_vector(gdf_size_type num_elements) -> std::tuple<RawType *, thrust::device_ptr<PointerType>>
-{
-    RawType *device_pointer;
-    auto rmm_error = RMM_ALLOC((void **)&device_pointer, sizeof(PointerType) * num_elements, 0);
-    assert(rmm_error == RMM_SUCCESS);
-    thrust::device_ptr<PointerType> device_wrapper = thrust::device_pointer_cast((PointerType *)device_pointer);
-    return std::make_tuple(device_pointer, device_wrapper);
-}
-
-template <typename ValueType, gdf_dtype Dtype>
-gdf_column* init_gdf_column(size_t column_size) {
-  char *raw_pointer;
-  auto gdf_enum_type_value = Dtype;
-  thrust::device_ptr<ValueType> device_pointer;
-  std::tie(raw_pointer, device_pointer) = init_device_vector<char, ValueType>(column_size);
-  
-  size_t n_bytes = valid_size(column_size);
-
-  gdf_valid_type *valid_value_pointer;
-  RMM_ALLOC((void **)&valid_value_pointer, n_bytes, 0);
-
-  gdf_column* output = new gdf_column;
-  gdf_column_view_augmented(output,
-                            (void *)raw_pointer, valid_value_pointer,
-                            column_size,
-                            gdf_enum_type_value,
-                            0);
-  return output;
-}
+ 
 
 // Type for a unique_ptr to a gdf_column with a custom deleter
 // Custom deleter is defined at construction

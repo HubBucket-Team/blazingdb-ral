@@ -134,7 +134,7 @@ query_token_t loadParquetAndInsertToResultRepository(std::string path, connectio
     throw std::runtime_error{error};
   }
 
-	// std::thread t = std::thread([=]{
+	std::thread t = std::thread([=]{
     CodeTimer blazing_timer;
 
 		std::vector<Uri> uris(1);
@@ -155,12 +155,12 @@ query_token_t loadParquetAndInsertToResultRepository(std::string path, connectio
 
 		double duration = blazing_timer.getDuration();
 		result_set_repository::get_instance().update_token(token, output_frame, duration);
-	//  });
-	//  t.detach();
+	});
+	t.detach();
 	return token;
 }
 
-static result_pair loadParquet(uint64_t accessToken, Buffer&& buffer) {
+static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
  
   blazingdb::message::io::LoadParquetFileRequestMessage message(buffer.data());
 
@@ -220,7 +220,7 @@ query_token_t loadCsvAndInsertToResultRepository(std::string path, std::vector<s
 	return token;
 }
 
-static result_pair loadCsv(uint64_t accessToken, Buffer&& buffer) {
+static result_pair loadCsvSchema(uint64_t accessToken, Buffer&& buffer) {
   blazingdb::message::io::LoadCsvFileRequestMessage message(buffer.data());
 
   std::vector<gdf_dtype> types;
@@ -329,7 +329,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
 //    }
 //  };
 
-  interpreter::GetResultResponseMessage responsePayload(metadata, fieldNames, values);
+interpreter::GetResultResponseMessage responsePayload(metadata, fieldNames, values);
   std::cout << "**before return data frame\n" << std::flush;
   return std::make_pair(Status_Success, responsePayload.getBufferData());
 }
@@ -445,6 +445,9 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
   uint64_t resultToken = 0L;
   try {
     resultToken = result_set_repository::get_instance().register_query(accessToken); 
+
+    // void data_loader<DataProvider, FileParser>::load_data(std::vector<gdf_column_cpp> & columns, std::vector<bool> include_column){
+
     std::thread t = std::thread([=]{
         CodeTimer blazing_timer;
   
@@ -525,8 +528,8 @@ int main(void)
   services.insert(std::make_pair(interpreter::MessageType_RegisterFileSystem, &registerFileSystem));
   services.insert(std::make_pair(interpreter::MessageType_DeregisterFileSystem, &deregisterFileSystem));
 
-  services.insert(std::make_pair(interpreter::MessageType_LoadCSV, &loadCsv));
-  services.insert(std::make_pair(interpreter::MessageType_LoadParquet, &loadParquet));
+  services.insert(std::make_pair(interpreter::MessageType_LoadCsvSchema, &loadCsvSchema));
+  services.insert(std::make_pair(interpreter::MessageType_LoadParquetSchema, &loadParquetSchema));
 
   //@todo execuplan with filesystem
   auto interpreterServices = [&services](const blazingdb::protocol::Buffer &requestPayloadBuffer) -> blazingdb::protocol::Buffer {

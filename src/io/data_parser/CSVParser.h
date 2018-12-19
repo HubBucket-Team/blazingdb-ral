@@ -34,6 +34,9 @@ public:
 	gdf_error parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 				std::vector<gdf_column_cpp> & columns);
 
+	gdf_error parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> file,
+			std::vector<gdf_column_cpp> & columns);
+
 private:
 	char quote_character = '\"';
 	csv_read_arg args;

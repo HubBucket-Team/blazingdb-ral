@@ -172,6 +172,10 @@ gdf_error csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	}
 	return error;
 }
+gdf_error csv_parser::parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> file, std::vector<gdf_column_cpp> & gdf_columns_out)  {
+	gdf_error error;
 
+	return error;
+}
 } /* namespace io */
 } /* namespace ral */

@@ -31,6 +31,9 @@ public:
 	virtual gdf_error parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 			std::vector<gdf_column_cpp> & columns) = 0;
 
+	virtual gdf_error parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> file,
+			std::vector<gdf_column_cpp> & columns) = 0;
+
 };
 
 } /* namespace io */

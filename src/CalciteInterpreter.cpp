@@ -367,12 +367,12 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 			//materialize with left_indices
 			err = materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),left_indices.get_gdf_column());
 			std::cout<<"left table output"<<std::endl;
-			print_gdf_column(output.get_gdf_column());
+			// print_gdf_column(output.get_gdf_column());
 		}else{
 			//materialize with right indices
 			err = materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),right_indices.get_gdf_column());
 			std::cout<<"right table output"<<std::endl;
-			print_gdf_column(output.get_gdf_column());
+			// print_gdf_column(output.get_gdf_column());
 		}
 		if(err != GDF_SUCCESS){
 			//TODO: clean up all the resources
@@ -1143,7 +1143,10 @@ gdf_error evaluate_query(
 		std::string logicalPlan,
 		std::vector<gdf_column_cpp> & outputs){
 
-	std::vector<std::string> splitted = StringUtil::split(logicalPlan, '\n');
+	std::vector<std::string> splitted = StringUtil::split(logicalPlan, "\n");
+	if (splitted[splitted.size() - 1].length() == 0) {
+		splitted.erase(splitted.end() -1);
+	}
 	blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
 
 	for(size_t i=0;i<output_frame.get_width();i++){

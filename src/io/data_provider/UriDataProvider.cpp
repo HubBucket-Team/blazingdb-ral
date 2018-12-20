@@ -35,7 +35,7 @@ std::string uri_data_provider::get_current_user_readable_file_handle(){
 }
 
 bool uri_data_provider::has_next(){
-	return this->current_file < (this->opened_files.size() - 1);
+	return this->current_file < this->file_uris.size();
 }
 
 std::shared_ptr<arrow::io::RandomAccessFile> uri_data_provider::get_next(){

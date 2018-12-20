@@ -70,6 +70,10 @@ void gdf_column_cpp::set_name(std::string name){
 
 
 	}
+void gdf_column_cpp::set_name_cpp_only(std::string name){
+	this->column_name = name;
+}
+
 void gdf_column_cpp::delete_set_name(std::string name){
 	delete [] this->column->col_name;
 	this->set_name(name);
@@ -237,6 +241,22 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
 
     GDFRefCounter::getInstance()->register_column(this->column);
 
+}
+void gdf_column_cpp::create_gdf_column(gdf_column * column){
+	this->column = column;
+	int width_per_value;
+	gdf_error err = get_column_byte_width(column, &width_per_value);
+
+	//TODO: we are assuming they are not padding,
+	this->allocated_size_data = width_per_value * column->size;
+	if(column->valid != nullptr){
+		this->allocated_size_valid = (column->size - 7) / 8;
+	}
+	this->is_ipc_column = false;
+    if (column->col_name)
+    	this->column_name = std::string(column->col_name);
+
+    GDFRefCounter::getInstance()->register_column(this->column);
 }
 /*
 void gdf_column_cpp::realloc_gdf_column(gdf_dtype type, size_t size, size_t width){

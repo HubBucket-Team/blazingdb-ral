@@ -24,6 +24,13 @@ public:
 	gdf_error parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 				std::vector<gdf_column_cpp> & columns,
 				std::vector<bool> include_column);
+
+	gdf_error parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
+				std::vector<gdf_column_cpp> & columns);
+
+	gdf_error parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> file,
+			std::vector<gdf_column_cpp> & columns);
+
 };
 
 } /* namespace io */

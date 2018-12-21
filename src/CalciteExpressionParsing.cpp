@@ -637,7 +637,7 @@ get_index(std::string operand_string) {
     std::string cleaned_expression = clean_calcite_expression(operand_string);
     if (cleaned_expression.length() == 0) { return 0; }
     return std::stoull(
-      std::isdigit(cleaned_expression[0])
+      is_literal(cleaned_expression)
         ? cleaned_expression
         : cleaned_expression.substr(1, cleaned_expression.size() - 1));
 }

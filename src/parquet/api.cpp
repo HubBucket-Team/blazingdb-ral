@@ -417,7 +417,7 @@ _AllocateGdfColumn(const std::size_t                        num_rows,
     }
 
     rmmError = RMM_ALLOC(reinterpret_cast<void **>(&_gdf_column.valid),
-                         ::arrow::BitUtil::BytesForBits(num_rows),
+                         ::arrow::BitUtil::PaddedLength(::arrow::BitUtil::BytesForBits(num_rows)),
                          cudaStream);
 
     if (rmmError != RMM_SUCCESS) {

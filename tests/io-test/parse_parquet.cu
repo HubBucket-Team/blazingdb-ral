@@ -197,7 +197,7 @@ protected:
     void
     checkNulls(/*const */ gdf_column &column) {
 
-        const std::size_t valid_size =
+        const std::size_t valid_size = 
           arrow::BitUtil::BytesForBits(column.size);
         const std::size_t valid_last = valid_size - 1;
 

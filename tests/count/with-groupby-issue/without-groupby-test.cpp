@@ -5,9 +5,9 @@
 
 class Item {
 public:
-    const std::string  logicalPlan;
-    const std::int64_t expectedOutputLength;
-    const std::int64_t expectedCount;
+    const std::string               logicalPlan;
+    const std::int64_t              expectedOutputLength;
+    const std::vector<std::int64_t> expectedCount;
 };
 
 class WithoutGroupByTest : public testing::TestWithParam<Item> {};
@@ -44,7 +44,14 @@ TEST_P(WithoutGroupByTest, RunQuery) {
     auto outputTable =
       GdfColumnCppsTableBuilder{"outputTable", outputs}.Build();
 
-    EXPECT_EQ(GetParam().expectedCount, outputTable[0][0].get<GDF_INT64>());
+    EXPECT_EQ(1, outputTable.size());
+    EXPECT_EQ(GetParam().expectedCount.size(), outputTable[0].size());
+
+    for (std::size_t i = 0; i < GetParam().expectedCount.size(); i++) {
+        EXPECT_EQ(GetParam().expectedCount[i],
+                  outputTable[0][i].get<GDF_INT64>())
+          << "with index " << i;
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(
@@ -56,11 +63,11 @@ INSTANTIATE_TEST_CASE_P(
          "  LogicalProject($f0=[0])\n"
          "    EnumerableTableScan(table=[[main, nation]])",
          1,
-         7},
+         {7}},
     Item{// select count(n_nationkey) from main.nation
          "LogicalAggregate(group=[{}], EXPR$0=[COUNT()])\n"
          "  LogicalProject(n_nationkey=[$0])\n"
          "    EnumerableTableScan(table=[[main, nation]])",
          1,
-         5},
+         {5}},
   }));

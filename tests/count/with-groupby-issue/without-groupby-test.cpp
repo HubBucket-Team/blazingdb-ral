@@ -77,4 +77,11 @@ INSTANTIATE_TEST_CASE_P(
          "      EnumerableTableScan(table=[[main, nation]])",
          4,
          {2, 2, 2, 1}},
+    Item{// select count(n_nationkey) from nations group by n_nationkey;
+         "LogicalProject(EXPR$0=[$1])\n"
+         "  LogicalAggregate(group=[{0}], EXPR$0=[COUNT()])\n"
+         "    LogicalProject(n_nationkey=[$0])\n"
+         "      EnumerableTableScan(table=[[main, nation]])",
+         4,
+         {0, 2, 2, 1}},
   }));

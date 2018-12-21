@@ -9,9 +9,11 @@
 //readme:  use bit-utils to compute valid.size in a standard way
 // see https://github.com/apache/arrow/blob/e34057c4b4be8c7abf3537dd4998b5b38919ba73/cpp/src/arrow/ipc/writer.cc#L66
 
+#include <cudf.h>
 #include "GDFColumn.cuh"
 #include "gdf_wrapper/gdf_wrapper.cuh"
 #include "cuDF/Allocator.h"
+#include "parquet/util/bit_util.cuh"
 
 gdf_column_cpp::gdf_column_cpp()
 {
@@ -157,7 +159,7 @@ void gdf_column_cpp::resize(size_t new_size){
 }
 //TODO: needs to be implemented for efficiency though not strictly necessary
 gdf_error gdf_column_cpp::compact(){
-    if( this->allocated_size_valid != arrow::BitUtil::PaddedLength(arrow::BitUtil::BytesForBits(this->size()))){
+    if( this->allocated_size_valid != gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(this->size()))){
     	//compact valid allcoation
 
     }
@@ -184,7 +186,7 @@ void gdf_column_cpp::allocate_set_valid(){
 gdf_valid_type * gdf_column_cpp::allocate_valid(){
 	size_t num_values = this->size();
     gdf_valid_type * valid_device;
-	this->allocated_size_valid = arrow::BitUtil::PaddedLength(arrow::BitUtil::BytesForBits(num_values)); //so allocations are supposed to be 64byte aligned
+	this->allocated_size_valid = gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(num_values)); //so allocations are supposed to be 64byte aligned
 
     try {
         cuDF::Allocator::allocate((void**)&valid_device, allocated_size_valid);
@@ -254,7 +256,7 @@ void gdf_column_cpp::create_gdf_column(gdf_column * column){
 	//TODO: we are assuming they are not padding,
 	this->allocated_size_data = width_per_value * column->size;
 	if(column->valid != nullptr){
-        this->allocated_size_valid = arrow::BitUtil::PaddedLength(arrow::BitUtil::BytesForBits(column->size)); //so allocations are supposed to be 64byte aligned
+        this->allocated_size_valid = gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(column->size)); //so allocations are supposed to be 64byte aligned
 	}
 	this->is_ipc_column = false;
     if (column->col_name)

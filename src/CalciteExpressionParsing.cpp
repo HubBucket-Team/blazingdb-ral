@@ -508,7 +508,7 @@ gdf_error get_aggregation_operation(std::string operator_string, gdf_agg_op * op
 	}else if(operator_string == "COUNT_DISTINCT"){
 		*operation = GDF_COUNT_DISTINCT;
 	}else{
-		return GDF_UNSUPPORTED_DTYPE;
+		return GDF_INVALID_API_CALL;
 	}
 	return GDF_SUCCESS;
 }
@@ -592,7 +592,7 @@ gdf_error get_operation(
 	}else if(operator_string == "OR"){
 		*operation = GDF_ADD;
 	}else{
-		return GDF_UNSUPPORTED_DTYPE;
+		return GDF_INVALID_API_CALL;
 	}
 	return GDF_SUCCESS;
 }

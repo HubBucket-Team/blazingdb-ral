@@ -30,7 +30,7 @@
 
 #include "column_reader.h"
 #include "file_reader.h"
-
+#include "util/bit_util.cuh"
 #include "api.h"
 
 #include <rmm.h>
@@ -417,7 +417,7 @@ _AllocateGdfColumn(const std::size_t                        num_rows,
     }
 
     rmmError = RMM_ALLOC(reinterpret_cast<void **>(&_gdf_column.valid),
-                         ::arrow::BitUtil::BytesForBits(num_rows),
+                         ::gdf::util::PaddedLength(::arrow::BitUtil::BytesForBits(num_rows)),
                          cudaStream);
 
     if (rmmError != RMM_SUCCESS) {

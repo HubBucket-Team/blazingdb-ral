@@ -9,6 +9,10 @@
 #include <thrust/execution_policy.h>
 #include <thrust/iterator/constant_iterator.h>
 #include <thrust/iterator/discard_iterator.h>
+#include <thrust/device_ptr.h>
+
+#include <rmm.h>
+
 
 #ifndef DEVICE_RESET
 #define DEVICE_RESET cudaDeviceReset();
@@ -323,7 +327,7 @@ static bool get_bit(const gdf_valid_type* const bits, size_t i)
 {
   return  bits == nullptr? true :  bits[i >> size_t(3)] & (1 << (i & size_t(7)));
 }
-
+ 
 
 // Type for a unique_ptr to a gdf_column with a custom deleter
 // Custom deleter is defined at construction

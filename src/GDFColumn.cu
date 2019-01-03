@@ -5,9 +5,15 @@
  *      Author: rqc
  */
 
+#include <arrow/util/bit-util.h>
+//readme:  use bit-utils to compute valid.size in a standard way
+// see https://github.com/apache/arrow/blob/e34057c4b4be8c7abf3537dd4998b5b38919ba73/cpp/src/arrow/ipc/writer.cc#L66
+
+#include <cudf.h>
 #include "GDFColumn.cuh"
 #include "gdf_wrapper/gdf_wrapper.cuh"
 #include "cuDF/Allocator.h"
+#include "parquet/util/bit_util.cuh"
 
 gdf_column_cpp::gdf_column_cpp()
 {
@@ -70,6 +76,10 @@ void gdf_column_cpp::set_name(std::string name){
 
 
 	}
+void gdf_column_cpp::set_name_cpp_only(std::string name){
+	this->column_name = name;
+}
+
 void gdf_column_cpp::delete_set_name(std::string name){
 	delete [] this->column->col_name;
 	this->set_name(name);
@@ -149,7 +159,7 @@ void gdf_column_cpp::resize(size_t new_size){
 }
 //TODO: needs to be implemented for efficiency though not strictly necessary
 gdf_error gdf_column_cpp::compact(){
-    if( this->allocated_size_valid != (((((this->size()+ 7 ) / 8) + 63 ) / 64) * 64)){
+    if( this->allocated_size_valid != gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(this->size()))){
     	//compact valid allcoation
 
     }
@@ -176,7 +186,7 @@ void gdf_column_cpp::allocate_set_valid(){
 gdf_valid_type * gdf_column_cpp::allocate_valid(){
 	size_t num_values = this->size();
     gdf_valid_type * valid_device;
-	this->allocated_size_valid = ((((num_values + 7 ) / 8) + 63 ) / 64) * 64; //so allocations are supposed to be 64byte aligned
+	this->allocated_size_valid = gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(num_values)); //so allocations are supposed to be 64byte aligned
 
     try {
         cuDF::Allocator::allocate((void**)&valid_device, allocated_size_valid);
@@ -237,6 +247,22 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
 
     GDFRefCounter::getInstance()->register_column(this->column);
 
+}
+void gdf_column_cpp::create_gdf_column(gdf_column * column){
+	this->column = column;
+	int width_per_value;
+	gdf_error err = get_column_byte_width(column, &width_per_value);
+
+	//TODO: we are assuming they are not padding,
+	this->allocated_size_data = width_per_value * column->size;
+	if(column->valid != nullptr){
+        this->allocated_size_valid = gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(column->size)); //so allocations are supposed to be 64byte aligned
+	}
+	this->is_ipc_column = false;
+    if (column->col_name)
+    	this->column_name = std::string(column->col_name);
+
+    GDFRefCounter::getInstance()->register_column(this->column);
 }
 /*
 void gdf_column_cpp::realloc_gdf_column(gdf_dtype type, size_t size, size_t width){

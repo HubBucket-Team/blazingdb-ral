@@ -508,7 +508,7 @@ gdf_error get_aggregation_operation(std::string operator_string, gdf_agg_op * op
 	}else if(operator_string == "COUNT_DISTINCT"){
 		*operation = GDF_COUNT_DISTINCT;
 	}else{
-		return GDF_UNSUPPORTED_DTYPE;
+		return GDF_INVALID_API_CALL;
 	}
 	return GDF_SUCCESS;
 }
@@ -592,7 +592,7 @@ gdf_error get_operation(
 	}else if(operator_string == "OR"){
 		*operation = GDF_ADD;
 	}else{
-		return GDF_UNSUPPORTED_DTYPE;
+		return GDF_INVALID_API_CALL;
 	}
 	return GDF_SUCCESS;
 }
@@ -611,13 +611,8 @@ bool is_literal(std::string operand){
 	return operand[0] != '$';
 }
 
-bool is_digits(const std::string &str)
-{
-	return str.find_first_not_of("0123456789.") == std::string::npos;
-}
-
-bool is_integer(const std::string &s) {
-	static const std::regex re{"-?\\d+"};
+bool is_number(const std::string &s) {
+	static const std::regex re{R""(^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$)""};
 	return std::regex_match(s, re);
 }
 
@@ -634,8 +629,7 @@ std::string get_last_token(std::string expression, int * position){
 }
 
 bool is_operator_token(std::string operand) {
-	return (operand[0] != '$' && !is_digits(operand) && !is_date(operand)
-			&& !is_integer(operand));
+	return (operand[0] != '$' && !is_number(operand) && !is_date(operand));
 }
 
 size_t get_index(std::string operand_string){

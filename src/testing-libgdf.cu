@@ -175,7 +175,7 @@ static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   interpreter::NodeConnectionDTO nodeInfo {
-      .path = "ipc://ipc:///tmp/ral.socket",
+      .path = "ipc:///tmp/ral.socket",
       .type = NodeConnectionType {NodeConnectionType_IPC}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -529,7 +529,7 @@ int main(void)
   auto output = new Library::Logging::CoutOutput();
   Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
 
-  blazingdb::protocol::ZeroMqServer server("ipc://ipc:///tmp/ral.socket");
+  blazingdb::protocol::ZeroMqServer server("ipc:///tmp/ral.socket");
 
   services.insert(std::make_pair(interpreter::MessageType_ExecutePlan, &executePlanService));
   services.insert(std::make_pair(interpreter::MessageType_ExecutePlanFileSystem, &executeFileSystemPlanService));

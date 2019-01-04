@@ -851,7 +851,8 @@ std::vector<std::string> get_expressions_from_expression_list(const std::string 
 			} else if (combined_expression[curInd] == ']'){
 				sqBraketsDepth--;
 			} else if (combined_expression[curInd] == ',' && parenthesisDepth == 0 && sqBraketsDepth == 0){
-				expressions.push_back(combined_expression.substr(curStart, curInd - curStart));
+				std::string exp = combined_expression.substr(curStart, curInd - curStart);
+				expressions.push_back(StringUtil::ltrim(exp));
 				curStart = curInd + 1;
 			}
 		}
@@ -859,7 +860,8 @@ std::vector<std::string> get_expressions_from_expression_list(const std::string 
 	}
 
 	if (curStart < combined_expression.size() && curInd <= combined_expression.size()){
-		expressions.push_back(combined_expression.substr(curStart, curInd - curStart));
+		std::string exp = combined_expression.substr(curStart, curInd - curStart);
+		expressions.push_back(StringUtil::trim(exp));
 	}
 
 	return expressions;

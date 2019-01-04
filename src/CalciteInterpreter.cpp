@@ -335,10 +335,10 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 			right_indices.get_gdf_column()
 	);
 
-	std::cout<<"Indices are starting!"<<std::endl;
-	print_gdf_column(left_indices.get_gdf_column());
-	print_gdf_column(right_indices.get_gdf_column());
-	std::cout<<"Indices are done!"<<std::endl;
+	// std::cout<<"Indices are starting!"<<std::endl;
+	// print_gdf_column(left_indices.get_gdf_column());
+	// print_gdf_column(right_indices.get_gdf_column());
+	// std::cout<<"Indices are done!"<<std::endl;
 
 
 
@@ -827,7 +827,7 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 	}
 
 	for(int i = 0; i < output_columns_group.size(); i++){
-		print_gdf_column(output_columns_group[i].get_gdf_column());
+		// print_gdf_column(output_columns_group[i].get_gdf_column());
 		output_columns_group[i].resize(aggregation_size);
 		output_columns_group[i].compact();
 		output_columns_group[i].update_null_count();

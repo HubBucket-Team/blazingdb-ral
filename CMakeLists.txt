@@ -48,6 +48,9 @@ include(ConfigureParquet)
 include(ConfigureLibGDF)
 include(ConfigureBlazingDBProtocol)
 include(ConfigureBlazingDBIO)
+include(ConfigureZeroMQ)
+
+find_package(Threads)
 
 # BEGIN MAIN #
 include_directories(
@@ -95,6 +98,8 @@ add_executable(testing-libgdf ${SRC_FILES})
 
 target_link_libraries(testing-libgdf
     ${BLAZINGDB_IO_STATIC_LIB}
+    Threads::Threads   
+    ${ZEROMQ_STATIC_LIB}
     ${BLAZINGDB_PROTOCOL_STATIC_LIB}
 
     ${LIBGDF_STATIC_LIB}

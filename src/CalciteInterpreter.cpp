@@ -486,6 +486,7 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 	//get aggregations
 	std::vector<gdf_agg_op> aggregation_types;
 	std::vector<std::string>  aggregation_input_expressions;
+	std::vector<std::string>  aggregation_column_assigned_aliases;
 
 	bool expressionFound = true;
 
@@ -502,6 +503,12 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 				err = get_aggregation_operation(expression,&operation);
 				aggregation_types.push_back(operation);
 				aggregation_input_expressions.push_back(get_string_between_outer_parentheses(expression));
+
+				// if the aggregation has an alias, lets capture it here, otherwise we'll figure out what to call the aggregation based on its input
+				if (expression.find("EXPR$") == 0)
+					aggregation_column_assigned_aliases.push_back("");
+				else 
+					aggregation_column_assigned_aliases.push_back(expression.substr(0, expression.find("=[")));
 		  }
 	  }
 
@@ -648,13 +655,13 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
         */
 
 		gdf_column_cpp output_column;
-		//TODO de donde saco el nombre de la columna aqui???
-		output_column.create_gdf_column(output_type,aggregation_size,nullptr,get_width_dtype(output_type), aggregator_to_string(aggregation_types[i]) + "(" + aggregation_input.name() + ")" );
-
-
+		// if the aggregation was given an alias lets use it, otherwise we'll name it based on the aggregation and input
+		if (aggregation_column_assigned_aliases[i] == "")
+			output_column.create_gdf_column(output_type,aggregation_size,nullptr,get_width_dtype(output_type), aggregator_to_string(aggregation_types[i]) + "(" + aggregation_input.name() + ")" );
+		else
+			output_column.create_gdf_column(output_type,aggregation_size,nullptr,get_width_dtype(output_type), aggregation_column_assigned_aliases[i]);
+		
 		output_columns_aggregations.push_back(output_column);
-
-
 
 		gdf_context ctxt;
 		ctxt.flag_distinct = aggregation_types[i] == GDF_COUNT_DISTINCT ? true : false;

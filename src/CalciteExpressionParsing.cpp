@@ -317,7 +317,7 @@ int64_t get_date_64_from_string(std::string scalar_string){
 
 	if (ss >> std::get_time(&t, "%Y-%m-%d %H:%M:%S")){
 		int64_t tr = std::mktime(&t);
-		return tr;
+		return tr * 1000;  // mktime produces posix time in seconds. date_64 is in milliseconds
 	}
 	else{
 		throw std::invalid_argument("Invalid datetime format");

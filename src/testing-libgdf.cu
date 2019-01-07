@@ -175,7 +175,7 @@ static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   interpreter::NodeConnectionDTO nodeInfo {
-      .path = "/tmp/ral.socket",
+      .path = "ipc:///tmp/ral.socket",
       .type = NodeConnectionType {NodeConnectionType_IPC}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -237,7 +237,7 @@ static result_pair loadCsvSchema(uint64_t accessToken, Buffer&& buffer) {
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   interpreter::NodeConnectionDTO nodeInfo {
-      .path = "/tmp/ral.socket",
+      .path = "ipc:///tmp/ral.socket",
       .type = NodeConnectionType {NodeConnectionType_IPC}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -470,7 +470,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
   }
 
   interpreter::NodeConnectionDTO nodeInfo {
-      .path = "/tmp/ral.socket",
+      .path = "ipc:///tmp/ral.socket",
       .type = NodeConnectionType {NodeConnectionType_IPC}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -502,11 +502,25 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   interpreter::NodeConnectionDTO nodeInfo {
-      .path = "/tmp/ral.socket",
+      .path = "ipc:///tmp/ral.socket",
       .type = NodeConnectionType {NodeConnectionType_IPC}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
   return std::make_pair(Status_Success, responsePayload.getBufferData());
+}
+
+
+static  std::map<int8_t, FunctionType> services;
+
+
+//@todo execuplan with filesystem
+auto  interpreterServices(const blazingdb::protocol::Buffer &requestPayloadBuffer) -> blazingdb::protocol::Buffer {
+  RequestMessage request{requestPayloadBuffer.data()};
+  std::cout << "header: " << (int)request.messageType() << std::endl;
+
+  auto result = services[request.messageType()] ( request.accessToken(),  request.getPayloadBuffer() );
+  ResponseMessage responseObject{result.first, result.second};
+  return Buffer{responseObject.getBufferData()};
 }
 
 int main(void)
@@ -515,10 +529,8 @@ int main(void)
   auto output = new Library::Logging::CoutOutput();
   Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
 
-  blazingdb::protocol::UnixSocketConnection connection({"/tmp/ral.socket", std::allocator<char>()});
-  blazingdb::protocol::Server server(connection);
+  blazingdb::protocol::ZeroMqServer server("ipc:///tmp/ral.socket");
 
-  std::map<int8_t, FunctionType> services;
   services.insert(std::make_pair(interpreter::MessageType_ExecutePlan, &executePlanService));
   services.insert(std::make_pair(interpreter::MessageType_ExecutePlanFileSystem, &executeFileSystemPlanService));
 
@@ -531,16 +543,7 @@ int main(void)
   services.insert(std::make_pair(interpreter::MessageType_LoadCsvSchema, &loadCsvSchema));
   services.insert(std::make_pair(interpreter::MessageType_LoadParquetSchema, &loadParquetSchema));
 
-  //@todo execuplan with filesystem
-  auto interpreterServices = [&services](const blazingdb::protocol::Buffer &requestPayloadBuffer) -> blazingdb::protocol::Buffer {
-    RequestMessage request{requestPayloadBuffer.data()};
-    std::cout << "header: " << (int)request.messageType() << std::endl;
-
-    auto result = services[request.messageType()] ( request.accessToken(),  request.getPayloadBuffer() );
-    ResponseMessage responseObject{result.first, result.second};
-    return Buffer{responseObject.getBufferData()};
-  };
-  server.handle(interpreterServices);
+  server.handle(&interpreterServices);
 
 	return 0;
 }

@@ -489,6 +489,7 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
 	std::cout << "FirstColumnSize: "
 			<< requestPayload.getTableGroup().tables[0].columns[0].size
 			<< std::endl;
+  std::cout << "token: " << requestPayload.getTableGroup().tables[0].token << std::endl;
 	  std::vector<void *> handles;
 	std::tuple<std::vector<std::vector<gdf_column_cpp>>, std::vector<std::string>, std::vector<std::vector<std::string>>> request = libgdf::toBlazingDataframe(requestPayload.getTableGroup(),handles);
 

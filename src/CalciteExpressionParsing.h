@@ -25,9 +25,16 @@ gdf_error get_operation(
 		gdf_unary_operator * operation
 );
 
+gdf_error get_operation(
+		std::string operator_string,
+		gdf_other_binary_operator * operation
+);
+
 bool is_binary_operator_token(std::string token);
 
 bool is_unary_operator_token(std::string token);
+
+bool is_other_binary_operator_token(std::string token);
 
 bool is_literal(std::string operand);
 

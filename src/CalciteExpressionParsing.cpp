@@ -214,6 +214,19 @@ gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_unary_operator operatio
 	}
 }
 
+gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type, gdf_other_binary_operator operation){
+	
+	// the only gdf_other_binary_operator we have right now is COALESCE where we will except both sides to be the same type
+	if (input_left_type == GDF_invalid)
+		return input_right_type;
+	else if (input_right_type == GDF_invalid)
+		return input_left_type;
+	else if (input_left_type == input_right_type)
+		return input_right_type;
+	else 
+		return GDF_invalid;
+}
+
 gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type, gdf_binary_operator operation){
 
 	//we are only considering binary ops between numbers for now
@@ -431,7 +444,7 @@ gdf_error get_output_type_expression(blazing_frame * input, gdf_dtype * output_t
 		//std::cout<<"Token is ==> "<<token<<"\n";
 
 		if(is_operator_token(token)){
-			if(is_binary_operator_token(token)){
+			if(is_binary_operator_token(token) || is_other_binary_operator_token(token)){
 				gdf_dtype left_operand = operands.top();
 				operands.pop();
 				gdf_dtype right_operand = operands.top();
@@ -452,10 +465,15 @@ gdf_error get_output_type_expression(blazing_frame * input, gdf_dtype * output_t
 						right_operand = left_operand;
 					}
 				}
-				gdf_binary_operator operation;
-				gdf_error err = get_operation(token,&operation);
-
-				operands.push(get_output_type(left_operand,right_operand,operation));
+				if (is_binary_operator_token(token)){
+					gdf_binary_operator operation;
+					gdf_error err = get_operation(token,&operation);
+					operands.push(get_output_type(left_operand,right_operand,operation));
+				} else {
+					gdf_other_binary_operator operation;
+					gdf_error err = get_operation(token,&operation);
+					operands.push(get_output_type(left_operand,right_operand,operation));
+				}
 				if(position > 0 && get_width_dtype(operands.top()) > get_width_dtype(*max_temp_type)){
 					*max_temp_type = operands.top();
 				}
@@ -470,6 +488,8 @@ gdf_error get_output_type_expression(blazing_frame * input, gdf_dtype * output_t
 				if(position > 0 && get_width_dtype(operands.top()) > get_width_dtype(*max_temp_type)){
 					*max_temp_type = operands.top();
 				}
+			} else {
+				return GDF_INVALID_API_CALL;
 			}
 
 		}else{
@@ -597,6 +617,18 @@ gdf_error get_operation(
 	return GDF_SUCCESS;
 }
 
+gdf_error get_operation(
+		std::string operator_string,
+		gdf_other_binary_operator * operation
+){
+	if(operator_string == "COALESCE"){
+		*operation = GDF_COALESCE;
+	}else{
+		return GDF_INVALID_API_CALL;
+	}
+	return GDF_SUCCESS;
+}
+
 bool is_binary_operator_token(std::string token){
 	gdf_binary_operator op;
 	return get_operation(token,&op) == GDF_SUCCESS;
@@ -604,6 +636,11 @@ bool is_binary_operator_token(std::string token){
 
 bool is_unary_operator_token(std::string token){
 	gdf_unary_operator op;
+	return get_operation(token,&op) == GDF_SUCCESS;
+}
+
+bool is_other_binary_operator_token(std::string token){
+	gdf_other_binary_operator op;
 	return get_operation(token,&op) == GDF_SUCCESS;
 }
 

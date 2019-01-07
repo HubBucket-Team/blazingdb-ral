@@ -190,6 +190,83 @@ gdf_error process_unary_operation(
 	}
 }
 
+gdf_error process_other_binary_operation(
+		std::string operator_string,
+		std::stack<std::string> & operands,
+		blazing_frame & inputs,
+		gdf_column_cpp final_output,
+		gdf_column_cpp temp,
+		bool is_last //set to true if we write to output
+){
+	gdf_column_cpp output;
+	if(is_last){
+		output = final_output;
+	}else{
+		output = temp;
+	}
+
+	gdf_other_binary_operator operation; 
+	error err = get_operation(operator_string,&operation);
+	if(err != GDF_SUCCESS){
+		return err;
+	}
+
+	std::string left_operand = operands.top();
+	operands.pop();
+	std::string right_operand = operands.top();
+	operands.pop();
+
+	if(is_literal(left_operand)){
+
+		if(is_literal(right_operand)){
+			//kind of silly, should evalute literals
+			//then copy results to output
+			return GDF_INVALID_API_CALL;
+		}else{
+			//for now we shortcut for our usecase
+			//assuming type char
+
+			// WSM LEFT OFF HERE
+
+			size_t right_index = get_index(right_operand);
+
+			gdf_scalar left = get_scalar_from_string(left_operand,inputs.get_column(right_index).dtype());
+			gdf_error err = gdf_binary_operation_v_s_v(output.get_gdf_column(),&left,inputs.get_column(right_index).get_gdf_column(),operation);
+			if(err == GDF_SUCCESS){
+				inputs.add_column(temp.clone());
+				operands.push("$" + std::to_string(inputs.get_size_column()-1));
+			}
+			return err;
+		}
+	}else{
+		size_t left_index = get_index(left_operand);
+
+		if(is_literal(right_operand)){
+			gdf_scalar right = get_scalar_from_string(right_operand,inputs.get_column(left_index).dtype());
+
+
+			gdf_error err = gdf_binary_operation_v_v_s(output.get_gdf_column(),inputs.get_column(left_index).get_gdf_column(),&right,operation);
+			if(err == GDF_SUCCESS){
+				inputs.add_column(temp.clone());
+				operands.push("$" + std::to_string(inputs.get_size_column()-1));
+			}
+			return err;
+		}else{
+
+			size_t right_index = get_index(right_operand);
+
+			gdf_error err = gdf_binary_operation_v_v_v(output.get_gdf_column(),inputs.get_column(left_index).get_gdf_column(),inputs.get_column(right_index).get_gdf_column(),
+					operation);
+			if(err == GDF_SUCCESS){
+				inputs.add_column(temp.clone());
+				operands.push("$" + std::to_string(inputs.get_size_column()-1));
+			}
+			return err;
+		}
+	}
+}
+
+
 
 
 template <typename T>
@@ -269,6 +346,17 @@ gdf_error evaluate_expression(
 						temp,
 						position == 0 ? true : false  //set to true if we write to output
 				);
+			} else if (is_other_binary_operator_token(token)){
+				process_other_binary_operation(
+						token,
+						operand_stack,
+						inputs,
+						output,
+						temp,
+						position == 0 ? true : false  //set to true if we write to output
+				);
+			} else {
+				return GDF_INVALID_API_CALL;
 			}
 
 

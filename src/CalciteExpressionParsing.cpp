@@ -693,7 +693,7 @@ std::string expand_if_logical_op(std::string expression){
 			int expression_end = find_closing_char(expression, expression_start);
 
 			std::string rest = expression.substr(expression_start+1, expression_end-(expression_start+1));
-			std::vector<std::string> processed = get_expressions_from_expression_list(rest);
+			std::vector<std::string> processed = get_expressions_from_expression_list(rest, false);
 
 			if(processed.size() == 2){ //is already binary
 				start_pos = expression_start;
@@ -823,7 +823,7 @@ int find_closing_char(const std::string & expression, int start) {
 }
 
 // takes a comma delimited list of expressions and splits it into separate expressions
-std::vector<std::string> get_expressions_from_expression_list(const std::string & combined_expression){
+std::vector<std::string> get_expressions_from_expression_list(const std::string & combined_expression, bool trim){
 
 	std::vector<std::string> expressions;
 
@@ -851,8 +851,12 @@ std::vector<std::string> get_expressions_from_expression_list(const std::string 
 			} else if (combined_expression[curInd] == ']'){
 				sqBraketsDepth--;
 			} else if (combined_expression[curInd] == ',' && parenthesisDepth == 0 && sqBraketsDepth == 0){
-				std::string exp = combined_expression.substr(curStart, curInd - curStart);
-				expressions.push_back(StringUtil::ltrim(exp));
+				if(!trim)
+					expressions.push_back(combined_expression.substr(curStart, curInd - curStart));
+				else{
+					std::string exp = combined_expression.substr(curStart, curInd - curStart);
+					expressions.push_back(StringUtil::ltrim(exp));
+				}
 				curStart = curInd + 1;
 			}
 		}
@@ -860,8 +864,13 @@ std::vector<std::string> get_expressions_from_expression_list(const std::string 
 	}
 
 	if (curStart < combined_expression.size() && curInd <= combined_expression.size()){
-		std::string exp = combined_expression.substr(curStart, curInd - curStart);
-		expressions.push_back(StringUtil::trim(exp));
+		if(!trim)
+			expressions.push_back(combined_expression.substr(curStart, curInd - curStart));
+		else
+		{
+			std::string exp = combined_expression.substr(curStart, curInd - curStart);
+			expressions.push_back(StringUtil::trim(exp));
+		}
 	}
 
 	return expressions;

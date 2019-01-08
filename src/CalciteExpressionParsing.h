@@ -67,6 +67,6 @@ std::string aggregator_to_string(gdf_agg_op operation);
 int find_closing_char(const std::string & expression, int start);
 
 // takes a comma delimited list of expressions and splits it into separate expressions
-std::vector<std::string> get_expressions_from_expression_list(const std::string & combined_expressions);
+std::vector<std::string> get_expressions_from_expression_list(const std::string & combined_expressions, bool trim = true);
 
 #endif /* CALCITEEXPRESSIONPARSING_H_ */

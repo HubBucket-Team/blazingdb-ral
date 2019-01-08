@@ -543,16 +543,30 @@ auto  interpreterServices(const blazingdb::protocol::Buffer &requestPayloadBuffe
 
 int
 main(int argc, const char *argv[]) {
-  if (3 != argc) {
-      std::cout << "usage: " << argv[0] << " <IP|HOSTNAME> <PORT>" << std::endl;
-      return 1;
-  }
+    std::string iphost;
+    std::string port;
 
-    std::cout << "RAL Engine starting"<< std::endl;
-  auto output = new Library::Logging::CoutOutput();
-  Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
+    switch (argc) {
+    case 2:
+        iphost = argv[1];
+        port   = "8892";
+        break;
+    case 3:
+        iphost = argv[1];
+        port   = argv[2];
+        break;
+    default:
+        std::cout << "usage: " << argv[0] << " <IP|HOSTNAME> <PORT>"
+                  << std::endl;
+        return 1;
+    }
 
-  blazingdb::protocol::TCPConnection connection(argv[1], argv[2]);
+    std::cout << "RAL Engine starting: host=" << iphost << ", port=" << port
+              << std::endl;
+    auto output = new Library::Logging::CoutOutput();
+    Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
+
+  blazingdb::protocol::TCPConnection connection(iphost, port);
   blazingdb::protocol::Server server(connection);
 
   services.insert(std::make_pair(interpreter::MessageType_ExecutePlan, &executePlanService));

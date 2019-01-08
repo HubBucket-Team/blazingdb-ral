@@ -216,57 +216,30 @@ gdf_error process_other_binary_operation(
 	std::string right_operand = operands.top();
 	operands.pop();
 
-	if(is_literal(left_operand)){
-
-		if(is_literal(right_operand)){
-			//kind of silly, should evalute literals
-			//then copy results to output
-			return GDF_INVALID_API_CALL;
-		}else{
-			//for now we shortcut for our usecase
-			//assuming type char
-
-			// WSM LEFT OFF HERE
-
-			size_t right_index = get_index(right_operand);
-
-			gdf_scalar left = get_scalar_from_string(left_operand,inputs.get_column(right_index).dtype());
-			gdf_error err = gdf_binary_operation_v_s_v(output.get_gdf_column(),&left,inputs.get_column(right_index).get_gdf_column(),operation);
-			if(err == GDF_SUCCESS){
-				inputs.add_column(temp.clone());
-				operands.push("$" + std::to_string(inputs.get_size_column()-1));
-			}
-			return err;
-		}
-	}else{
-		size_t left_index = get_index(left_operand);
-
-		if(is_literal(right_operand)){
-			gdf_scalar right = get_scalar_from_string(right_operand,inputs.get_column(left_index).dtype());
-
-
-			gdf_error err = gdf_binary_operation_v_v_s(output.get_gdf_column(),inputs.get_column(left_index).get_gdf_column(),&right,operation);
-			if(err == GDF_SUCCESS){
-				inputs.add_column(temp.clone());
-				operands.push("$" + std::to_string(inputs.get_size_column()-1));
-			}
-			return err;
-		}else{
-
-			size_t right_index = get_index(right_operand);
-
-			gdf_error err = gdf_binary_operation_v_v_v(output.get_gdf_column(),inputs.get_column(left_index).get_gdf_column(),inputs.get_column(right_index).get_gdf_column(),
-					operation);
-			if(err == GDF_SUCCESS){
-				inputs.add_column(temp.clone());
-				operands.push("$" + std::to_string(inputs.get_size_column()-1));
-			}
-			return err;
-		}
+	gdf_error err;
+	switch (operation){
+		case GDF_COALESCE:
+			err = execute_coalesce(left_operand, right_operand, inputs, output);
+			break;
+		default:
+			err = GDF_INVALID_API_CALL;
 	}
 }
 
+// select n.n_nationkey, coalesce(r.r_regionkey, 100) from main.nation as n left outer join main.region as r on n.n_nationkey = r.r_regionkey where n.n_nationkey < 10
+gdf_error execute_coalesce(const std::string & left_operand, const std::string & right_operand,
+	blazing_frame & inputs, gdf_column_cpp & output){
 
+	if(is_literal(left_operand)){
+		return GDF_INVALID_API_CALL;			
+	} else {
+		if(is_literal(right_operand)){
+			// take literal and put into a size 1 column and call replace_nulls
+		} else {
+			// call replace_null
+		}
+	}
+}
 
 
 template <typename T>

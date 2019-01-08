@@ -27,6 +27,9 @@ public:
 	csv_parser(csv_read_arg	args);
 
 	virtual ~csv_parser();
+
+	gdf_error parse(const char *fname, std::vector<gdf_column_cpp> & columns);
+
 	gdf_error parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 				std::vector<gdf_column_cpp> & columns,
 				std::vector<bool> include_column);

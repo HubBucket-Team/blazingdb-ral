@@ -335,10 +335,10 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 			right_indices.get_gdf_column()
 	);
 
-	std::cout<<"Indices are starting!"<<std::endl;
-	print_gdf_column(left_indices.get_gdf_column());
-	print_gdf_column(right_indices.get_gdf_column());
-	std::cout<<"Indices are done!"<<std::endl;
+	// std::cout<<"Indices are starting!"<<std::endl;
+	// print_gdf_column(left_indices.get_gdf_column());
+	// print_gdf_column(right_indices.get_gdf_column());
+	// std::cout<<"Indices are done!"<<std::endl;
 
 
 
@@ -438,16 +438,16 @@ blazing_frame process_union(blazing_frame& left, blazing_frame& right, std::stri
 	return result_frame;
 }
 
-std::vector<size_t> get_group_columns(std::string query_part){
+std::vector<int> get_group_columns(std::string query_part){
 
 	std::string temp_column_string = get_named_expression(query_part,"group");
 	if(temp_column_string.size() <= 2){
-		return std::vector<size_t>();
+		return std::vector<int>();
 	}
 	//now you have somethig like {0, 1}
 	temp_column_string = temp_column_string.substr(1,temp_column_string.length() - 2);
 	std::vector<std::string> column_numbers_string = StringUtil::split(temp_column_string,",");
-	std::vector<size_t> group_columns(column_numbers_string.size());
+	std::vector<int> group_columns(column_numbers_string.size());
 	for(int i = 0; i < column_numbers_string.size();i++){
 		group_columns[i] = std::stoull (column_numbers_string[i],0);
 	}
@@ -467,7 +467,7 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 	 *
 	 * 			As you can see the project following aggregate expects the columns to be grouped by to appear BEFORE the expressions
 	 */
-
+	gdf_error err{GDF_SUCCESS};
     {
         auto pos = query_part.find("(") + 1;
         if (pos == std::string::npos) {
@@ -481,7 +481,7 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
     }
 
 	//get groups
-	std::vector<size_t> group_columns = get_group_columns(query_part);
+	std::vector<int> group_columns = get_group_columns(query_part);
 
 	//get aggregations
 	std::vector<gdf_agg_op> aggregation_types;
@@ -499,13 +499,70 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		  if (expression.find("group=") == std::string::npos)
 		  {
 				gdf_agg_op operation;
-				gdf_error err = get_aggregation_operation(expression,&operation);
+				err = get_aggregation_operation(expression,&operation);
 				aggregation_types.push_back(operation);
 				aggregation_input_expressions.push_back(get_string_between_outer_parentheses(expression));
 		  }
 	  }
 
+	// Group by without aggregation 
+	if (aggregation_types.size() == 0) {
+		size_t num_group_columns = group_columns.size();
+		std::vector<gdf_column*> cols(num_group_columns);
+		for(int i = 0; i < num_group_columns; i++){
+			cols[i] = input.get_column(i).get_gdf_column();
+		}
 
+		size_t nrows = input.get_column(0).size();
+		std::vector<gdf_column_cpp> output_columns_group(num_group_columns);
+		std::vector<gdf_column*> group_by_columns_ptr_out(num_group_columns);
+		for(int i = 0; i < num_group_columns; i++){
+			gdf_column_cpp& input_column = input.get_column(i);
+			
+			output_columns_group[i].create_gdf_column(input_column.dtype(),nrows,nullptr,get_width_dtype(input_column.dtype()), input_column.name());
+
+			group_by_columns_ptr_out[i] = output_columns_group[i].get_gdf_column();
+		}
+
+		gdf_column_cpp index_col;
+		index_col.create_gdf_column(GDF_INT32,nrows,nullptr,get_width_dtype(GDF_INT32), "");
+
+		err = gdf_group_by_wo_aggregations(num_group_columns,
+											cols.data(),
+											num_group_columns,
+											group_columns.data(),
+											group_by_columns_ptr_out.data(),
+											index_col.get_gdf_column(),
+											0);
+		
+		if (err != GDF_SUCCESS) {
+			return err;
+		}
+				
+		//find the widest possible column
+		int widest_column = 0;
+		for(int i = 0; i < input.get_width();i++){
+			int cur_width;
+			get_column_byte_width(input.get_column(i).get_gdf_column(), &cur_width);
+			if(cur_width > widest_column){
+				widest_column = cur_width;
+			}
+		}
+
+		gdf_column_cpp temp_output;
+		temp_output.create_gdf_column(input.get_column(0).dtype(),index_col.size(),nullptr,widest_column, "");
+		for(int i = 0; i < num_group_columns; i++){
+			temp_output.set_dtype(output_columns_group[i].dtype());
+
+			err = materialize_column(group_by_columns_ptr_out[i],
+									temp_output.get_gdf_column(),
+									index_col.get_gdf_column());
+			temp_output.update_null_count();
+			input.set_column(i,temp_output.clone(input.get_column(i).name()));
+		}
+
+		return err;
+	}
 
 	gdf_column_cpp temp;
 	gdf_dtype max_temp_type = GDF_invalid;
@@ -770,7 +827,7 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 	}
 
 	for(int i = 0; i < output_columns_group.size(); i++){
-		print_gdf_column(output_columns_group[i].get_gdf_column());
+		// print_gdf_column(output_columns_group[i].get_gdf_column());
 		output_columns_group[i].resize(aggregation_size);
 		output_columns_group[i].compact();
 		output_columns_group[i].update_null_count();

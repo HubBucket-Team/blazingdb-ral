@@ -13,29 +13,22 @@ set(source_files
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/util/type.cpp
 )
 
-set(parse_csv-test_SRCS
+set(groupbywoagg-test_SRCS
+  ${CMAKE_SOURCE_DIR}/src/Utils.cu
   ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
-  ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
-
-  ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
   ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
-  ${CMAKE_SOURCE_DIR}/src/io/data_parser/CSVParser.cpp
-  ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
+  ${CMAKE_SOURCE_DIR}/src/ColumnManipulation.cu
+  ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
+  ${CMAKE_SOURCE_DIR}/src/JoinProcessor.cpp
+  ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp
+  ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
+  ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
+  ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
   ${source_files}
-  parse_csv.cu
-)
-  
-set(parse_parquet-test_SRCS
-    ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
-    ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
-    ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
-    ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
-    ${CMAKE_SOURCE_DIR}/src/io/data_parser/ParquetParser.cpp
-    ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
-    ${parquet_reader_source_files}
-    ${source_files}
-    parse_parquet.cu
+  ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
+  groupbywoagg-tests.cu
 )
 
-configure_test(parse_csv-test "${parse_csv-test_SRCS}")
-configure_test(parse_parquet-test "${parse_parquet-test_SRCS}")
+configure_test(groupbywoagg-test "${groupbywoagg-test_SRCS}")
+
+

@@ -42,6 +42,7 @@ using namespace blazingdb::protocol;
 #include <blazingdb/io/Config/BlazingContext.h>
 #include <blazingdb/io/Library/Logging/Logger.h>
 #include <blazingdb/io/Library/Logging/CoutOutput.h>
+#include <blazingdb/io/Library/Logging/FileOutput.h>
 #include "blazingdb/io/Library/Logging/ServiceLogging.h"
 
 #include "CalciteExpressionParsing.h"
@@ -492,6 +493,8 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
 	  std::vector<void *> handles;
 	std::tuple<std::vector<std::vector<gdf_column_cpp>>, std::vector<std::string>, std::vector<std::vector<std::string>>> request = libgdf::toBlazingDataframe(requestPayload.getTableGroup(),handles);
 
+  Library::Logging::Logger().logInfo("query:\n" + requestPayload.getLogicalPlan());
+
   uint64_t resultToken = 0L;
   try {
     resultToken = evaluate_query(std::get<0>(request), std::get<1>(request), std::get<2>(request),
@@ -526,7 +529,7 @@ auto  interpreterServices(const blazingdb::protocol::Buffer &requestPayloadBuffe
 int main(void)
 {
 	std::cout << "RAL Engine starting"<< std::endl;
-  auto output = new Library::Logging::CoutOutput();
+  auto output = new Library::Logging::FileOutput("RAL.log", true);
   Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
 
   blazingdb::protocol::ZeroMqServer server("ipc:///tmp/ral.socket");

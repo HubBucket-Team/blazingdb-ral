@@ -60,6 +60,10 @@ const Path FS_NAMESPACES_FILE("/tmp/file_system.bin");
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);
 
+//TODO percy c.gonzales fix this later
+std::string global_ip;
+std::string global_port;
+
 static result_pair  registerFileSystem(uint64_t accessToken, Buffer&& buffer) {
   std::cout << "registerFileSystem: " << accessToken << std::endl;
   blazingdb::message::io::FileSystemRegisterRequestMessage message(buffer.data());
@@ -175,7 +179,7 @@ static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   interpreter::NodeConnectionDTO nodeInfo {
-      .path = "ipc:///tmp/ral.socket",
+      .path = global_ip + ":" + global_ip,
       .type = NodeConnectionType {NodeConnectionType_IPC}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -237,7 +241,7 @@ static result_pair loadCsvSchema(uint64_t accessToken, Buffer&& buffer) {
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   interpreter::NodeConnectionDTO nodeInfo {
-      .path = "ipc:///tmp/ral.socket",
+      .path = global_ip + ":" + global_ip,
       .type = NodeConnectionType {NodeConnectionType_IPC}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -488,7 +492,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
   }
 
   interpreter::NodeConnectionDTO nodeInfo {
-      .path = "ipc:///tmp/ral.socket",
+      .path = global_ip + ":" + global_ip,
       .type = NodeConnectionType {NodeConnectionType_IPC}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -520,7 +524,7 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   interpreter::NodeConnectionDTO nodeInfo {
-      .path = "ipc:///tmp/ral.socket",
+      .path = global_ip + ":" + global_ip,
       .type = NodeConnectionType {NodeConnectionType_IPC}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -565,6 +569,9 @@ main(int argc, const char *argv[]) {
               << std::endl;
     auto output = new Library::Logging::CoutOutput();
     Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
+
+  global_ip = iphost;
+  global_port = port;
 
   blazingdb::protocol::TCPConnection connection(iphost, port);
   blazingdb::protocol::Server server(connection);

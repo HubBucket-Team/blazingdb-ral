@@ -693,6 +693,7 @@ std::string expand_if_logical_op(std::string expression){
 			int expression_end = find_closing_char(expression, expression_start);
 
 			std::string rest = expression.substr(expression_start+1, expression_end-(expression_start+1));
+			// the trim flag is false because trimming the expressions cause malformmed ones
 			std::vector<std::string> processed = get_expressions_from_expression_list(rest, false);
 
 			if(processed.size() == 2){ //is already binary
@@ -851,12 +852,13 @@ std::vector<std::string> get_expressions_from_expression_list(const std::string 
 			} else if (combined_expression[curInd] == ']'){
 				sqBraketsDepth--;
 			} else if (combined_expression[curInd] == ',' && parenthesisDepth == 0 && sqBraketsDepth == 0){
-				if(!trim)
-					expressions.push_back(combined_expression.substr(curStart, curInd - curStart));
-				else{
-					std::string exp = combined_expression.substr(curStart, curInd - curStart);
+				std::string exp = combined_expression.substr(curStart, curInd - curStart);
+
+				if(trim)
 					expressions.push_back(StringUtil::ltrim(exp));
-				}
+				else
+					expressions.push_back(exp);
+
 				curStart = curInd + 1;
 			}
 		}
@@ -864,13 +866,12 @@ std::vector<std::string> get_expressions_from_expression_list(const std::string 
 	}
 
 	if (curStart < combined_expression.size() && curInd <= combined_expression.size()){
-		if(!trim)
-			expressions.push_back(combined_expression.substr(curStart, curInd - curStart));
-		else
-		{
-			std::string exp = combined_expression.substr(curStart, curInd - curStart);
+		std::string exp = combined_expression.substr(curStart, curInd - curStart);
+
+		if(trim)
 			expressions.push_back(StringUtil::trim(exp));
-		}
+		else
+			expressions.push_back(exp);
 	}
 
 	return expressions;

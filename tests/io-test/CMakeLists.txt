@@ -15,6 +15,7 @@ set(source_files
 
 set(parse_csv-test_SRCS
   ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
+  ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
 
   ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
   ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
@@ -25,6 +26,7 @@ set(parse_csv-test_SRCS
 )
   
 set(parse_parquet-test_SRCS
+    ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
     ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
     ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
     ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu

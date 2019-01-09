@@ -939,11 +939,10 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 
 	//assert(input.get_column(0) != nullptr);
 
-	gdf_column_cpp stencil, temp;
-
 	size_t size = input.get_column(0).size();
 
 	//TODO de donde saco el nombre de la columna aqui???
+	gdf_column_cpp stencil;
 	stencil.create_gdf_column(GDF_INT8,input.get_column(0).size(),nullptr,1, "");
 
 	gdf_dtype output_type_junk; //just gets thrown away
@@ -961,6 +960,7 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 	}
 
 	//TODO de donde saco el nombre de la columna aqui???
+	gdf_column_cpp temp;
 	temp.create_gdf_column(max_temp_type,input.get_column(0).size(),nullptr,get_width_dtype(max_temp_type), "");
 
 	std::string conditional_expression = get_condition_expression(query_part);
@@ -972,31 +972,64 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 
 	if(err == GDF_SUCCESS){
 		//apply filter to all the columns
-		for(int i = 0; i < input.get_width(); i++){
-			temp.create_gdf_column(input.get_column(i).dtype(), input.get_column(i).size(), nullptr, get_width_dtype(input.get_column(i).dtype()));
-			//temp.set_dtype(input.get_column(i).dtype());
+		// for(int i = 0; i < input.get_width(); i++){
+		// 	temp.create_gdf_column(input.get_column(i).dtype(), input.get_column(i).size(), nullptr, get_width_dtype(input.get_column(i).dtype()));
+		// 	//temp.set_dtype(input.get_column(i).dtype());
 
-			//			cudaPointerAttributes attributes;
-			//			cudaError_t err2 = cudaPointerGetAttributes ( &attributes, (void *) temp.data );
-			//			err2 = cudaPointerGetAttributes ( &attributes, (void *) input.get_column(i)->data );
-			//			err2 = cudaPointerGetAttributes ( &attributes, (void *) stencil.data );
+		// 	//			cudaPointerAttributes attributes;
+		// 	//			cudaError_t err2 = cudaPointerGetAttributes ( &attributes, (void *) temp.data );
+		// 	//			err2 = cudaPointerGetAttributes ( &attributes, (void *) input.get_column(i)->data );
+		// 	//			err2 = cudaPointerGetAttributes ( &attributes, (void *) stencil.data );
 
 
-			//just for testing
-			//			cudaMalloc((void **)&(temp.data),1000);
-			//			cudaMalloc((void **)&(temp.valid),1000);
+		// 	//just for testing
+		// 	//			cudaMalloc((void **)&(temp.data),1000);
+		// 	//			cudaMalloc((void **)&(temp.valid),1000);
 
-			err = gpu_apply_stencil(
-					input.get_column(i).get_gdf_column(),
+		// 	err = gpu_apply_stencil(
+		// 			input.get_column(i).get_gdf_column(),
+		// 			stencil.get_gdf_column(),
+		// 			temp.get_gdf_column()
+		// 	);
+		// 	if(err != GDF_SUCCESS){
+		// 		return err;
+		// 	}
+
+
+		// 	input.set_column(i,temp.clone());
+		// }
+		
+		gdf_column_cpp index_col;
+		index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
+		gdf_sequence(static_cast<int32_t*>(index_col.get_gdf_column()->data), input.get_column(0).size(), 0);
+		// std::vector<int32_t> idx(input.get_column(0).size());
+		// std::iota(idx.begin(),idx.end(),0);
+		// CheckCudaErrors(cudaMemcpy(index_col.get_gdf_column()->data, idx.data(), idx.size() * sizeof(int32_t), cudaMemcpyHostToDevice));
+
+		gdf_column_cpp temp_idx;
+		temp_idx.create_gdf_column(GDF_INT32, input.get_column(0).size(), nullptr, get_width_dtype(GDF_INT32));
+		err = gpu_apply_stencil(
+					index_col.get_gdf_column(),
 					stencil.get_gdf_column(),
-					temp.get_gdf_column()
+					temp_idx.get_gdf_column()
 			);
-			if(err != GDF_SUCCESS){
-				return err;
-			}
 
+		if(err != GDF_SUCCESS){
+			return err;
+		}
 
-			input.set_column(i,temp.clone());
+		temp.create_gdf_column(input.get_column(0).dtype(),temp_idx.size(),nullptr,get_width_dtype(max_temp_type), "");
+		for(int i = 0; i < input.get_width();i++){
+			temp.set_dtype(input.get_column(i).dtype());
+
+			gdf_error err = materialize_column(
+					input.get_column(i).get_gdf_column(),
+					temp.get_gdf_column(),
+					temp_idx.get_gdf_column()
+			);
+
+			temp.update_null_count();
+			input.set_column(i,temp.clone(input.get_column(i).name()));
 		}
 
 	}else{

@@ -358,15 +358,41 @@ static result_pair freeResultService(uint64_t accessToken, Buffer&& requestPaylo
 }
   
 
-template<class ParserType>
-void load_files(std::vector<Uri> uris, std::vector<gdf_column_cpp>& out_columns) {
-		auto provider = std::make_unique<ral::io::uri_data_provider>(uris);
-		std::vector<std::vector<gdf_column_cpp>> all_parts;
+
+template<class FileParserType>
+void load_files(FileParserType&& parser, const std::vector<Uri>& uris, std::vector<gdf_column_cpp>& out_columns) {
+	auto provider = std::make_unique<ral::io::uri_data_provider>(uris);
+	std::vector<std::vector<gdf_column_cpp>> all_parts;
     while (provider->has_next()) {
-      auto parser = std::make_unique<ParserType>();
       std::vector<gdf_column_cpp> columns;
-		  parser->parse(provider->get_next(), columns);
-      all_parts.push_back(columns);
+      std::string user_readable_file_handle = provider->get_current_user_readable_file_handle();
+
+      std::shared_ptr<arrow::io::RandomAccessFile> file = provider->get_next();
+      if(file != nullptr){
+        gdf_error error = parser.parse(file, columns);
+        if(error != GDF_SUCCESS){
+          //TODO: probably want to pass this up as an error
+          std::cout<<"Could not parse "<<user_readable_file_handle<<std::endl;
+        }else{
+          all_parts.push_back(columns);
+        }
+      }else{
+        std::cout<<"Was unable to open "<<user_readable_file_handle<<std::endl;
+      }
+    }
+    //checking if any errors occurred
+    std::vector<std::string> provider_errors = provider->get_errors();
+    if(provider_errors.size() != 0){
+      for(size_t error_index = 0; error_index < provider_errors.size(); error_index++){
+        std::cout<<provider_errors[error_index]<<std::endl;
+      }
+    }
+
+    size_t num_files = all_parts.size();
+    size_t num_columns = all_parts[0].size();
+
+    if(num_files == 0 || num_columns == 0){ 	//we got no data
+      return ;
     }
     if (all_parts.size() == 1) {
         out_columns = all_parts[0];
@@ -422,7 +448,8 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
       for (auto file_path : table_info.files) {
         uris.push_back(Uri{file_path});
       }
-      load_files<ral::io::parquet_parser>(uris, table_cpp);
+      ral::io::parquet_parser parser;
+      load_files(std::move(parser), uris, table_cpp);
     } else {
       std::vector<Uri> uris = { Uri{table_info.files[0]} }; //@todo, concat many files in one single table
       auto csv_params = table_info.csv;
@@ -430,17 +457,8 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
       for(auto val : csv_params.dtypes) {
         types.push_back( (gdf_dtype) val );
       }
-
-      auto provider = std::make_unique<ral::io::uri_data_provider>(uris);
-      auto parser = std::make_unique<ral::io::csv_parser>(csv_params.delimiter, csv_params.line_terminator, csv_params.skip_rows, csv_params.names, types);
-      provider->has_next();
-
-      size_t num_cols = csv_params.names.size();
-      std::vector<bool> include_column(num_cols, true);
-
-      std::vector<gdf_column_cpp> columns;
-      parser->parse(provider->get_next(), columns, include_column);
-
+      ral::io::csv_parser parser(csv_params.delimiter, csv_params.line_terminator, csv_params.skip_rows, csv_params.names, types);
+      load_files(std::move(parser), uris, table_cpp);
     }
     input_tables.push_back(table_cpp); 
     table_names.push_back(table_info.name);

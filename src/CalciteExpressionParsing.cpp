@@ -783,6 +783,17 @@ std::string clean_calcite_expression(std::string expression){
 	StringUtil::findAndReplaceAll(expression,"EXTRACT(FLAG(DAY), ","BL_DAY(");
 	StringUtil::findAndReplaceAll(expression,"FLOOR(","BL_FLOUR(");
 
+// we want this "CASE(IS NOT NULL($1), $1, -1)" to become this: "COALESCE($1, -1)"
+// "CASE(IS NOT NULL((-($1, $2))), -($1, $2), -1)" to become this: "COALESCE(-($1, $2), -1)"
+// "+(CASE(IS NOT NULL((-($1, $2))), -($1, $2), -1), *($4, $5))" to become this: "+(COALESCE(-($1, $2), -1), *($4, $5)) "
+
+	// std::string coalesce_identifier = "CASE(IS NOT NULL(";
+	// size_t pos = expression.find(coalesce_identifier);
+	// int endOfFirstArg = find_closing_char(expression, pos + coalesce_identifier.length() - 1) ;
+	// // this should be in this example "$1"
+	// std::string firstArg = expression.substring(pos + coalesce_identifier.length(), endOfFirstArg - (pos + coalesce_identifier.length()));
+	// std::string 
+	
 
 
 

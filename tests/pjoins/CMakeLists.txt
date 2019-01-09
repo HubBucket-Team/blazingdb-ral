@@ -9,6 +9,7 @@ set(jsource_files_SRC
   ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
   ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
   ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
+  ${CMAKE_SOURCE_DIR}/src/Utils.cu
   ${binary_operation_source_files}
   pjoins.cu
 )

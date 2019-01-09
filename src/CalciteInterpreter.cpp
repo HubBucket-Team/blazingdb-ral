@@ -985,14 +985,14 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 	timer.reset();
 	std::string conditional_expression = get_condition_expression(query_part);
 	Library::Logging::Logger().logInfo("-> Filter sub block 3 took " + std::to_string(timer.getDuration()) + " ms");
-	timer.reset();
+	// timer.reset();
 	err = evaluate_expression(
 			input,
 			conditional_expression,
 			stencil,
 			temp);
 	
-	Library::Logging::Logger().logInfo("-> Filter sub block 4 took " + std::to_string(timer.getDuration()) + " ms");
+	// Library::Logging::Logger().logInfo("-> Filter sub block 4 took " + std::to_string(timer.getDuration()) + " ms");
 	
 	if(err == GDF_SUCCESS){
 		//apply filter to all the columns
@@ -1166,14 +1166,14 @@ blazing_frame evaluate_split_query(
 			///left_frame.consolidate_tables();
 			blazing_timer.reset();
 			result_frame = process_join(left_frame,query[0]);
-			Library::Logging::Logger().logInfo("process_join took " + std::to_string(blazing_timer.getDuration()) + " ms");
+			Library::Logging::Logger().logInfo("process_join took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(left_frame.get_column(0).size()) + " rows");
 			return result_frame;
 		}else if(is_union(query[0])){
 			//TODO: append the frames to each other
 			//return right_frame;//!!
 			blazing_timer.reset();
 			result_frame = process_union(left_frame,right_frame,query[0]);
-			Library::Logging::Logger().logInfo("process_union took " + std::to_string(blazing_timer.getDuration()) + " ms");
+			Library::Logging::Logger().logInfo("process_union took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(left_frame.get_column(0).size()) + " rows");
 			return result_frame;
 		}else{
 			//probably an error here
@@ -1194,22 +1194,22 @@ blazing_frame evaluate_split_query(
 		if(is_project(query[0])){
 			blazing_timer.reset();
 			gdf_error err = process_project(child_frame,query[0]);
-			Library::Logging::Logger().logInfo("process_project took " + std::to_string(blazing_timer.getDuration()) + " ms");
+			Library::Logging::Logger().logInfo("process_project took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
 			return child_frame;
 		}else if(is_aggregate(query[0])){
 			blazing_timer.reset();
 			gdf_error err = process_aggregate(child_frame,query[0]);
-			Library::Logging::Logger().logInfo("process_aggregate took " + std::to_string(blazing_timer.getDuration()) + " ms");
+			Library::Logging::Logger().logInfo("process_aggregate took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
 			return child_frame;
 		}else if(is_sort(query[0])){
 			blazing_timer.reset();
 			gdf_error err = process_sort(child_frame,query[0]);
-			Library::Logging::Logger().logInfo("process_sort took " + std::to_string(blazing_timer.getDuration()) + " ms");
+			Library::Logging::Logger().logInfo("process_sort took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
 			return child_frame;
 		}else if(is_filter(query[0])){
 			blazing_timer.reset();
 			gdf_error err = process_filter(child_frame,query[0]);
-			Library::Logging::Logger().logInfo("process_filter took " + std::to_string(blazing_timer.getDuration()) + " ms");
+			Library::Logging::Logger().logInfo("process_filter took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
 			if(err != GDF_SUCCESS){
 				std::cout<<"Error in filter: "<<err<<std::endl;
 			}

@@ -175,7 +175,7 @@ static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   interpreter::NodeConnectionDTO nodeInfo {
-      .path = "ipc:///tmp/ral.socket",
+      .path = "127.0.0.1:8892",
       .type = NodeConnectionType {NodeConnectionType_IPC}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -237,7 +237,7 @@ static result_pair loadCsvSchema(uint64_t accessToken, Buffer&& buffer) {
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   interpreter::NodeConnectionDTO nodeInfo {
-      .path = "ipc:///tmp/ral.socket",
+      .path = "127.0.0.1:8892",
       .type = NodeConnectionType {NodeConnectionType_IPC}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -488,7 +488,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
   }
 
   interpreter::NodeConnectionDTO nodeInfo {
-      .path = "ipc:///tmp/ral.socket",
+      .path = "127.0.0.1:8892",
       .type = NodeConnectionType {NodeConnectionType_IPC}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -520,7 +520,7 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   interpreter::NodeConnectionDTO nodeInfo {
-      .path = "ipc:///tmp/ral.socket",
+      .path = "127.0.0.1:8892",
       .type = NodeConnectionType {NodeConnectionType_IPC}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};

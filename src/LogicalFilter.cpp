@@ -12,6 +12,8 @@
 
 #include "CalciteExpressionParsing.h"
 
+#include "gdf_wrapper/gdf_wrapper.cuh"
+
 //TODO: we need to update this to binary_operator
 //when we have built that enum
 gdf_error process__binary_operation_column_column(
@@ -190,6 +192,30 @@ gdf_error process_unary_operation(
 	}
 }
 
+// select n.n_nationkey, coalesce(r.r_regionkey, 100) from main.nation as n left outer join main.region as r on n.n_nationkey = r.r_regionkey where n.n_nationkey < 10
+gdf_error execute_coalesce(const std::string & left_operand, const std::string & right_operand,
+	blazing_frame & inputs, gdf_column_cpp & output){
+
+	if(is_literal(left_operand)){
+		return GDF_INVALID_API_CALL;			
+	} else {
+		size_t left_index = get_index(left_operand);
+		size_t right_index = get_index(right_operand);
+		
+		if(is_literal(right_operand)){
+			// take literal and put into a size 1 column and call replace_nulls
+			//gdf_scalar right = get_scalar_from_string(right_operand,inputs.get_column(left_index).dtype());
+			gdf_column* scalar_input = inputs.get_column(right_index).get_gdf_column();
+			std::cout << "scalar_input->size: " << scalar_input->size << std::endl;
+			scalar_input->size = 1;
+			gdf_error error = gdf_replace_nulls(output.get_gdf_column(), scalar_input);
+		} else {
+			// call replace_null
+			gdf_error error = gdf_replace_nulls(output.get_gdf_column(), inputs.get_column(right_index).get_gdf_column());
+		}
+	}
+}
+
 gdf_error process_other_binary_operation(
 		std::string operator_string,
 		std::stack<std::string> & operands,
@@ -206,7 +232,7 @@ gdf_error process_other_binary_operation(
 	}
 
 	gdf_other_binary_operator operation; 
-	error err = get_operation(operator_string,&operation);
+	gdf_error err = get_operation(operator_string,&operation);
 	if(err != GDF_SUCCESS){
 		return err;
 	}
@@ -216,28 +242,12 @@ gdf_error process_other_binary_operation(
 	std::string right_operand = operands.top();
 	operands.pop();
 
-	gdf_error err;
 	switch (operation){
 		case GDF_COALESCE:
 			err = execute_coalesce(left_operand, right_operand, inputs, output);
 			break;
 		default:
 			err = GDF_INVALID_API_CALL;
-	}
-}
-
-// select n.n_nationkey, coalesce(r.r_regionkey, 100) from main.nation as n left outer join main.region as r on n.n_nationkey = r.r_regionkey where n.n_nationkey < 10
-gdf_error execute_coalesce(const std::string & left_operand, const std::string & right_operand,
-	blazing_frame & inputs, gdf_column_cpp & output){
-
-	if(is_literal(left_operand)){
-		return GDF_INVALID_API_CALL;			
-	} else {
-		if(is_literal(right_operand)){
-			// take literal and put into a size 1 column and call replace_nulls
-		} else {
-			// call replace_null
-		}
 	}
 }
 
@@ -249,17 +259,18 @@ gdf_error process__binary_operation_column_literal(
 		T right,
 		gdf_column * output
 ){
-
 }
+
 template <typename T>
 gdf_error process__binary_operation_literal_column(
 		gdf_binary_operator operation,
 		T left,
 		gdf_column * right,
 		gdf_column * output
-){
+)
+{
 	//TODO: only works for comparison operators
-
+	
 }
 
 

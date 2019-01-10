@@ -48,7 +48,6 @@ include(ConfigureParquet)
 include(ConfigureLibGDF)
 include(ConfigureBlazingDBProtocol)
 include(ConfigureBlazingDBIO)
-include(ConfigureZeroMQ)
 
 find_package(Threads)
 

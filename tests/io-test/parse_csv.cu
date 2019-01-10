@@ -12,10 +12,11 @@
 #include "io/data_provider/UriDataProvider.h"
 #include "io/data_parser/DataParser.h"
 #include "io/data_provider/DataProvider.h"
+#include "io/DataLoader.h"
 
 #include <DataFrame.h>
 #include <fstream>
-
+#include "CalciteExpressionParsing.h"
 
 #include <blazingdb/io/Library/Logging/Logger.h>
 #include <blazingdb/io/Library/Logging/CoutOutput.h>
@@ -135,6 +136,72 @@ TEST_F(ParseCSVTest, parse_small_csv_file_int32) {
 }
 
 
+  
+
+template<class FileParserType>
+void load_files(FileParserType&& parser, const std::vector<Uri>& uris, std::vector<gdf_column_cpp>& out_columns) {
+	auto provider = std::make_unique<ral::io::uri_data_provider>(uris);
+	std::vector<std::vector<gdf_column_cpp>> all_parts;
+    while (provider->has_next()) {
+      std::vector<gdf_column_cpp> columns;
+      std::string user_readable_file_handle = provider->get_current_user_readable_file_handle();
+
+      std::shared_ptr<arrow::io::RandomAccessFile> file = provider->get_next();
+      if(file != nullptr){
+        gdf_error error = parser.parse(file, columns);
+        if(error != GDF_SUCCESS){
+          //TODO: probably want to pass this up as an error
+          std::cout<<"Could not parse "<<user_readable_file_handle<<std::endl;
+        }else{
+          all_parts.push_back(columns);
+        }
+      }else{
+        std::cout<<"Was unable to open "<<user_readable_file_handle<<std::endl;
+      }
+    }
+    //checking if any errors occurred
+    std::vector<std::string> provider_errors = provider->get_errors();
+    if(provider_errors.size() != 0){
+      for(size_t error_index = 0; error_index < provider_errors.size(); error_index++){
+        std::cout<<provider_errors[error_index]<<std::endl;
+      }
+    }
+
+    size_t num_files = all_parts.size();
+    size_t num_columns = all_parts[0].size();
+
+    if(num_files == 0 || num_columns == 0){ 	//we got no data
+      return ;
+    }
+    if (all_parts.size() == 1) {
+        out_columns = all_parts[0];
+    } 
+    else if (all_parts.size() > 1) {
+      std::vector<gdf_column_cpp>& part_left = all_parts[0];
+      for(size_t index_col = 0; index_col < part_left.size(); index_col++) { //iterate each one of the columns
+        
+        std::vector<gdf_column*> columns;
+        size_t col_total_size = 0;
+
+        for(size_t index_part = 0; index_part < all_parts.size(); index_part++) { //iterate each one of the parts 
+          std::vector<gdf_column_cpp> &part = all_parts[index_part];
+          auto &gdf_col = part[index_col];
+          columns.push_back(gdf_col.get_gdf_column());
+          col_total_size+= gdf_col.size();
+        }
+        gdf_column_cpp output_col;
+        auto & lhs = all_parts[0][index_col];
+        output_col.create_gdf_column(lhs.dtype(), col_total_size, nullptr, get_width_dtype(lhs.dtype()), lhs.name());
+        gdf_error err = gdf_column_concat(output_col.get_gdf_column(), columns.data(), columns.size());
+        if (err == GDF_SUCCESS) {
+          out_columns.push_back(output_col);
+        } else {
+          std::cerr << "ERROR: gdf_column_concat\n";
+        }
+      }
+    }
+}
+
 TEST_F(ParseCSVTest, nation_csv) {
 	std::cout << "nation_csv\n";
 	std::vector<gdf_dtype> types{GDF_INT32, GDF_INT64, GDF_INT32, GDF_INT64};
@@ -172,25 +239,27 @@ R"(0|ALGERIA|0| haggle. carefully final deposits detect slyly agai
 	outfile <<	content << std::endl;
 	outfile.close();
 
-	std::vector<gdf_column_cpp> columns(num_cols);
+	std::vector<gdf_column_cpp> columns;
 
-	std::vector<Uri> uris(6);
+	std::vector<Uri> uris(3);
 	uris[0] = Uri(fname);
 	uris[1] = Uri(fname);
 	uris[2] = Uri(fname);
-	uris[3] = Uri(fname);
-	uris[4] = Uri(fname);
-	uris[5] = Uri(fname);
-
-	std::vector<bool> include_column(num_cols,true);
 
 	std::cout << "config provider\n";
-	std::unique_ptr<ral::io::data_provider> provider = std::make_unique<ral::io::uri_data_provider>(uris);
-	while(provider->has_next()) {
-		std::cout << "\nparsing csv\n";
-		std::unique_ptr<ral::io::data_parser> parser = std::make_unique<ral::io::csv_parser>("|", "\n", 0, names, types);
-		parser->parse(provider->get_next(),columns,include_column);
+	ral::io::uri_data_provider provider(uris);
+  std::cout << "\nparsing csv\n\n";
 
-		std::cout << "\nsz: " << columns.size() << std::endl;
+	while(provider.has_next()) {
+		std::unique_ptr<ral::io::csv_parser> parser = std::make_unique<ral::io::csv_parser>("|", "\n", 0, names, types);
+		parser->parse(provider.get_next(), columns);
+		std::cout << "\tnum_cols_out: " << columns.size() << std::endl;
+    std::cout << "\tnum_rows_out: " << columns[0].size() << std::endl << std::endl;
 	}
+  
+	ral::io::csv_parser parser("|", "\n", 0, names, types);
+	std::vector<gdf_column_cpp> columns_out;
+	load_files(std::move(parser), uris, columns_out);
+	std::cout << "\nsz: " << columns_out.size() << std::endl;
+	
 }

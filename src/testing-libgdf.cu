@@ -62,7 +62,7 @@ using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);
 
 //TODO percy c.gonzales fix this later
 std::string global_ip;
-std::string global_port;
+int global_port;
 
 static result_pair  registerFileSystem(uint64_t accessToken, Buffer&& buffer) {
   std::cout << "registerFileSystem: " << accessToken << std::endl;
@@ -179,8 +179,9 @@ static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   interpreter::NodeConnectionDTO nodeInfo {
-      .path = global_ip + ":" + global_port,
-      .type = NodeConnectionType {NodeConnectionType_IPC}
+      .port = global_port,
+      .path = global_ip,
+      .type = NodeConnectionType {NodeConnectionType_TCP}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
   return std::make_pair(Status_Success, responsePayload.getBufferData());
@@ -241,8 +242,9 @@ static result_pair loadCsvSchema(uint64_t accessToken, Buffer&& buffer) {
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   interpreter::NodeConnectionDTO nodeInfo {
-      .path = global_ip + ":" + global_port,
-      .type = NodeConnectionType {NodeConnectionType_IPC}
+      .port = global_port,
+      .path = global_ip,
+      .type = NodeConnectionType {NodeConnectionType_TCP}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
   return std::make_pair(Status_Success, responsePayload.getBufferData());
@@ -492,8 +494,9 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
   }
 
   interpreter::NodeConnectionDTO nodeInfo {
-      .path = global_ip + ":" + global_port,
-      .type = NodeConnectionType {NodeConnectionType_IPC}
+      .port = global_port,
+      .path = global_ip,
+      .type = NodeConnectionType {NodeConnectionType_TCP}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
   return std::make_pair(Status_Success, responsePayload.getBufferData());
@@ -524,8 +527,9 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   interpreter::NodeConnectionDTO nodeInfo {
-      .path = global_ip + ":" + global_port,
-      .type = NodeConnectionType {NodeConnectionType_IPC}
+      .port = global_port,
+      .path = global_ip,
+      .type = NodeConnectionType {NodeConnectionType_TCP}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
   return std::make_pair(Status_Success, responsePayload.getBufferData());
@@ -571,7 +575,7 @@ main(int argc, const char *argv[]) {
     Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
 
   global_ip = iphost;
-  global_port = port;
+  global_port = atoi(port.c_str());
 
   blazingdb::protocol::TCPConnection connection(iphost, port);
   blazingdb::protocol::Server server(connection);

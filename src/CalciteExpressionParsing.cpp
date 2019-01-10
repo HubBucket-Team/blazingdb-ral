@@ -775,6 +775,11 @@ std::string clean_project_expression(std::string expression){
 
 std::string clean_calcite_expression(std::string expression){
 	//TODO: this is very hacky, the proper way is to remove this in calcite
+	// std::cout << ">>>>>>>>> " << expression << std::endl;
+	static const std::regex re{R""(CASE\(IS NOT NULL\((\W\(.+?\)|.+)\), \1, (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
+	expression = std::regex_replace(expression, re, "COALESCE($1, $2)");
+	// std::cout << "+++++++++ " << expression << std::endl;
+
 	StringUtil::findAndReplaceAll(expression," NOT NULL","");
 	StringUtil::findAndReplaceAll(expression,"):DOUBLE","");
 	StringUtil::findAndReplaceAll(expression,"CAST(","");
@@ -782,6 +787,7 @@ std::string clean_calcite_expression(std::string expression){
 	StringUtil::findAndReplaceAll(expression,"EXTRACT(FLAG(MONTH), ","BL_MONTH(");
 	StringUtil::findAndReplaceAll(expression,"EXTRACT(FLAG(DAY), ","BL_DAY(");
 	StringUtil::findAndReplaceAll(expression,"FLOOR(","BL_FLOUR(");
+
 
 // we want this "CASE(IS NOT NULL($1), $1, -1)" to become this: "COALESCE($1, -1)"
 // "CASE(IS NOT NULL((-($1, $2))), -($1, $2), -1)" to become this: "COALESCE(-($1, $2), -1)"

@@ -564,10 +564,6 @@ auto  interpreterServices(const blazingdb::protocol::Buffer &requestPayloadBuffe
 
 main(int argc, const char *argv[])
 {
-	std::cout << "RAL Engine starting"<< std::endl;
-  auto output = new Library::Logging::FileOutput("RAL.log", true);
-  Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
-
     std::string iphost;
     std::string port;
 
@@ -588,7 +584,8 @@ main(int argc, const char *argv[])
 
     std::cout << "RAL Engine starting: host=" << iphost << ", port=" << port
               << std::endl;
-    auto output = new Library::Logging::CoutOutput();
+
+    auto output = new Library::Logging::FileOutput("RAL.log", true);
     Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
 
   global_ip = iphost;

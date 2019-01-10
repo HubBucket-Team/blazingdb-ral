@@ -79,6 +79,7 @@ add_subdirectory(parquet)
 add_subdirectory(union)
 add_subdirectory(unary)
 add_subdirectory(groupbywoagg)
+add_subdirectory(hdfs)
 
 
 message(STATUS "******** Tests are ready ********")

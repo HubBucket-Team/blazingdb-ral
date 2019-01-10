@@ -42,6 +42,7 @@ using namespace blazingdb::protocol;
 #include <blazingdb/io/Config/BlazingContext.h>
 #include <blazingdb/io/Library/Logging/Logger.h>
 #include <blazingdb/io/Library/Logging/CoutOutput.h>
+#include <blazingdb/io/Library/Logging/FileOutput.h>
 #include "blazingdb/io/Library/Logging/ServiceLogging.h"
 
 #include "CalciteExpressionParsing.h"
@@ -523,9 +524,10 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
 			<< requestPayload.getTableGroup().tables[0].columns[0].size
 			<< std::endl;
   std::cout << "token: " << requestPayload.getTableGroup().tables[0].token << std::endl;
+  Library::Logging::Logger().logInfo("query:\n" + requestPayload.getLogicalPlan());
+
   std::vector<void *> handles;
 	uint64_t resultToken = 0L;
-
   try {
     std::tuple<std::vector<std::vector<gdf_column_cpp>>, std::vector<std::string>, std::vector<std::vector<std::string>>> request = libgdf::toBlazingDataframe(accessToken, requestPayload.getTableGroup(),handles);
 
@@ -559,8 +561,9 @@ auto  interpreterServices(const blazingdb::protocol::Buffer &requestPayloadBuffe
   return Buffer{responseObject.getBufferData()};
 }
 
-int
-main(int argc, const char *argv[]) {
+
+main(int argc, const char *argv[])
+{
     std::string iphost;
     std::string port;
 
@@ -581,7 +584,8 @@ main(int argc, const char *argv[]) {
 
     std::cout << "RAL Engine starting: host=" << iphost << ", port=" << port
               << std::endl;
-    auto output = new Library::Logging::CoutOutput();
+
+    auto output = new Library::Logging::FileOutput("RAL.log", true);
     Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
 
   global_ip = iphost;

@@ -174,10 +174,15 @@ gdf_error gdf_column_cpp::compact(){
 
 void gdf_column_cpp::update_null_count()
 {
-    int count;
-    gdf_error result = gdf_count_nonzero_mask(this->column->valid, this->column->size, &count);
-    assert(result == GDF_SUCCESS);
-    this->column->null_count = this->column->size - static_cast<gdf_size_type>(count);
+    if (this->column->size == 0) {
+        this->column->null_count = 0;
+    }
+    else {
+        int count;
+        gdf_error result = gdf_count_nonzero_mask(this->column->valid, this->column->size, &count);
+        assert(result == GDF_SUCCESS);
+        this->column->null_count = this->column->size - static_cast<gdf_size_type>(count);
+    }
 }
 
 void gdf_column_cpp::allocate_set_valid(){

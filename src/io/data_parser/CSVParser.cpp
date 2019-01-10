@@ -83,7 +83,7 @@ csv_parser::csv_parser(const std::string & delimiter,
 	// 		//i guess this is why factories are good
 	// 	}
 	// }
-
+		
 	this->column_names = names;
 	this->dtype_strings.resize(num_columns);
 	std::cout<<"made it here"<<std::endl;
@@ -130,30 +130,69 @@ csv_parser::~csv_parser() {
 }
 
 gdf_error csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file, std::vector<gdf_column_cpp> & columns) {
+	csv_read_arg raw_args{};
+    raw_args.num_cols		= args.num_cols;
+    raw_args.names			= args.names;
+    raw_args.dtype			= args.dtype;
+    raw_args.delimiter		= args.delimiter;
+    raw_args.lineterminator = args.lineterminator;
+    
 
-	gdf_error error = read_csv_arrow(&this->args,file);
+	gdf_error error = read_csv_arrow(&raw_args,file);
+	std::cout << "args.num_cols_out " << raw_args.num_cols_out << std::endl;
+	std::cout << "args.num_rows_out " <<raw_args.num_rows_out << std::endl;
+	assert(raw_args.num_cols_out > 0);
 
-	for(size_t i = 0; i < args.num_cols_out; i++ ){
+	for(size_t i = 0; i < raw_args.num_cols_out; i++ ){
 		gdf_column_cpp c;
-		c.create_gdf_column(args.data[i]); 
-		c.delete_set_name(std::string{args.names[i]});
+		c.create_gdf_column(raw_args.data[i]); 
+		c.delete_set_name(std::string{raw_args.names[i]});
 		columns.push_back(c);
 	}
+	return error;
+}
+
+gdf_error csv_parser::parse(const char *fname, std::vector<gdf_column_cpp> & columns) {
+	args.file_path		= fname;
+	csv_read_arg raw_args{};
+    raw_args.file_path		= fname;
+    raw_args.num_cols		= args.num_cols;
+    raw_args.names			= args.names;
+    raw_args.dtype			= args.dtype;
+    raw_args.delimiter		= args.delimiter;
+    raw_args.lineterminator = args.lineterminator;
+    
+	gdf_error error = read_csv(&raw_args);
+
+	std::cout << "raw_args.num_cols_out " << raw_args.num_cols_out << std::endl;
+	std::cout << "raw_args.num_rows_out " <<raw_args.num_rows_out << std::endl;
+	assert(raw_args.num_cols_out > 0);
+
+	for(size_t i = 0; i < raw_args.num_cols_out; i++ ){
+		gdf_column_cpp c;
+		c.create_gdf_column(raw_args.data[i]); 
+		c.delete_set_name(std::string{raw_args.names[i]});
+		columns.push_back(c);
+	}
+	return error;
 }
 
 gdf_error csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		std::vector<gdf_column_cpp> & columns,
 		std::vector<bool> include_column){
 
-	// create_csv_args(num_columns,
-	// 		args,
-	// 		include_column );
+	csv_read_arg raw_args{};
+    raw_args.num_cols		= args.num_cols;
+    raw_args.names			= args.names;
+    raw_args.dtype			= args.dtype;
+    raw_args.delimiter		= args.delimiter;
+    raw_args.lineterminator = args.lineterminator;
+    
+	gdf_error error = read_csv_arrow(&raw_args,file);
 
-	gdf_error error = read_csv_arrow(&this->args,file);
-
-	std::cout << "args.num_cols_out " << args.num_cols_out << std::endl;
-	std::cout << "args.num_rows_out " <<args.num_rows_out << std::endl;
-	assert(args.num_cols_out > 0);
+	std::cout << "args.num_cols_out " << raw_args.num_cols_out << std::endl;
+	std::cout << "args.num_rows_out " <<raw_args.num_rows_out << std::endl;
+	assert(raw_args.num_cols_out > 0);
 
 	//This is kind of legacy but we need to copy the name to gdf_column_cpp
 	//TODO: make it so we dont have to do this
@@ -162,11 +201,11 @@ gdf_error csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	// 	columns[index_in_original_columns].create_gdf_column(
 	// 			args.data[output_column_index]);
 	// }
- 	for(size_t i = 0; i < args.num_cols_out; i++ ){
+ 	for(size_t i = 0; i < raw_args.num_cols_out; i++ ){
 		if(include_column[i]) {
 			gdf_column_cpp c;
-			c.create_gdf_column(args.data[i]); 
-			c.delete_set_name(std::string{args.names[i]});
+			c.create_gdf_column(raw_args.data[i]); 
+			c.delete_set_name(std::string{raw_args.names[i]});
 			columns.push_back(c);
 		}
 	}

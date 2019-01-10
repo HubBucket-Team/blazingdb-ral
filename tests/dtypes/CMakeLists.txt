@@ -23,6 +23,7 @@ set(dtypes-test_SRCS
   ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp
   ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
   ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
+  ${CMAKE_SOURCE_DIR}/src/Utils.cu
   ${source_files}
   ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
   dtypes-test.cu)

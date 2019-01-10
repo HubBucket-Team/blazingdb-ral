@@ -10,6 +10,7 @@
 #include <thrust/iterator/constant_iterator.h>
 #include <thrust/iterator/discard_iterator.h>
 #include <thrust/device_ptr.h>
+#include <thrust/sequence.h>
 
 #include <rmm.h>
 
@@ -465,5 +466,7 @@ void print_column(gdf_column * column){
 }
 
 void free_gdf_column(gdf_column * column);
+
+void gdf_sequence(int32_t* data, size_t size, int32_t init_val);
 
 #endif /* UTILS_CUH_ */

@@ -196,38 +196,7 @@ gdf_error process_unary_operation(
 		return err;
 	}
 }
-
-// select n.n_nationkey, coalesce(r.r_regionkey, 100) from main.nation as n left outer join main.region as r on n.n_nationkey = r.r_regionkey where n.n_nationkey < 10
-gdf_error execute_coalesce(const std::string & left_operand, const std::string & right_operand,
-	blazing_frame & inputs, gdf_column_cpp & output){
-
-	if(is_literal(left_operand)){
-		return GDF_INVALID_API_CALL;			
-	} else {
-		size_t left_index = get_index(left_operand);
-		size_t right_index = get_index(right_operand);
-		
-		if(is_literal(right_operand)){
-			// take literal and put into a size 1 column and call replace_nulls
-			//gdf_scalar right = get_scalar_from_string(right_operand,inputs.get_column(left_index).dtype());
-			gdf_column* expression_input = inputs.get_column(right_index).get_gdf_column();
-			gdf_column* scalar_input = inputs.get_column(left_index).get_gdf_column();
-			std::cout << ">>>>>>>>>>>> expression_input" << std::endl;
-			print_gdf_column(expression_input);
-			std::cout << ">>>>>>>>>>>> scalar_input" << std::endl;
-			print_gdf_column(scalar_input);
-			std::cout << ">>>>>>>>>>>> output" << std::endl;
-			print_gdf_column(output.get_gdf_column());
-			// std::cout << "scalar_input->size: " << scalar_input->size << std::endl;
-			// scalar_input->size = 1;
-			gdf_error error = gdf_replace_nulls(scalar_input, output.get_gdf_column());
-		} else {
-			// call replace_null
-			gdf_error error = gdf_replace_nulls(output.get_gdf_column(), inputs.get_column(right_index).get_gdf_column());
-		}
-	}
-}
-
+ 
 gdf_error process_other_binary_operation(
 		std::string operator_string,
 		std::stack<std::string> & operands,
@@ -260,32 +229,29 @@ gdf_error process_other_binary_operation(
 				return GDF_INVALID_API_CALL;			
 			} else {
 				size_t left_index = get_index(left_operand);
-				size_t right_index = get_index(right_operand);
 				
 				if(is_literal(right_operand)){
 					// take literal and put into a size 1 column and call replace_nulls
-					gdf_scalar right = get_scalar_from_string(right_operand,inputs.get_column(left_index).dtype());
-					std::cout << ">>>>>>>>>>>> coalesce right " << right_operand << " "<<  (int)right.dtype << "  " << (right.data.si64) << std::endl;
+					gdf_scalar right = get_scalar_from_string(right_operand, inputs.get_column(left_index).dtype());
+					std::cout << ">>>>>>>>>>>> coalesce right " << right_operand << " "<<  (int)right.dtype << "  " << (right.data.si32) << std::endl;
 
-					gdf_column* expression_input = inputs.get_column(left_index).get_gdf_column();
+					gdf_column_cpp expression_input = inputs.get_column(left_index);
 					std::cout << ">>>>>>>>>>>> coalesce expression_input" << std::endl;
-					print_gdf_column(expression_input);
+					print_gdf_column(expression_input.get_gdf_column());
 
 					gdf_column_cpp temp_scalar;
-					temp_scalar.create_gdf_column(GDF_INT64, 1, nullptr, get_width_dtype(GDF_INT64));
-					CheckCudaErrors(cudaMemcpy(temp_scalar.data(), &(right.data.si64), sizeof(int64_t), cudaMemcpyHostToDevice));
+					temp_scalar.create_gdf_column(right.dtype, 1, nullptr, get_width_dtype(right.dtype));
+					CheckCudaErrors(cudaMemcpy(temp_scalar.data(), &(right.data), get_width_dtype(right.dtype), cudaMemcpyHostToDevice));
 
-					err = gdf_replace_nulls(expression_input, temp_scalar.get_gdf_column());
+					err = gdf_replace_nulls(output.get_gdf_column(), expression_input.get_gdf_column(), temp_scalar.get_gdf_column());
 					std::cout << ">>>>>>>>>>>> coalesce out" << std::endl;
-					print_gdf_column(expression_input);
-
-					output.create_gdf_column(expression_input);
+					print_gdf_column(output.get_gdf_column());
 				} else {
 					// call replace_null
-					// err = gdf_replace_nulls(output.get_gdf_column(), inputs.get_column(right_index).get_gdf_column());
+					size_t right_index = get_index(right_operand);
+
+					err = gdf_replace_nulls(output.get_gdf_column(), inputs.get_column(left_index).get_gdf_column(), inputs.get_column(right_index).get_gdf_column());
 				}
-
-
 				if(err == GDF_SUCCESS){
 					inputs.add_column(temp.clone());
 					operands.push("$" + std::to_string(inputs.get_size_column()-1));
@@ -399,5 +365,8 @@ gdf_error evaluate_expression(
 
 	output.update_null_count();
 
+	std::cout << "<<<<<<<<<<<<<<<<,,>>>>>>>>>>>> out" << std::endl;
+	print_gdf_column(output.get_gdf_column());
+	
 	return GDF_SUCCESS;
 }

@@ -16,4 +16,4 @@
  */
 #include <cudf.h>
 
-gdf_error gdf_replace_nulls(gdf_column* col_out, const gdf_column* new_values_column);
+gdf_error gdf_replace_nulls(gdf_column* col_out, gdf_column* col_in, const gdf_column* new_values_column);

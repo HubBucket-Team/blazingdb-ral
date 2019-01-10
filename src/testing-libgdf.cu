@@ -562,7 +562,7 @@ auto  interpreterServices(const blazingdb::protocol::Buffer &requestPayloadBuffe
 }
 
 
-int main(void)
+main(int argc, const char *argv[])
 {
 	std::cout << "RAL Engine starting"<< std::endl;
   auto output = new Library::Logging::FileOutput("RAL.log", true);

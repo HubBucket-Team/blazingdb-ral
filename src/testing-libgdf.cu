@@ -180,7 +180,7 @@ static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
   }
   interpreter::NodeConnectionDTO nodeInfo {
       .port = global_port,
-      .path = global_ip,
+      .path = "/tmp/ral.socket",
       .type = NodeConnectionType {NodeConnectionType_TCP}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -243,7 +243,7 @@ static result_pair loadCsvSchema(uint64_t accessToken, Buffer&& buffer) {
   }
   interpreter::NodeConnectionDTO nodeInfo {
       .port = global_port,
-      .path = global_ip,
+      .path = "/tmp/ral.socket",
       .type = NodeConnectionType {NodeConnectionType_TCP}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -503,7 +503,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 
   interpreter::NodeConnectionDTO nodeInfo {
       .port = global_port,
-      .path = global_ip,
+      .path = "/tmp/ral.socket",
       .type = NodeConnectionType {NodeConnectionType_TCP}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -538,7 +538,7 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
   }
   interpreter::NodeConnectionDTO nodeInfo {
       .port = global_port,
-      .path = global_ip,
+      .path = "/tmp/ral.socket",
       .type = NodeConnectionType {NodeConnectionType_TCP}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};

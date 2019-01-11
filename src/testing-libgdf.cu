@@ -584,7 +584,7 @@ main(int argc, const char *argv[]) {
     auto output = new Library::Logging::CoutOutput();
     Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
 
-  global_ip = iphost;
+  global_ip = "/tmp/ral.socket";
   global_port = atoi(port.c_str());
 
   blazingdb::protocol::UnixSocketConnection connection("/tmp/ral.socket");

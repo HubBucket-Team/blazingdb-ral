@@ -277,7 +277,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
   try {
     // remove from repository using accessToken and resultToken
     std::tuple<blazing_frame, double> result = result_set_repository::get_instance().get_result(accessToken, request.getResultToken());
-    
+
     //TODO ojo el result siempre es una sola tabla por eso indice 0
     const int rows = std::get<0>(result).get_columns()[0][0].size();
 
@@ -293,7 +293,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
     //TODO WARNING why 0 why multitables?
     for(int i = 0; i < std::get<0>(result).get_columns()[0].size(); ++i) {
       fieldNames.push_back(std::get<0>(result).get_columns()[0][i].name());
-      
+
       std::cout << "col_name: " << std::get<0>(result).get_columns()[0][i].name() << std::endl;
 
       auto data = libgdf::BuildCudaIpcMemHandler(std::get<0>(result).get_columns()[0][i].get_gdf_column()->data);

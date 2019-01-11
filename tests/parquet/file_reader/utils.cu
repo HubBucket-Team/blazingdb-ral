@@ -5,11 +5,12 @@
 #include <cudf/functions.h>
 #include <iostream>
 #include <limits.h>
+#include <arrow/util/bit-util.h>
 
 gdf_valid_type *
 get_gdf_valid_from_device(gdf_column *column) {
     gdf_valid_type *host_valid_out;
-    size_t          n_bytes = get_number_of_bytes_for_valid(column->size);
+    size_t          n_bytes = arrow::BitUtil::BytesForBits(column->size);
     host_valid_out          = new gdf_valid_type[n_bytes];
     cudaMemcpy(host_valid_out, column->valid, n_bytes, cudaMemcpyDeviceToHost);
     return host_valid_out;
@@ -17,7 +18,7 @@ get_gdf_valid_from_device(gdf_column *column) {
 
 std::string
 gdf_valid_to_str(gdf_valid_type *valid, size_t column_size) {
-    size_t      n_bytes = get_number_of_bytes_for_valid(column_size);
+    size_t      n_bytes = arrow::BitUtil::BytesForBits(column_size);
     std::string response;
     for (size_t i = 0; i < n_bytes; i++) {
         size_t length = n_bytes != i + 1
@@ -35,7 +36,7 @@ gen_gdf_valid(size_t column_size, size_t init_value) {
     if (column_size == 0) {
         valid = new gdf_valid_type[1];
     } else {
-        size_t n_bytes = get_number_of_bytes_for_valid(column_size);
+        size_t n_bytes = arrow::BitUtil::BytesForBits(column_size);
         valid          = new gdf_valid_type[n_bytes];
         size_t i;
         for (i = 0; i < n_bytes - 1; ++i) { valid[i] = (init_value % 256); }

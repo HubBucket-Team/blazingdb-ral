@@ -181,7 +181,7 @@ static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
   }
   interpreter::NodeConnectionDTO nodeInfo {
       .port = global_port,
-      .path = global_ip,
+      .path = "/tmp/ral.socket",
       .type = NodeConnectionType {NodeConnectionType_TCP}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -244,7 +244,7 @@ static result_pair loadCsvSchema(uint64_t accessToken, Buffer&& buffer) {
   }
   interpreter::NodeConnectionDTO nodeInfo {
       .port = global_port,
-      .path = global_ip,
+      .path = "/tmp/ral.socket",
       .type = NodeConnectionType {NodeConnectionType_TCP}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -278,7 +278,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
   try {
     // remove from repository using accessToken and resultToken
     std::tuple<blazing_frame, double> result = result_set_repository::get_instance().get_result(accessToken, request.getResultToken());
-    
+
     //TODO ojo el result siempre es una sola tabla por eso indice 0
     const int rows = std::get<0>(result).get_columns()[0][0].size();
 
@@ -294,7 +294,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
     //TODO WARNING why 0 why multitables?
     for(int i = 0; i < std::get<0>(result).get_columns()[0].size(); ++i) {
       fieldNames.push_back(std::get<0>(result).get_columns()[0][i].name());
-      
+
       std::cout << "col_name: " << std::get<0>(result).get_columns()[0][i].name() << std::endl;
 
       auto data = libgdf::BuildCudaIpcMemHandler(std::get<0>(result).get_columns()[0][i].get_gdf_column()->data);
@@ -504,7 +504,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 
   interpreter::NodeConnectionDTO nodeInfo {
       .port = global_port,
-      .path = global_ip,
+      .path = "/tmp/ral.socket",
       .type = NodeConnectionType {NodeConnectionType_TCP}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -540,7 +540,7 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
   }
   interpreter::NodeConnectionDTO nodeInfo {
       .port = global_port,
-      .path = global_ip,
+      .path = "/tmp/ral.socket",
       .type = NodeConnectionType {NodeConnectionType_TCP}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -588,10 +588,10 @@ main(int argc, const char *argv[])
     auto output = new Library::Logging::FileOutput("RAL.log", true);
     Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
 
-  global_ip = iphost;
+  global_ip = "/tmp/ral.socket";
   global_port = atoi(port.c_str());
 
-  blazingdb::protocol::TCPConnection connection(iphost, port);
+  blazingdb::protocol::UnixSocketConnection connection("/tmp/ral.socket");
   blazingdb::protocol::Server server(connection);
 
   services.insert(std::make_pair(interpreter::MessageType_ExecutePlan, &executePlanService));

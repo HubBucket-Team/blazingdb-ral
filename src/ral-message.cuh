@@ -1,10 +1,14 @@
 #pragma once
 
+#include <tuple>
+
 #include <cuda_runtime.h>
 
 #include <blazingdb/protocol/message/messages.h>
 #include <blazingdb/protocol/message/interpreter/messages.h>
 #include "Utils.cuh"
+#include "ResultSetRepository.h"
+#include "DataFrame.h"
 
 namespace libgdf {
 
@@ -35,7 +39,7 @@ static void* CudaIpcMemHandlerFrom (const std::basic_string<int8_t>& handler) {
 
 std::tuple<std::vector<std::vector<gdf_column_cpp>>,
            std::vector<std::string>,
-           std::vector<std::vector<std::string>>> toBlazingDataframe(const ::blazingdb::protocol::TableGroupDTO& request,std::vector<void *> & handles)
+           std::vector<std::vector<std::string>>> toBlazingDataframe(uint64_t accessToken, const ::blazingdb::protocol::TableGroupDTO& request,std::vector<void *> & handles)
 {
   std::vector<std::vector<gdf_column_cpp>> input_tables;
   std::vector<std::string> table_names;
@@ -46,30 +50,34 @@ std::tuple<std::vector<std::vector<gdf_column_cpp>>,
     column_names.push_back(table.columnNames);
 
     std::vector<gdf_column_cpp> input_table;
-    int column_index = 0;
-    for(auto column : table.columns) {
-    	const std::string column_name = table.columnNames.at(column_index);
-//    	gdf_column_cpp col = gdf_column_cpp(libgdf::CudaIpcMemHandlerFrom(column.data), (gdf_valid_type*)libgdf::CudaIpcMemHandlerFrom(column.valid), (::gdf_dtype)column.dtype, (size_t)column.size, (gdf_size_type)column.null_count, column_name);
-    	//    	handles.push_back((void *) col.valid());
-    	//lines above commented becuase valid is set but its junk
-    	gdf_column_cpp col;
+    if (table.token != 0){
 
-    	col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),nullptr,column.size,column_name);
-    //	gdf_column_cpp col = gdf_column_cpp(libgdf::CudaIpcMemHandlerFrom(column.data), nullptr, (::gdf_dtype)column.dtype, (size_t)column.size, (gdf_size_type)column.null_count, column_name);
-    	handles.push_back(col.data());
+      std::tuple<blazing_frame, double> result = result_set_repository::get_instance().get_result(accessToken, table.token);
+      input_table = std::get<0>(result).get_columns()[0]; // a result set should only have one table
 
-    	if(col.valid() == nullptr){
-    		//TODO: we can remove this when libgdf properly
-    		//implements all algorithsm with valid == nullptr support
-    		//it crashes somethings like group by
-    		col.allocate_set_valid();
+    } else {
+      int column_index = 0;
+      for(auto column : table.columns) {
+        const std::string column_name = table.columnNames.at(column_index);
 
-    	}else{
-			handles.push_back(col.valid());
-    	}
-    	input_table.push_back(col);
+        gdf_column_cpp col;
+        // col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),(gdf_valid_type*)libgdf::CudaIpcMemHandlerFrom(column.valid),column.size,column_name);
+        col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),nullptr,column.size,column_name);
+        handles.push_back(col.data());
 
-    	++column_index;
+        if(col.valid() == nullptr){
+          //TODO: we can remove this when libgdf properly
+          //implements all algorithsm with valid == nullptr support
+          //it crashes somethings like group by
+          col.allocate_set_valid();
+
+        }else{
+          handles.push_back(col.valid());
+        }
+        input_table.push_back(col);
+
+        ++column_index;
+      }
     }
     input_tables.push_back(input_table);
   }

@@ -214,6 +214,19 @@ gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_unary_operator operatio
 	}
 }
 
+gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type, gdf_other_binary_operator operation){
+	
+	// the only gdf_other_binary_operator we have right now is COALESCE where we will except both sides to be the same type
+	if (input_left_type == GDF_invalid)
+		return input_right_type;
+	else if (input_right_type == GDF_invalid)
+		return input_left_type;
+	else if (input_left_type == input_right_type)
+		return input_right_type;
+	else 
+		return GDF_invalid;
+}
+
 gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type, gdf_binary_operator operation){
 
 	//we are only considering binary ops between numbers for now
@@ -317,7 +330,7 @@ int64_t get_date_64_from_string(std::string scalar_string){
 
 	if (ss >> std::get_time(&t, "%Y-%m-%d %H:%M:%S")){
 		int64_t tr = std::mktime(&t);
-		return tr;
+		return tr * 1000;  // mktime produces posix time in seconds. date_64 is in milliseconds
 	}
 	else{
 		throw std::invalid_argument("Invalid datetime format");
@@ -431,7 +444,7 @@ gdf_error get_output_type_expression(blazing_frame * input, gdf_dtype * output_t
 		//std::cout<<"Token is ==> "<<token<<"\n";
 
 		if(is_operator_token(token)){
-			if(is_binary_operator_token(token)){
+			if(is_binary_operator_token(token) || is_other_binary_operator_token(token)){
 				gdf_dtype left_operand = operands.top();
 				operands.pop();
 				gdf_dtype right_operand = operands.top();
@@ -452,10 +465,15 @@ gdf_error get_output_type_expression(blazing_frame * input, gdf_dtype * output_t
 						right_operand = left_operand;
 					}
 				}
-				gdf_binary_operator operation;
-				gdf_error err = get_operation(token,&operation);
-
-				operands.push(get_output_type(left_operand,right_operand,operation));
+				if (is_binary_operator_token(token)){
+					gdf_binary_operator operation;
+					gdf_error err = get_operation(token,&operation);
+					operands.push(get_output_type(left_operand,right_operand,operation));
+				} else {
+					gdf_other_binary_operator operation;
+					gdf_error err = get_operation(token,&operation);
+					operands.push(get_output_type(left_operand,right_operand,operation));
+				}
 				if(position > 0 && get_width_dtype(operands.top()) > get_width_dtype(*max_temp_type)){
 					*max_temp_type = operands.top();
 				}
@@ -470,6 +488,8 @@ gdf_error get_output_type_expression(blazing_frame * input, gdf_dtype * output_t
 				if(position > 0 && get_width_dtype(operands.top()) > get_width_dtype(*max_temp_type)){
 					*max_temp_type = operands.top();
 				}
+			} else {
+				return GDF_INVALID_API_CALL;
 			}
 
 		}else{
@@ -597,6 +617,18 @@ gdf_error get_operation(
 	return GDF_SUCCESS;
 }
 
+gdf_error get_operation(
+		std::string operator_string,
+		gdf_other_binary_operator * operation
+){
+	if(operator_string == "COALESCE"){
+		*operation = GDF_COALESCE;
+	}else{
+		return GDF_INVALID_API_CALL;
+	}
+	return GDF_SUCCESS;
+}
+
 bool is_binary_operator_token(std::string token){
 	gdf_binary_operator op;
 	return get_operation(token,&op) == GDF_SUCCESS;
@@ -604,6 +636,11 @@ bool is_binary_operator_token(std::string token){
 
 bool is_unary_operator_token(std::string token){
 	gdf_unary_operator op;
+	return get_operation(token,&op) == GDF_SUCCESS;
+}
+
+bool is_other_binary_operator_token(std::string token){
+	gdf_other_binary_operator op;
 	return get_operation(token,&op) == GDF_SUCCESS;
 }
 
@@ -693,7 +730,8 @@ std::string expand_if_logical_op(std::string expression){
 			int expression_end = find_closing_char(expression, expression_start);
 
 			std::string rest = expression.substr(expression_start+1, expression_end-(expression_start+1));
-			std::vector<std::string> processed = get_expressions_from_expression_list(rest);
+			// the trim flag is false because trimming the expressions cause malformmed ones
+			std::vector<std::string> processed = get_expressions_from_expression_list(rest, false);
 
 			if(processed.size() == 2){ //is already binary
 				start_pos = expression_start;
@@ -737,6 +775,11 @@ std::string clean_project_expression(std::string expression){
 
 std::string clean_calcite_expression(std::string expression){
 	//TODO: this is very hacky, the proper way is to remove this in calcite
+	// std::cout << ">>>>>>>>> " << expression << std::endl;
+	static const std::regex re{R""(CASE\(IS NOT NULL\((\W\(.+?\)|.+)\), \1, (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
+	expression = std::regex_replace(expression, re, "COALESCE($1, $2)");
+	// std::cout << "+++++++++ " << expression << std::endl;
+
 	StringUtil::findAndReplaceAll(expression," NOT NULL","");
 	StringUtil::findAndReplaceAll(expression,"):DOUBLE","");
 	StringUtil::findAndReplaceAll(expression,"CAST(","");
@@ -745,6 +788,18 @@ std::string clean_calcite_expression(std::string expression){
 	StringUtil::findAndReplaceAll(expression,"EXTRACT(FLAG(DAY), ","BL_DAY(");
 	StringUtil::findAndReplaceAll(expression,"FLOOR(","BL_FLOUR(");
 
+
+// we want this "CASE(IS NOT NULL($1), $1, -1)" to become this: "COALESCE($1, -1)"
+// "CASE(IS NOT NULL((-($1, $2))), -($1, $2), -1)" to become this: "COALESCE(-($1, $2), -1)"
+// "+(CASE(IS NOT NULL((-($1, $2))), -($1, $2), -1), *($4, $5))" to become this: "+(COALESCE(-($1, $2), -1), *($4, $5)) "
+
+	// std::string coalesce_identifier = "CASE(IS NOT NULL(";
+	// size_t pos = expression.find(coalesce_identifier);
+	// int endOfFirstArg = find_closing_char(expression, pos + coalesce_identifier.length() - 1) ;
+	// // this should be in this example "$1"
+	// std::string firstArg = expression.substring(pos + coalesce_identifier.length(), endOfFirstArg - (pos + coalesce_identifier.length()));
+	// std::string 
+	
 
 
 
@@ -823,7 +878,7 @@ int find_closing_char(const std::string & expression, int start) {
 }
 
 // takes a comma delimited list of expressions and splits it into separate expressions
-std::vector<std::string> get_expressions_from_expression_list(const std::string & combined_expression){
+std::vector<std::string> get_expressions_from_expression_list(const std::string & combined_expression, bool trim){
 
 	std::vector<std::string> expressions;
 
@@ -852,7 +907,12 @@ std::vector<std::string> get_expressions_from_expression_list(const std::string 
 				sqBraketsDepth--;
 			} else if (combined_expression[curInd] == ',' && parenthesisDepth == 0 && sqBraketsDepth == 0){
 				std::string exp = combined_expression.substr(curStart, curInd - curStart);
-				expressions.push_back(StringUtil::ltrim(exp));
+
+				if(trim)
+					expressions.push_back(StringUtil::ltrim(exp));
+				else
+					expressions.push_back(exp);
+
 				curStart = curInd + 1;
 			}
 		}
@@ -861,7 +921,11 @@ std::vector<std::string> get_expressions_from_expression_list(const std::string 
 
 	if (curStart < combined_expression.size() && curInd <= combined_expression.size()){
 		std::string exp = combined_expression.substr(curStart, curInd - curStart);
-		expressions.push_back(StringUtil::trim(exp));
+
+		if(trim)
+			expressions.push_back(StringUtil::trim(exp));
+		else
+			expressions.push_back(exp);
 	}
 
 	return expressions;

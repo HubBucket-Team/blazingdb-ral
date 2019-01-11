@@ -31,8 +31,11 @@ static constexpr int32_t kTensorAlignment = 64;
 // Align on 8-byte boundaries in IPC
 static constexpr int32_t kArrowIpcAlignment = 8;
 
+// Align on 4-byte boundaries in CUDF static 
+constexpr int32_t kCudfIpcAlignment = 4;
+
 //todo, enable arrow ipc utils, and remove this method
-static inline int64_t PaddedLength(int64_t nbytes, int32_t alignment = kArrowAlignment) {
+static inline int64_t PaddedLength(int64_t nbytes, int32_t alignment = kCudfIpcAlignment) {
   return ((nbytes + alignment - 1) / alignment) * alignment;
 }
 

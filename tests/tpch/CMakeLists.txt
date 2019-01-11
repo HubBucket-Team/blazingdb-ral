@@ -24,6 +24,7 @@ set(source_files
     ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
     ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
     ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
+    ${CMAKE_SOURCE_DIR}/src/Utils.cu
     tpch-tests.cu 
 )
 
@@ -50,6 +51,8 @@ set(tpch_csv_tests_src
     ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
     ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
     ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
+    ${CMAKE_SOURCE_DIR}/src/Utils.cu
+
     tpch_csv_tests.cu
 )
 

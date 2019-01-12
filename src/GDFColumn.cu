@@ -15,6 +15,8 @@
 #include "cuDF/Allocator.h"
 #include "parquet/util/bit_util.cuh"
 
+#include "FreeMemory.h"
+
 gdf_column_cpp::gdf_column_cpp()
 {
 	column = nullptr;
@@ -218,6 +220,9 @@ void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,g
     this->allocate_valid();
     is_ipc_column = true;
     this->set_name(column_name);
+
+    FreeMemory::registerIPCPointer(column->data);
+    FreeMemory::registerIPCPointer(column->valid);
 }
 
 void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value, const std::string &column_name)

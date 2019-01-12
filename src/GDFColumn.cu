@@ -215,7 +215,9 @@ void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,g
     gdf_column_view(this->column, col_data, valid_data, num_values, type);
     get_column_byte_width(this->column, &width);
     this->allocated_size_data = num_values * width;
-    this->allocate_valid();
+    if (valid_data == nullptr)  // TODO A MEM LEAK. IPCs dont get freed, but they do get valid allocations?
+        this->allocate_set_valid();
+
     is_ipc_column = true;
     this->set_name(column_name);
 }

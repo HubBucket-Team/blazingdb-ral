@@ -19,6 +19,8 @@
 #include "Types.h"
 #include <cuda_runtime.h>
 
+#include "FreeMemory.h"
+
 #include "gdf_wrapper/gdf_wrapper.cuh"
 
 #include <tuple>
@@ -259,7 +261,13 @@ static result_pair closeConnectionService(uint64_t accessToken, Buffer&& request
   std::cout << "accessToken: " << accessToken << std::endl;
 
   try {
-	result_set_repository::get_instance().remove_all_connection_tokens(accessToken);
+  result_set_repository::get_instance().remove_all_connection_tokens(accessToken);
+
+  // NOTE: use next 3 lines to check with "/usr/local/cuda/bin/cuda-memcheck  --leak-check full  ./testing-libgdf"   
+  // GDFRefCounter::getInstance()->show_summary();
+  // cudaDeviceReset();
+  // exit(0);
+
   } catch (std::runtime_error &error) {
      std::cout << error.what() << std::endl;
      ResponseErrorMessage errorMessage{ std::string{error.what()} };
@@ -551,6 +559,11 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
   return std::make_pair(Status_Success, responsePayload.getBufferData());
 }
 
+static result_pair freeMemoryCallback(uint64_t accessToken, Buffer&& requesBuffer)   {
+    FreeMemory::freeAll();
+    ZeroMessage response{};
+    return std::make_pair(Status_Success, response.getBufferData());
+}
 
 static  std::map<int8_t, FunctionType> services;
 
@@ -568,7 +581,7 @@ auto  interpreterServices(const blazingdb::protocol::Buffer &requestPayloadBuffe
 
 main(int argc, const char *argv[])
 {
-    std::string iphost;
+    /*std::string iphost;
     std::string port;
 
     switch (argc) {
@@ -583,15 +596,17 @@ main(int argc, const char *argv[])
         //default:
         //std::cout << "usage: " << argv[0] << " <IP|HOSTNAME> <PORT>" << std::endl;
         //return 1;
-    }
+    }*/
 
     std::cout << "RAL Engine starting" << std::endl;
+
+    FreeMemory::Initialize();
 
     auto output = new Library::Logging::FileOutput("RAL.log", true);
     Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
 
   global_ip = "/tmp/ral.socket";
-  global_port = atoi(port.c_str());
+  //global_port = atoi(port.c_str());
 
   blazingdb::protocol::UnixSocketConnection connection("/tmp/ral.socket");
   blazingdb::protocol::Server server(connection);
@@ -607,6 +622,8 @@ main(int argc, const char *argv[])
 
   services.insert(std::make_pair(interpreter::MessageType_LoadCsvSchema, &loadCsvSchema));
   services.insert(std::make_pair(interpreter::MessageType_LoadParquetSchema, &loadParquetSchema));
+
+  services.insert(std::make_pair(9, &freeMemoryCallback));
 
   server.handle(&interpreterServices);
 

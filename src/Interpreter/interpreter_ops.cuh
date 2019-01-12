@@ -88,7 +88,7 @@ private:
 	gdf_unary_operator * unary_operations; //device
 	char * temp_space;
 
-	template<typename LocalStorageTyzpe>
+	template<typename LocalStorageType>
 	__device__ __forceinline__
 	LocalStorageType get_data_from_buffer(
 			int64_t * buffer, //the local buffer which storse the information that is to be processed

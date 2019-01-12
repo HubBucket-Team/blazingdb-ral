@@ -70,4 +70,11 @@ int find_closing_char(const std::string & expression, int start);
 // if the flag trim is true, leading and trailing spaces are removed
 std::vector<std::string> get_expressions_from_expression_list(const std::string & combined_expressions, bool trim = true);
 
+
+bool is_type_signed(gdf_dtype type);
+
+bool is_type_float(gdf_dtype type);
+bool is_date_type(gdf_dtype type);
+gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type, gdf_binary_operator operation);
+
 #endif /* CALCITEEXPRESSIONPARSING_H_ */

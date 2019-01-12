@@ -1,6 +1,7 @@
 #include "FreeMemory.h"
 
 #include <algorithm>
+#include <iostream>
 #include <vector>
 
 #include <cuda_runtime_api.h>
@@ -11,6 +12,10 @@ static std::vector<const void *> ipcPointers;
 namespace FreeMemory {
 void
 freeAll() noexcept {
+    std::cout << "\033[32mFreeMemory:\n"
+              << "\tRaw: " << rawPointers.size()
+              << "\n\tIPC: " << ipcPointers.size() << std::endl;
+
     std::vector<const void *> pointersToFree;
     std::set_difference(rawPointers.begin(),
                         rawPointers.end(),

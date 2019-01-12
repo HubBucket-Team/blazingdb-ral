@@ -1054,18 +1054,19 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 		}
 
 		timer.reset();
-		temp.create_gdf_column(input.get_column(0).dtype(),temp_idx.size(),nullptr,get_width_dtype(max_temp_type), "");
+		gdf_column_cpp materialize_temp;
+		materialize_temp.create_gdf_column(input.get_column(0).dtype(),temp_idx.size(),nullptr,get_width_dtype(max_temp_type), "");
 		for(int i = 0; i < input.get_width();i++){
-			temp.set_dtype(input.get_column(i).dtype());
+			materialize_temp.set_dtype(input.get_column(i).dtype());
 
 			gdf_error err = materialize_column(
 					input.get_column(i).get_gdf_column(),
-					temp.get_gdf_column(),
+					materialize_temp.get_gdf_column(),
 					temp_idx.get_gdf_column()
 			);
 
-			temp.update_null_count();
-			input.set_column(i,temp.clone(input.get_column(i).name()));
+			materialize_temp.update_null_count();
+			input.set_column(i,materialize_temp.clone(input.get_column(i).name()));
 		}
 		Library::Logging::Logger().logInfo("-> Filter sub block 7 took " + std::to_string(timer.getDuration()) + " ms");
 	}else{

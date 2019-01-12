@@ -16,6 +16,7 @@
 #include "CodeTimer.h"
 #include "Traits/RuntimeTraits.h"
 #include "cuDF/Allocator.h"
+#include "Interpreter/interpreter_cpp.h"
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 const std::string LOGICAL_UNION_TEXT = "LogicalUnion";

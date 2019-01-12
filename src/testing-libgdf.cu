@@ -576,14 +576,12 @@ main(int argc, const char *argv[])
         iphost = argv[1];
         port   = argv[2];
         break;
-    default:
-        std::cout << "usage: " << argv[0] << " <IP|HOSTNAME> <PORT>"
-                  << std::endl;
-        return 1;
+        //default:
+        //std::cout << "usage: " << argv[0] << " <IP|HOSTNAME> <PORT>" << std::endl;
+        //return 1;
     }
 
-    std::cout << "RAL Engine starting: host=" << iphost << ", port=" << port
-              << std::endl;
+    std::cout << "RAL Engine starting" << std::endl;
 
     auto output = new Library::Logging::FileOutput("RAL.log", true);
     Library::Logging::ServiceLogging::getInstance().setLogOutput(output);

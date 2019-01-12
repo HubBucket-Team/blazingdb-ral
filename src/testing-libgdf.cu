@@ -258,7 +258,13 @@ static result_pair closeConnectionService(uint64_t accessToken, Buffer&& request
   std::cout << "accessToken: " << accessToken << std::endl;
 
   try {
-	result_set_repository::get_instance().remove_all_connection_tokens(accessToken);
+  result_set_repository::get_instance().remove_all_connection_tokens(accessToken);
+  
+  GDFRefCounter::getInstance()->show_summary();
+
+  cudaDeviceReset();
+  exit(0);
+
   } catch (std::runtime_error &error) {
      std::cout << error.what() << std::endl;
      ResponseErrorMessage errorMessage{ std::string{error.what()} };
@@ -524,7 +530,7 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
 			<< requestPayload.getTableGroup().tables[0].columns[0].size
 			<< std::endl;
   std::cout << "token: " << requestPayload.getTableGroup().tables[0].token << std::endl;
-  Library::Logging::Logger().logInfo("query:\n" + requestPayload.getLogicalPlan());
+  //Library::Logging::Logger().logInfo("query:\n" + requestPayload.getLogicalPlan());
 
   std::vector<void *> handles;
 	uint64_t resultToken = 0L;
@@ -564,7 +570,7 @@ auto  interpreterServices(const blazingdb::protocol::Buffer &requestPayloadBuffe
 
 main(int argc, const char *argv[])
 {
-    std::string iphost;
+    /*std::string iphost;
     std::string port;
 
     switch (argc) {
@@ -579,7 +585,7 @@ main(int argc, const char *argv[])
         //default:
         //std::cout << "usage: " << argv[0] << " <IP|HOSTNAME> <PORT>" << std::endl;
         //return 1;
-    }
+    }*/
 
     std::cout << "RAL Engine starting" << std::endl;
 
@@ -587,7 +593,7 @@ main(int argc, const char *argv[])
     Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
 
   global_ip = "/tmp/ral.socket";
-  global_port = atoi(port.c_str());
+  //global_port = atoi(port.c_str());
 
   blazingdb::protocol::UnixSocketConnection connection("/tmp/ral.socket");
   blazingdb::protocol::Server server(connection);

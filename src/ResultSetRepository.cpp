@@ -7,6 +7,7 @@
 
 #include "ResultSetRepository.h"
 #include <random>
+#include "cuDF/Allocator.h"
 
 result_set_repository::result_set_repository() {
 	// nothing really has to be instantiated
@@ -114,7 +115,7 @@ void result_set_repository::remove_all_connection_tokens(connection_id_t connect
 
 bool result_set_repository::free_result(query_token_t token){
 	std::lock_guard<std::mutex> guard(this->repo_mutex);
-	this->result_sets.erase(token);
+
 	for(auto it = this->connection_result_sets.begin(); it != this->connection_result_sets.end(); ++it) {
 		connection_id_t connection = it->first;
 		for(size_t i = 0; i <  this->connection_result_sets[connection].size(); i++){
@@ -124,11 +125,17 @@ bool result_set_repository::free_result(query_token_t token){
 				tokens.erase(tokens.begin() + i);
 				this->connection_result_sets[connection] = tokens;
 				std::cout<<"freed result!"<<std::endl;
+
+				blazing_frame output_frame = std::get<1>(this->result_sets[token]);
+
+				for(size_t i = 0; i < output_frame.get_width(); i++){
+					GDFRefCounter::getInstance()->free(output_frame.get_column(i).get_gdf_column());
+				}
+
+				this->result_sets.erase(token);
 				return true;
 			}
-
 		}
-
 	}
 	return false;
 

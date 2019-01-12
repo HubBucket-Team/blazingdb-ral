@@ -47,6 +47,29 @@ void GDFRefCounter::increment(gdf_column* col_ptr)
     }
 }
 
+void GDFRefCounter::free(gdf_column* col_ptr)
+{
+    std::lock_guard<std::mutex> lock(gc_mutex);
+    gdf_column * map_key = {col_ptr};
+
+    if(map.find(map_key)!=map.end()){
+        map.erase(map_key);
+
+        try {
+            cuDF::Allocator::deallocate(map_key->data);
+            if (map_key->valid != nullptr) {
+                cuDF::Allocator::deallocate(map_key->valid);
+            }
+            delete map_key;
+        }
+        catch (const cuDF::Allocator::Exception& exception) {
+            std::cerr << exception.what() << std::endl;
+            cudaDeviceReset();
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
 void GDFRefCounter::decrement(gdf_column* col_ptr)
 {
     std::lock_guard<std::mutex> lock(gc_mutex);
@@ -81,6 +104,18 @@ bool GDFRefCounter::contains_column(gdf_column * ptrs){
 		return false;
 	}
 	return true;
+}
+
+void GDFRefCounter::show_summary()
+{
+    std::cout<<"--------------------- RefCounter Summary -------------------------\n";
+
+    for (auto& iter : this->map)
+        std::cout << "Ptr: " << iter.first << " count: " << iter.second <<"\n";
+    
+    std::cout<<"Size: "<<get_map_size()<<"\n";
+
+    std::cout<<"------------------ End RefCounter Summary -------------------------\n";
 }
 
 GDFRefCounter::GDFRefCounter()

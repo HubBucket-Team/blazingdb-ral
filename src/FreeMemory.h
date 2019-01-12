@@ -5,7 +5,10 @@
 
 namespace FreeMemory {
 void
-freeAll() noexcept;
+Initialize();
+
+void
+freeAll();
 
 void
 registerRawPointer(const void *);

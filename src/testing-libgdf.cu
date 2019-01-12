@@ -19,6 +19,8 @@
 #include "Types.h"
 #include <cuda_runtime.h>
 
+#include "FreeMemory.h"
+
 #include "gdf_wrapper/gdf_wrapper.cuh"
 
 #include <tuple>
@@ -547,6 +549,11 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
   return std::make_pair(Status_Success, responsePayload.getBufferData());
 }
 
+static result_pair freeMemoryCallback(uint64_t accessToken, Buffer&& requesBuffer)   {
+    FreeMemory::freeAll();
+    ZeroMessage response{};
+    return std::make_pair(Status_Success, response.getBufferData());
+}
 
 static  std::map<int8_t, FunctionType> services;
 
@@ -583,6 +590,8 @@ main(int argc, const char *argv[])
 
     std::cout << "RAL Engine starting" << std::endl;
 
+    FreeMemory::Initialize();
+
     auto output = new Library::Logging::FileOutput("RAL.log", true);
     Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
 
@@ -603,6 +612,8 @@ main(int argc, const char *argv[])
 
   services.insert(std::make_pair(interpreter::MessageType_LoadCsvSchema, &loadCsvSchema));
   services.insert(std::make_pair(interpreter::MessageType_LoadParquetSchema, &loadParquetSchema));
+
+  services.insert(std::make_pair(9, &freeMemoryCallback));
 
   server.handle(&interpreterServices);
 

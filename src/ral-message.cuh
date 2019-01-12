@@ -10,9 +10,12 @@
 #include "ResultSetRepository.h"
 #include "DataFrame.h"
 
+#include "FreeMemory.h"
+
 namespace libgdf {
 
 static std::basic_string<int8_t> BuildCudaIpcMemHandler (void *data) {
+  FreeMemory::registerIPCPointer(data);
   std::basic_string<int8_t> bytes;
   if (data != nullptr) {
     cudaIpcMemHandle_t ipc_memhandle;
@@ -20,7 +23,7 @@ static std::basic_string<int8_t> BuildCudaIpcMemHandler (void *data) {
 
     bytes.resize(sizeof(cudaIpcMemHandle_t));
     memcpy((void*)bytes.data(), (int8_t*)(&ipc_memhandle), sizeof(cudaIpcMemHandle_t));
-  
+
   }
   return bytes;
 }

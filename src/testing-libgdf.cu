@@ -140,7 +140,8 @@ query_token_t loadParquetAndInsertToResultRepository(std::string path, connectio
   }
 
 	std::thread t = std::thread([=]{
-    CodeTimer blazing_timer;
+    
+	CodeTimer blazing_timer;
 
 		std::vector<Uri> uris(1);
 		uris[0] = Uri(path);
@@ -483,7 +484,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 
     std::thread t = std::thread([=]{
         CodeTimer blazing_timer;
-
+        
         blazing_frame output_frame;
 
         std::vector<gdf_column_cpp> columns;
@@ -524,7 +525,10 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
 			<< requestPayload.getTableGroup().tables[0].columns[0].size
 			<< std::endl;
   std::cout << "token: " << requestPayload.getTableGroup().tables[0].token << std::endl;
+
+  #if LOG_PERFORMANCE
   Library::Logging::Logger().logInfo("query:\n" + requestPayload.getLogicalPlan());
+  #endif
 
   std::vector<void *> handles;
 	uint64_t resultToken = 0L;

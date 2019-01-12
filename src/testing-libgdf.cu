@@ -259,11 +259,11 @@ static result_pair closeConnectionService(uint64_t accessToken, Buffer&& request
 
   try {
   result_set_repository::get_instance().remove_all_connection_tokens(accessToken);
-  
-  GDFRefCounter::getInstance()->show_summary();
 
-  cudaDeviceReset();
-  exit(0);
+  // NOTE: use next 3 lines to check with "/usr/local/cuda/bin/cuda-memcheck  --leak-check full  ./testing-libgdf"   
+  // GDFRefCounter::getInstance()->show_summary();
+  // cudaDeviceReset();
+  // exit(0);
 
   } catch (std::runtime_error &error) {
      std::cout << error.what() << std::endl;

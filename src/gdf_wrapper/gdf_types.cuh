@@ -59,6 +59,10 @@ typedef enum{
 
 } gdf_unary_operator;
 
+typedef enum{
+    GDF_COALESCE
+} gdf_other_binary_operator;
+
 
 /**
  * @union gdf_data

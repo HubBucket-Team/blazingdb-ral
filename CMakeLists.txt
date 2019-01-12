@@ -48,7 +48,6 @@ include(ConfigureParquet)
 include(ConfigureLibGDF)
 include(ConfigureBlazingDBProtocol)
 include(ConfigureBlazingDBIO)
-include(ConfigureZeroMQ)
 
 find_package(Threads)
 
@@ -77,7 +76,7 @@ get_directory_property(parquet_reader_source_files DIRECTORY ${CMAKE_SOURCE_DIR}
 set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_parser/ParquetParser.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_parser/CSVParser.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/Config/Config.cpp             
+              ${CMAKE_CURRENT_SOURCE_DIR}/src/Config/Config.cpp
               ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
               ${CMAKE_SOURCE_DIR}/src/Interpreter/interpreter_cpp.cu
               ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
@@ -87,6 +86,8 @@ set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
               ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp
               ${CMAKE_SOURCE_DIR}/src/QueryState.cpp
               ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
+              ${CMAKE_SOURCE_DIR}/src/FreeMemory.cpp
+
               ${CMAKE_SOURCE_DIR}/src/Utils.cu
               ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
               ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
@@ -99,7 +100,7 @@ add_executable(testing-libgdf ${SRC_FILES})
 
 target_link_libraries(testing-libgdf
     ${BLAZINGDB_IO_STATIC_LIB}
-    Threads::Threads   
+    Threads::Threads
     ${ZEROMQ_STATIC_LIB}
     ${BLAZINGDB_PROTOCOL_STATIC_LIB}
 

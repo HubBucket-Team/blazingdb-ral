@@ -16,28 +16,30 @@
  * limitations under the License.
  */
 #pragma once
-#include <ctype.h>
-#include "gdf_wrapper/gdf_wrapper.cuh"
+
+#include <utilities/cudf_utils.h>
+
 namespace gdf {
 namespace util {
 
-// variables from apache/arrow
-// Buffers are padded to 64-byte boundaries (for SIMD)
-static constexpr int32_t kArrowAlignment = 64;
+static constexpr int ValidSize = 32;
+using ValidType = uint32_t;
 
-// Tensors are padded to 64-byte boundaries
-static constexpr int32_t kTensorAlignment = 64;
 
-// Align on 8-byte boundaries in IPC
-static constexpr int32_t kArrowIpcAlignment = 8;
+// Instead of this function, use get_number_of_bytes_for_valid from gdf/utils.h
+//__host__ __device__ __forceinline__
+//  size_t
+//  valid_size(size_t column_length)
+//{
+//  const size_t n_ints = (column_length / ValidSize) + ((column_length % ValidSize) ? 1 : 0);
+//  return n_ints * sizeof(ValidType);
+//}
 
-// Align on 4-byte boundaries in CUDF static 
-constexpr int32_t kCudfIpcAlignment = 4;
-
-//todo, enable arrow ipc utils, and remove this method
-static inline int64_t PaddedLength(int64_t nbytes, int32_t alignment = kCudfIpcAlignment) {
-  return ((nbytes + alignment - 1) / alignment) * alignment;
-}
+// Instead of this function, use gdf_is_valid from gdf/utils.h
+///__host__ __device__ __forceinline__ bool get_bit(const gdf_valid_type* const bits, size_t i)
+///{
+///  return  bits == nullptr? true :  bits[i >> size_t(3)] & (1 << (i & size_t(7)));
+///}
 
 __host__ __device__ __forceinline__
   uint8_t
@@ -70,27 +72,29 @@ __host__ __device__ __forceinline__ size_t last_byte_index(size_t column_size)
   return (column_size + 8 - 1) / 8;
 }
 
-static inline std::string chartobin(gdf_valid_type c, size_t size = 8)
+static inline std::string chartobin(gdf_valid_type c, int size = 8)
 {
   std::string bin;
   bin.resize(size);
   bin[0] = 0;
-  size_t i;
-  for (i = 0; i < size; i++) {
-    bin[i] = (c % 2) + '0';
-    c /= 2;
+  int i;
+  for (i = size - 1; i >= 0; i--)
+  {
+      bin[i] = (c % 2) + '0';
+      c /= 2;
   }
   return bin;
 }
 
-static inline std::string gdf_valid_to_str(gdf_valid_type* valid, size_t column_size)
+static inline std::string gdf_valid_to_str(gdf_valid_type *valid, size_t column_size)
 {
-  size_t last_byte = gdf::util::last_byte_index(column_size);
+  size_t n_bytes = get_number_of_bytes_for_valid(column_size);
   std::string response;
-  for (size_t i = 0; i < last_byte; i++) {
-    size_t n_bits = last_byte != i + 1 ? 8 : column_size - 8 * (last_byte - 1);
-    auto result = chartobin(valid[i], n_bits);
-    response += std::string(result);
+  for (size_t i = 0; i < n_bytes; i++)
+  {
+      size_t length = (n_bytes != i + 1) ? GDF_VALID_BITSIZE : (column_size - GDF_VALID_BITSIZE * (n_bytes - 1));
+      auto result = chartobin(valid[i], length);
+      response += std::string(result);
   }
   return response;
 }

@@ -29,11 +29,17 @@ class GDFRefCounter
 
 		void decrement(gdf_column* col_ptr);
 
+		//Deallocating memory from the resultset repository
+		//Used by decrement and for freeing data that has been deregistered previously
+		void free(gdf_column* col_ptr);
+
 		void register_column(gdf_column* col_ptr);
 
 		void deregister_column(gdf_column* col_ptr);
 
 		size_t get_map_size();
+
+		void show_summary();
 
 		bool contains_column(gdf_column * ptrs);
 		static GDFRefCounter* getInstance();

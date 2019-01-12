@@ -12,6 +12,10 @@
 
 #include "CalciteExpressionParsing.h"
 
+#include <blazingdb/io/Library/Logging/Logger.h>
+#include "CodeTimer.h"
+#include "gdf_wrapper/gdf_wrapper.cuh"
+
 //TODO: we need to update this to binary_operator
 //when we have built that enum
 gdf_error process__binary_operation_column_column(
@@ -66,9 +70,8 @@ gdf_error process__binary_operation_column_column(
 		if(is_literal(right_operand)){
 			gdf_scalar right = get_scalar_from_string(right_operand,inputs.get_column(left_index).dtype());
 
-
 			gdf_error err = gdf_binary_operation_v_v_s(output.get_gdf_column(),inputs.get_column(left_index).get_gdf_column(),&right,operation);
-			if(err == GDF_SUCCESS){
+ 			if(err == GDF_SUCCESS){
 				inputs.add_column(temp.clone());
 				operands.push("$" + std::to_string(inputs.get_size_column()-1));
 			}
@@ -189,7 +192,68 @@ gdf_error process_unary_operation(
 		return err;
 	}
 }
+ 
+gdf_error process_other_binary_operation(
+		std::string operator_string,
+		std::stack<std::string> & operands,
+		blazing_frame & inputs,
+		gdf_column_cpp final_output,
+		gdf_column_cpp temp,
+		bool is_last //set to true if we write to output
+){
+	gdf_column_cpp output;
+	if(is_last){
+		output = final_output;
+	}else{
+		output = temp;
+	}
 
+	gdf_other_binary_operator operation; 
+	gdf_error err = get_operation(operator_string,&operation);
+	if(err != GDF_SUCCESS){
+		return err;
+	}
+
+	std::string left_operand = operands.top();
+	operands.pop();
+	std::string right_operand = operands.top();
+	operands.pop();
+
+	switch (operation){
+		case GDF_COALESCE:
+			if(is_literal(left_operand)){
+				return GDF_INVALID_API_CALL;			
+			} else {
+				size_t left_index = get_index(left_operand);
+				
+				if(is_literal(right_operand)){
+					// take literal and put into a size 1 column and call replace_nulls
+					gdf_scalar right = get_scalar_from_string(right_operand, inputs.get_column(left_index).dtype());
+					
+					gdf_column_cpp expression_input = inputs.get_column(left_index);
+					
+					gdf_column_cpp temp_scalar;
+					temp_scalar.create_gdf_column(right.dtype, 1, nullptr, get_width_dtype(right.dtype));
+					CheckCudaErrors(cudaMemcpy(temp_scalar.data(), &(right.data), get_width_dtype(right.dtype), cudaMemcpyHostToDevice));
+
+					err = gdf_replace_nulls(output.get_gdf_column(), expression_input.get_gdf_column(), temp_scalar.get_gdf_column());
+				} else {
+					// call replace_null
+					size_t right_index = get_index(right_operand);
+					err = gdf_replace_nulls(output.get_gdf_column(), inputs.get_column(left_index).get_gdf_column(), inputs.get_column(right_index).get_gdf_column());
+				}
+				if(err == GDF_SUCCESS){
+					inputs.add_column(temp.clone());
+					operands.push("$" + std::to_string(inputs.get_size_column()-1));
+				}
+			}
+			break;
+		default:
+			err = GDF_INVALID_API_CALL;
+	}
+	
+	return err;
+}
 
 
 template <typename T>
@@ -199,17 +263,18 @@ gdf_error process__binary_operation_column_literal(
 		T right,
 		gdf_column * output
 ){
-
 }
+
 template <typename T>
 gdf_error process__binary_operation_literal_column(
 		gdf_binary_operator operation,
 		T left,
 		gdf_column * right,
 		gdf_column * output
-){
+)
+{
 	//TODO: only works for comparison operators
-
+	
 }
 
 
@@ -222,7 +287,8 @@ gdf_error evaluate_expression(
 		gdf_column_cpp output,
 		gdf_column_cpp temp){
 	//make temp a column of size 8 bytes so it can accomodate the largest possible size
-
+	static CodeTimer timer;
+	timer.reset();
 	std::string clean_expression = clean_calcite_expression(expression);
 	int position = clean_expression.size();
 
@@ -269,6 +335,17 @@ gdf_error evaluate_expression(
 						temp,
 						position == 0 ? true : false  //set to true if we write to output
 				);
+			} else if (is_other_binary_operator_token(token)){
+				process_other_binary_operation(
+						token,
+						operand_stack,
+						inputs,
+						output,
+						temp,
+						position == 0 ? true : false  //set to true if we write to output
+				);
+			} else {
+				return GDF_INVALID_API_CALL;
 			}
 
 
@@ -278,6 +355,8 @@ gdf_error evaluate_expression(
 	}
 
 	output.update_null_count();
+
+	Library::Logging::Logger().logInfo("-> evaluate_expression took " + std::to_string(timer.getDuration()) + " ms processing expression:\n" + expression);
 
 	return GDF_SUCCESS;
 }

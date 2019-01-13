@@ -3,6 +3,7 @@ set(jsource_files_SRC
   ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
   ${CMAKE_SOURCE_DIR}/src/ColumnManipulation.cu
   ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
+  ${CMAKE_SOURCE_DIR}/src/FreeMemory.cpp
   ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
   ${CMAKE_SOURCE_DIR}/src/JoinProcessor.cpp
   ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp

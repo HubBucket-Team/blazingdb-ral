@@ -66,8 +66,11 @@ macro(CONFIGURE_CUDA_COMPILER compute_capability)
     # set warnings
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Werror cross-execution-space-call -Xcompiler -Wall")
 
+    message(STATUS "Default C++ preprocessor definitions for all targets: ${CXX_DEFINES}")
+    message(STATUS "Default CUDA preprocessor definitions for all targets: ${CUDA_DEFINES}")
     message(STATUS "Default C++ compiler flags for all targets: ${CMAKE_CXX_FLAGS}")
-    message(STATUS "Default CUDA compiler flags for all targets: ${CUDA_NVCC_FLAGS}")
+    message(STATUS "Default CUDA compiler flags for all targets: ${CMAKE_CUDA_FLAGS}")
+
 endmacro()
 
 # END macros

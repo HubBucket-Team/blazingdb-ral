@@ -52,6 +52,9 @@ include(ConfigureBlazingDBIO)
 find_package(Threads)
 
 # BEGIN MAIN #
+
+add_definitions(${CXX_DEFINES} ${CUDA_DEFINES})
+
 include_directories(
     ${LIB_BLAZINGIO_INCLUDEDIR}
     ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}

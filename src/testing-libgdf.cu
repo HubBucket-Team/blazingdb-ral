@@ -602,8 +602,12 @@ main(int argc, const char *argv[])
 
     FreeMemory::Initialize();
 
+    #if LOG_PERFORMANCE
+    std::cout << "Recording performance logs ..." << std::endl;
     auto output = new Library::Logging::FileOutput("RAL.log", true);
     Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
+    Library::Logging::Logger().logInfo("Recording performance logs ...");
+    #endif
 
   global_ip = "/tmp/ral.socket";
   //global_port = atoi(port.c_str());

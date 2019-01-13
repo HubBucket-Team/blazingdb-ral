@@ -126,6 +126,7 @@ BlazingFrame ToBlazingFrame(std::vector<std::string> filePaths, std::vector<std:
       args.dtype			= columnDTypes[index].data();
       args.delimiter		= '|';
       args.lineterminator = '\n';
+      args.decimal = '.';
 
       error = read_csv(&args);
       assert(error == GDF_SUCCESS);

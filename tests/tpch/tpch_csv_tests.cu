@@ -202,8 +202,7 @@ R"(1|Customer#000000001|IVhzIApeRb ot,c,E|15|25-989-741-2988|711.56|BUILDING|to 
 147|Customer#000000147|6VvIwbVdmcsMzuu,C84GtBWPaipGfi7DV|18|28-803-187-4335|8071.4|AUTOMOBILE|ress packages above the blithely regular packages sleep fluffily blithely ironic accounts. 
 148|Customer#000000148|BhSPlEWGvIJyT9swk vCWE|11|21-562-498-6636|2135.6|HOUSEHOLD|ing to the carefully ironic requests. carefully regular dependencies about the theodolites wake furious
 149|Customer#000000149|3byTHCp2mNLPigUrrq|19|29-797-439-6760|8959.65|AUTOMOBILE|al instructions haggle against the slyly bold w
-150|Customer#000000150|zeoGShTjCwGPplOWFkLURrh41O0AZ8dwNEEN4 |18|28-328-564-7630|3849.48|MACHINERY|ole blithely among the furiously pending packages. furiously bold ideas wake fluffily ironic idea
-)";
+150|Customer#000000150|zeoGShTjCwGPplOWFkLURrh41O0AZ8dwNEEN4 |18|28-328-564-7630|3849.48|MACHINERY|ole blithely among the furiously pending packages. furiously bold ideas wake fluffily ironic idea)";
 	outfile <<	content << std::endl;
 	outfile.close();
    } 
@@ -246,6 +245,7 @@ TEST_F(EvaluateQueryTest, TEST_00) {
   std::vector<gdf_column_cpp> outputs;
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
+
   EXPECT_TRUE(err == GDF_SUCCESS);
   auto output_table =
       GdfColumnCppsTableBuilder{"output_table", outputs}.Build();

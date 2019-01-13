@@ -11,7 +11,6 @@
 #include <cuda_runtime.h>
 #include <memory>
 #include <algorithm>
-#include <sstream>
 #include <thread>
 #include "CalciteInterpreter.h"
 #include "ResultSetRepository.h"
@@ -143,8 +142,7 @@ query_token_t loadParquetAndInsertToResultRepository(std::string path, connectio
   }
 
 	std::thread t = std::thread([=]{
-    
-	CodeTimer blazing_timer;
+    CodeTimer blazing_timer;
 
 		std::vector<Uri> uris(1);
 		uris[0] = Uri(path);
@@ -493,7 +491,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 
     std::thread t = std::thread([=]{
         CodeTimer blazing_timer;
-        
+
         blazing_frame output_frame;
 
         std::vector<gdf_column_cpp> columns;
@@ -534,10 +532,7 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
 			<< requestPayload.getTableGroup().tables[0].columns[0].size
 			<< std::endl;
   std::cout << "token: " << requestPayload.getTableGroup().tables[0].token << std::endl;
-
-  #ifdef LOG_PERFORMANCE
-  Library::Logging::Logger().logInfo("query:\n" + requestPayload.getLogicalPlan());
-  #endif
+  //Library::Logging::Logger().logInfo("query:\n" + requestPayload.getLogicalPlan());
 
   std::vector<void *> handles;
 	uint64_t resultToken = 0L;
@@ -579,24 +574,38 @@ auto  interpreterServices(const blazingdb::protocol::Buffer &requestPayloadBuffe
   return Buffer{responseObject.getBufferData()};
 }
 
-int main(int argc, const char *argv[])
+
+main(int argc, const char *argv[])
 {
+    /*std::string iphost;
+    std::string port;
+
+    switch (argc) {
+    case 2:
+        iphost = argv[1];
+        port   = "8892";
+        break;
+    case 3:
+        iphost = argv[1];
+        port   = argv[2];
+        break;
+        //default:
+        //std::cout << "usage: " << argv[0] << " <IP|HOSTNAME> <PORT>" << std::endl;
+        //return 1;
+    }*/
   #ifndef VERBOSE
   std::cout.rdbuf(nullptr); // substitute internal std::cout buffer with
   #endif // VERBOSE 
 
-  std::cout << "RAL Engine starting" << std::endl;
 
-  FreeMemory::Initialize();
+    std::cout << "RAL Engine starting" << std::endl;
 
-  #ifdef LOG_PERFORMANCE
-  std::cout << "Recording performance logs ..." << std::endl;
-  auto output = new Library::Logging::FileOutput("RAL.log", true);
-  Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
-  Library::Logging::Logger().logInfo("Recording performance logs ...");
-  #endif
+    FreeMemory::Initialize();
 
-global_ip = "/tmp/ral.socket";
+    auto output = new Library::Logging::FileOutput("RAL.log", true);
+    Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
+
+  global_ip = "/tmp/ral.socket";
   //global_port = atoi(port.c_str());
 
   blazingdb::protocol::UnixSocketConnection connection("/tmp/ral.socket");

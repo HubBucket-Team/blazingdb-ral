@@ -18,6 +18,7 @@ set(source_files
 set(groupbywoagg-test_SRCS
   ${CMAKE_SOURCE_DIR}/src/Utils.cu
   ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
+  ${CMAKE_SOURCE_DIR}/src/FreeMemory.cpp
   ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
   ${CMAKE_SOURCE_DIR}/src/ColumnManipulation.cu
   ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp

@@ -72,11 +72,9 @@ macro(CONFIGURE_CUDA_COMPILER compute_capability)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -rdynamic")
     endif(CMAKE_BUILD_TYPE MATCHES Debug)
 
-    message(STATUS "Default C++ preprocessor definitions for all targets: ${CXX_DEFINES}")
-    message(STATUS "Default CUDA preprocessor definitions for all targets: ${CUDA_DEFINES}")
+    message(STATUS "Default C++ (CUDA) compiler flags for all targets: ${CMAKE_CUDA_FLAGS}")
     message(STATUS "Default C++ compiler flags for all targets: ${CMAKE_CXX_FLAGS}")
-    message(STATUS "Default CUDA compiler flags for all targets: ${CMAKE_CUDA_FLAGS}")
-
+    message(STATUS "Default CUDA compiler flags for all targets: ${CUDA_NVCC_FLAGS}")
 endmacro()
 
 # END macros

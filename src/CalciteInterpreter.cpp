@@ -14,10 +14,9 @@
 #include "JoinProcessor.h"
 #include "ColumnManipulation.cuh"
 #include "CalciteExpressionParsing.h"
+#include "CodeTimer.h"
 #include "Traits/RuntimeTraits.h"
 #include "cuDF/Allocator.h"
-
-#include "CodeTimer.h"
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 const std::string LOGICAL_UNION_TEXT = "LogicalUnion";
@@ -316,10 +315,8 @@ std::string get_named_expression(std::string query_part, std::string expression_
 
 
 blazing_frame process_join(blazing_frame input, std::string query_part){
-	#ifdef LOG_PERFORMANCE
-    static CodeTimer timer;
+	static CodeTimer timer;
 	timer.reset();
-    #endif
 
 	size_t size = 0; //libgdf will be handling the outputs for these
 
@@ -340,11 +337,7 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 			left_indices.get_gdf_column(),
 			right_indices.get_gdf_column()
 	);
-    
-    #ifdef LOG_PERFORMANCE
 	Library::Logging::Logger().logInfo("-> Join sub block 1 took " + std::to_string(timer.getDuration()) + " ms");
-    #endif
-    
 	// std::cout<<"Indices are starting!"<<std::endl;
 	// print_gdf_column(left_indices.get_gdf_column());
 	// print_gdf_column(right_indices.get_gdf_column());
@@ -360,10 +353,7 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 	// you could write the output in place, saving time for allocations then shrink later on
 	// the simplest solution is to reallocate space and free up the old after copying it over
 
-	#ifdef LOG_PERFORMANCE
-    timer.reset();
-    #endif
-    
+	timer.reset();
 	//a data frame should have two "tables"or groups of columns at this point
 	std::vector<gdf_column_cpp> new_columns(input.get_size_columns());
 	size_t first_table_end_index = input.get_size_column();
@@ -399,10 +389,8 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 	}
 	input.clear();
 	input.add_table(new_columns);
-    #ifdef LOG_PERFORMANCE
 	Library::Logging::Logger().logInfo("-> Join sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
-	#endif
-    return input;
+	return input;
 }
 
 blazing_frame process_union(blazing_frame& left, blazing_frame& right, std::string query_part){
@@ -868,11 +856,8 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 
 
 gdf_error process_sort(blazing_frame & input, std::string query_part){
-    #ifdef LOG_PERFORMANCE
 	static CodeTimer timer;
 	timer.reset();
-    #endif
-
 	std::cout<<"about to process sort"<<std::endl;
 
 	auto rangeStart = query_part.find("(");
@@ -891,10 +876,8 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 		sort_order_types[i] = (get_named_expression(combined_expression, "dir" + std::to_string(i)) == DESCENDING_ORDER_SORT_TEXT);
 	}
 
-    #ifdef LOG_PERFORMANCE
 	Library::Logging::Logger().logInfo("-> Sort sub block 1 took " + std::to_string(timer.getDuration()) + " ms");
 	timer.reset();
-    #endif
 
 	gdf_column_cpp asc_desc_col;
 	asc_desc_col.create_gdf_column(GDF_INT8,num_sort_columns,nullptr,1, "");
@@ -910,14 +893,12 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 								 index_col.get_gdf_column(),
 								 flag_nulls_are_smallest);
 
-    #ifdef LOG_PERFORMANCE
 	Library::Logging::Logger().logInfo("-> Sort sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
-    timer.reset();    
-    #endif
-    
+
 	if (err != GDF_SUCCESS)
 		return err;
 
+	timer.reset();
 	int widest_column = 0;
 	for(int i = 0; i < input.get_width();i++){
 		int cur_width;
@@ -968,9 +949,7 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 
 		//free_gdf_column(&empty);*/
 	}
-    #ifdef LOG_PERFORMANCE
 	Library::Logging::Logger().logInfo("-> Sort sub block 3 took " + std::to_string(timer.getDuration()) + " ms");
-    #endif
 	return GDF_SUCCESS;
 }
 
@@ -978,15 +957,11 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 gdf_error process_filter(blazing_frame & input, std::string query_part){
 
 	//assert(input.get_column(0) != nullptr);
-    #ifdef LOG_PERFORMANCE
 	static CodeTimer timer;
-    #endif
 
 	size_t size = input.get_column(0).size();
-
-    #ifdef LOG_PERFORMANCE
+	
 	timer.reset();
-    #endif
 	
 	//TODO de donde saco el nombre de la columna aqui???
 	gdf_column_cpp stencil;
@@ -1000,11 +975,8 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 		}
 	}
 
-    #ifdef LOG_PERFORMANCE
 	Library::Logging::Logger().logInfo("-> Filter sub block 1 took " + std::to_string(timer.getDuration()) + " ms");
 	timer.reset();
-    #endif
-    
 	gdf_dtype output_type; // this is junk since we know the output types here
 	gdf_error err = get_output_type_expression(&input, &output_type, &max_temp_type, get_condition_expression(query_part));
 	if(err != GDF_SUCCESS){
@@ -1015,26 +987,20 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 	gdf_column_cpp temp;
 	temp.create_gdf_column(max_temp_type,input.get_column(0).size(),nullptr,get_width_dtype(max_temp_type), "");
 
-    #ifdef LOG_PERFORMANCE
 	Library::Logging::Logger().logInfo("-> Filter sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
+	
 	timer.reset();
-    #endif
-    
 	std::string conditional_expression = get_condition_expression(query_part);
-	#ifdef LOG_PERFORMANCE
-    Library::Logging::Logger().logInfo("-> Filter sub block 3 took " + std::to_string(timer.getDuration()) + " ms");
+	Library::Logging::Logger().logInfo("-> Filter sub block 3 took " + std::to_string(timer.getDuration()) + " ms");
 	// timer.reset();
-    #endif
 	err = evaluate_expression(
 			input,
 			conditional_expression,
 			stencil,
 			temp);
 	
-    #ifdef LOG_PERFORMANCE
 	// Library::Logging::Logger().logInfo("-> Filter sub block 4 took " + std::to_string(timer.getDuration()) + " ms");
-	#endif
-    
+	
 	if(err == GDF_SUCCESS){
 		//apply filter to all the columns
 		// for(int i = 0; i < input.get_width(); i++){
@@ -1063,45 +1029,33 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 
 		// 	input.set_column(i,temp.clone());
 		// }
-
-        #ifdef LOG_PERFORMANCE
+		
 		timer.reset();
-        #endif
-
 		gdf_column_cpp index_col;
 		index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
 		gdf_sequence(static_cast<int32_t*>(index_col.get_gdf_column()->data), input.get_column(0).size(), 0);
 		// std::vector<int32_t> idx(input.get_column(0).size());
 		// std::iota(idx.begin(),idx.end(),0);
 		// CheckCudaErrors(cudaMemcpy(index_col.get_gdf_column()->data, idx.data(), idx.size() * sizeof(int32_t), cudaMemcpyHostToDevice));
-		#ifdef LOG_PERFORMANCE
-        Library::Logging::Logger().logInfo("-> Filter sub block 5 took " + std::to_string(timer.getDuration()) + " ms");
-        #endif
+		Library::Logging::Logger().logInfo("-> Filter sub block 5 took " + std::to_string(timer.getDuration()) + " ms");
+
 		gdf_column_cpp temp_idx;
 		temp_idx.create_gdf_column(GDF_INT32, input.get_column(0).size(), nullptr, get_width_dtype(GDF_INT32));
 		
-        #ifdef LOG_PERFORMANCE
 		timer.reset();
-        #endif
 		err = gpu_apply_stencil(
 					index_col.get_gdf_column(),
 					stencil.get_gdf_column(),
 					temp_idx.get_gdf_column()
 			);
-		#ifdef LOG_PERFORMANCE
-        Library::Logging::Logger().logInfo("-> Filter sub block 6 took " + std::to_string(timer.getDuration()) + " ms");
-        #endif
+		Library::Logging::Logger().logInfo("-> Filter sub block 6 took " + std::to_string(timer.getDuration()) + " ms");
 		if(err != GDF_SUCCESS){
 			return err;
 		}
 
-        #ifdef LOG_PERFORMANCE
 		timer.reset();
-        #endif
-        
 		gdf_column_cpp materialize_temp;
 		materialize_temp.create_gdf_column(input.get_column(0).dtype(),temp_idx.size(),nullptr,get_width_dtype(max_temp_type), "");
-
 		for(int i = 0; i < input.get_width();i++){
 			materialize_temp.set_dtype(input.get_column(i).dtype());
 
@@ -1114,9 +1068,7 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 			materialize_temp.update_null_count();
 			input.set_column(i,materialize_temp.clone(input.get_column(i).name()));
 		}
-		#ifdef LOG_PERFORMANCE
-        Library::Logging::Logger().logInfo("-> Filter sub block 7 took " + std::to_string(timer.getDuration()) + " ms");
-        #endif
+		Library::Logging::Logger().logInfo("-> Filter sub block 7 took " + std::to_string(timer.getDuration()) + " ms");
 	}else{
 		//free_gdf_column(&stencil);
 		//free_gdf_column(&temp);
@@ -1156,9 +1108,7 @@ blazing_frame evaluate_split_query(
 		std::vector<std::string> query, int call_depth = 0){
 	assert(input_tables.size() == table_names.size());
 	
-    #ifdef LOG_PERFORMANCE
 	static CodeTimer blazing_timer;			
-    #endif
 
 	if(query.size() == 1){
 		//process yourself and return
@@ -1222,25 +1172,17 @@ blazing_frame evaluate_split_query(
 			//we know that left and right are dataframes we want to join together
 			left_frame.add_table(right_frame.get_columns()[0]);
 			///left_frame.consolidate_tables();
-			#ifdef LOG_PERFORMANCE
-            blazing_timer.reset();
-            #endif
+			blazing_timer.reset();
 			result_frame = process_join(left_frame,query[0]);
-			#ifdef LOG_PERFORMANCE
-            Library::Logging::Logger().logInfo("process_join took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(left_frame.get_column(0).size()) + " rows");
-			#endif
-            return result_frame;
+			Library::Logging::Logger().logInfo("process_join took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(left_frame.get_column(0).size()) + " rows");
+			return result_frame;
 		}else if(is_union(query[0])){
 			//TODO: append the frames to each other
 			//return right_frame;//!!
-			#ifdef LOG_PERFORMANCE
-            blazing_timer.reset();
-            #endif
+			blazing_timer.reset();
 			result_frame = process_union(left_frame,right_frame,query[0]);
-			#ifdef LOG_PERFORMANCE
-            Library::Logging::Logger().logInfo("process_union took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(left_frame.get_column(0).size()) + " rows");
-			#endif
-            return result_frame;
+			Library::Logging::Logger().logInfo("process_union took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(left_frame.get_column(0).size()) + " rows");
+			return result_frame;
 		}else{
 			//probably an error here
 		}
@@ -1258,41 +1200,25 @@ blazing_frame evaluate_split_query(
 		);
 		//process self
 		if(is_project(query[0])){
-			#ifdef LOG_PERFORMANCE
-            blazing_timer.reset();
-            #endif
+			blazing_timer.reset();
 			gdf_error err = process_project(child_frame,query[0]);
-			#ifdef LOG_PERFORMANCE
-            Library::Logging::Logger().logInfo("process_project took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
-			#endif
-            return child_frame;
+			Library::Logging::Logger().logInfo("process_project took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
+			return child_frame;
 		}else if(is_aggregate(query[0])){
-            #ifdef LOG_PERFORMANCE
 			blazing_timer.reset();
-            #endif
 			gdf_error err = process_aggregate(child_frame,query[0]);
-			#ifdef LOG_PERFORMANCE
-            Library::Logging::Logger().logInfo("process_aggregate took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
-			#endif
-            return child_frame;
+			Library::Logging::Logger().logInfo("process_aggregate took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
+			return child_frame;
 		}else if(is_sort(query[0])){
-			#ifdef LOG_PERFORMANCE
-            blazing_timer.reset();
-            #endif
-			gdf_error err = process_sort(child_frame,query[0]);
-			#ifdef LOG_PERFORMANCE
-            Library::Logging::Logger().logInfo("process_sort took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
-			#endif
-            return child_frame;
-		}else if(is_filter(query[0])){
-            #ifdef LOG_PERFORMANCE
 			blazing_timer.reset();
-            #endif
+			gdf_error err = process_sort(child_frame,query[0]);
+			Library::Logging::Logger().logInfo("process_sort took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
+			return child_frame;
+		}else if(is_filter(query[0])){
+			blazing_timer.reset();
 			gdf_error err = process_filter(child_frame,query[0]);
-			#ifdef LOG_PERFORMANCE
-            Library::Logging::Logger().logInfo("process_filter took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
-			#endif
-            if(err != GDF_SUCCESS){
+			Library::Logging::Logger().logInfo("process_filter took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
+			if(err != GDF_SUCCESS){
 				std::cout<<"Error in filter: "<<err<<std::endl;
 			}
 
@@ -1320,7 +1246,7 @@ query_token_t evaluate_query(
 	 std::thread t = std::thread([=]{
 	
 	CodeTimer blazing_timer;
-    
+
 	std::vector<std::string> splitted = StringUtil::split(logicalPlan, "\n");
 	if (splitted[splitted.size() - 1].length() == 0) {
 		splitted.erase(splitted.end() -1);

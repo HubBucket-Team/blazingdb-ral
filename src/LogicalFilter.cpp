@@ -14,7 +14,7 @@
 
 #include <blazingdb/io/Library/Logging/Logger.h>
 
-#if LOG_PERFORMANCE
+#ifdef LOG_PERFORMANCE
 #include "CodeTimer.h"
 #endif
 
@@ -292,7 +292,7 @@ gdf_error evaluate_expression(
 		gdf_column_cpp temp){
 	//make temp a column of size 8 bytes so it can accomodate the largest possible size
 	
-    #if LOG_PERFORMANCE
+    #ifdef LOG_PERFORMANCE
     static CodeTimer timer;
     timer.reset();    
     #endif
@@ -364,7 +364,7 @@ gdf_error evaluate_expression(
 
 	output.update_null_count();
 
-    #if LOG_PERFORMANCE
+    #ifdef LOG_PERFORMANCE
 	Library::Logging::Logger().logInfo("-> evaluate_expression took " + std::to_string(timer.getDuration()) + " ms processing expression:\n" + expression);
     #endif
 

@@ -534,7 +534,7 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
 			<< std::endl;
   std::cout << "token: " << requestPayload.getTableGroup().tables[0].token << std::endl;
 
-  #if LOG_PERFORMANCE
+  #ifdef LOG_PERFORMANCE
   Library::Logging::Logger().logInfo("query:\n" + requestPayload.getLogicalPlan());
   #endif
 
@@ -602,7 +602,7 @@ main(int argc, const char *argv[])
 
     FreeMemory::Initialize();
 
-    #if LOG_PERFORMANCE
+    #ifdef LOG_PERFORMANCE
     std::cout << "Recording performance logs ..." << std::endl;
     auto output = new Library::Logging::FileOutput("RAL.log", true);
     Library::Logging::ServiceLogging::getInstance().setLogOutput(output);

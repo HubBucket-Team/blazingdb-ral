@@ -11,6 +11,7 @@
 #include <cuda_runtime.h>
 #include <memory>
 #include <algorithm>
+#include <sstream>
 #include <thread>
 #include "CalciteInterpreter.h"
 #include "ResultSetRepository.h"
@@ -578,38 +579,24 @@ auto  interpreterServices(const blazingdb::protocol::Buffer &requestPayloadBuffe
   return Buffer{responseObject.getBufferData()};
 }
 
-
-main(int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
-    /*std::string iphost;
-    std::string port;
+  #ifndef VERBOSE
+  std::cout.rdbuf(nullptr); // substitute internal std::cout buffer with
+  #endif // VERBOSE 
 
-    switch (argc) {
-    case 2:
-        iphost = argv[1];
-        port   = "8892";
-        break;
-    case 3:
-        iphost = argv[1];
-        port   = argv[2];
-        break;
-        //default:
-        //std::cout << "usage: " << argv[0] << " <IP|HOSTNAME> <PORT>" << std::endl;
-        //return 1;
-    }*/
+  std::cout << "RAL Engine starting" << std::endl;
 
-    std::cout << "RAL Engine starting" << std::endl;
+  FreeMemory::Initialize();
 
-    FreeMemory::Initialize();
+  #ifdef LOG_PERFORMANCE
+  std::cout << "Recording performance logs ..." << std::endl;
+  auto output = new Library::Logging::FileOutput("RAL.log", true);
+  Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
+  Library::Logging::Logger().logInfo("Recording performance logs ...");
+  #endif
 
-    #ifdef LOG_PERFORMANCE
-    std::cout << "Recording performance logs ..." << std::endl;
-    auto output = new Library::Logging::FileOutput("RAL.log", true);
-    Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
-    Library::Logging::Logger().logInfo("Recording performance logs ...");
-    #endif
-
-  global_ip = "/tmp/ral.socket";
+global_ip = "/tmp/ral.socket";
   //global_port = atoi(port.c_str());
 
   blazingdb::protocol::UnixSocketConnection connection("/tmp/ral.socket");

@@ -176,6 +176,14 @@ CUDACXX=/usr/local/cuda-9.2/bin/nvcc cmake -DCUDA_DEFINES=-DLOG_PERFORMANCE -DCX
 
 Then just search the file RAL.log in the same folder of the executable.
 
+### Verbose mode
+
+If you want to show verbose, add these args to cmake:
+
+```bash
+CUDACXX=/usr/local/cuda-9.2/bin/nvcc cmake -DCUDA_DEFINES=-DVERBOSE -DCXX_DEFINES=-DVERBOSE ...etc...
+```
+
 # Integration Tests
 
 ```bash

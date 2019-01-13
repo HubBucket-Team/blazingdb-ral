@@ -108,8 +108,7 @@ git submodule update --init --recursive
 # Build
 There are two ways to build the RAL component (for both cases you don't need to have conda in your system).
 
-## Build modes
-### First approach: Basic build
+## First approach: Basic build
 The first one will automagically download all the RAL dependencies as part of the cmake process.
 
 ```bash
@@ -119,7 +118,7 @@ CUDACXX=/usr/local/cuda-9.2/bin/nvcc cmake -DCMAKE_BUILD_TYPE=Debug ..
 make
 ```
 
-### Second approach: Custom build with dependencies
+## Second approach: Custom build with dependencies
 This second approach will reuse your development environment.
 So you just need to pass cmake arguments for installation paths of the dependencies you want.
 
@@ -164,17 +163,6 @@ Also, if you don't define any of these optional arguments then the cmake process
 - GOOGLETEST_INSTALL_DIR
 
 Finally, if don't want to use conda and need the nvstrings library, just download https://anaconda.org/nvidia/nvstrings/0.0.3/download/linux-64/nvstrings-0.0.3-cuda9.2_py35_0.tar.bz2 and uncompress the folder, this folder is the NVSTRINGS_INSTALL_DIR.
-
-## Build options
-### Performance log
-
-If you want to print or save the performance log, add these args to cmake:
-
-```bash
-CUDACXX=/usr/local/cuda-9.2/bin/nvcc cmake -DCUDA_DEFINES=-DLOG_PERFORMANCE -DCXX_DEFINES=-DLOG_PERFORMANCE ...etc...
-```
-
-Then just search the file RAL.log in the same folder of the executable.
 
 # Integration Tests
 

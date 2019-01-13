@@ -13,11 +13,7 @@
 #include "CalciteExpressionParsing.h"
 
 #include <blazingdb/io/Library/Logging/Logger.h>
-
-#ifdef LOG_PERFORMANCE
 #include "CodeTimer.h"
-#endif
-
 #include "gdf_wrapper/gdf_wrapper.cuh"
 
 //TODO: we need to update this to binary_operator
@@ -291,12 +287,8 @@ gdf_error evaluate_expression(
 		gdf_column_cpp output,
 		gdf_column_cpp temp){
 	//make temp a column of size 8 bytes so it can accomodate the largest possible size
-	
-    #ifdef LOG_PERFORMANCE
-    static CodeTimer timer;
-    timer.reset();    
-    #endif
-
+	static CodeTimer timer;
+	timer.reset();
 	std::string clean_expression = clean_calcite_expression(expression);
 	int position = clean_expression.size();
 
@@ -364,9 +356,7 @@ gdf_error evaluate_expression(
 
 	output.update_null_count();
 
-    #ifdef LOG_PERFORMANCE
 	Library::Logging::Logger().logInfo("-> evaluate_expression took " + std::to_string(timer.getDuration()) + " ms processing expression:\n" + expression);
-    #endif
 
 	return GDF_SUCCESS;
 }

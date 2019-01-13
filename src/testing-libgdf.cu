@@ -142,8 +142,7 @@ query_token_t loadParquetAndInsertToResultRepository(std::string path, connectio
   }
 
 	std::thread t = std::thread([=]{
-    
-	CodeTimer blazing_timer;
+    CodeTimer blazing_timer;
 
 		std::vector<Uri> uris(1);
 		uris[0] = Uri(path);
@@ -492,7 +491,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 
     std::thread t = std::thread([=]{
         CodeTimer blazing_timer;
-        
+
         blazing_frame output_frame;
 
         std::vector<gdf_column_cpp> columns;
@@ -533,10 +532,7 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
 			<< requestPayload.getTableGroup().tables[0].columns[0].size
 			<< std::endl;
   std::cout << "token: " << requestPayload.getTableGroup().tables[0].token << std::endl;
-
-  #ifdef LOG_PERFORMANCE
-  Library::Logging::Logger().logInfo("query:\n" + requestPayload.getLogicalPlan());
-  #endif
+  //Library::Logging::Logger().logInfo("query:\n" + requestPayload.getLogicalPlan());
 
   std::vector<void *> handles;
 	uint64_t resultToken = 0L;
@@ -602,12 +598,8 @@ main(int argc, const char *argv[])
 
     FreeMemory::Initialize();
 
-    #ifdef LOG_PERFORMANCE
-    std::cout << "Recording performance logs ..." << std::endl;
     auto output = new Library::Logging::FileOutput("RAL.log", true);
     Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
-    Library::Logging::Logger().logInfo("Recording performance logs ...");
-    #endif
 
   global_ip = "/tmp/ral.socket";
   //global_port = atoi(port.c_str());

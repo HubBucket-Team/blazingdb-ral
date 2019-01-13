@@ -593,12 +593,13 @@ main(int argc, const char *argv[])
         //std::cout << "usage: " << argv[0] << " <IP|HOSTNAME> <PORT>" << std::endl;
         //return 1;
     }*/
+
+    std::cout << "RAL Engine starting" << std::endl;
+
   #ifndef VERBOSE
   std::cout.rdbuf(nullptr); // substitute internal std::cout buffer with
   #endif // VERBOSE 
 
-
-    std::cout << "RAL Engine starting" << std::endl;
 
     FreeMemory::Initialize();
 

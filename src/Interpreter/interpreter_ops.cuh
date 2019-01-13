@@ -13,9 +13,6 @@
 
 #include "CalciteExpressionParsing.h"
 
-bool is_exponential_operator(gdf_binary_operator operation){
-	return operation == GDF_POW;
-}
 
 /*
 template<typename T>

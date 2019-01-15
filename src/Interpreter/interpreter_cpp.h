@@ -13,6 +13,10 @@
 //We have templated cude that has to be in a
 //.cuh but we need to be able to include this in cpp code that is not compiled with nvcc
 //this wraps that
+typedef short column_index_type;
+static const short SCALAR_INDEX;
+static const short SCALAR_NULL_INDEX;
+
 
 gdf_error perform_operation();
 

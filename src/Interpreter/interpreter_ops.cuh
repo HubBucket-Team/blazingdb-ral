@@ -23,6 +23,33 @@ __device__ __forceinline__ T t(int thread_id,
 }
  */
 
+
+int64_t scale_to_64_bit_return_bytes(gdf_scalar input){
+	gdf_dtype cur_type = input.dtype;
+	int64_t data;
+	if(cur_type == GDF_INT8){
+		data = input.data.si08;
+	}else if(cur_type == GDF_INT16){
+		data = input.data.si16;
+	}else if(cur_type == GDF_INT32){
+		data = input.data.si32;
+	}else if(cur_type == GDF_DATE32){
+		data = input.data.dt32;
+	}else if(cur_type == GDF_INT64 ){
+		data = input.data.si64;
+	}else if(cur_type == GDF_DATE64){
+		data = input.data.dt64;
+	} else if(cur_type == GDF_TIMESTAMP){
+		data = input.data.tmst;
+	}else if(cur_type == GDF_FLOAT32){
+		//convert to double first
+		double temp_data = input.data.fp32;
+		data =  *((int64_t *) &temp_data);
+	}else if(cur_type == GDF_FLOAT64){
+		data =  *((int64_t *) &input.data.fp64);
+	}
+}
+
 __device__ __forceinline__
 bool isInt(gdf_dtype type){
 	return (type == GDF_INT32) ||
@@ -71,8 +98,8 @@ private:
 	size_t num_columns;
 	gdf_dtype * input_column_types;
 	size_t num_rows;
-	column_index_type *  left_input_positions; //device
-	column_index_type * right_input_positions; //device
+	column_index_type *  left_input_positions; //device fuck it we are using -2 for scalars
+	column_index_type * right_input_positions; //device , -1 for unary, -2 for scalars!, fuck it one more, -3 for null scalars
 	column_index_type * output_positions; //device
 	column_index_type * final_output_positions; //should be same size as output_data, e.g. num_outputs
 	short num_final_outputs;
@@ -83,12 +110,18 @@ private:
 	gdf_dtype * final_output_types; //size
 	gdf_binary_operator * binary_operations; //device
 	gdf_unary_operator * unary_operations; //device
+	int64_t * scalars_left; //if these scalars are not of invalid type we use them instead of input positions
+	int64_t * scalars_right;
+	cudaStream_t stream;
+
+	gdf_size_type * null_counts_inputs;
+
 	char * temp_space;
 
-	template<typename LocalStorageType>
+	template<typename LocalStorageType, typename BufferType>
 	__device__ __forceinline__
 	LocalStorageType get_data_from_buffer(
-			int64_t * buffer, //the local buffer which storse the information that is to be processed
+			BufferType * buffer, //the local buffer which storse the information that is to be processed
 			column_index_type position) //the position in the local buffer where this data needs to be written
 	{
 		//columns
@@ -103,41 +136,54 @@ private:
 		//return (col_data[row]);
 	}
 
-	template<typename LocalStorageType>
+	template<typename LocalStorageType, typename BufferType>
 	__device__ __forceinline__
 	void store_data_in_buffer(
 			LocalStorageType data,
-			int64_t * buffer,
+			BufferType * buffer,
 			column_index_type position){
 		*((LocalStorageType *) (buffer + ((position * ThreadBlockSize) + threadIdx.x))) = data;
 	}
 
-	template<typename ColType, typename LocalStorageType>
+	template<typename ColType, typename LocalStorageType, typename BufferType>
 	__device__ __forceinline__
 	void device_ptr_read_into_buffer(int col_index,
 			const IndexT row,
 			const void * const * columns,
-			int64_t * buffer, //the local buffer which storse the information that is to be processed
+			BufferType * buffer, //the local buffer which storse the information that is to be processed
 			column_index_type position){
 		const ColType* col_data = static_cast<const ColType*>((columns[col_index]));
 		//	return *col_data;
 		*((LocalStorageType *) (buffer + ((position * ThreadBlockSize) + threadIdx.x))) = (LocalStorageType) __ldg(((ColType *) &col_data[row]));
 	}
 
-	template<typename ColType, typename LocalStorageType>
+	template<typename ColType, typename LocalStorageType, typename BufferType>
 	__device__ __forceinline__
 	void device_ptr_write_from_buffer(
 			const IndexT row,
 			void * columns,
-			int64_t * buffer, //the local buffer which storse the information that is to be processed
+			BufferType * buffer, //the local buffer which storse the information that is to be processed
 			column_index_type position){
 		const LocalStorageType col_data = *((LocalStorageType *) (buffer + ((position * ThreadBlockSize) + threadIdx.x)));
 		((ColType *) columns)[row] = (ColType) col_data;
 	}
 
-
+	template<typename BufferType>
 	__device__
-	__forceinline__ void write_data(column_index_type cur_column, column_index_type cur_buffer,  int64_t * buffer,const size_t & row_index){
+	__forceinline__ void write_valid_data(column_index_type cur_column, column_index_type cur_buffer, const int32_t * buffer,const size_t & row_index){
+		device_ptr_write_from_buffer<int32_t,int32_t>(
+
+				row_index,
+				this->valid_ptrs_out[cur_column],
+				buffer,
+				cur_buffer);
+	}
+
+
+
+	template<typename BufferType>
+	__device__
+	__forceinline__ void write_data(column_index_type cur_column, column_index_type cur_buffer,  BufferType * buffer,const size_t & row_index){
 		gdf_dtype cur_type = this->final_output_types[cur_column];
 		if(cur_type == GDF_INT8){
 			device_ptr_write_from_buffer<int8_t,int64_t>(
@@ -203,12 +249,13 @@ private:
 	//TODO: a clever person would make this something that gets passed into this function so that we can do more clever things than just read
 	//data from some grumpy old buffer, like read in from another one of these that does read from a boring buffer, or from some perumtation iterartor
 	//hmm in fact if it could read permuted data you could avoi dmaterializing intermeidate filter steps
+	template<typename BufferType>
 	__device__
-	__forceinline__ void read_data(column_index_type cur_column,  int64_t * buffer,const size_t & row_index){
+	__forceinline__ void read_data(column_index_type cur_column,  BufferType * buffer,const size_t & row_index){
 		gdf_dtype cur_type = this->input_column_types[cur_column];
 
 		if(cur_type == GDF_INT8){
-			device_ptr_read_into_buffer<int8_t,int64_t>(
+			device_ptr_read_into_buffer<int8_t,BufferType>(
 					cur_column,
 					row_index,
 					this->column_data,
@@ -217,7 +264,7 @@ private:
 
 
 		}else if(cur_type == GDF_INT16){
-			device_ptr_read_into_buffer<int16_t,int64_t>(
+			device_ptr_read_into_buffer<int16_t,BufferType>(
 					cur_column,
 					row_index,
 					this->column_data,
@@ -227,7 +274,7 @@ private:
 
 		}else if(cur_type == GDF_INT32 ||
 				cur_type == GDF_DATE32){
-			device_ptr_read_into_buffer<int32_t,int64_t>(
+			device_ptr_read_into_buffer<int32_t,BufferType>(
 					cur_column,
 					row_index,
 					this->column_data,
@@ -238,7 +285,7 @@ private:
 		}else if(cur_type == GDF_INT64 ||
 				cur_type == GDF_DATE64 ||
 				cur_type == GDF_TIMESTAMP){
-			device_ptr_read_into_buffer<int64_t,int64_t>(
+			device_ptr_read_into_buffer<int64_t,BufferType>(
 					cur_column,
 					row_index,
 					this->column_data,
@@ -247,7 +294,7 @@ private:
 
 
 		}else if(cur_type == GDF_FLOAT32){
-			device_ptr_read_into_buffer<float,double>(
+			device_ptr_read_into_buffer<float,BufferType>(
 					cur_column,
 					row_index,
 					this->column_data,
@@ -256,7 +303,7 @@ private:
 
 
 		}else if(cur_type == GDF_FLOAT64){
-			device_ptr_read_into_buffer<double,double>(
+			device_ptr_read_into_buffer<double,BufferType>(
 					cur_column,
 					row_index,
 					this->column_data,
@@ -267,14 +314,28 @@ private:
 		}
 	}
 
+
+	__device__
+	__forceinline__ void read_valid_data(column_index_type cur_column, const int32_t * buffer,const size_t & row_index){
+
+		device_ptr_read_into_buffer<int32_t,int32_t>(
+				cur_column,
+				row_index,
+				this->valid_ptrs,
+				buffer,
+				cur_column);
+
+	}
+
 	/*
 	__device__
 	__forceinline__ void read_permuted_data(column_index_type cur_column,  int64_t * buffer,const size_t & row_index){
 		//put permuted data here
 	}
 	 */
+	template<typename BufferType>
 	__device__
-	__forceinline__ void process_operator(size_t op_index,  int64_t * buffer){
+	__forceinline__ void process_operator(size_t op_index,  BufferType * buffer){
 		gdf_dtype type = this->input_types_left[op_index];
 		if(isInt(type)){
 			process_operator_1<int64_t>(op_index,buffer);
@@ -285,9 +346,10 @@ private:
 		}
 	}
 
-	template<typename LeftType>
+
+	template<typename LeftType, typename BufferType>
 	__device__
-	__forceinline__ void process_operator_1(size_t op_index,  int64_t * buffer){
+	__forceinline__ void process_operator_1(size_t op_index,  BufferType * buffer){
 		gdf_dtype type = this->input_types_right[op_index];
 		if(isInt(type)){
 			process_operator_2<LeftType,int64_t>(op_index,buffer);
@@ -298,9 +360,9 @@ private:
 		}
 	}
 
-	template<typename LeftType, typename RightType>
+	template<typename LeftType, typename RightType, typename BufferType>
 	__device__
-	__forceinline__ void process_operator_2(size_t op_index,  int64_t * buffer){
+	__forceinline__ void process_operator_2(size_t op_index,  BufferType * buffer){
 		gdf_dtype type = this->output_types[op_index];
 		if(isInt(type)){
 			process_operator_3<LeftType,RightType,int64_t>(op_index,buffer);
@@ -311,9 +373,62 @@ private:
 		}
 	}
 
-	template<typename LeftType, typename RightType, typename OutputTypeOperator>
+	//TODO: make it so that all this happens the same wya as normal operators by being able to supply how things are loaded and procssed
 	__device__
-	__forceinline__ void process_operator_3(size_t op_index,  int64_t * buffer){
+	__forceinline__ void process_valids(size_t op_index,  const int32_t * buffer){
+
+		column_index_type right_position = this->right_input_positions[op_index];
+		column_index_type left_position = this->left_input_positions[op_index];
+
+		column_index_type output_position = this->output_positions[op_index];
+
+		if(right_position != -1){
+			int32_t left_valid;
+			if(left_position == -2){
+				left_valid = -1;
+			}else if(left_position == -3){
+				left_valid = 0;
+			}else{
+				left_valid = get_data_from_buffer<int32_t>(buffer,left_position);
+
+			}
+			int32_t right_valid;
+
+			if(right_position == -2){
+				right_valid = -1;
+			}else if(right_position == -3){
+				right_valid = 0;
+			}else{
+				right_valid = get_data_from_buffer<int32_t>(buffer,right_position);
+
+			}
+
+			store_data_in_buffer<int32_t>(
+					left_valid
+					| right_valid,
+					buffer,
+					output_position);
+		}else{
+			int32_t left_valid;
+			if(left_position == -2){
+				left_valid = -1;
+			}else if(left_position == -3){
+				left_valid = 0;
+			}else{
+				left_valid = get_data_from_buffer<int32_t>(buffer,left_position);
+
+			}
+			store_data_in_buffer<int32_t>(
+					left_valid,
+					buffer,
+					output_position);
+		}
+	}
+
+
+	template<typename LeftType, typename RightType, typename OutputTypeOperator, typename BufferType>
+	__device__
+	__forceinline__ void process_operator_3(size_t op_index,  BufferType * buffer){
 
 		column_index_type right_position = this->right_input_positions[op_index];
 		column_index_type left_position = this->left_input_positions[op_index];
@@ -321,29 +436,49 @@ private:
 		column_index_type output_position = this->output_positions[op_index];
 		if(right_position != -1){
 			//binary op
+			LeftType left_value;
+
+			if(left_position == -2){
+				left_value = ((LeftType *) this->scalars_left)[op_index];
+			}else if(left_position >= 0){
+				left_value = get_data_from_buffer<LeftType>(buffer,left_position);
+
+			}else if(left_position == -3){
+				//left is null do whatever
+			}
+
+			RightType right_value;
+			if(right_position == -2){
+				right_value = ((RightType *) this->scalars_right)[op_index];
+			}else if(right_position == -3){
+				//right is null doo whatever
+			}else if(right_position >= 0){
+				right_value = get_data_from_buffer<RightType>(buffer,right_position);
+			}
+
 			gdf_binary_operator oper = this->binary_operations[op_index];
 			if(oper == GDF_ADD){
 				store_data_in_buffer<OutputTypeOperator>(
-						get_data_from_buffer<LeftType>(buffer,left_position)
-						+ get_data_from_buffer<RightType>(buffer,right_position),
+						left_value
+						+ right_value,
 						buffer,
 						output_position);
 			}else if(oper == GDF_SUB){
 				store_data_in_buffer<OutputTypeOperator>(
-						get_data_from_buffer<LeftType>(buffer,left_position)
-						- get_data_from_buffer<RightType>(buffer,right_position),
+						left_value
+						- right_value,
 						buffer,
 						output_position);
 			}else if(oper == GDF_MUL){
 				store_data_in_buffer<OutputTypeOperator>(
-						get_data_from_buffer<LeftType>(buffer,left_position)
-						* get_data_from_buffer<RightType>(buffer,right_position),
+						left_value
+						* right_value,
 						buffer,
 						output_position);
 			}else if(oper == GDF_DIV){
 				store_data_in_buffer<OutputTypeOperator>(
-						get_data_from_buffer<LeftType>(buffer,left_position)
-						/ get_data_from_buffer<RightType>(buffer,right_position),
+						left_value
+						/ right_value,
 						buffer,
 						output_position);
 			}else if(oper == GDF_TRUE_DIV){
@@ -353,23 +488,23 @@ private:
 			}else if(oper == GDF_MOD){
 				//mod only makes sense with integer inputs
 				store_data_in_buffer<OutputTypeOperator>(
-						(int64_t) get_data_from_buffer<LeftType>(buffer,left_position)
-						% (int64_t) get_data_from_buffer<RightType>(buffer,right_position),
+						(int64_t) left_value
+						% (int64_t) right_value,
 						buffer,
 						output_position);
 			}else if(oper == GDF_POW){
 				//oh god this is where it breaks if we are floats e do one thing
 				OutputTypeOperator data = 1;
 				if(isFloat((gdf_dtype) __ldg((int32_t *) &this->input_types_left[op_index])) || isFloat((gdf_dtype) __ldg((int32_t *) &this->input_types_right[op_index]))){
-					data = pow((double) get_data_from_buffer<LeftType>(buffer,left_position),
-							(double) get_data_from_buffer<RightType>(buffer,right_position));
+					data = pow((double) left_value,
+							(double) right_value);
 
 				}else{
 					//there is no pow for ints, so lets just do it...
 
-					LeftType base = get_data_from_buffer<LeftType>(buffer,left_position);
+					LeftType base = left_value;
 					//right type is the exponent
-					for(int i = 0; i < get_data_from_buffer<RightType>(buffer,right_position); i++){
+					for(int i = 0; i < right_value; i++){
 						data *= base;
 					}
 				}
@@ -379,38 +514,38 @@ private:
 						output_position);
 			}else if(oper == GDF_EQUAL){
 				store_data_in_buffer<OutputTypeOperator>(
-						get_data_from_buffer<LeftType>(buffer,left_position)
-						== get_data_from_buffer<RightType>(buffer,right_position),
+						left_value
+						== right_value,
 						buffer,
 						output_position);
 			}else if(oper == GDF_NOT_EQUAL){
 				store_data_in_buffer<OutputTypeOperator>(
-						get_data_from_buffer<LeftType>(buffer,left_position)
-						!= get_data_from_buffer<RightType>(buffer,right_position),
+						left_value
+						!= right_value,
 						buffer,
 						output_position);
 			}else if(oper == GDF_LESS){
 				store_data_in_buffer<OutputTypeOperator>(
-						get_data_from_buffer<LeftType>(buffer,left_position)
-						< get_data_from_buffer<RightType>(buffer,right_position),
+						left_value
+						< right_value,
 						buffer,
 						output_position);
 			}else if(oper == GDF_GREATER){
 				store_data_in_buffer<OutputTypeOperator>(
-						get_data_from_buffer<LeftType>(buffer,left_position)
-						> get_data_from_buffer<RightType>(buffer,right_position),
+						left_value
+						> right_value,
 						buffer,
 						output_position);
 			}else if(oper == GDF_LESS_EQUAL){
 				store_data_in_buffer<OutputTypeOperator>(
-						get_data_from_buffer<LeftType>(buffer,left_position)
-						<= get_data_from_buffer<RightType>(buffer,right_position),
+						left_value
+						<= right_value,
 						buffer,
 						output_position);
 			}else if(oper == GDF_GREATER_EQUAL){
 				store_data_in_buffer<OutputTypeOperator>(
-						get_data_from_buffer<LeftType>(buffer,left_position)
-						>= get_data_from_buffer<RightType>(buffer,right_position),
+						left_value
+						>= right_value,
 						buffer,
 						output_position);
 			}
@@ -424,7 +559,17 @@ private:
 	}
 
 public:
+	cudaStream_t get_stream(){
+		return this->stream;
+	}
 
+	int get_buffer_size(){
+		return BufferSize;
+	}
+
+	int get_thread_block_size(){
+			return ThreadBlockSize;
+		}
 	/*
 	 * void  **column_data; //these are device side pointers to the device pointer found in gdf_column.data
 	void ** output_data;
@@ -445,6 +590,7 @@ public:
 	gdf_dtype * final_output_types; //size
 	gdf_binary_operator * binary_operations; //device
 	gdf_unary_operator * unary_operations;
+
 	 */
 
 
@@ -467,7 +613,8 @@ public:
 		space += (sizeof(gdf_dtype) * num_final_outputs); //space for pointers to types for each input_index, e.g. if input_index = 1 then this value should contain column_1 type
 		space += sizeof(gdf_binary_operator) * _num_operations;
 		space += sizeof(gdf_unary_operator) * _num_operations;
-
+		space += sizeof(gdf_size_type) * columns.size();
+		space += sizeof(int64_t) * _num_operations * 2; //space for scalar inputs
 		return space;
 	}
 	//does not perform allocations
@@ -518,12 +665,16 @@ public:
 			std::vector<short> output_positions_vec,
 			std::vector<short> final_output_positions_vec,
 			std::vector<gdf_binary_operator> operators,
-			std::vector<gdf_unary_operator> unary_operators//,
+			std::vector<gdf_unary_operator> unary_operators,
+			std::vector<gdf_scalar> left_scalars, //should be same size as operations with most of them filled in with invalid types unless scalar is used in oepration
+			std::vector<gdf_scalar> right_scalars//,
 
 			//char * temp_space
 
 	){
 
+		//TODO: you should be able to make this faster by placing alll the memory in one
+		//pinned memory buffer then copying that over
 
 		this->num_final_outputs = final_output_positions_vec.size();
 		this->num_operations = _num_operations;
@@ -574,25 +725,35 @@ public:
 		final_output_types = (gdf_dtype *) cur_temp_space;
 		cur_temp_space += sizeof(gdf_dtype) * num_final_outputs;
 		binary_operations = (gdf_binary_operator *) cur_temp_space;
-		cur_temp_space += sizeof(gdf_dtype) * num_final_outputs;
-		binary_operations = (gdf_binary_operator *) cur_temp_space;
-		cur_temp_space += sizeof(gdf_binary_operator) * num_final_outputs;
+		cur_temp_space += sizeof(gdf_binary_operator) * num_operations;
 		unary_operations = (gdf_unary_operator *) cur_temp_space;
+		cur_temp_space += sizeof(gdf_unary_operator) * num_operations;
+		null_counts_inputs = (gdf_size_type *) cur_temp_space;
+		cur_temp_space += sizeof(gdf_size_type) * num_columns;
+		scalars_left = (int64_t *) cur_temp_space;
+		cur_temp_space += sizeof(int64_t) * num_operations;
+		scalars_right = (int64_t *) cur_temp_space;
+
+
 
 
 		std::vector<void *> host_data_ptrs(num_columns);
 		std::vector<gdf_valid_type *> host_valid_ptrs(num_columns);
+		std::vector<gdf_size_type> host_null_counts(num_columns);
+
+
 		for(int i = 0; i < num_columns; i++){
 			host_data_ptrs[i] = columns[i].data;
 			host_valid_ptrs[i] = columns[i].valid;
+			host_null_counts[i] = columns[i].null_count;
 		}
 
-		cudaError_t error = cudaMemcpy(this->column_data,&host_data_ptrs[0],sizeof(void *) * num_columns,cudaMemcpyHostToDevice);
+		cudaError_t error = cudaMemcpyAsync(this->column_data,&host_data_ptrs[0],sizeof(void *) * num_columns,cudaMemcpyHostToDevice,stream);
 		//	cudaError_t error = cudaMemcpy(this->column_data,&host_data_ptrs[0],sizeof(void *) * num_columns,cudaMemcpyHostToDevice);
 		//	std::cout<<"about to copy host valid"<<error<<std::endl;
 		//	error = cudaMemcpy(this->valid_ptrs,&host_valid_ptrs[0],sizeof(void *) * num_columns,cudaMemcpyHostToDevice);
-		error = cudaMemcpy(this->valid_ptrs,&host_valid_ptrs[0],sizeof(void *) * num_columns,cudaMemcpyHostToDevice);
-
+		error = cudaMemcpyAsync(this->valid_ptrs,&host_valid_ptrs[0],sizeof(void *) * num_columns,cudaMemcpyHostToDevice,stream);
+		error = cudaMemcpyAsync(this->null_counts_inputs,&host_null_counts[0],sizeof(gdf_size_type *) * num_columns,cudaMemcpyHostToDevice,stream);
 		//	std::cout<<"copied data and valid"<<error<<std::endl;
 
 
@@ -605,11 +766,11 @@ public:
 		}
 		//	error = cudaMemcpy(this->output_data,&host_data_ptrs[0],sizeof(void *) * num_final_outputs,cudaMemcpyHostToDevice);
 
-		error = cudaMemcpy(this->output_data,&host_data_ptrs[0],sizeof(void *) * num_final_outputs,cudaMemcpyHostToDevice);
+		error = cudaMemcpyAsync(this->output_data,&host_data_ptrs[0],sizeof(void *) * num_final_outputs,cudaMemcpyHostToDevice,stream);
 
 		//	std::cout<<"about to copy host valid"<<error<<std::endl;
 		//		error = cudaMemcpy(this->valid_ptrs_out,&host_valid_ptrs[0],sizeof(void *) * num_final_outputs,cudaMemcpyHostToDevice);
-		error = cudaMemcpy(this->valid_ptrs_out,&host_valid_ptrs[0],sizeof(void *) * num_final_outputs,cudaMemcpyHostToDevice);
+		error = cudaMemcpyAsync(this->valid_ptrs_out,&host_valid_ptrs[0],sizeof(void *) * num_final_outputs,cudaMemcpyHostToDevice,stream);
 
 
 		//copy over inputs
@@ -618,6 +779,8 @@ public:
 		std::vector<gdf_dtype> right_input_types_vec(num_operations);
 		std::vector<gdf_dtype> output_types_vec(num_operations);
 		std::vector<gdf_dtype> output_final_types_vec(num_final_outputs);
+		std::vector<int64_t> left_scalars_host(num_operations);
+		std::vector<int64_t> right_scalars_host(num_operations);
 
 
 
@@ -626,28 +789,65 @@ public:
 		std::map<size_t,gdf_dtype> output_map_type;
 
 		for(int cur_operation = 0; cur_operation < num_operations; cur_operation++){
-			size_t left_index = left_input_positions_vec[cur_operation];
-			size_t right_index = right_input_positions_vec[cur_operation];
-			size_t output_index = output_positions_vec[cur_operation];
+			column_index_type left_index = left_input_positions_vec[cur_operation];
+			column_index_type right_index = right_input_positions_vec[cur_operation];
+			column_index_type output_index = output_positions_vec[cur_operation];
 
-			if( left_index < columns.size()){
+			if( left_index < columns.size() && left_index >= 0){
 				left_input_types_vec[cur_operation] = columns[left_index].dtype;
 			}else{
-				//have to get it from the output that generated it
-				left_input_types_vec[cur_operation] = output_map_type[left_index];
-				//		std::cout<<"left type was "<<left_input_types_vec[cur_operation]<<std::endl;
+				if(left_index < 0 ){
+					if(left_index == -3){
+						//this was a null scalar in left weird but ok
+						left_input_types_vec[cur_operation] = left_scalars[cur_operation].dtype;
+					}else if(left_index == -2){
+						//get scalars type
+						left_input_types_vec[cur_operation] = left_scalars[cur_operation].dtype;
+						left_scalars_host[cur_operation] = scale_to_64_bit_return_bytes(left_scalars[cur_operation]);
+					}
+				}else{
+					//have to get it from the output that generated it
+					left_input_types_vec[cur_operation] = output_map_type[left_index];
+				}
+
 			}
 
-			if( right_index < columns.size()){
+			if( right_index < columns.size() && right_index >= 0){
 				right_input_types_vec[cur_operation] = columns[right_index].dtype;
 			}else{
-				right_input_types_vec[cur_operation] = output_map_type[right_index];
+				if(right_index < 0 ){
+					if(right_index == -3){
+						//this was a null scalar weird but ok
+						//TODO: figure out if we have to do anything here, i am sure we will for coalesce
+						right_input_types_vec[cur_operation] = right_scalars[cur_operation].dtype;
+					}else if(right_index == -2){
+						//get scalars type
+						right_input_types_vec[cur_operation] = right_scalars[cur_operation].dtype;
+						right_scalars_host[cur_operation] = scale_to_64_bit_return_bytes(right_scalars[cur_operation]);
+					}else if(right_index == -1){
+						//right wont be used its a unary operation
+					}
+				}else{
+					right_input_types_vec[cur_operation] = output_map_type[right_index];
+				}
+
+
 				//		std::cout<<"right type was "<<right_input_types_vec[cur_operation]<<std::endl;
 			}
 
-			gdf_dtype type_from_op = get_output_type(left_input_types_vec[cur_operation],
-					right_input_types_vec[cur_operation],
-					operators[cur_operation]);
+			gdf_dtype type_from_op;
+			if(right_index == -1){
+				//unary
+				type_from_op = get_output_type(left_input_types_vec[cur_operation],
+						unary_operators[cur_operation]);
+
+			}else{
+				//binary
+				type_from_op = get_output_type(left_input_types_vec[cur_operation],
+						right_input_types_vec[cur_operation],
+						operators[cur_operation]);
+
+			}
 
 			//		std::cout<<"type from op was "<<type_from_op<<std::endl;
 			if(is_type_signed(type_from_op) && !(is_type_float(type_from_op))){
@@ -678,21 +878,21 @@ public:
 		try{
 
 
-			cudaMemcpy (left_input_positions,
+			cudaMemcpyAsync (left_input_positions,
 					&left_input_positions_vec[0],
-					left_input_positions_vec.size() * sizeof(short),cudaMemcpyHostToDevice);
+					left_input_positions_vec.size() * sizeof(short),cudaMemcpyHostToDevice,stream);
 
-			cudaMemcpy (right_input_positions,
+			cudaMemcpyAsync (right_input_positions,
 					&right_input_positions_vec[0],
-					right_input_positions_vec.size() * sizeof(short),cudaMemcpyHostToDevice);
+					right_input_positions_vec.size() * sizeof(short),cudaMemcpyHostToDevice,stream);
 
-			cudaMemcpy (output_positions,
+			cudaMemcpyAsync (output_positions,
 					&output_positions_vec[0],
-					output_positions_vec.size() * sizeof(short),cudaMemcpyHostToDevice);
+					output_positions_vec.size() * sizeof(short),cudaMemcpyHostToDevice,stream);
 
-			cudaMemcpy (final_output_positions,
+			cudaMemcpyAsync (final_output_positions,
 					&final_output_positions_vec[0],
-					final_output_positions_vec.size() * sizeof(short),cudaMemcpyHostToDevice);
+					final_output_positions_vec.size() * sizeof(short),cudaMemcpyHostToDevice,stream);
 			/*
 			thrust::copy(left_input_positions_vec.begin(),left_input_positions_vec.end(),thrust::device_pointer_cast(left_input_positions));
 			thrust::copy(right_input_positions_vec.begin(),right_input_positions_vec.end(),thrust::device_pointer_cast(right_input_positions));
@@ -701,39 +901,47 @@ public:
 
 			 */
 
-			cudaMemcpy (binary_operations,
+			cudaMemcpyAsync (binary_operations,
 					&operators[0],
-					operators.size() * sizeof(gdf_binary_operator),cudaMemcpyHostToDevice);
+					operators.size() * sizeof(gdf_binary_operator),cudaMemcpyHostToDevice,stream);
 
-			cudaMemcpy (unary_operations,
+			cudaMemcpyAsync (unary_operations,
 					&unary_operators[0],
-					unary_operators.size() * sizeof(gdf_unary_operator),cudaMemcpyHostToDevice);
+					unary_operators.size() * sizeof(gdf_unary_operator),cudaMemcpyHostToDevice,stream);
 
 			//	thrust::copy(operators.begin(),operators.end(),thrust::device_pointer_cast(binary_operations));
 
-			cudaMemcpy (input_column_types,
+			cudaMemcpyAsync (input_column_types,
 					&input_column_types_vec[0],
-					input_column_types_vec.size() * sizeof(gdf_dtype),cudaMemcpyHostToDevice);
+					input_column_types_vec.size() * sizeof(gdf_dtype),cudaMemcpyHostToDevice,stream);
 
 
 			//	thrust::copy(input_column_types_vec.begin(), input_column_types_vec.end(), thrust::device_pointer_cast(input_column_types));
 
 
-			cudaMemcpy (input_types_left,
+			cudaMemcpyAsync (input_types_left,
 					&left_input_types_vec[0],
-					left_input_types_vec.size() * sizeof(gdf_dtype),cudaMemcpyHostToDevice);
+					left_input_types_vec.size() * sizeof(gdf_dtype),cudaMemcpyHostToDevice,stream);
 
-			cudaMemcpy (input_types_right,
+			cudaMemcpyAsync (input_types_right,
 					&right_input_types_vec[0],
-					right_input_types_vec.size() * sizeof(gdf_dtype),cudaMemcpyHostToDevice);
+					right_input_types_vec.size() * sizeof(gdf_dtype),cudaMemcpyHostToDevice,stream);
 
-			cudaMemcpy (output_types,
+			cudaMemcpyAsync (output_types,
 					&output_types_vec[0],
-					output_types_vec.size() * sizeof(gdf_dtype),cudaMemcpyHostToDevice);
+					output_types_vec.size() * sizeof(gdf_dtype),cudaMemcpyHostToDevice,stream);
 
-			cudaMemcpy (final_output_types,
+			cudaMemcpyAsync (final_output_types,
 					&output_final_types_vec[0],
-					output_final_types_vec.size() * sizeof(gdf_dtype),cudaMemcpyHostToDevice);
+					output_final_types_vec.size() * sizeof(gdf_dtype),cudaMemcpyHostToDevice,stream);
+
+			cudaMemcpyAsync (scalars_left,
+					&left_scalars_host[0],
+					left_scalars_host.size() * sizeof(int64_t),cudaMemcpyHostToDevice,stream);
+
+			cudaMemcpyAsync (scalars_right,
+					&right_scalars_host[0],
+					right_scalars_host.size() * sizeof(int64_t),cudaMemcpyHostToDevice,stream);
 			/*
 			thrust::copy(left_input_types_vec.begin(),left_input_types_vec.end(), thrust::device_pointer_cast(input_types_left));
 			thrust::copy(right_input_types_vec.begin(),right_input_types_vec.end(), thrust::device_pointer_cast(input_types_right));
@@ -742,7 +950,7 @@ public:
 			 */
 
 			//			std::cout<<"copied data!"<<std::endl;
-			cudaDeviceSynchronize();
+			cudaStreamSynchronize(stream);
 
 		}catch( ...){
 			std::cout<<"could not copy data!"<<std::endl;
@@ -751,10 +959,12 @@ public:
 
 
 	}
+
+
 	__device__ __forceinline__ void operator()(const IndexT &row_index) {
 		//		__shared__ char buffer[BufferSize * THREADBLOCK_SIZE];
-		__shared__  int64_t  total_buffer[BufferSize * ThreadBlockSize];
 
+		__shared__  int64_t  total_buffer[BufferSize * ThreadBlockSize ];
 
 
 		//here we are basically upgrading our inputs to a larger type
@@ -775,6 +985,48 @@ public:
 		}
 
 
+
+
+	}
+
+	__device__ __forceinline__ void valid_operator(const IndexT &row_index) {
+		//TODO: this should happen in configuration and be stored in a bool to reduce the number of instructions
+		//executed inthe kernel
+		__shared__  int32_t  total_buffer[BufferSize * ThreadBlockSize ];
+		bool process_valids = false;
+		for(int out_index = 0; out_index < this->num_final_outputs; out_index++ ){
+			process_valids = process_valids || (this->valid_ptrs_out[out_index] != nullptr);
+		}
+
+		if(process_valids){
+
+			for(short cur_column = 0; cur_column < this->num_columns; cur_column++ ){
+
+				if(this->valid_ptrs[cur_column] == nullptr || this->null_counts_inputs[cur_column] == 0){
+					store_data_in_buffer<int32_t>(
+							-1, //this shoudl be when int32_t is all 1111111...111 , i mean everyone uses 2's compliment right?
+							total_buffer,
+							cur_column);
+				}else{
+					read_valid_data(cur_column,total_buffer, row_index);
+				}
+
+			}
+
+
+			for(short op_index = 0; op_index < this->num_operations; op_index++ ){
+				this->process_valids(row_index,total_buffer);
+				//process_operator(op_index, total_buffer );
+			}
+
+			//		#pragma unroll
+			for(int out_index = 0; out_index < this->num_final_outputs; out_index++ ){
+				if(this->valid_ptrs_out[out_index] != nullptr){
+					write_valid_data(out_index,this->final_output_positions[out_index],total_buffer,row_index);
+				}
+
+			}
+		}
 
 
 	}
@@ -818,16 +1070,37 @@ gdf_column create_gdf_column(gdf_dtype type, size_t num_values, void * input_dat
 
 }
 
-
+//TODO: consider running valids at the same time as the normal
+// operations to increase throughput
 template<typename interpreted_operator>
-__global__ void transformKernel(interpreted_operator op, size_t size)
+__global__ void transformKernel(interpreted_operator op, gdf_size_type size)
 {
 
-	for (int i = blockIdx.x * blockDim.x + threadIdx.x;
+	//so that we can access valids int32_t at a time, we make the buffer an int32_t
+	//when we pass it into the actual op it casts to int64_t
+
+	for (gdf_size_type i = blockIdx.x * blockDim.x + threadIdx.x;
 			i < size;
 			i += blockDim.x * gridDim.x)
 	{
 		op(i);
+	}
+
+	//at this poitn all data has been written so we can reuse the temp space actually, how nice!
+	//we can process gdf_valid_type * num values per byte which is 8
+	//at a time here
+
+	//short circuit could work as follows, check if any of the valid_ptrs null in the output columns
+	//if so we dont need this
+
+	gdf_size_type rows_per_element = sizeof(gdf_valid_type) * 8;
+	gdf_size_type num_valid_elements =  (size +(rows_per_element - 1)) / rows_per_element;
+
+	for (gdf_size_type row_index = blockIdx.x * blockDim.x + threadIdx.x;
+			row_index < num_valid_elements;
+			row_index += blockDim.x * gridDim.x)
+	{
+		op.valid_operator(row_index);
 	}
 
 
@@ -1011,4 +1284,4 @@ int main(void)
 
 	return 0;
 }
-*/
+ */

@@ -9,6 +9,10 @@
 #include "DataFrame.h"
 
 
+bool is_null(std::string token){
+	return token == "null";
+}
+
 bool is_type_signed(gdf_dtype type){
 	return (GDF_INT8 == type ||
 			GDF_INT16 == type ||
@@ -369,6 +373,10 @@ int32_t  dt32;  // GDF_DATE32
 int64_t  dt64;  // GDF_DATE64
 int64_t  tmst;  // GDF_TIMESTAMP
 };*/
+	if(scalar_string == "null"){
+		gdf_data data;
+		return {data, GDF_INT8, false};
+	}
 	if(type == GDF_INT8){
 		gdf_data data;
 		data.si08 = stoi(scalar_string);

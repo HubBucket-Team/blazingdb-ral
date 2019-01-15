@@ -16,6 +16,8 @@
 #include "CodeTimer.h"
 #include "gdf_wrapper/gdf_wrapper.cuh"
 
+#include "Interpreter/interpreter_cpp.h"
+
 //TODO: we need to update this to binary_operator
 //when we have built that enum
 gdf_error process__binary_operation_column_column(
@@ -71,7 +73,7 @@ gdf_error process__binary_operation_column_column(
 			gdf_scalar right = get_scalar_from_string(right_operand,inputs.get_column(left_index).dtype());
 
 			gdf_error err = gdf_binary_operation_v_v_s(output.get_gdf_column(),inputs.get_column(left_index).get_gdf_column(),&right,operation);
- 			if(err == GDF_SUCCESS){
+			if(err == GDF_SUCCESS){
 				inputs.add_column(temp.clone());
 				operands.push("$" + std::to_string(inputs.get_size_column()-1));
 			}
@@ -192,7 +194,7 @@ gdf_error process_unary_operation(
 		return err;
 	}
 }
- 
+
 gdf_error process_other_binary_operation(
 		std::string operator_string,
 		std::stack<std::string> & operands,
@@ -220,38 +222,38 @@ gdf_error process_other_binary_operation(
 	operands.pop();
 
 	switch (operation){
-		case GDF_COALESCE:
-			if(is_literal(left_operand)){
-				return GDF_INVALID_API_CALL;			
-			} else {
-				size_t left_index = get_index(left_operand);
-				
-				if(is_literal(right_operand)){
-					// take literal and put into a size 1 column and call replace_nulls
-					gdf_scalar right = get_scalar_from_string(right_operand, inputs.get_column(left_index).dtype());
-					
-					gdf_column_cpp expression_input = inputs.get_column(left_index);
-					
-					gdf_column_cpp temp_scalar;
-					temp_scalar.create_gdf_column(right.dtype, 1, nullptr, get_width_dtype(right.dtype));
-					CheckCudaErrors(cudaMemcpy(temp_scalar.data(), &(right.data), get_width_dtype(right.dtype), cudaMemcpyHostToDevice));
+	case GDF_COALESCE:
+		if(is_literal(left_operand)){
+			return GDF_INVALID_API_CALL;
+		} else {
+			size_t left_index = get_index(left_operand);
 
-					err = gdf_replace_nulls(output.get_gdf_column(), expression_input.get_gdf_column(), temp_scalar.get_gdf_column());
-				} else {
-					// call replace_null
-					size_t right_index = get_index(right_operand);
-					err = gdf_replace_nulls(output.get_gdf_column(), inputs.get_column(left_index).get_gdf_column(), inputs.get_column(right_index).get_gdf_column());
-				}
-				if(err == GDF_SUCCESS){
-					inputs.add_column(temp.clone());
-					operands.push("$" + std::to_string(inputs.get_size_column()-1));
-				}
+			if(is_literal(right_operand)){
+				// take literal and put into a size 1 column and call replace_nulls
+				gdf_scalar right = get_scalar_from_string(right_operand, inputs.get_column(left_index).dtype());
+
+				gdf_column_cpp expression_input = inputs.get_column(left_index);
+
+				gdf_column_cpp temp_scalar;
+				temp_scalar.create_gdf_column(right.dtype, 1, nullptr, get_width_dtype(right.dtype));
+				CheckCudaErrors(cudaMemcpy(temp_scalar.data(), &(right.data), get_width_dtype(right.dtype), cudaMemcpyHostToDevice));
+
+				err = gdf_replace_nulls(output.get_gdf_column(), expression_input.get_gdf_column(), temp_scalar.get_gdf_column());
+			} else {
+				// call replace_null
+				size_t right_index = get_index(right_operand);
+				err = gdf_replace_nulls(output.get_gdf_column(), inputs.get_column(left_index).get_gdf_column(), inputs.get_column(right_index).get_gdf_column());
 			}
-			break;
-		default:
-			err = GDF_INVALID_API_CALL;
+			if(err == GDF_SUCCESS){
+				inputs.add_column(temp.clone());
+				operands.push("$" + std::to_string(inputs.get_size_column()-1));
+			}
+		}
+		break;
+	default:
+		err = GDF_INVALID_API_CALL;
 	}
-	
+
 	return err;
 }
 
@@ -274,10 +276,172 @@ gdf_error process__binary_operation_literal_column(
 )
 {
 	//TODO: only works for comparison operators
-	
+
 }
 
 
+typedef struct {
+	std::string token;
+	size_t position;
+} operand_position;
+
+column_index_type get_first_open_position(std::vector<bool> & open_positions, column_index_type start_position){
+	for(column_index_type index =  start_position;index < open_positions.size(); index++ ){
+		if(open_positions[index]){
+			return index;
+		}
+	}
+	return -1;
+}
+/**
+ * Creates a physical plan for the expression that can be added to the total plan
+ */
+gdf_error evaluate_expression_plan(	blazing_frame inputs,
+		std::string expression,
+		gdf_column_cpp output,
+		column_index_type expression_position,
+		column_index_type num_outputs){
+
+	/*
+	 * inputs needed
+	 * std::vector<gdf_column> columns,
+			std::vector<gdf_column> output_columns,
+			short _num_operations,
+			std::vector<short> left_input_positions_vec,
+			std::vector<short> right_input_positions_vec,
+			std::vector<short> output_positions_vec,
+			std::vector<short> final_output_positions_vec,
+			std::vector<gdf_binary_operator> operators,
+			std::vector<gdf_unary_operator> unary_operators,
+			std::vector<gdf_scalar> left_scalars, //should be same size as operations with most of them filled in with invalid types unless scalar is used in oepration
+			std::vector<gdf_scalar> right_scalars//,
+	 */
+
+	//handled in parent
+	std::vector<column_index_type> final_output_positions { 1, 3 };
+	std::vector<gdf_column> output_columns;
+
+
+	column_index_type start_processing_position = inputs.get_size_columns() + num_outputs;
+
+	std::vector<column_index_type> left_inputs;
+	std::vector<column_index_type> right_inputs = { 1,  1};
+	std::vector<column_index_type> outputs { 2, 3 };
+
+	std::vector<gdf_binary_operator> operators;// = { GDF_ADD, GDF_MUL};
+	std::vector<gdf_unary_operator> unary_operators = { GDF_SIN, GDF_SIN };
+
+
+	std::vector<gdf_scalar> left_scalars;
+	std::vector<gdf_scalar> right_scalars;
+
+	std::string clean_expression = clean_calcite_expression(expression);
+	int position = clean_expression.size();
+
+
+
+
+	std::stack<operand_position> operand_stack;
+	gdf_scalar dummy_scalar;
+
+	std::vector<bool> processing_space_free(512,true); //a place to stare whether or not a processing space is occupied at any point in time
+	for(size_t i = 0; i < processing_space_free.size(); i++){
+		if(i < start_processing_position){
+			processing_space_free[i] = false;
+		}
+	}
+	//pretend they are like registers and we need to know how many registers we need to evaluate this expression
+
+	while(position > 0){
+		std::string token = get_last_token(clean_expression,&position);
+
+		if(is_operator_token(token)){
+			if(is_binary_operator_token(token)){
+
+				std::string left_operand = operand_stack.top().token;
+				if(!is_literal(left_operand)){
+					if(operand_stack.top().position >= start_processing_position){
+						processing_space_free[operand_stack.top().position] = true;
+					}
+				}
+				operands.pop();
+				std::string right_operand = operand_stack.top().token;
+				if(!is_literal(right_operand)){
+					if(operand_stack.top().position >= start_processing_position){
+						processing_space_free[operand_stack.top().position] = true;
+					}
+				}
+				operands.pop();
+
+				gdf_binary_operator operation;
+				gdf_error err = get_operation(token,&operation);
+				operators.push_back(operation);
+
+
+
+
+
+				if(is_literal(left_operand) && is_literal(right_operand)){
+					//both are literal have to deduce types, nuts
+					//TODO: this is not working yet becuase we have to deduce the types..
+					//					gdf_scalar left = get_scalar_from_string(left_operand,inputs.get_column(right_index).dtype());
+					//					left_scalars.push_back(left);
+					//					gdf_scalar right = get_scalar_from_string(right_operand,inputs.get_column(right_index).dtype());
+					//					right_scalars.push_back(left);
+
+					left_inputs.push_back(SCALAR_INDEX); //
+				}else if(is_literal(left_operand)){
+					size_t right_index = get_index(right_operand);
+					gdf_scalar left = get_scalar_from_string(left_operand,inputs.get_column(right_index).dtype());
+					left_scalars.push_back(left);
+					left_inputs.push_back(left.is_valid ? SCALAR_INDEX : SCALAR_NULL_INDEX);
+					right_inputs.push_back(right_index);
+
+					if(position == 0){
+						//write to final output
+						outputs.push_back(expression_position + inputs.get_size_columns());
+					}else{
+						//write to temp output
+						column_index_type output_position = get_first_open_position(processing_space_free,start_processing_position);
+						outputs.push_back(output_position);
+						//push back onto stack
+						operand_stack.push({std::string("$") + std::to_string(output_position),output_position});
+					}
+
+
+				}else if(is_literal(right_operand)){
+
+
+
+				}
+				else{
+					size_t left_index = get_index(left_operand);
+					size_t right_index = get_index(right_operand);
+
+					left_scalars.push_back(dummy_scalar);
+
+				}
+
+
+			}else if(is_unary_operator_token(token)){
+				gdf_unary_operator operation;
+				gdf_error err = get_operation(token,&operation);
+				operators.push_back(operation);
+			} else if (is_other_binary_operator_token(token)){
+
+			}else{
+
+			}
+		}else{
+			if(is_literal(token)){
+				operand_stack.push({token,SCALAR_INDEX});
+			}else{
+				operand_stack.push({token,get_index(token)});
+			}
+
+		}
+	}
+}
 
 //processing in reverse we never need to have more than TWO spaces to work in
 //

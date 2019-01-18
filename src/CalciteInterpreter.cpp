@@ -251,7 +251,7 @@ gdf_error execute_project_plan(blazing_frame & input, std::string query_part){
 
 				if(!is_operator_token(token) && !is_literal(token)){
 					size_t index = get_index(token);
-					input_used_in_espression[index] = true;
+					input_used_in_expression[index] = true;
 				}
 			}
 			num_expressions_out++;
@@ -264,12 +264,12 @@ gdf_error execute_project_plan(blazing_frame & input, std::string query_part){
 	size_t input_columns_used = 0;
 	for(int i = 0; i < input_used_in_expression.size(); i++){
 		if(input_used_in_expression[i]){
-			new__column_indices[i] = input_columns_used;
-			input_columns[input_columns_used] = input.get_column(i);
+			new_column_indices[i] = input_columns_used;
+			input_columns[input_columns_used] = input.get_column(i).get_gdf_column();
 			input_columns_used++;
 
 		}else{
-			new__column_indices[i] = -1; //won't be uesd anyway
+			new_column_indices[i] = -1; //won't be uesd anyway
 		}
 	}
 
@@ -291,17 +291,17 @@ gdf_error execute_project_plan(blazing_frame & input, std::string query_part){
 		}
 	}
 
-	std::vector<column_index_type> & left_inputs;
-	std::vector<column_index_type> & right_inputs;
-	std::vector<column_index_type> & outputs;
+	std::vector<column_index_type>  left_inputs;
+	std::vector<column_index_type>  right_inputs;
+	std::vector<column_index_type>  outputs;
 
-	std::vector<gdf_binary_operator> & operators;
-	std::vector<gdf_unary_operator> & unary_operators;
+	std::vector<gdf_binary_operator>  operators;
+	std::vector<gdf_unary_operator>  unary_operators;
 
 
-	std::vector<gdf_scalar> & left_scalars;
-	std::vector<gdf_scalar> & right_scalars;
-
+	std::vector<gdf_scalar>  left_scalars;
+	std::vector<gdf_scalar>  right_scalars;
+	size_t cur_expression_out = 0;
 	for(int i = 0; i < expressions.size(); i++){ //last not an expression
 		std::string expression = expressions[i].substr(
 				expressions[i].find("=[") + 2 ,
@@ -320,9 +320,9 @@ gdf_error execute_project_plan(blazing_frame & input, std::string query_part){
 
 			output_columns[cur_expression_out] = output.get_gdf_column();
 			cur_expression_out++;
-			gdf_error add_expression_to_plan(	inputs,
+			gdf_error err = add_expression_to_plan(	input,
 					expression,
-					cur_expression_out = expression_position,
+					cur_expression_out,
 					num_expressions_out,
 					input_columns_used,
 					left_inputs,
@@ -363,7 +363,7 @@ gdf_error execute_project_plan(blazing_frame & input, std::string query_part){
 
 
 	//perform operations
-	gdf_error perform_operation( output_columns,
+	gdf_error err = perform_operation( output_columns,
 	input_columns,
 	left_inputs,
 	right_inputs,
@@ -373,13 +373,13 @@ gdf_error execute_project_plan(blazing_frame & input, std::string query_part){
 	unary_operators,
 	left_scalars,
 	right_scalars,
-	new_input_indices);
+	new_column_indices);
 
 	input.clear();
 	input.add_table(columns);
 
 	//free_gdf_column(&temp);
-	return GDF_SUCCESS;
+	return err;
 }
 
 gdf_error process_project(blazing_frame & input, std::string query_part){

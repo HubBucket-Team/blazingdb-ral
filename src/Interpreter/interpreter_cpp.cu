@@ -16,10 +16,10 @@ const int THREAD_BLOCK_SIZE_64 = 512/8;
 
 
 //we need to limit the number of threas per block depending on how mcuh shared memory we need per thread
-typedef InterpreterFunctor<size_t,8,THREAD_BLOCK_SIZE> interpreter_functor_8;
-typedef InterpreterFunctor<size_t,8,THREAD_BLOCK_SIZE/2> interpreter_functor_16;
-typedef InterpreterFunctor<size_t,8,THREAD_BLOCK_SIZE/4> interpreter_functor_32;
-typedef InterpreterFunctor<size_t,8,THREAD_BLOCK_SIZE/8> interpreter_functor_64;
+typedef InterpreterFunctor<size_t,8,THREAD_BLOCK_SIZE_8> interpreter_functor_8;
+typedef InterpreterFunctor<size_t,8,THREAD_BLOCK_SIZE_16> interpreter_functor_16;
+typedef InterpreterFunctor<size_t,8,THREAD_BLOCK_SIZE_32> interpreter_functor_32;
+typedef InterpreterFunctor<size_t,8,THREAD_BLOCK_SIZE_64> interpreter_functor_64;
 
 gdf_error perform_operation(	std::vector<gdf_column *> output_columns,
 std::vector<gdf_column *> input_columns,
@@ -43,7 +43,7 @@ std::vector<column_index_type> & left_inputs,
 			max_output = outputs[i];
 		}
 	}
-	gdf_size_type num_rows = inputcolumns[0]->size;
+	gdf_size_type num_rows = input_columns[0]->size;
 
 	cudaStream_t stream;
 	cudaStreamCreate(&stream);
@@ -52,7 +52,7 @@ std::vector<column_index_type> & left_inputs,
 	size_t shared_memory_per_thread = max_output * sizeof(int64_t);
 
 	if(max_output <= 8){
-		interpreter_functor_8 op(columns,
+		interpreter_functor_8 op(input_columns,
 					output_columns,
 					left_inputs.size(),
 					left_inputs,
@@ -65,13 +65,13 @@ std::vector<column_index_type> & left_inputs,
 					right_scalars
 					,stream);
 
-		transformKernel<<<32 * BlazingConfig::get_instance().get_number_of_sms()
+		transformKernel<<<32 * BlazingConfig::getInstance()->get_number_of_sms()
 		,THREAD_BLOCK_SIZE_8,
 						shared_memory_per_thread * THREAD_BLOCK_SIZE_8,
 						stream>>>(op, num_rows);
 
 	}else if(max_output <= 16){
-		interpreter_functor_16 op(columns,
+		interpreter_functor_16 op(input_columns,
 					output_columns,
 					left_inputs.size(),
 					left_inputs,
@@ -84,13 +84,13 @@ std::vector<column_index_type> & left_inputs,
 					right_scalars,
 					stream);
 
-		transformKernel<<<32 * BlazingConfig::get_instance().get_number_of_sms()
+		transformKernel<<<32 * BlazingConfig::getInstance()->get_number_of_sms()
 				,THREAD_BLOCK_SIZE_16,
 				shared_memory_per_thread * THREAD_BLOCK_SIZE_16,
 				stream>>>(op, num_rows);
 
 	}else if(max_output <= 32){
-		interpreter_functor_32 op(columns,
+		interpreter_functor_32 op(input_columns,
 					output_columns,
 					left_inputs.size(),
 					left_inputs,
@@ -103,12 +103,12 @@ std::vector<column_index_type> & left_inputs,
 					right_scalars,
 					stream);
 
-		transformKernel<<<32 * BlazingConfig::get_instance().get_number_of_sms()
+		transformKernel<<<32 * BlazingConfig::getInstance()->get_number_of_sms()
 		,THREAD_BLOCK_SIZE_32,
 						shared_memory_per_thread * THREAD_BLOCK_SIZE_32,
 						stream>>>(op, num_rows);
-	}else if(max_output_64 <= 64){
-		interpreter_functor op(columns,
+	}else if(max_output <= 64){
+		interpreter_functor_64 op(input_columns,
 					output_columns,
 					left_inputs.size(),
 					left_inputs,
@@ -121,7 +121,7 @@ std::vector<column_index_type> & left_inputs,
 					right_scalars,
 					stream);
 
-		transformKernel<<<32 * BlazingConfig::get_instance().get_number_of_sms()
+		transformKernel<<<32 * BlazingConfig::getInstance()->get_number_of_sms()
 		,THREAD_BLOCK_SIZE_64,
 						shared_memory_per_thread * THREAD_BLOCK_SIZE_64,
 						stream>>>(op, num_rows);

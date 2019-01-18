@@ -282,7 +282,7 @@ gdf_error process__binary_operation_literal_column(
 
 typedef struct {
 	std::string token;
-	size_t position;
+	column_index_type position;
 } operand_position;
 
 column_index_type get_first_open_position(std::vector<bool> & open_positions, column_index_type start_position){
@@ -313,7 +313,7 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 
 		std::vector<gdf_scalar> & left_scalars,
 		std::vector<gdf_scalar> & right_scalars,
-		std::vector<column_index_type> new_input_indices){
+		std::vector<column_index_type> & new_input_indices){
 
 	/*
 	 * inputs needed
@@ -367,14 +367,14 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 						processing_space_free[operand_stack.top().position] = true;
 					}
 				}
-				operands.pop();
+				operand_stack.pop();
 				std::string right_operand = operand_stack.top().token;
 				if(!is_literal(right_operand)){
 					if(operand_stack.top().position >= start_processing_position){
 						processing_space_free[operand_stack.top().position] = true;
 					}
 				}
-				operands.pop();
+				operand_stack.pop();
 
 				gdf_binary_operator operation;
 				gdf_error err = get_operation(token,&operation);
@@ -432,6 +432,13 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 
 			}else if(is_unary_operator_token(token)){
 
+				std::string left_operand = operand_stack.top().token;
+								if(!is_literal(left_operand)){
+									if(operand_stack.top().position >= start_processing_position){
+										processing_space_free[operand_stack.top().position] = true;
+									}
+								}
+								operand_stack.pop();
 
 				gdf_unary_operator operation;
 				gdf_error err = get_operation(token,&operation);

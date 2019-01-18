@@ -11,13 +11,14 @@
 
 #include <gdf_wrapper/gdf_wrapper.cuh>
 #include <vector>
+#include "interpreter_cpp.h"
 
 //We have templated cude that has to be in a
 //.cuh but we need to be able to include this in cpp code that is not compiled with nvcc
 //this wraps that
 typedef short column_index_type;
-static const short SCALAR_INDEX;
-static const short SCALAR_NULL_INDEX;
+static const short SCALAR_INDEX = -2;
+static const short SCALAR_NULL_INDEX = -3;
 
 
 gdf_error perform_operation(	std::vector<gdf_column *> output_columns,

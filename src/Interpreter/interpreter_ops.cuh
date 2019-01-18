@@ -13,7 +13,7 @@
 
 #include "CalciteExpressionParsing.h"
 
-typedef int32_t temp_temp_gdf_valid_type; //until its an int32 in cudf
+typedef int32_t temp_gdf_valid_type; //until its an int32 in cudf
 
 /*
 template<typename T>
@@ -711,7 +711,7 @@ public:
 				num_final_outputs);
 		//		cudaGetSymbolAddress ( (void**)&cur_temp_space, shared_buffer);
 		//		cudaGetSymbolAddress ( (void**)&column_data, shared_buffer);
-		cudaMalloc(this->temp_space,allocation_size);
+		cudaMalloc(&this->temp_space,allocation_size);
 		char * cur_temp_space = this->temp_space;
 
 		column_data = (void **) cur_temp_space;
@@ -760,7 +760,7 @@ public:
 
 		for(int i = 0; i < num_columns; i++){
 			host_data_ptrs[i] = columns[i]->data;
-			host_valid_ptrs[i] = columns[i]->valid;
+			host_valid_ptrs[i] = (temp_gdf_valid_type *) columns[i]->valid;
 			host_null_counts[i] = columns[i]->null_count;
 		}
 
@@ -778,7 +778,7 @@ public:
 
 		for(int i = 0; i < num_final_outputs; i++){
 			host_data_ptrs[i] = output_columns[i]->data;
-			host_valid_ptrs[i] = output_columns[i]->valid;
+			host_valid_ptrs[i] = (temp_gdf_valid_type *) output_columns[i]->valid;
 		}
 		//	error = cudaMemcpy(this->output_data,&host_data_ptrs[0],sizeof(void *) * num_final_outputs,cudaMemcpyHostToDevice);
 

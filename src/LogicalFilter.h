@@ -14,11 +14,30 @@
 #include "DataFrame.h"
 #include "Utils.cuh"
 
+typedef short column_index_type;
+
 gdf_error evaluate_expression(
 		blazing_frame inputs,
 		std::string expression,
 		gdf_column_cpp output,
 		gdf_column_cpp temp);
 
+
+gdf_error add_expression_to_plan(	blazing_frame & inputs,
+		std::string expression,
+		column_index_type expression_position,
+		column_index_type num_outputs,
+		column_index_type num_inputs,
+		std::vector<column_index_type> & left_inputs,
+		std::vector<column_index_type> & right_inputs,
+		std::vector<column_index_type> & outputs,
+
+		std::vector<gdf_binary_operator> & operators,
+		std::vector<gdf_unary_operator> & unary_operators,
+
+
+		std::vector<gdf_scalar> & left_scalars,
+		std::vector<gdf_scalar> & right_scalars,
+		std::vector<column_index_type> & new_input_indices);
 
 #endif /* LOGICALFILTER_H_ */

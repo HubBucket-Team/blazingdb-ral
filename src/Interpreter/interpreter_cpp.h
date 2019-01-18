@@ -9,7 +9,9 @@
 #define INTERPRETER_CPP_H_
 
 
-#include <cudf.h>
+#include <gdf_wrapper/gdf_wrapper.cuh>
+#include <vector>
+
 //We have templated cude that has to be in a
 //.cuh but we need to be able to include this in cpp code that is not compiled with nvcc
 //this wraps that
@@ -18,8 +20,19 @@ static const short SCALAR_INDEX;
 static const short SCALAR_NULL_INDEX;
 
 
-gdf_error perform_operation();
+gdf_error perform_operation(	std::vector<gdf_column *> output_columns,
+std::vector<gdf_column *> input_columns,
+std::vector<column_index_type> & left_inputs,
+		std::vector<column_index_type> & right_inputs,
+		std::vector<column_index_type> & outputs,
+		std::vector<column_index_type> & final_output_positions,
+		std::vector<gdf_binary_operator> & operators,
+		std::vector<gdf_unary_operator> & unary_operators,
 
+
+		std::vector<gdf_scalar> & left_scalars,
+		std::vector<gdf_scalar> & right_scalars,
+		std::vector<column_index_type> new_input_indices);
 
 
 #endif /* INTERPRETER_CPP_H_ */

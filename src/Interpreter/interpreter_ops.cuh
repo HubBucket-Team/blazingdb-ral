@@ -13,6 +13,7 @@
 
 #include "CalciteExpressionParsing.h"
 
+typedef int32_t temp_temp_gdf_valid_type; //until its an int32 in cudf
 
 /*
 template<typename T>
@@ -21,6 +22,16 @@ __device__ __forceinline__ T t(int thread_id,
 {
     return logical_index * THREADBLOCK_SIZE + thread_id;
 }
+ */
+
+/*
+ * Things to consider
+ *
+ * shared memory is limited in size and we actually aren't using it the way its meant which is to coordinate access between threads
+ * we just use it as a lower latency place to access memory than from device memory, we should see how fast it is when we just use
+ * normal memory for the buffer instead of shared
+ *
+ *
  */
 
 
@@ -93,8 +104,8 @@ class InterpreterFunctor {
 private:
 	void  **column_data; //these are device side pointers to the device pointer found in gdf_column.data
 	void ** output_data;
-	gdf_valid_type ** valid_ptrs; //device
-	gdf_valid_type ** valid_ptrs_out;
+	temp_gdf_valid_type ** valid_ptrs; //device
+	temp_gdf_valid_type ** valid_ptrs_out;
 	size_t num_columns;
 	gdf_dtype * input_column_types;
 	size_t num_rows;
@@ -318,7 +329,7 @@ private:
 	__device__
 	__forceinline__ void read_valid_data(column_index_type cur_column, const int32_t * buffer,const size_t & row_index){
 
-		device_ptr_read_into_buffer<int32_t,int32_t>(
+		device_ptr_read_into_buffer<temp_gdf_valid_type,temp_gdf_valid_type>(
 				cur_column,
 				row_index,
 				this->valid_ptrs,
@@ -563,6 +574,10 @@ public:
 		return this->stream;
 	}
 
+	void set_stream(cudaStream_t new_stream){
+		this->stream = new_stream;
+	}
+
 	int get_buffer_size(){
 		return BufferSize;
 	}
@@ -573,8 +588,8 @@ public:
 	/*
 	 * void  **column_data; //these are device side pointers to the device pointer found in gdf_column.data
 	void ** output_data;
-	gdf_valid_type ** valid_ptrs; //device
-	gdf_valid_type ** valid_ptrs_out;
+	temp_gdf_valid_type ** valid_ptrs; //device
+	temp_gdf_valid_type ** valid_ptrs_out;
 	size_t num_columns;
 	gdf_dtype * input_column_types;
 	size_t num_rows;
@@ -594,7 +609,7 @@ public:
 	 */
 
 
-	static size_t get_temp_size(std::vector<gdf_column> columns,
+	static size_t get_temp_size(std::vector<gdf_column *> columns,
 			short _num_operations,
 			std::vector<short> left_input_positions_vec,
 			std::vector<short> right_input_positions_vec,
@@ -604,8 +619,8 @@ public:
 		size_t space = 0;
 		space += sizeof(void *) * columns.size(); //space for array of pointers to column data
 		space += sizeof(void *) * num_final_outputs;
-		space += sizeof(gdf_valid_type *) *columns.size(); //space for array of pointers  to column validity bitmasks
-		space += sizeof(gdf_valid_type *) * num_final_outputs;
+		space += sizeof(temp_gdf_valid_type *) *columns.size(); //space for array of pointers  to column validity bitmasks
+		space += sizeof(temp_gdf_valid_type *) * num_final_outputs;
 		space += sizeof(gdf_dtype) * columns.size(); //space for pointers to types for of input_columns
 		space += 3 * (sizeof(short) * _num_operations); //space for pointers to indexes to columns e.g. left_input index, right_input index and output_index
 		space += 3 * (sizeof(gdf_dtype) * _num_operations); //space for pointers to types for each input_index, e.g. if input_index = 1 then this value should contain column_1 type
@@ -619,7 +634,7 @@ public:
 	}
 	//does not perform allocations
 	InterpreterFunctor(void  ** column_data, //these are device side pointers to the device pointer found in gdf_column.data
-			gdf_valid_type ** valid_ptrs, //device
+			temp_gdf_valid_type ** valid_ptrs, //device
 			size_t num_columns,
 			size_t num_rows,
 			short * left_input_positions, //device
@@ -649,6 +664,7 @@ public:
 
 	virtual ~InterpreterFunctor(){
 		cudaFree(this->temp_space);
+		cudaStreamDestroy(this->stream);
 	}
 
 
@@ -657,18 +673,18 @@ public:
 	//This whole phase should take about ~ .1 ms, should
 	//be using a stream for all this
 	InterpreterFunctor(
-			std::vector<gdf_column> columns,
-			std::vector<gdf_column> output_columns,
+			std::vector<gdf_column *> columns,
+			std::vector<gdf_column *> output_columns,
 			short _num_operations,
-			std::vector<short> left_input_positions_vec,
-			std::vector<short> right_input_positions_vec,
-			std::vector<short> output_positions_vec,
-			std::vector<short> final_output_positions_vec,
+			std::vector<column_index_type> left_input_positions_vec,
+			std::vector<column_index_type> right_input_positions_vec,
+			std::vector<column_index_type> output_positions_vec,
+			std::vector<column_index_type> final_output_positions_vec,
 			std::vector<gdf_binary_operator> operators,
 			std::vector<gdf_unary_operator> unary_operators,
 			std::vector<gdf_scalar> left_scalars, //should be same size as operations with most of them filled in with invalid types unless scalar is used in oepration
 			std::vector<gdf_scalar> right_scalars//,
-
+			,cudaStream_t stream
 			//char * temp_space
 
 	){
@@ -679,9 +695,9 @@ public:
 		this->num_final_outputs = final_output_positions_vec.size();
 		this->num_operations = _num_operations;
 
-
+		this->stream = stream;
 		num_columns = columns.size();
-		num_rows = columns[0].size;
+		num_rows = columns[0]->size;
 
 		//added this to class
 		//fuck this allocating is easier and i didnt see a significant differnece in tmie when i tried
@@ -702,10 +718,10 @@ public:
 		cur_temp_space += sizeof(void *) * num_columns;
 		output_data = (void **) cur_temp_space;
 		cur_temp_space += sizeof(void *) * num_final_outputs;
-		valid_ptrs = (gdf_valid_type **) cur_temp_space;
-		cur_temp_space += sizeof(gdf_valid_type *) * num_columns;
-		valid_ptrs_out = (gdf_valid_type **) cur_temp_space;
-		cur_temp_space += sizeof(gdf_valid_type *) * num_final_outputs;
+		valid_ptrs = (temp_gdf_valid_type **) cur_temp_space;
+		cur_temp_space += sizeof(temp_gdf_valid_type *) * num_columns;
+		valid_ptrs_out = (temp_gdf_valid_type **) cur_temp_space;
+		cur_temp_space += sizeof(temp_gdf_valid_type *) * num_final_outputs;
 		input_column_types = (gdf_dtype *) cur_temp_space;
 		cur_temp_space += sizeof(gdf_dtype) * num_columns;
 		left_input_positions = (short *) cur_temp_space;
@@ -738,14 +754,14 @@ public:
 
 
 		std::vector<void *> host_data_ptrs(num_columns);
-		std::vector<gdf_valid_type *> host_valid_ptrs(num_columns);
+		std::vector<temp_gdf_valid_type *> host_valid_ptrs(num_columns);
 		std::vector<gdf_size_type> host_null_counts(num_columns);
 
 
 		for(int i = 0; i < num_columns; i++){
-			host_data_ptrs[i] = columns[i].data;
-			host_valid_ptrs[i] = columns[i].valid;
-			host_null_counts[i] = columns[i].null_count;
+			host_data_ptrs[i] = columns[i]->data;
+			host_valid_ptrs[i] = columns[i]->valid;
+			host_null_counts[i] = columns[i]->null_count;
 		}
 
 		cudaError_t error = cudaMemcpyAsync(this->column_data,&host_data_ptrs[0],sizeof(void *) * num_columns,cudaMemcpyHostToDevice,stream);
@@ -761,8 +777,8 @@ public:
 		host_valid_ptrs.resize(num_final_outputs);
 
 		for(int i = 0; i < num_final_outputs; i++){
-			host_data_ptrs[i] = output_columns[i].data;
-			host_valid_ptrs[i] = output_columns[i].valid;
+			host_data_ptrs[i] = output_columns[i]->data;
+			host_valid_ptrs[i] = output_columns[i]->valid;
 		}
 		//	error = cudaMemcpy(this->output_data,&host_data_ptrs[0],sizeof(void *) * num_final_outputs,cudaMemcpyHostToDevice);
 
@@ -794,7 +810,7 @@ public:
 			column_index_type output_index = output_positions_vec[cur_operation];
 
 			if( left_index < columns.size() && left_index >= 0){
-				left_input_types_vec[cur_operation] = columns[left_index].dtype;
+				left_input_types_vec[cur_operation] = columns[left_index]->dtype;
 			}else{
 				if(left_index < 0 ){
 					if(left_index == -3){
@@ -813,7 +829,7 @@ public:
 			}
 
 			if( right_index < columns.size() && right_index >= 0){
-				right_input_types_vec[cur_operation] = columns[right_index].dtype;
+				right_input_types_vec[cur_operation] = columns[right_index]->dtype;
 			}else{
 				if(right_index < 0 ){
 					if(right_index == -3){
@@ -865,12 +881,12 @@ public:
 
 		//put the output final positions
 		for(int output_index = 0; output_index < num_final_outputs; output_index++){
-			output_final_types_vec[output_index] = output_columns[output_index].dtype;
+			output_final_types_vec[output_index] = output_columns[output_index]->dtype;
 		}
 
 		std::vector<gdf_dtype> input_column_types_vec(num_columns);
 		for(int column_index = 0; column_index < columns.size(); column_index++){
-			input_column_types_vec[column_index] = columns[column_index].dtype;
+			input_column_types_vec[column_index] = columns[column_index]->dtype;
 			//		std::cout<<"type was "<<input_column_types_vec[column_index]<<std::endl;
 		}
 
@@ -1033,7 +1049,7 @@ public:
 };
 
 
-
+/*
 
 void delete_gdf_column(gdf_column col){
 	cudaFree(col.data);
@@ -1046,14 +1062,14 @@ gdf_column create_gdf_column(gdf_dtype type, size_t num_values, void * input_dat
 	cudaError_t error;
 	gdf_column column;
 	char * data;
-	gdf_valid_type * valid_device;
+	temp_gdf_valid_type * valid_device;
 
 	size_t allocated_size_valid = ((((num_values + 7 ) / 8) + 63 ) / 64) * 64; //so allocations are supposed to be 64byte aligned
 	std::cout<<"allocating valid "<<allocated_size_valid<<std::endl;
 	error = cudaMalloc( &valid_device, allocated_size_valid);
 	std::cout<<"allocated valid "<<allocated_size_valid<<std::endl;
 	//	std::cout<<"allocated device valid"<<error<<std::endl;
-	cudaMemset(valid_device, (gdf_valid_type)255, allocated_size_valid); //assume all relevant bits are set to on
+	cudaMemset(valid_device, (temp_gdf_valid_type)255, allocated_size_valid); //assume all relevant bits are set to on
 
 	size_t allocated_size_data = (((width_per_value * num_values) + 63 )/64) * 64;
 	std::cout<<"allocating data "<<allocated_size_data<<std::endl;
@@ -1069,7 +1085,7 @@ gdf_column create_gdf_column(gdf_dtype type, size_t num_values, void * input_dat
 	return column;
 
 }
-
+*/
 //TODO: consider running valids at the same time as the normal
 // operations to increase throughput
 template<typename interpreted_operator>
@@ -1087,13 +1103,13 @@ __global__ void transformKernel(interpreted_operator op, gdf_size_type size)
 	}
 
 	//at this poitn all data has been written so we can reuse the temp space actually, how nice!
-	//we can process gdf_valid_type * num values per byte which is 8
+	//we can process temp_gdf_valid_type * num values per byte which is 8
 	//at a time here
 
 	//short circuit could work as follows, check if any of the valid_ptrs null in the output columns
 	//if so we dont need this
 
-	gdf_size_type rows_per_element = sizeof(gdf_valid_type) * 8;
+	gdf_size_type rows_per_element = sizeof(temp_gdf_valid_type) * 8;
 	gdf_size_type num_valid_elements =  (size +(rows_per_element - 1)) / rows_per_element;
 
 	for (gdf_size_type row_index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -1177,9 +1193,9 @@ int main(void)
 
 		Timer timer;
 
-		std::vector<short> left_inputs = { 0 , 2};
-		std::vector<short> right_inputs = { 1,  1};
-		std::vector<short> outputs { 2, 3 };
+		std::vector<short> left_inputs = { 0 , 2, 1, 0, 2};
+		std::vector<short> right_inputs = { 1,  1, 3, 1, 1};
+		std::vector<short> outputs { 2, 3, 2 };
 		std::vector<short> final_output_positions { 1, 3 };
 		std::vector<gdf_binary_operator> operators = { GDF_ADD, GDF_MUL};
 		//		char * temp_space;

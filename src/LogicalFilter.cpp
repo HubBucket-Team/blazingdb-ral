@@ -293,14 +293,27 @@ column_index_type get_first_open_position(std::vector<bool> & open_positions, co
 	}
 	return -1;
 }
+
+
 /**
  * Creates a physical plan for the expression that can be added to the total plan
  */
-gdf_error evaluate_expression_plan(	blazing_frame inputs,
+gdf_error add_expression_to_plan(	blazing_frame & inputs,
 		std::string expression,
-		gdf_column_cpp output,
 		column_index_type expression_position,
-		column_index_type num_outputs){
+		column_index_type num_outputs,
+		column_index_type num_inputs,
+		std::vector<column_index_type> & left_inputs,
+		std::vector<column_index_type> & right_inputs,
+		std::vector<column_index_type> & outputs,
+
+		std::vector<gdf_binary_operator> & operators,
+		std::vector<gdf_unary_operator> & unary_operators,
+
+
+		std::vector<gdf_scalar> & left_scalars,
+		std::vector<gdf_scalar> & right_scalars,
+		std::vector<column_index_type> new_input_indices){
 
 	/*
 	 * inputs needed
@@ -318,22 +331,12 @@ gdf_error evaluate_expression_plan(	blazing_frame inputs,
 	 */
 
 	//handled in parent
-	std::vector<column_index_type> final_output_positions { 1, 3 };
-	std::vector<gdf_column> output_columns;
+	//std::vector<column_index_type> final_output_positions;
+	//std::vector<gdf_column> output_columns;
 
 
-	column_index_type start_processing_position = inputs.get_size_columns() + num_outputs;
+	column_index_type start_processing_position = num_inputs + num_outputs;
 
-	std::vector<column_index_type> left_inputs;
-	std::vector<column_index_type> right_inputs = { 1,  1};
-	std::vector<column_index_type> outputs { 2, 3 };
-
-	std::vector<gdf_binary_operator> operators;// = { GDF_ADD, GDF_MUL};
-	std::vector<gdf_unary_operator> unary_operators = { GDF_SIN, GDF_SIN };
-
-
-	std::vector<gdf_scalar> left_scalars;
-	std::vector<gdf_scalar> right_scalars;
 
 	std::string clean_expression = clean_calcite_expression(expression);
 	int position = clean_expression.size();
@@ -376,7 +379,7 @@ gdf_error evaluate_expression_plan(	blazing_frame inputs,
 				gdf_binary_operator operation;
 				gdf_error err = get_operation(token,&operation);
 				operators.push_back(operation);
-
+				unary_operators.push_back(GDF_INVALID_UNARY);
 
 
 
@@ -391,46 +394,77 @@ gdf_error evaluate_expression_plan(	blazing_frame inputs,
 
 					left_inputs.push_back(SCALAR_INDEX); //
 				}else if(is_literal(left_operand)){
-					size_t right_index = get_index(right_operand);
-					gdf_scalar left = get_scalar_from_string(left_operand,inputs.get_column(right_index).dtype());
+					size_t right_index = new_input_indices[get_index(right_operand)];
+					gdf_scalar left = get_scalar_from_string(left_operand,inputs.get_column(get_index(right_operand)).dtype());
 					left_scalars.push_back(left);
+					right_scalars.push_back(dummy_scalar);
+
 					left_inputs.push_back(left.is_valid ? SCALAR_INDEX : SCALAR_NULL_INDEX);
 					right_inputs.push_back(right_index);
 
-					if(position == 0){
-						//write to final output
-						outputs.push_back(expression_position + inputs.get_size_columns());
-					}else{
-						//write to temp output
-						column_index_type output_position = get_first_open_position(processing_space_free,start_processing_position);
-						outputs.push_back(output_position);
-						//push back onto stack
-						operand_stack.push({std::string("$") + std::to_string(output_position),output_position});
-					}
 
 
 				}else if(is_literal(right_operand)){
+					size_t left_index = new_input_indices[get_index(left_operand)];
+					gdf_scalar right = get_scalar_from_string(right_operand,inputs.get_column(get_index(left_operand)).dtype());
+					right_scalars.push_back(right);
+					left_scalars.push_back(dummy_scalar);
+
+					right_inputs.push_back(right.is_valid ? SCALAR_INDEX : SCALAR_NULL_INDEX);
+					left_inputs.push_back(left_index);
 
 
 
 				}
 				else{
-					size_t left_index = get_index(left_operand);
-					size_t right_index = get_index(right_operand);
+					size_t left_index = new_input_indices[get_index(left_operand)];
+					size_t right_index = new_input_indices[get_index(right_operand)];
+
+					left_inputs.push_back(left_index);
+					right_inputs.push_back(right_index);
 
 					left_scalars.push_back(dummy_scalar);
+					right_scalars.push_back(dummy_scalar);
 
 				}
 
 
+
 			}else if(is_unary_operator_token(token)){
+
+
 				gdf_unary_operator operation;
 				gdf_error err = get_operation(token,&operation);
-				operators.push_back(operation);
+				operators.push_back(GDF_INVALID_BINARY);
+				unary_operators.push_back(operation);
+
+				if(is_literal(left_operand)){
+
+				}else{
+					size_t left_index = get_index(left_operand);
+					left_inputs.push_back(left_index);
+					right_inputs.push_back(-1);
+
+					left_scalars.push_back(dummy_scalar);
+					right_scalars.push_back(dummy_scalar);
+
+				}
+
 			} else if (is_other_binary_operator_token(token)){
-
+				//well we can figure this out later
 			}else{
+				//uh oh
+			}
 
+			if(position == 0){
+				//write to final output
+				outputs.push_back(expression_position + num_inputs);
+			}else{
+				//write to temp output
+				column_index_type output_position = get_first_open_position(processing_space_free,start_processing_position);
+				outputs.push_back(output_position);
+				//push back onto stack
+				operand_stack.push({std::string("$") + std::to_string(output_position),output_position});
 			}
 		}else{
 			if(is_literal(token)){
@@ -442,6 +476,7 @@ gdf_error evaluate_expression_plan(	blazing_frame inputs,
 		}
 	}
 }
+
 
 //processing in reverse we never need to have more than TWO spaces to work in
 //

@@ -26,6 +26,7 @@ set(union-all-test_SRCS
   ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp
   ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
   ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
+      ${CMAKE_SOURCE_DIR}/src/Interpreter/interpreter_cpp.cu
   ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
   ${source_files}
   ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp

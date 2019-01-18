@@ -44,7 +44,7 @@ function(configure_test TEST_NAME Tests_SRCS)
         Boost::filesystem
         Boost::system
         Boost::regex
-        ${CMAKE_SOURCE_DIR}/src/Interpreter/interpreter_cpp.cu
+
     )
 
     set_target_properties(${TEST_NAME} PROPERTIES

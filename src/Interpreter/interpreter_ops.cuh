@@ -156,9 +156,10 @@ private:
 		*((LocalStorageType *) (buffer + ((position * ThreadBlockSize) + threadIdx.x))) = data;
 	}
 
+
 	template<typename ColType, typename LocalStorageType, typename BufferType>
 	__device__ __forceinline__
-	void device_ptr_read_into_buffer(int col_index,
+	void device_ptr_read_into_buffer(column_index_type col_index,
 			const IndexT row,
 			const void * const * columns,
 			BufferType * buffer, //the local buffer which storse the information that is to be processed
@@ -181,11 +182,11 @@ private:
 
 	template<typename BufferType>
 	__device__
-	__forceinline__ void write_valid_data(column_index_type cur_column, column_index_type cur_buffer, const int32_t * buffer,const size_t & row_index){
+	__forceinline__ void write_valid_data(column_index_type cur_column, column_index_type cur_buffer, int32_t * buffer,const size_t & row_index){
 		device_ptr_write_from_buffer<int32_t,int32_t>(
 
 				row_index,
-				this->valid_ptrs_out[cur_column],
+				(void **) this->valid_ptrs_out[cur_column],
 				buffer,
 				cur_buffer);
 	}
@@ -327,12 +328,12 @@ private:
 
 
 	__device__
-	__forceinline__ void read_valid_data(column_index_type cur_column, const int32_t * buffer,const size_t & row_index){
+	__forceinline__ void read_valid_data(column_index_type cur_column, int32_t * buffer,const size_t & row_index){
 
-		device_ptr_read_into_buffer<temp_gdf_valid_type,temp_gdf_valid_type>(
+		device_ptr_read_into_buffer<temp_gdf_valid_type,int32_t>(
 				cur_column,
 				row_index,
-				this->valid_ptrs,
+				(void **) this->valid_ptrs,
 				buffer,
 				cur_column);
 
@@ -1016,7 +1017,7 @@ public:
 
 		if(process_valids){
 
-			for(short cur_column = 0; cur_column < this->num_columns; cur_column++ ){
+			for(column_index_type cur_column = 0; cur_column < this->num_columns; cur_column++ ){
 
 				if(this->valid_ptrs[cur_column] == nullptr || this->null_counts_inputs[cur_column] == 0){
 					store_data_in_buffer<int32_t>(

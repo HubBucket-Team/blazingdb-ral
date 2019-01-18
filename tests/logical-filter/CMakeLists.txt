@@ -22,6 +22,7 @@ set(logical_filter_test_SRCS
     ${CMAKE_SOURCE_DIR}/src/FreeMemory.cpp
     ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
     ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
+    
     ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp
     ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
 

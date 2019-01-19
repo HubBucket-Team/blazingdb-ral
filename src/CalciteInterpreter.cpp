@@ -1391,7 +1391,7 @@ blazing_frame evaluate_split_query(
 		//process self
 		if(is_project(query[0])){
 			blazing_timer.reset();
-			gdf_error err = process_project(child_frame,query[0]);
+			gdf_error err = execute_project_plan(child_frame,query[0]);
 			Library::Logging::Logger().logInfo("process_project took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
 			return child_frame;
 		}else if(is_aggregate(query[0])){

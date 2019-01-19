@@ -880,7 +880,7 @@ public:
 
 	virtual ~InterpreterFunctor(){
 		cudaFree(this->temp_space);
-		cudaStreamDestroy(this->stream);
+
 	}
 
 

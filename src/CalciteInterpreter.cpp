@@ -260,12 +260,12 @@ gdf_error execute_project_plan(blazing_frame & input, std::string query_part){
 
 	//create allocations for output on seperate thread
 
-	std::vector<column_index_type> new_column_indices;
+	std::vector<column_index_type> new_column_indices(input_used_in_expression.size());
 	size_t input_columns_used = 0;
 	for(int i = 0; i < input_used_in_expression.size(); i++){
 		if(input_used_in_expression[i]){
 			new_column_indices[i] = input_columns_used;
-			input_columns[input_columns_used] = input.get_column(i).get_gdf_column();
+			input_columns.push_back( input.get_column(i).get_gdf_column());
 			input_columns_used++;
 
 		}else{
@@ -318,7 +318,7 @@ gdf_error execute_project_plan(blazing_frame & input, std::string query_part){
 			gdf_column_cpp output;
 			output.create_gdf_column(output_type_expressions[i],size,nullptr,get_width_dtype(output_type_expressions[i]), name);
 
-			output_columns[cur_expression_out] = output.get_gdf_column();
+			output_columns.push_back(output.get_gdf_column());
 			cur_expression_out++;
 			gdf_error err = add_expression_to_plan(	input,
 					expression,
@@ -361,19 +361,32 @@ gdf_error execute_project_plan(blazing_frame & input, std::string query_part){
 		}
 	}
 
+	//TODO: remove hack testing to see if its null
+	for(int i = 0; i < output_columns.size(); i++){
+		output_columns[i]->valid = nullptr;
+	}
+	for(int i = 0; i < input_columns.size(); i++){
+			input_columns[i]->valid = nullptr;
+		}
 
 	//perform operations
-	gdf_error err = perform_operation( output_columns,
-	input_columns,
-	left_inputs,
-	right_inputs,
-	outputs,
-	final_output_positions,
-	operators,
-	unary_operators,
-	left_scalars,
-	right_scalars,
-	new_column_indices);
+
+
+	gdf_error err = GDF_SUCCESS;
+	if(num_expressions_out > 0){
+		err = perform_operation( output_columns,
+			input_columns,
+			left_inputs,
+			right_inputs,
+			outputs,
+			final_output_positions,
+			operators,
+			unary_operators,
+			left_scalars,
+			right_scalars,
+			new_column_indices);
+
+	}
 
 	input.clear();
 	input.add_table(columns);

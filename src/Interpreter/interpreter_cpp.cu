@@ -43,6 +43,9 @@ std::vector<column_index_type> & left_inputs,
 			max_output = outputs[i];
 		}
 	}
+
+
+
 	gdf_size_type num_rows = input_columns[0]->size;
 
 	cudaStream_t stream;

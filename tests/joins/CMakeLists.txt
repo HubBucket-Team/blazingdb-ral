@@ -43,6 +43,7 @@ target_link_libraries(fullouter_join-test
 )
 
 set(left-test_SRCS
+    ${CMAKE_SOURCE_DIR}/src/Interpreter/interpreter_cpp.cu
   ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
   ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
   ${CMAKE_SOURCE_DIR}/src/ColumnManipulation.cu

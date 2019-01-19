@@ -105,7 +105,7 @@ class BlazingConfig {
 			return this->sequentialFolders;
 		}
 
-		const double transformationProcessorOverhead() const {
+		double transformationProcessorOverhead() const {
 			return TRANSFORMATION_PROCESSOR_OVERHEAD;
 		}
 

@@ -17,9 +17,9 @@ const int THREAD_BLOCK_SIZE_64 = 512/8;
 
 //we need to limit the number of threas per block depending on how mcuh shared memory we need per thread
 typedef InterpreterFunctor<size_t,8,THREAD_BLOCK_SIZE_8> interpreter_functor_8;
-typedef InterpreterFunctor<size_t,8,THREAD_BLOCK_SIZE_16> interpreter_functor_16;
-typedef InterpreterFunctor<size_t,8,THREAD_BLOCK_SIZE_32> interpreter_functor_32;
-typedef InterpreterFunctor<size_t,8,THREAD_BLOCK_SIZE_64> interpreter_functor_64;
+typedef InterpreterFunctor<size_t,16,THREAD_BLOCK_SIZE_16> interpreter_functor_16;
+typedef InterpreterFunctor<size_t,32,THREAD_BLOCK_SIZE_32> interpreter_functor_32;
+typedef InterpreterFunctor<size_t,64,THREAD_BLOCK_SIZE_64> interpreter_functor_64;
 
 gdf_error perform_operation(	std::vector<gdf_column *> output_columns,
 std::vector<gdf_column *> input_columns,

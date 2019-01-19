@@ -35,6 +35,114 @@ __device__ __forceinline__ T t(int thread_id,
  */
 
 
+/*
+ * TODO find a way to include date time operations from CUDF instead of maintaing it here
+ * irequires that the operators can be templated
+ */
+__constant__
+const int64_t units_per_day = 86400000;
+__constant__
+const int64_t units_per_hour = 3600000;
+__constant__
+const int64_t units_per_minute = 60000;
+__constant__
+const int64_t units_per_second = 1000;
+
+__device__
+int64_t extract_year_op(int64_t unixTime){
+
+			const int z = ((unixTime >= 0 ? unixTime : unixTime - (units_per_day - 1)) / units_per_day) + 719468;
+			const int era = (z >= 0 ? z : z - 146096) / 146097;
+			const unsigned doe = static_cast<unsigned>(z - era * 146097);
+			const unsigned yoe = (doe - doe/1460 + doe/36524 - doe/146096) / 365;
+			const int y = static_cast<int>(yoe) + era * 400;
+			const unsigned doy = doe - (365*yoe + yoe/4 - yoe/100);
+			const unsigned mp = (5*doy + 2)/153;
+			const unsigned m = mp + (mp < 10 ? 3 : -9);
+			if (m <= 2)
+				return y + 1;
+			else
+				return y;
+}
+
+__device__
+int64_t extract_month_op(int64_t unixTime){
+	const int z = ((unixTime >= 0 ? unixTime : unixTime - (units_per_day - 1)) / units_per_day) + 719468;
+	const int era = (z >= 0 ? z : z - 146096) / 146097;
+	const unsigned doe = static_cast<unsigned>(z - era * 146097);
+	const unsigned yoe = (doe - doe/1460 + doe/36524 - doe/146096) / 365;
+	const unsigned doy = doe - (365*yoe + yoe/4 - yoe/100);
+	const unsigned mp = (5*doy + 2)/153;
+	return mp + (mp < 10 ? 3 : -9);
+}
+
+__device__
+int64_t extract_day_op(int64_t unixTime){
+	const int z = ((unixTime >= 0 ? unixTime : unixTime - (units_per_day - 1)) / units_per_day) + 719468;
+	const int era = (z >= 0 ? z : z - 146096) / 146097;
+	const unsigned doe = static_cast<unsigned>(z - era * 146097);
+	const unsigned yoe = (doe - doe/1460 + doe/36524 - doe/146096) / 365;
+	const unsigned doy = doe - (365*yoe + yoe/4 - yoe/100);
+	const unsigned mp = (5*doy + 2)/153;
+	return doy - (153*mp+2)/5 + 1;
+}
+
+__device__
+int64_t extract_hour_op(int64_t unixTime){
+	return unixTime >= 0 ? ((unixTime % units_per_day)/units_per_hour) : ((units_per_day + (unixTime % units_per_day))/units_per_hour);
+}
+
+__device__
+int64_t extract_minute_op(int64_t unixTime){
+	return unixTime >= 0 ? ((unixTime % units_per_hour)/units_per_minute) :  ((units_per_hour + (unixTime % units_per_hour))/units_per_minute);
+}
+
+__device__
+int64_t extract_second_op(int64_t unixTime){
+	return unixTime >= 0 ? ((unixTime % units_per_minute)/units_per_second) : ((units_per_minute + (unixTime % units_per_minute))/units_per_second);
+}
+
+__device__
+int64_t extract_year_op_32(int64_t unixDate){
+	const int z = unixDate + 719468;
+	const int era = (z >= 0 ? z : z - 146096) / 146097;
+	const unsigned doe = static_cast<unsigned>(z - era * 146097);
+	const unsigned yoe = (doe - doe/1460 + doe/36524 - doe/146096) / 365;
+	const int y = static_cast<int>(yoe) + era * 400;
+	const unsigned doy = doe - (365*yoe + yoe/4 - yoe/100);
+	const unsigned mp = (5*doy + 2)/153;
+	const unsigned m = mp + (mp < 10 ? 3 : -9);
+	if (m <= 2)
+		return y + 1;
+	else
+		return y;
+}
+
+__device__
+int64_t extract_month_op_32(int64_t unixDate){
+	const int z = unixDate + 719468;
+			const int era = (z >= 0 ? z : z - 146096) / 146097;
+			const unsigned doe = static_cast<unsigned>(z - era * 146097);
+			const unsigned yoe = (doe - doe/1460 + doe/36524 - doe/146096) / 365;
+			const unsigned doy = doe - (365*yoe + yoe/4 - yoe/100);
+			const unsigned mp = (5*doy + 2)/153;
+
+			return mp + (mp < 10 ? 3 : -9);
+}
+
+
+__device__
+int64_t extract_day_op_32(int64_t unixDate){
+	const int z = unixDate + 719468;
+	const int era = (z >= 0 ? z : z - 146096) / 146097;
+	const unsigned doe = static_cast<unsigned>(z - era * 146097);
+	const unsigned yoe = (doe - doe/1460 + doe/36524 - doe/146096) / 365;
+	const unsigned doy = doe - (365*yoe + yoe/4 - yoe/100);
+	const unsigned mp = (5*doy + 2)/153;
+	return doy - (153*mp+2)/5 + 1;
+}
+
+
 int64_t scale_to_64_bit_return_bytes(gdf_scalar input){
 	gdf_dtype cur_type = input.dtype;
 	int64_t data;
@@ -59,6 +167,7 @@ int64_t scale_to_64_bit_return_bytes(gdf_scalar input){
 	}else if(cur_type == GDF_FLOAT64){
 		data =  *((int64_t *) &input.data.fp64);
 	}
+	return data;
 }
 
 __device__ __forceinline__
@@ -72,6 +181,10 @@ bool isInt(gdf_dtype type){
 			(type == GDF_TIMESTAMP);
 }
 
+__device__ __forceinline__
+bool isDate32(gdf_dtype type){
+	return type == GDF_DATE32;
+}
 
 __device__ __forceinline__
 bool isFloat(gdf_dtype type){
@@ -183,10 +296,10 @@ private:
 	template<typename BufferType>
 	__device__
 	__forceinline__ void write_valid_data(column_index_type cur_column, column_index_type cur_buffer, int32_t * buffer,const size_t & row_index){
-		device_ptr_write_from_buffer<int32_t,int32_t>(
+		device_ptr_write_from_buffer<int32_t,temp_gdf_valid_type>(
 
 				row_index,
-				(void **) this->valid_ptrs_out[cur_column],
+				(void *) this->valid_ptrs_out[cur_column],
 				buffer,
 				cur_buffer);
 	}
@@ -387,7 +500,7 @@ private:
 
 	//TODO: make it so that all this happens the same wya as normal operators by being able to supply how things are loaded and procssed
 	__device__
-	__forceinline__ void process_valids(size_t op_index,  const int32_t * buffer){
+	__forceinline__ void process_valids(column_index_type op_index,  const int32_t * buffer){
 
 		column_index_type right_position = this->right_input_positions[op_index];
 		column_index_type left_position = this->left_input_positions[op_index];
@@ -487,7 +600,7 @@ private:
 						* right_value,
 						buffer,
 						output_position);
-			}else if(oper == GDF_DIV){
+			}else if(oper == GDF_DIV || oper == GDF_FLOOR_DIV){
 				store_data_in_buffer<OutputTypeOperator>(
 						left_value
 						/ right_value,
@@ -495,8 +608,6 @@ private:
 						output_position);
 			}else if(oper == GDF_TRUE_DIV){
 				//TODO: snap this requires understanding of the bitmask
-			}else if(oper == GDF_FLOOR_DIV){
-				//TODO: figure out the same
 			}else if(oper == GDF_MOD){
 				//mod only makes sense with integer inputs
 				store_data_in_buffer<OutputTypeOperator>(
@@ -565,6 +676,110 @@ private:
 			//unary op
 			gdf_unary_operator oper = this->unary_operations[op_index];
 
+			LeftType left_value;
+
+			if(left_position == -2){
+				left_value = ((LeftType *) this->scalars_left)[op_index];
+			}else if(left_position >= 0){
+				left_value = get_data_from_buffer<LeftType>(buffer,left_position);
+
+			}else if(left_position == -3){
+				//left is null do whatever
+			}
+			/*
+			 * GDF_FLOOR,
+	GDF_CEIL,
+	GDF_SIN,
+	GDF_COS,
+	GDF_ASIN,
+	GDF_ACOS,
+	GDF_TAN,
+	GDF_COTAN,
+	GDF_ATAN,
+	GDF_ABS,
+	GDF_NOT,
+	GDF_LN,
+	GDF_LOG,
+	GDF_YEAR,
+	GDF_MONTH,
+	GDF_DAY,
+	GDF_HOUR,
+	GDF_MINUTE,
+	GDF_SECOND,
+	GDF_INVALID_UNARY
+			 */
+			OutputTypeOperator computed;
+			if(oper == GDF_FLOOR){
+				computed = floor(left_value);
+			}else if(oper == GDF_CEIL){
+				computed = ceil(left_value);
+			}else if(oper == GDF_SIN){
+				computed = sin(left_value);
+			}else if(oper == GDF_COS){
+				computed = cos(left_value);
+			}else if(oper == GDF_ASIN){
+				computed = asin(left_value);
+			}else if(oper == GDF_ACOS){
+				computed = acos(left_value);
+			}else if(oper == GDF_TAN){
+				computed = tan(left_value);
+			}else if(oper == GDF_COTAN){
+				computed = cos(left_value)/sin(left_value);
+			}else if(oper == GDF_ATAN){
+				computed = atan(left_value);
+			}else if(oper == GDF_ABS){
+				computed = fabs(left_value);
+			}else if(oper == GDF_NOT){
+				computed = ! left_value;
+			}else if(oper == GDF_LN){
+				computed = log(left_value);
+			}else if(oper == GDF_LOG){
+				computed = log10(left_value);
+			}else if(oper == GDF_YEAR){
+				if(isDate32((gdf_dtype) __ldg((int32_t *) &this->input_types_left[op_index]))){
+					computed = extract_year_op_32(left_value);
+
+				}else{
+					//assume date64
+					computed = extract_year_op(left_value);
+				}
+			}else if(oper == GDF_MONTH){
+				if(isDate32((gdf_dtype) __ldg((int32_t *) &this->input_types_left[op_index]))){
+					computed = extract_month_op_32(left_value);
+
+				}else{
+
+					computed = extract_month_op(left_value);
+				}
+			}else if(oper == GDF_DAY){
+				if(isDate32((gdf_dtype) __ldg((int32_t *) &this->input_types_left[op_index]))){
+					computed = extract_day_op_32(left_value);
+				}else{
+					computed = extract_day_op(left_value);
+				}
+			}else if(oper == GDF_HOUR){
+				if(isDate32((gdf_dtype) __ldg((int32_t *) &this->input_types_left[op_index]))){
+					computed = 0;
+				}else{
+					computed = extract_hour_op(left_value);
+				}
+			}else if(oper == GDF_MINUTE){
+				if(isDate32((gdf_dtype) __ldg((int32_t *) &this->input_types_left[op_index]))){
+					computed = 0;
+				}else{
+					computed = extract_minute_op(left_value);
+				}
+			}else if(oper == GDF_SECOND){
+				if(isDate32((gdf_dtype) __ldg((int32_t *) &this->input_types_left[op_index]))){
+					computed = 0;
+				}else{
+					computed = extract_second_op(left_value);
+				}
+			}
+			store_data_in_buffer<OutputTypeOperator>(
+					computed,
+					buffer,
+					output_position);
 		}
 
 
@@ -584,8 +799,8 @@ public:
 	}
 
 	int get_thread_block_size(){
-			return ThreadBlockSize;
-		}
+		return ThreadBlockSize;
+	}
 	/*
 	 * void  **column_data; //these are device side pointers to the device pointer found in gdf_column.data
 	void ** output_data;
@@ -1031,15 +1246,17 @@ public:
 			}
 
 
-			for(short op_index = 0; op_index < this->num_operations; op_index++ ){
-				this->process_valids(row_index,total_buffer);
+			for(column_index_type op_index = 0; op_index < this->num_operations; op_index++ ){
+				this->process_valids(op_index,total_buffer);
 				//process_operator(op_index, total_buffer );
 			}
 
 			//		#pragma unroll
-			for(int out_index = 0; out_index < this->num_final_outputs; out_index++ ){
+			for(column_index_type out_index = 0; out_index < this->num_final_outputs; out_index++ ){
 				if(this->valid_ptrs_out[out_index] != nullptr){
-					write_valid_data(out_index,this->final_output_positions[out_index],total_buffer,row_index);
+					//	 void write_valid_data(column_index_type cur_column, column_index_type cur_buffer, int32_t * buffer,const size_t & row_index)
+					write_valid_data<int32_t>(out_index,this->final_output_positions[out_index],total_buffer,row_index);
+
 				}
 
 			}
@@ -1086,7 +1303,7 @@ gdf_column create_gdf_column(gdf_dtype type, size_t num_values, void * input_dat
 	return column;
 
 }
-*/
+ */
 //TODO: consider running valids at the same time as the normal
 // operations to increase throughput
 template<typename interpreted_operator>

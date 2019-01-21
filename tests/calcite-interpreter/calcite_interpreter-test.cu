@@ -235,6 +235,7 @@ LogicalProject(S=[-($0, $1)])\n\
 			host_output[i] = input1[i] - input2[i];
 		}
 
+		print_column<int8_t>(outputs[0].get_gdf_column());
 		Check(outputs[0], host_output);
 	}
 }

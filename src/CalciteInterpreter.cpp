@@ -319,7 +319,7 @@ gdf_error execute_project_plan(blazing_frame & input, std::string query_part){
 			output.create_gdf_column(output_type_expressions[i],size,nullptr,get_width_dtype(output_type_expressions[i]), name);
 
 			output_columns.push_back(output.get_gdf_column());
-			cur_expression_out++;
+
 			gdf_error err = add_expression_to_plan(	input,
 					expression,
 					cur_expression_out,
@@ -333,7 +333,7 @@ gdf_error execute_project_plan(blazing_frame & input, std::string query_part){
 					left_scalars,
 					right_scalars,
 					new_column_indices);
-
+			cur_expression_out++;
 			columns[i] = output;
 
 
@@ -361,13 +361,6 @@ gdf_error execute_project_plan(blazing_frame & input, std::string query_part){
 		}
 	}
 
-	//TODO: remove hack testing to see if its null
-	for(int i = 0; i < output_columns.size(); i++){
-		output_columns[i]->valid = nullptr;
-	}
-	for(int i = 0; i < input_columns.size(); i++){
-			input_columns[i]->valid = nullptr;
-		}
 
 	//perform operations
 

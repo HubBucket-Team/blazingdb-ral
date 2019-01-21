@@ -240,7 +240,7 @@ private:
 
 	gdf_size_type * null_counts_inputs;
 
-	char * temp_space;
+
 
 	template<typename LocalStorageType, typename BufferType>
 	__device__ __forceinline__
@@ -594,7 +594,7 @@ private:
 						- right_value,
 						buffer,
 						output_position);
-			}else if(oper == GDF_MUL){
+			}/*else if(oper == GDF_MUL){
 				store_data_in_buffer<OutputTypeOperator>(
 						left_value
 						* right_value,
@@ -671,7 +671,7 @@ private:
 						>= right_value,
 						buffer,
 						output_position);
-			}
+			}*/
 		}else{
 			//unary op
 			gdf_unary_operator oper = this->unary_operations[op_index];
@@ -708,7 +708,8 @@ private:
 	GDF_SECOND,
 	GDF_INVALID_UNARY
 			 */
-			OutputTypeOperator computed;
+			OutputTypeOperator computed = left_value;
+			/*
 			if(oper == GDF_FLOOR){
 				computed = floor(left_value);
 			}else if(oper == GDF_CEIL){
@@ -775,7 +776,7 @@ private:
 				}else{
 					computed = extract_second_op(left_value);
 				}
-			}
+			}*/
 			store_data_in_buffer<OutputTypeOperator>(
 					computed,
 					buffer,
@@ -825,26 +826,22 @@ public:
 	 */
 
 
-	static size_t get_temp_size(std::vector<gdf_column *> columns,
+	static size_t get_temp_size(short num_inputs,
 			short _num_operations,
-			std::vector<short> left_input_positions_vec,
-			std::vector<short> right_input_positions_vec,
-			std::vector<short> output_positions_vec,
-			std::vector<gdf_binary_operator> operators,
 			short num_final_outputs){
 		size_t space = 0;
-		space += sizeof(void *) * columns.size(); //space for array of pointers to column data
+		space += sizeof(void *) * num_inputs; //space for array of pointers to column data
 		space += sizeof(void *) * num_final_outputs;
-		space += sizeof(temp_gdf_valid_type *) *columns.size(); //space for array of pointers  to column validity bitmasks
+		space += sizeof(temp_gdf_valid_type *) *num_inputs; //space for array of pointers  to column validity bitmasks
 		space += sizeof(temp_gdf_valid_type *) * num_final_outputs;
-		space += sizeof(gdf_dtype) * columns.size(); //space for pointers to types for of input_columns
+		space += sizeof(gdf_dtype) * num_inputs; //space for pointers to types for of input_columns
 		space += 3 * (sizeof(short) * _num_operations); //space for pointers to indexes to columns e.g. left_input index, right_input index and output_index
 		space += 3 * (sizeof(gdf_dtype) * _num_operations); //space for pointers to types for each input_index, e.g. if input_index = 1 then this value should contain column_1 type
 		space += (sizeof(short) * num_final_outputs); //space for pointers to indexes to columns e.g. left_input index, right_input index and output_index
 		space += (sizeof(gdf_dtype) * num_final_outputs); //space for pointers to types for each input_index, e.g. if input_index = 1 then this value should contain column_1 type
 		space += sizeof(gdf_binary_operator) * _num_operations;
 		space += sizeof(gdf_unary_operator) * _num_operations;
-		space += sizeof(gdf_size_type) * columns.size();
+		space += sizeof(gdf_size_type) * num_inputs;
 		space += sizeof(int64_t) * _num_operations * 2; //space for scalar inputs
 		return space;
 	}
@@ -878,8 +875,8 @@ public:
 		this->input_column_types = input_column_types;
 	}
 
+	__host__
 	virtual ~InterpreterFunctor(){
-		cudaFree(this->temp_space);
 
 	}
 
@@ -900,7 +897,8 @@ public:
 			std::vector<gdf_unary_operator> unary_operators,
 			std::vector<gdf_scalar> left_scalars, //should be same size as operations with most of them filled in with invalid types unless scalar is used in oepration
 			std::vector<gdf_scalar> right_scalars//,
-			,cudaStream_t stream
+			,cudaStream_t stream,
+			char * temp_space
 			//char * temp_space
 
 	){
@@ -918,17 +916,11 @@ public:
 		//added this to class
 		//fuck this allocating is easier and i didnt see a significant differnece in tmie when i tried
 		//to put this in constant memory
-		size_t allocation_size = this->get_temp_size(columns,
-				num_operations,
-				left_input_positions_vec,
-				right_input_positions_vec,
-				output_positions_vec,
-				operators,
-				num_final_outputs);
+
 		//		cudaGetSymbolAddress ( (void**)&cur_temp_space, shared_buffer);
 		//		cudaGetSymbolAddress ( (void**)&column_data, shared_buffer);
-		cudaMalloc(&this->temp_space,allocation_size);
-		char * cur_temp_space = this->temp_space;
+
+		char * cur_temp_space = temp_space;
 
 		column_data = (void **) cur_temp_space;
 		cur_temp_space += sizeof(void *) * num_columns;
@@ -1202,6 +1194,7 @@ public:
 		//here we are basically upgrading our inputs to a larger type
 
 		//		#pragma unroll
+		//TODO: find out what the fuck is going on here it may be something related to CC
 		for(short cur_column = 0; cur_column < this->num_columns; cur_column++ ){
 			read_data(cur_column,total_buffer, row_index);
 		}
@@ -1230,7 +1223,7 @@ public:
 			process_valids = process_valids || (this->valid_ptrs_out[out_index] != nullptr);
 		}
 
-		if(process_valids){
+		if(process_valids && false){
 
 			for(column_index_type cur_column = 0; cur_column < this->num_columns; cur_column++ ){
 
@@ -1411,8 +1404,8 @@ int main(void)
 
 		Timer timer;
 
-		std::vector<short> left_inputs = { 0 , 2, 1, 0, 2};
-		std::vector<short> right_inputs = { 1,  1, 3, 1, 1};
+		std::vector<short> left_inputs = { 0 , 2, 1};
+		std::vector<short> right_inputs = { 1,  1, 3};
 		std::vector<short> outputs { 2, 3, 2 };
 		std::vector<short> final_output_positions { 1, 3 };
 		std::vector<gdf_binary_operator> operators = { GDF_ADD, GDF_MUL};

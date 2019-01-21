@@ -4,10 +4,10 @@
 #include "gdf_wrapper/gdf_wrapper.cuh"
 
 
-const int THREAD_BLOCK_SIZE_8 = 512;
-const int THREAD_BLOCK_SIZE_16 = 512/2;
-const int THREAD_BLOCK_SIZE_32 = 512/4;
-const int THREAD_BLOCK_SIZE_64 = 512/8;
+const int THREAD_BLOCK_SIZE_8 = 256;
+const int THREAD_BLOCK_SIZE_16 = THREAD_BLOCK_SIZE_8/2;
+const int THREAD_BLOCK_SIZE_32 = THREAD_BLOCK_SIZE_8/4;
+const int THREAD_BLOCK_SIZE_64 = THREAD_BLOCK_SIZE_8/8;
 
 
 //TODO: a better way to handle all this thread block size is
@@ -20,6 +20,69 @@ typedef InterpreterFunctor<size_t,8,THREAD_BLOCK_SIZE_8> interpreter_functor_8;
 typedef InterpreterFunctor<size_t,16,THREAD_BLOCK_SIZE_16> interpreter_functor_16;
 typedef InterpreterFunctor<size_t,32,THREAD_BLOCK_SIZE_32> interpreter_functor_32;
 typedef InterpreterFunctor<size_t,64,THREAD_BLOCK_SIZE_64> interpreter_functor_64;
+
+/*
+ *
+ *
+ *
+ *
+ *
+ *
+ dataframe input
+ How to use this shit
+
+ gdf_column col_input_1 = //make a column
+ gdf_column col_input_2 = //make a column
+ gdf_column col_input_3 = //make a column
+
+ gdf_column col_output_1 = //allocate column
+ gdf_column col_output_2 = //allocate column
+
+ std::vector<gdf_column *> output_columns(2);
+ output_columns[0] = &col_output_1;
+ output_columns[1] = &col_output_2;
+
+ std::vector<gdf_column *> input_columns(3);
+ input_columns[0] = &col_input_1;
+ input_columns[1] = &col_input_2;
+ input_columns[2] = &col_input_3;
+
+
+ temp_space starts at input.size + output.size = 5
+
+ + * + $0 $1 $2 $1 , + sin $1 2.33   = step 0
+
+ + * $5 $2 $1 , + $1 $2 step 1
+
+ + $5 $1 , + $1 $2 step 2
+
+
+
+
+Registers are
+	0			1				2			3			4				5			6				n + 3 + 2
+input_col_1, input_col_2, input_col_3, output_col_1, output_col2, processing_1, processing_2 .... processing_n
+
+std::vector<column_index_type> & left_inputs = { 0, 5, 5, 1 ,5},
+		std::vector<column_index_type> & right_inputs = { 1, 2, 1, -1, -2 },
+		std::vector<column_index_type> & outputs { 5, 5, 3, 5,4 }
+
+
+ std::vector<column_index_type> & final_output_positions = { 3 , 4 }
+
+ std::vector<gdf_binary_operator> & operators = { GDF_ADD, GDF_MULT, GDF_ADD, GDF_INVALID_BINARY, GDF_ADD}
+		std::vector<gdf_unary_operator> & unary_operators = { GDF_INVALID_UNARY,GDF_INVALID_UNARY,GDF_INVALID_UNARY,GDF_SIN,GDF_INVALID_UNARY  }
+
+ 		std::vector<gdf_scalar> & left_scalars = { junk, junk, junk, junk, junk }
+		std::vector<gdf_scalar> & right_scalars = {junk, junk ,junk , 2.33, junk }
+
+ 		std::vector<column_index_type> new_input_indices = {0 , 1, 2 }
+
+ perform_operation(all this shit you just made);
+ hola alexander comoe estas
+ *
+ *
+ */
 
 gdf_error perform_operation(	std::vector<gdf_column *> output_columns,
 std::vector<gdf_column *> input_columns,
@@ -45,6 +108,7 @@ std::vector<column_index_type> & left_inputs,
 	}
 
 
+	char * temp_space;
 
 	gdf_size_type num_rows = input_columns[0]->size;
 
@@ -52,9 +116,11 @@ std::vector<column_index_type> & left_inputs,
 	cudaStreamCreate(&stream);
 
 
-	size_t shared_memory_per_thread = max_output * sizeof(int64_t);
+	size_t shared_memory_per_thread = (max_output+1) * sizeof(int64_t);
 
 	if(max_output <= 8){
+		cudaMalloc(&temp_space,interpreter_functor_8::get_temp_size(input_columns.size(),left_inputs.size(),final_output_positions.size()));
+
 		interpreter_functor_8 op(input_columns,
 					output_columns,
 					left_inputs.size(),
@@ -66,14 +132,18 @@ std::vector<column_index_type> & left_inputs,
 					unary_operators,
 					left_scalars,
 					right_scalars
-					,stream);
-
+					,stream,
+					temp_space);
 		transformKernel<<<32 * BlazingConfig::getInstance()->get_number_of_sms()
 		,THREAD_BLOCK_SIZE_8,
 						shared_memory_per_thread * THREAD_BLOCK_SIZE_8,
 						stream>>>(op, num_rows);
 
+		cudaStreamSynchronize(stream);
+		cudaStreamDestroy(stream);
 	}else if(max_output <= 16){
+		cudaMalloc(&temp_space,interpreter_functor_16::get_temp_size(input_columns.size(),left_inputs.size(),final_output_positions.size()));
+
 		interpreter_functor_16 op(input_columns,
 					output_columns,
 					left_inputs.size(),
@@ -85,14 +155,18 @@ std::vector<column_index_type> & left_inputs,
 					unary_operators,
 					left_scalars,
 					right_scalars,
-					stream);
-
+					stream,
+					temp_space);
 		transformKernel<<<32 * BlazingConfig::getInstance()->get_number_of_sms()
 				,THREAD_BLOCK_SIZE_16,
 				shared_memory_per_thread * THREAD_BLOCK_SIZE_16,
 				stream>>>(op, num_rows);
+		cudaStreamSynchronize(stream);
+		cudaStreamDestroy(stream);
 
 	}else if(max_output <= 32){
+		cudaMalloc(&temp_space,interpreter_functor_32::get_temp_size(input_columns.size(),left_inputs.size(),final_output_positions.size()));
+
 		interpreter_functor_32 op(input_columns,
 					output_columns,
 					left_inputs.size(),
@@ -104,13 +178,18 @@ std::vector<column_index_type> & left_inputs,
 					unary_operators,
 					left_scalars,
 					right_scalars,
-					stream);
+					stream,
+					temp_space);
 
 		transformKernel<<<32 * BlazingConfig::getInstance()->get_number_of_sms()
 		,THREAD_BLOCK_SIZE_32,
 						shared_memory_per_thread * THREAD_BLOCK_SIZE_32,
 						stream>>>(op, num_rows);
-	}else if(max_output <= 64){
+		cudaStreamSynchronize(stream);
+		cudaStreamDestroy(stream);
+	}else{ // if(max_output <= 64){
+		cudaMalloc(&temp_space,interpreter_functor_64::get_temp_size(input_columns.size(),left_inputs.size(),final_output_positions.size()));
+
 		interpreter_functor_64 op(input_columns,
 					output_columns,
 					left_inputs.size(),
@@ -122,16 +201,18 @@ std::vector<column_index_type> & left_inputs,
 					unary_operators,
 					left_scalars,
 					right_scalars,
-					stream);
+					stream,
+					temp_space);
 
 		transformKernel<<<32 * BlazingConfig::getInstance()->get_number_of_sms()
 		,THREAD_BLOCK_SIZE_64,
 						shared_memory_per_thread * THREAD_BLOCK_SIZE_64,
 						stream>>>(op, num_rows);
+		cudaStreamSynchronize(stream);
+		cudaStreamDestroy(stream);
 	}
+	cudaFree(temp_space);
 
-	cudaStreamSynchronize(stream);
-	cudaStreamDestroy(stream);
 
 	return GDF_SUCCESS;
 }

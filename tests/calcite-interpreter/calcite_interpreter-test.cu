@@ -12,12 +12,19 @@
 #include <GDFCounter.cuh>
 #include <Utils.cuh>
 
+
+#include <blazingdb/io/Library/Logging/Logger.h>
+#include <blazingdb/io/Library/Logging/CoutOutput.h>
+#include "blazingdb/io/Library/Logging/ServiceLogging.h"
 //#include <sqls_rtti_comp.hpp> //TODO build fails here it seems we need to export this header from libgdf
 
 class TestEnvironment : public testing::Environment {
 public:
 	virtual ~TestEnvironment() {}
-	virtual void SetUp() {}
+	virtual void SetUp() {
+		auto output = new Library::Logging::CoutOutput();
+  		Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
+	}
 
 	void TearDown() {
 		cudaDeviceReset(); //for cuda-memchecking

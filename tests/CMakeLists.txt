@@ -80,6 +80,7 @@ add_subdirectory(parquet)
 add_subdirectory(union)
 add_subdirectory(unary)
 add_subdirectory(groupbywoagg)
+add_subdirectory(interpreter)
 
 
 message(STATUS "******** Tests are ready ********")

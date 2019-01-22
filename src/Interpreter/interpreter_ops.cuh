@@ -48,7 +48,7 @@ const int64_t units_per_minute = 60000;
 __constant__
 const int64_t units_per_second = 1000;
 
-__device__
+static __device__
 int64_t extract_year_op(int64_t unixTime){
 
 			const int z = ((unixTime >= 0 ? unixTime : unixTime - (units_per_day - 1)) / units_per_day) + 719468;
@@ -65,7 +65,7 @@ int64_t extract_year_op(int64_t unixTime){
 				return y;
 }
 
-__device__
+static __device__
 int64_t extract_month_op(int64_t unixTime){
 	const int z = ((unixTime >= 0 ? unixTime : unixTime - (units_per_day - 1)) / units_per_day) + 719468;
 	const int era = (z >= 0 ? z : z - 146096) / 146097;
@@ -76,7 +76,7 @@ int64_t extract_month_op(int64_t unixTime){
 	return mp + (mp < 10 ? 3 : -9);
 }
 
-__device__
+static __device__
 int64_t extract_day_op(int64_t unixTime){
 	const int z = ((unixTime >= 0 ? unixTime : unixTime - (units_per_day - 1)) / units_per_day) + 719468;
 	const int era = (z >= 0 ? z : z - 146096) / 146097;
@@ -87,22 +87,22 @@ int64_t extract_day_op(int64_t unixTime){
 	return doy - (153*mp+2)/5 + 1;
 }
 
-__device__
+static __device__
 int64_t extract_hour_op(int64_t unixTime){
 	return unixTime >= 0 ? ((unixTime % units_per_day)/units_per_hour) : ((units_per_day + (unixTime % units_per_day))/units_per_hour);
 }
 
-__device__
+static __device__
 int64_t extract_minute_op(int64_t unixTime){
 	return unixTime >= 0 ? ((unixTime % units_per_hour)/units_per_minute) :  ((units_per_hour + (unixTime % units_per_hour))/units_per_minute);
 }
 
-__device__
+static __device__
 int64_t extract_second_op(int64_t unixTime){
 	return unixTime >= 0 ? ((unixTime % units_per_minute)/units_per_second) : ((units_per_minute + (unixTime % units_per_minute))/units_per_second);
 }
 
-__device__
+static __device__
 int64_t extract_year_op_32(int64_t unixDate){
 	const int z = unixDate + 719468;
 	const int era = (z >= 0 ? z : z - 146096) / 146097;
@@ -118,7 +118,7 @@ int64_t extract_year_op_32(int64_t unixDate){
 		return y;
 }
 
-__device__
+static __device__
 int64_t extract_month_op_32(int64_t unixDate){
 	const int z = unixDate + 719468;
 			const int era = (z >= 0 ? z : z - 146096) / 146097;
@@ -131,7 +131,7 @@ int64_t extract_month_op_32(int64_t unixDate){
 }
 
 
-__device__
+static __device__
 int64_t extract_day_op_32(int64_t unixDate){
 	const int z = unixDate + 719468;
 	const int era = (z >= 0 ? z : z - 146096) / 146097;
@@ -143,7 +143,7 @@ int64_t extract_day_op_32(int64_t unixDate){
 }
 
 
-int64_t scale_to_64_bit_return_bytes(gdf_scalar input){
+static int64_t scale_to_64_bit_return_bytes(gdf_scalar input){
 	gdf_dtype cur_type = input.dtype;
 	int64_t data;
 	if(cur_type == GDF_INT8){
@@ -170,7 +170,7 @@ int64_t scale_to_64_bit_return_bytes(gdf_scalar input){
 	return data;
 }
 
-__device__ __forceinline__
+static __device__ __forceinline__
 bool isInt(gdf_dtype type){
 	return (type == GDF_INT32) ||
 			(type == GDF_INT64) ||
@@ -181,18 +181,18 @@ bool isInt(gdf_dtype type){
 			(type == GDF_TIMESTAMP);
 }
 
-__device__ __forceinline__
+static __device__ __forceinline__
 bool isDate32(gdf_dtype type){
 	return type == GDF_DATE32;
 }
 
-__device__ __forceinline__
+static __device__ __forceinline__
 bool isFloat(gdf_dtype type){
 	return (type == GDF_FLOAT64) ||
 			(type == GDF_FLOAT32);
 }
 
-__device__ __forceinline__
+static __device__ __forceinline__
 bool isUnsignedInt(gdf_dtype type){
 	return false;
 	/* Unsigned types are not currently supported in cudf

@@ -594,7 +594,7 @@ private:
 						- right_value,
 						buffer,
 						output_position);
-			}/*else if(oper == GDF_MUL){
+			}else if(oper == GDF_MUL){
 				store_data_in_buffer<OutputTypeOperator>(
 						left_value
 						* right_value,
@@ -671,7 +671,7 @@ private:
 						>= right_value,
 						buffer,
 						output_position);
-			}*/
+			}
 		}else{
 			//unary op
 			gdf_unary_operator oper = this->unary_operations[op_index];
@@ -709,7 +709,7 @@ private:
 	GDF_INVALID_UNARY
 			 */
 			OutputTypeOperator computed = left_value;
-			/*
+			
 			if(oper == GDF_FLOOR){
 				computed = floor(left_value);
 			}else if(oper == GDF_CEIL){
@@ -776,7 +776,7 @@ private:
 				}else{
 					computed = extract_second_op(left_value);
 				}
-			}*/
+			}
 			store_data_in_buffer<OutputTypeOperator>(
 					computed,
 					buffer,

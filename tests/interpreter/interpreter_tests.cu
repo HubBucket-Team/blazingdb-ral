@@ -60,7 +60,7 @@ TEST_F(EvaluateQueryTest, TEST_00) {
           LiteralTableGroupBuilder{
               {"main.customer",
                {{"c_custkey",
-                 Literals<GDF_INT32>{
+                 Literals<GDF_INT64>{
                      1,   2,   3,   4,   5,   6,   7,   8,   9,   10,  11,  12,
                      13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,
                      25,  26,  27,  28,  29,  30,  31,  32,  33,  34,  35,  36,
@@ -95,7 +95,7 @@ TEST_F(EvaluateQueryTest, TEST_00) {
                      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
                 {"c_nationkey",
-                 Literals<GDF_INT32>{
+                 Literals<GDF_INT64>{
                      15, 13, 1,  4,  3,  20, 18, 17, 8,  5,  23, 13, 3,  1,
                      23, 10, 2,  6,  18, 22, 8,  3,  3,  13, 12, 22, 3,  8,
                      0,  1,  23, 15, 17, 15, 17, 21, 8,  12, 2,  3,  10, 5,
@@ -184,8 +184,8 @@ TEST_F(EvaluateQueryTest, TEST_00) {
   Table t = TableBuilder{
     "emps",
     {
-      { "x", [](Index i) -> DType<GDF_FLOAT64> { return i / 10.0; } },
-  	  { "y", [](Index i) -> DType<GDF_INT64> { return i * 1000; } },
+  	  { "x", [](Index i) -> DType<GDF_INT64> { return i / 5.0; } },
+      { "y", [](Index i) -> DType<GDF_INT64> { return i / 10.0; } },
     }
   }.Build(150);
    std::vector<gdf_column_cpp> output_columns_cpp = t.ToGdfColumnCpps();
@@ -219,7 +219,7 @@ TEST_F(EvaluateQueryTest, TEST_00) {
   std::vector<column_index_type>  final_output_positions = { 3 , 4 };
 
   std::vector<gdf_binary_operator> operators = { GDF_ADD, GDF_MUL, GDF_ADD, GDF_INVALID_BINARY, GDF_ADD};
-  std::vector<gdf_unary_operator>  unary_operators = { GDF_INVALID_UNARY,GDF_INVALID_UNARY,GDF_INVALID_UNARY,GDF_SIN,GDF_INVALID_UNARY  };
+  std::vector<gdf_unary_operator>  unary_operators = { GDF_INVALID_UNARY,GDF_INVALID_UNARY,GDF_INVALID_UNARY,GDF_FLOOR,GDF_INVALID_UNARY  };
 
   using FP32 = gdf::library::GdfEnumType<GDF_FLOAT32>;
     

@@ -1073,12 +1073,13 @@ public:
 
 			}
 
+			output_types_vec[cur_operation] = type_from_op;
 			//		std::cout<<"type from op was "<<type_from_op<<std::endl;
-			if(is_type_signed(type_from_op) && !(is_type_float(type_from_op))){
-				output_types_vec[cur_operation] = GDF_INT64;
-			}else if(is_type_float(type_from_op)){
-				output_types_vec[cur_operation] = GDF_FLOAT64;
-			}
+//			if(is_type_signed(type_from_op) && !(is_type_float(type_from_op))){
+//				output_types_vec[cur_operation] = GDF_INT64;
+//			}else if(is_type_float(type_from_op)){
+//				output_types_vec[cur_operation] = GDF_FLOAT64;
+//			}
 			//		std::cout<<"op will be "<<output_types_vec[cur_operation]<<std::endl;
 
 

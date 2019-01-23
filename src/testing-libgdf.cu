@@ -284,7 +284,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
   std::cout << "resultToken: " << request.getResultToken() << std::endl;
 
   try {
-    // remove from repository using accessToken and resultToken
+    // get result from repository using accessToken and resultToken
     std::tuple<blazing_frame, double> result = result_set_repository::get_instance().get_result(accessToken, request.getResultToken());
 
     //TODO ojo el result siempre es una sola tabla por eso indice 0
@@ -362,7 +362,7 @@ static result_pair freeResultService(uint64_t accessToken, Buffer&& requestPaylo
 
   interpreter::GetResultRequestMessage request(requestPayloadBuffer.data());
   std::cout << "resultToken: " << request.getResultToken() << std::endl;
-  if(result_set_repository::get_instance().free_result(request.getResultToken())){
+  if(result_set_repository::get_instance().free_result(accessToken, request.getResultToken())){
 	  ZeroMessage response{};
 	  return std::make_pair(Status_Success, response.getBufferData());
   }else{

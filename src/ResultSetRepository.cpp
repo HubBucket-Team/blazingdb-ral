@@ -138,12 +138,7 @@ bool result_set_repository::free_result(connection_id_t connection, query_token_
 			return true;
 		}
 	}	
-		}
-	}	
-		}
-	}	
 	return false;
-
 }
 
 std::tuple<blazing_frame, double> result_set_repository::get_result(connection_id_t connection, query_token_t token){

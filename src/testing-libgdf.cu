@@ -297,11 +297,13 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
       .rows = rows
     };
     std::vector<std::string> fieldNames;
+    std::vector<uint64_t> columnTokens;
     std::vector<::gdf_dto::gdf_column> values;
 
     //TODO WARNING why 0 why multitables?
     for(int i = 0; i < std::get<0>(result).get_columns()[0].size(); ++i) {
       fieldNames.push_back(std::get<0>(result).get_columns()[0][i].name());
+      columnTokens.push_back(0);
 
       std::cout << "col_name: " << std::get<0>(result).get_columns()[0][i].name() << std::endl;
 
@@ -344,7 +346,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
   //    }
   //  };
 
-    interpreter::GetResultResponseMessage responsePayload(metadata, fieldNames, values);
+    interpreter::GetResultResponseMessage responsePayload(metadata, fieldNames, columnTokens, values);
     return std::make_pair(Status_Success, responsePayload.getBufferData());
 
   } catch (std::runtime_error &error) {

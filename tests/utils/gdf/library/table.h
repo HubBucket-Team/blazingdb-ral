@@ -37,6 +37,7 @@ public:
     if ((name_ != other.name_) || (columns_.size() != other.columns_.size())) {
       return false;
     }
+
     for (std::size_t i = 0; i < columns_.size(); i++) {
       if ((*columns_[i]) != (*other.columns_[i])) { return false; }
     }
@@ -322,7 +323,7 @@ public:
 
   TableRowBuilder(const std::string &              name,
                   std::vector<std::string>         headers,
-                  std::vector<DataTuple> rows)
+                  std::initializer_list<DataTuple> rows)
     : name_{name}, headers_(headers), rows_{rows},
       ncols_{std::tuple_size<DataTuple>::value}, nrows_{rows.size()} {}
 

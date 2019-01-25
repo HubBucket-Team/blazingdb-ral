@@ -72,6 +72,10 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 	{
 		std::lock_guard<std::mutex> guard(this->repo_mutex);
 		this->result_sets[token] = std::make_tuple(true, frame, duration);
+
+		for(size_t i = 0; i < frame.get_width(); i++){
+			this->precalculated_columns[frame.get_column(i).get_column_token()] = frame.get_column(i);
+		}
 	}
 	cv.notify_all();
 	/*if(this->requested_responses.find(token) != this->requested_responses.end()){

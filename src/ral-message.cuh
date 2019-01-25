@@ -53,42 +53,37 @@ std::tuple<std::vector<std::vector<gdf_column_cpp>>,
     column_names.push_back(table.columnNames);
 
     std::vector<gdf_column_cpp> input_table;
-    //if (table.token != 0){
 
-      //std::tuple<blazing_frame, double> result = result_set_repository::get_instance().get_result(accessToken, table.token);
-      //input_table = std::get<0>(result).get_columns()[0]; // a result set should only have one table
+    int column_index = 0;
+    for(auto column : table.columns) {
 
-    //} else {
-      int column_index = 0;
-      for(auto column : table.columns) {
+      gdf_column_cpp col;
 
-        gdf_column_cpp col;
+      if (table.columnTokens[column_index] == 0){
+        const std::string column_name = table.columnNames.at(column_index);
+        
+        // col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),(gdf_valid_type*)libgdf::CudaIpcMemHandlerFrom(column.valid),column.size,column_name);
+        col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),nullptr,column.size,column_name);
+        handles.push_back(col.data());
 
-        if (table.columnTokens.at(column_index) == 0){
-          const std::string column_name = table.columnNames.at(column_index);
-          
-          // col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),(gdf_valid_type*)libgdf::CudaIpcMemHandlerFrom(column.valid),column.size,column_name);
-          col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),nullptr,column.size,column_name);
-          handles.push_back(col.data());
+        if(col.valid() == nullptr){
+          //TODO: we can remove this when libgdf properly
+          //implements all algorithsm with valid == nullptr support
+          //it crashes somethings like group by
+          col.allocate_set_valid();
 
-          if(col.valid() == nullptr){
-            //TODO: we can remove this when libgdf properly
-            //implements all algorithsm with valid == nullptr support
-            //it crashes somethings like group by
-            col.allocate_set_valid();
-
-          }else{
-            handles.push_back(col.valid());
-          }
         }else{
-          col = result_set_repository::get_instance().get_column(accessToken, table.columnTokens.at(column_index));
+          handles.push_back(col.valid());
         }
-
-        input_table.push_back(col);
-
-        ++column_index;
+      }else{
+        col = result_set_repository::get_instance().get_column(accessToken, table.columnTokens[column_index]);
       }
-    //}
+
+      input_table.push_back(col);
+
+      ++column_index;
+    }
+
     input_tables.push_back(input_table);
   }
 

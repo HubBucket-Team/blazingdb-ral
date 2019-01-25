@@ -303,7 +303,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
     //TODO WARNING why 0 why multitables?
     for(int i = 0; i < std::get<0>(result).get_columns()[0].size(); ++i) {
       fieldNames.push_back(std::get<0>(result).get_columns()[0][i].name());
-      columnTokens.push_back(0);
+      columnTokens.push_back(std::get<0>(result).get_columns()[0][i].get_column_token());
 
       std::cout << "col_name: " << std::get<0>(result).get_columns()[0][i].name() << std::endl;
 

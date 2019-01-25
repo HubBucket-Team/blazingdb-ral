@@ -11,7 +11,9 @@
 #include "gdf_wrapper/gdf_wrapper.cuh"
 #include "GDFCounter.cuh"
 #include "Utils.cuh"
+#include "Types.h"
 #include <string>
+#include <random>
 
 class gdf_column_cpp
 {
@@ -23,6 +25,7 @@ class gdf_column_cpp
 		gdf_valid_type * allocate_valid();
 		void set_name(std::string name);
 		int8_t is_ipc_column;
+		column_token_t column_token;
 	//	gdf_column_cpp(void* _data, gdf_valid_type* _valid, gdf_dtype _dtype, size_t _size, gdf_size_type _null_count, const std::string &column_name = "");
 	public:
 
@@ -41,6 +44,8 @@ class gdf_column_cpp
     gdf_size_type null_count();
 
     gdf_dtype_extra_info dtype_info();
+	
+	column_token_t get_column_token();
 
 	void set_dtype(gdf_dtype dtype);
 	bool is_ipc();
@@ -74,5 +79,16 @@ class gdf_column_cpp
 public:
     std::size_t get_valid_size() const;
 };
+
+template<typename T>
+T gen_token(){
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<T> dis(
+			std::numeric_limits<T>::min(),
+			std::numeric_limits<T>::max());
+
+	return dis(gen);
+}
 
 #endif /* GDFCOLUMN_H_ */

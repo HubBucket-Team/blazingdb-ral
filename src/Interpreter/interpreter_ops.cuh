@@ -380,7 +380,7 @@ private:
 		gdf_dtype cur_type = this->input_column_types[cur_column];
 
 		if(cur_type == GDF_INT8){
-			device_ptr_read_into_buffer<int8_t,BufferType>(
+			device_ptr_read_into_buffer<int8_t,int64_t>(
 					cur_column,
 					row_index,
 					this->column_data,
@@ -389,7 +389,7 @@ private:
 
 
 		}else if(cur_type == GDF_INT16){
-			device_ptr_read_into_buffer<int16_t,BufferType>(
+			device_ptr_read_into_buffer<int16_t,int64_t>(
 					cur_column,
 					row_index,
 					this->column_data,
@@ -399,7 +399,7 @@ private:
 
 		}else if(cur_type == GDF_INT32 ||
 				cur_type == GDF_DATE32){
-			device_ptr_read_into_buffer<int32_t,BufferType>(
+			device_ptr_read_into_buffer<int32_t,int64_t>(
 					cur_column,
 					row_index,
 					this->column_data,
@@ -410,7 +410,7 @@ private:
 		}else if(cur_type == GDF_INT64 ||
 				cur_type == GDF_DATE64 ||
 				cur_type == GDF_TIMESTAMP){
-			device_ptr_read_into_buffer<int64_t,BufferType>(
+			device_ptr_read_into_buffer<int64_t,int64_t>(
 					cur_column,
 					row_index,
 					this->column_data,
@@ -419,7 +419,7 @@ private:
 
 
 		}else if(cur_type == GDF_FLOAT32){
-			device_ptr_read_into_buffer<float,BufferType>(
+			device_ptr_read_into_buffer<float,double>(
 					cur_column,
 					row_index,
 					this->column_data,
@@ -428,7 +428,7 @@ private:
 
 
 		}else if(cur_type == GDF_FLOAT64){
-			device_ptr_read_into_buffer<double,BufferType>(
+			device_ptr_read_into_buffer<double,double>(
 					cur_column,
 					row_index,
 					this->column_data,

@@ -533,7 +533,7 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
 	std::cout << "FirstColumnSize: "
 			<< requestPayload.getTableGroup().tables[0].columns[0].size
 			<< std::endl;
-  std::cout << "token: " << requestPayload.getTableGroup().tables[0].token << std::endl;
+  std::cout << "resultToken: " << requestPayload.getTableGroup().tables[0].resultToken << std::endl;
   //Library::Logging::Logger().logInfo("query:\n" + requestPayload.getLogicalPlan());
 
   std::vector<void *> handles;

@@ -601,6 +601,9 @@ main(int argc, const char *argv[])
     auto output = new Library::Logging::FileOutput("RAL.log", true);
     Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
 
+    // Init AWS S3 ... TODO see if we need to call shutdown and avoid leaks from s3 percy
+    BlazingContext::getInstance()->initExternalSystems();
+    
   global_ip = "/tmp/ral.socket";
   //global_port = atoi(port.c_str());
 

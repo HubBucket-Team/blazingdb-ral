@@ -209,7 +209,7 @@ gdf_error execute_project_plan(blazing_frame & input, std::string query_part){
 
 	//now we have a vector
 	//x=[$0
-	std::vector<bool> input_used_in_output(size,false);
+	std::vector<bool> input_used_in_output(input.get_width(),false);
 
 	std::vector<gdf_column_cpp> columns(expressions.size());
 	std::vector<std::string> names(expressions.size());

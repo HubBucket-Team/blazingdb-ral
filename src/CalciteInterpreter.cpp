@@ -192,7 +192,9 @@ gdf_error perform_avg(gdf_column* column_output, gdf_column* column_input) {
 	return error;
 }
 
-gdf_error execute_project_plan(blazing_frame & input, std::string query_part){
+project_plan_params parse_project_plan(blazing_frame& input, std::string query_part) {
+
+	gdf_error err = GDF_SUCCESS;
 
 	std::cout<<"starting process_project"<<std::endl;
 
@@ -361,30 +363,49 @@ gdf_error execute_project_plan(blazing_frame & input, std::string query_part){
 		}
 	}
 
+	//free_gdf_column(&temp);
+	return project_plan_params {
+		num_expressions_out,
+		output_columns,
+		input_columns,
+		left_inputs,
+		right_inputs,
+		outputs,
+		final_output_positions,
+		operators,
+		unary_operators,
+		left_scalars,
+		right_scalars,
+		new_column_indices,
+		columns,
+		err
+	};
+}
 
-	//perform operations
-
-
+gdf_error execute_project_plan(blazing_frame & input, std::string query_part){
+	
 	gdf_error err = GDF_SUCCESS;
-	if(num_expressions_out > 0){
-		err = perform_operation( output_columns,
-			input_columns,
-			left_inputs,
-			right_inputs,
-			outputs,
-			final_output_positions,
-			operators,
-			unary_operators,
-			left_scalars,
-			right_scalars,
-			new_column_indices);
+
+	project_plan_params params = parse_project_plan(input, query_part);
+	
+	//perform operations
+	if(params.num_expressions_out > 0){
+		err = perform_operation( params.output_columns,
+			params.input_columns,
+			params.left_inputs,
+			params.right_inputs,
+			params.outputs,
+			params.final_output_positions,
+			params.operators,
+			params.unary_operators,
+			params.left_scalars,
+			params.right_scalars,
+			params.new_column_indices);
 
 	}
 
 	input.clear();
-	input.add_table(columns);
-
-	//free_gdf_column(&temp);
+	input.add_table(params.columns);
 	return err;
 }
 

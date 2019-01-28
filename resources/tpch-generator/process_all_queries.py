@@ -38,6 +38,10 @@ if __name__ == '__main__':
         # 'select count(c_custkey) + sum(c_acctbal) + avg(c_acctbal), min(c_custkey) - max(c_nationkey), c_nationkey * 2 as key from customer where key < 40 group by key'
     ]
 
+    groupby_no_agg_queries = [
+        'select n_nationkey, n_regionkey from nation group by n_regionkey, n_nationkey'
+    ]
+
     orderby_queries = [
         'select c_custkey, c_acctbal from customer order by c_acctbal',
         'select c_custkey, c_nationkey, c_acctbal from customer order by c_acctbal',
@@ -88,6 +92,7 @@ if __name__ == '__main__':
     generator.generate_json_input(drill, tpch_path, join_queries, 'json_inputs/join_queries.json')
     generator.generate_json_input(drill, tpch_path, orderby_queries, 'json_inputs/orderby_queries.json')
     generator.generate_json_input(drill, tpch_path, groupby_queries, 'json_inputs/groupby_queries.json')
+    generator.generate_json_input(drill, tpch_path, groupby_no_agg_queries, 'json_inputs/groupby_no_agg_queries.json')
     generator.generate_json_input(drill, tpch_path, aggregration_queries, 'json_inputs/aggregration_queries.json')
     
     all_queries = where_queries + join_queries + orderby_queries + groupby_queries + aggregration_queries

@@ -5,9 +5,17 @@
  *      Author: rqc
  */
 
+#include <arrow/util/bit-util.h>
+//readme:  use bit-utils to compute valid.size in a standard way
+// see https://github.com/apache/arrow/blob/e34057c4b4be8c7abf3537dd4998b5b38919ba73/cpp/src/arrow/ipc/writer.cc#L66
+
+#include <cudf.h>
 #include "GDFColumn.cuh"
 #include "gdf_wrapper/gdf_wrapper.cuh"
 #include "cuDF/Allocator.h"
+#include "parquet/util/bit_util.cuh"
+
+#include "FreeMemory.h"
 
 gdf_column_cpp::gdf_column_cpp()
 {
@@ -153,7 +161,7 @@ void gdf_column_cpp::resize(size_t new_size){
 }
 //TODO: needs to be implemented for efficiency though not strictly necessary
 gdf_error gdf_column_cpp::compact(){
-    if( this->allocated_size_valid != (((((this->size()+ 7 ) / 8) + 63 ) / 64) * 64)){
+    if( this->allocated_size_valid != gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(this->size()))){
     	//compact valid allcoation
 
     }
@@ -168,10 +176,15 @@ gdf_error gdf_column_cpp::compact(){
 
 void gdf_column_cpp::update_null_count()
 {
-    int count;
-    gdf_error result = gdf_count_nonzero_mask(this->column->valid, this->column->size, &count);
-    assert(result == GDF_SUCCESS);
-    this->column->null_count = this->column->size - static_cast<gdf_size_type>(count);
+    if (this->column->size == 0) {
+        this->column->null_count = 0;
+    }
+    else {
+        int count;
+        gdf_error result = gdf_count_nonzero_mask(this->column->valid, this->column->size, &count);
+        assert(result == GDF_SUCCESS);
+        this->column->null_count = this->column->size - static_cast<gdf_size_type>(count);
+    }
 }
 
 void gdf_column_cpp::allocate_set_valid(){
@@ -180,7 +193,7 @@ void gdf_column_cpp::allocate_set_valid(){
 gdf_valid_type * gdf_column_cpp::allocate_valid(){
 	size_t num_values = this->size();
     gdf_valid_type * valid_device;
-	this->allocated_size_valid = ((((num_values + 7 ) / 8) + 63 ) / 64) * 64; //so allocations are supposed to be 64byte aligned
+	this->allocated_size_valid = gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(num_values)); //so allocations are supposed to be 64byte aligned
 
     try {
         cuDF::Allocator::allocate((void**)&valid_device, allocated_size_valid);
@@ -207,8 +220,12 @@ void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,g
     this->allocate_valid();
     is_ipc_column = true;
     this->set_name(column_name);
+
+    FreeMemory::registerIPCPointer(column->data);
+    FreeMemory::registerIPCPointer(column->valid);
 }
 
+//Todo: Verificar que al llamar mas de una vez al create_gdf_column se desaloque cualquier memoria alocada anteriormente
 void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value, const std::string &column_name)
 {
     assert(type != GDF_invalid);
@@ -250,7 +267,7 @@ void gdf_column_cpp::create_gdf_column(gdf_column * column){
 	//TODO: we are assuming they are not padding,
 	this->allocated_size_data = width_per_value * column->size;
 	if(column->valid != nullptr){
-		this->allocated_size_valid = (column->size - 7) / 8;
+        this->allocated_size_valid = gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(column->size)); //so allocations are supposed to be 64byte aligned
 	}
 	this->is_ipc_column = false;
     if (column->col_name)

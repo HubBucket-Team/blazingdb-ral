@@ -5,6 +5,8 @@
 #include <cassert>
 #include <iostream>
 
+#include <arrow/util/bit-util.h>
+#include "parquet/util/bit_util.cuh"
 #include <cudf.h>
 #include <thrust/device_ptr.h>
 #include <thrust/functional.h>
@@ -56,13 +58,7 @@ inline gdf_dtype
 gdf_enum_type_for<double>() {
     return GDF_FLOAT64;
 }
-
-inline auto
-get_number_of_bytes_for_valid(size_t column_size) -> size_t {
-    return sizeof(gdf_valid_type) * (column_size + GDF_VALID_BITSIZE - 1)
-           / GDF_VALID_BITSIZE;
-}
-
+ 
 inline gdf_error
 gdf_column_view_init(gdf_column *    column,
                      void *          data,
@@ -150,7 +146,7 @@ convert_to_device_gdf_column(gdf_column *column) {
                cudaMemcpyHostToDevice);
 
     gdf_valid_type *host_valid = column->valid;
-    size_t          n_bytes    = get_number_of_bytes_for_valid(column_size);
+    size_t          n_bytes    = gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(column_size));
 
     gdf_valid_type *valid_value_pointer;
     cudaMalloc((void **) &valid_value_pointer, n_bytes);
@@ -234,7 +230,7 @@ gen_gdb_column(size_t column_size, ValueType init_value) {
     //std::cout << "2. gen_gdb_column\n";
 
     gdf_valid_type *host_valid = gen_gdf_valid(column_size, init_value);
-    size_t          n_bytes    = get_number_of_bytes_for_valid(column_size);
+    size_t          n_bytes    = arrow::BitUtil::BytesForBits(column_size);
 
     gdf_valid_type *valid_value_pointer;
     cudaMalloc((void **) &valid_value_pointer, n_bytes);
@@ -317,7 +313,7 @@ check_column_for_comparison_operation(gdf_column *            lhs,
         auto rhs_valid    = get_gdf_valid_from_device(rhs);
         auto output_valid = get_gdf_valid_from_device(output);
 
-        size_t n_bytes = get_number_of_bytes_for_valid(output->size);
+        size_t n_bytes = arrow::BitUtil::BytesForBits(output->size);
 
         assert(lhs->size == rhs->size);
 

@@ -15,7 +15,7 @@ set(source_files
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/replace/replace.cu
 )
 
-set(union-all-test_SRCS
+set(groupbywoagg-test_SRCS
   ${CMAKE_SOURCE_DIR}/src/Utils.cu
   ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
   ${CMAKE_SOURCE_DIR}/src/FreeMemory.cpp
@@ -29,9 +29,9 @@ set(union-all-test_SRCS
   ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
   ${source_files}
   ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
-  union-all-tests.cu
+  groupbywoagg-tests.cu
 )
 
-configure_test(union-all-test "${union-all-test_SRCS}")
+configure_test(groupbywoagg-test "${groupbywoagg-test_SRCS}")
 
 

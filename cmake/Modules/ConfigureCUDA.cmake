@@ -66,6 +66,13 @@ macro(CONFIGURE_CUDA_COMPILER compute_capability)
     # set warnings
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Werror cross-execution-space-call -Xcompiler -Wall")
 
+    if(CMAKE_BUILD_TYPE MATCHES Debug)
+        message(STATUS "Building with debugging flags")
+        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G -Xcompiler -rdynamic")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -rdynamic")
+    endif(CMAKE_BUILD_TYPE MATCHES Debug)
+
+    message(STATUS "Default C++ (CUDA) compiler flags for all targets: ${CMAKE_CUDA_FLAGS}")
     message(STATUS "Default C++ compiler flags for all targets: ${CMAKE_CXX_FLAGS}")
     message(STATUS "Default CUDA compiler flags for all targets: ${CUDA_NVCC_FLAGS}")
 endmacro()

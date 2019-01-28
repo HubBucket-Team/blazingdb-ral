@@ -3,4 +3,6 @@
 
 #include "gdf_types.cuh"
 
+#include "binary-operation/replace/replace.cuh"
+
 #endif /* _BZ_WRAPPER_H_ */

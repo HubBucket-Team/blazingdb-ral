@@ -296,7 +296,7 @@ struct _GetValuesLambda {
 struct _FillColumnLambda {
   std::vector<std::vector<linb::any> > &values;
   std::vector<ColumnFiller> &           builders;
-  std::vector<std::string> &            headers;
+  std::vector<std::string>              headers;
   mutable size_t                        i;
 
   _FillColumnLambda(std::vector<std::vector<linb::any> > &values,
@@ -306,6 +306,7 @@ struct _FillColumnLambda {
 
   template <typename T>
   void operator()(T value) const {
+    assert (i < headers.size() );
     auto                         name = headers[i];
     std::vector<decltype(value)> column_values;
     for (auto &&any_val : values[i]) {

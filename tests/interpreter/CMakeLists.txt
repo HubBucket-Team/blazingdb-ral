@@ -2,7 +2,8 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/thirdparty/jitify
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper)
  
-set(interpreter_tests_src
+
+set(source_files_src
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/code/gdf-data.cpp
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/code/kernel.cpp
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/code/operation.cpp
@@ -26,8 +27,21 @@ set(interpreter_tests_src
     ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
     ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
     ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
-    ${CMAKE_SOURCE_DIR}/src/Utils.cu
+    ${CMAKE_SOURCE_DIR}/src/Utils.cu 
+) 
+
+set(interpreter_tests_src
+    ${source_files_src}
     interpreter_tests.cu
 ) 
 
 configure_test(interpreter_tests "${interpreter_tests_src}")
+
+ 
+set(project_tests_src
+    ${source_files_src}
+    project_tests.cu
+) 
+
+configure_test(project_tests "${project_tests_src}")
+

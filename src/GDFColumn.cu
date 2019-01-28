@@ -23,7 +23,7 @@ gdf_column_cpp::gdf_column_cpp()
     this->allocated_size_data = 0;
     this->allocated_size_valid = 0;
     this->is_ipc_column = false;
-
+    this->column_token = 0;
 }
 /*
 gdf_column_cpp::gdf_column_cpp(void* _data, gdf_valid_type* _valid, gdf_dtype _dtype, size_t _size, gdf_size_type _null_count, const std::string &column_name)
@@ -127,7 +127,7 @@ gdf_column_cpp gdf_column_cpp::clone(std::string name)  // TODO clone needs to r
 	col1.allocated_size_data = this->allocated_size_data;
 	col1.allocated_size_valid = this->allocated_size_valid;
     col1.is_ipc_column = false;
-    col1.column_token = gen_token<column_token_t>();
+    col1.column_token = 0;
 	if(name == ""){
 		col1.set_name(this->column_name);
 	}else{
@@ -241,7 +241,7 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     this->get_gdf_column()->size = num_values;
     char * data;
     is_ipc_column = false;
-    this->column_token = gen_token<column_token_t>();
+    this->column_token = 0;
 
     gdf_valid_type * valid_device = allocate_valid();
     this->allocated_size_data = (((width_per_value * num_values) + 63) /64) * 64;
@@ -276,7 +276,7 @@ void gdf_column_cpp::create_gdf_column(gdf_column * column){
         this->allocated_size_valid = gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(column->size)); //so allocations are supposed to be 64byte aligned
 	}
     this->is_ipc_column = false;
-    this->column_token = gen_token<column_token_t>();
+    this->column_token = 0;
     if (column->col_name)
     	this->column_name = std::string(column->col_name);
 
@@ -347,4 +347,8 @@ std::size_t gdf_column_cpp::get_valid_size() const {
 
 column_token_t gdf_column_cpp::get_column_token(){
     return this->column_token;
+}
+
+void gdf_column_cpp::set_column_token(column_token_t column_token){
+    this->column_token = column_token;
 }

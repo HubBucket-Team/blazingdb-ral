@@ -69,13 +69,19 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 		GDFRefCounter::getInstance()->deregister_column(frame.get_column(i).get_gdf_column());
 	}
 
+	for(size_t i = 0; i < frame.get_width(); i++){
+		column_token_t column_token = frame.get_column(i).get_column_token();
+
+		if(column_token == 0){
+			column_token = gen_token<column_token_t>();
+			frame.get_column(i).set_column_token(column_token);
+			this->precalculated_columns[column_token] = frame.get_column(i);
+		}
+	}
+
 	{
 		std::lock_guard<std::mutex> guard(this->repo_mutex);
 		this->result_sets[token] = std::make_tuple(true, frame, duration);
-
-		for(size_t i = 0; i < frame.get_width(); i++){
-			this->precalculated_columns[frame.get_column(i).get_column_token()] = frame.get_column(i);
-		}
 	}
 	cv.notify_all();
 	/*if(this->requested_responses.find(token) != this->requested_responses.end()){

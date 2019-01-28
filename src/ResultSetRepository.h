@@ -12,6 +12,7 @@
 #include "Types.h"
 #include <map>
 #include <vector>
+#include <random>
 #include <mutex>
 #include <condition_variable>
 
@@ -49,5 +50,16 @@ private:
 	std::mutex repo_mutex;
 	std::condition_variable cv;
 };
+
+template<typename T>
+T gen_token(){
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<T> dis(
+			std::numeric_limits<T>::min(),
+			std::numeric_limits<T>::max());
+
+	return dis(gen);
+}
 
 #endif /* RESULTSETREPOSITORY_H_ */

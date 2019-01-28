@@ -13,7 +13,6 @@
 #include "Utils.cuh"
 #include "Types.h"
 #include <string>
-#include <random>
 
 class gdf_column_cpp
 {
@@ -47,6 +46,8 @@ class gdf_column_cpp
 	
 	column_token_t get_column_token();
 
+	void set_column_token(column_token_t column_token);
+
 	void set_dtype(gdf_dtype dtype);
 	bool is_ipc();
 
@@ -79,16 +80,5 @@ class gdf_column_cpp
 public:
     std::size_t get_valid_size() const;
 };
-
-template<typename T>
-T gen_token(){
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	std::uniform_int_distribution<T> dis(
-			std::numeric_limits<T>::min(),
-			std::numeric_limits<T>::max());
-
-	return dis(gen);
-}
 
 #endif /* GDFCOLUMN_H_ */

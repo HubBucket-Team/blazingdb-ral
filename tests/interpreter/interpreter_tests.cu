@@ -440,15 +440,15 @@ TEST_F(EvaluateQueryTest, TEST_02)
     Table input_table = TableBuilder{
         "emps",
         {
-            {"x", [](Index i) -> DType<GDF_INT32> { return (i + 1) * 2.0; }},
-            {"y", [](Index i) -> DType<GDF_INT32> { return (i + 1) * 10.0; }},
+            {"x", [](Index i) -> DType<GDF_FLOAT32> { return (i + 1) * 2.0; }},
+            {"y", [](Index i) -> DType<GDF_FLOAT32> { return (i + 1) * 10.0; }},
             {"z", [](Index i) -> DType<GDF_INT32> { return (i + 1) * 20.0; }},
         }}
                             .Build(10);
     Table output_table = TableBuilder{
         "emps",
         {
-            {"o1", [](Index i) -> DType<GDF_INT32> { return 0; }},
+            {"o1", [](Index i) -> DType<GDF_FLOAT32> { return 0; }},
             {"o2", [](Index i) -> DType<GDF_FLOAT32> { return 0; }},
         }}
                              .Build(10);
@@ -494,26 +494,27 @@ TEST_F(EvaluateQueryTest, TEST_02)
     ASSERT_EQ(error, GDF_SUCCESS);
 
     auto ral_solution_table = GdfColumnCppsTableBuilder{ "output", output_columns_cpp }.Build();
-    using VTableBuilder = gdf::library::TableRowBuilder<int32_t, float>;
+    using VTableBuilder = gdf::library::TableRowBuilder<float, float>;
     using DataTuple = VTableBuilder::DataTuple;
+
     auto reference_table = VTableBuilder{
         "output",
         { "a", "b"},
         {
-            DataTuple{0,    2.33}, 
-            DataTuple{250,	1.7859788891}, 
-            DataTuple{980,	3.2429452507}, 
-            DataTuple{2190,	1.3419683759}, 
-            DataTuple{3880,	3.0751131605}, 
-            DataTuple{6050,	2.0676251463}, 
-            DataTuple{8700,	2.0251893789}, 
-            DataTuple{11830,3.1038906816}, 
-            DataTuple{15440,1.3361113461}, 
-            DataTuple{19530,3.2239966636},
+            DataTuple{250.0,	1.78598}, 
+            DataTuple{980.0,	3.24295}, 
+            DataTuple{2190.0,	1.34197}, 
+            DataTuple{3880.0,	3.07511}, 
+            DataTuple{6050.0,	2.06763}, 
+            DataTuple{8700.0,	2.02519}, 
+            DataTuple{11830.0,  3.10389}, 
+            DataTuple{15440.0,  1.33611}, 
+            DataTuple{19530.0,  3.224},
+            DataTuple{24100.0,  1.82363},
         }
     }.Build();
     ral_solution_table.print(std::cout);
-    EXPECT_EQ(ral_solution_table, reference_table);
+    CHECK_RESULT(ral_solution_table, reference_table);
 }
 
 // agregation without groupby

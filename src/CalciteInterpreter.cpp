@@ -788,7 +788,7 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 			if(group_columns.size() == 0){
                 // output dtype is GDF_UINT64
                 // defined in 'get_aggregation_output_type' function.
-                uint64_t result = aggregation_input.get_gdf_column()->size;
+                uint64_t result = aggregation_input.get_gdf_column()->size - aggregation_input.get_gdf_column()->null_count;
                 output_column.create_gdf_column(output_type,
                                                 aggregation_size,
                                                 &result,

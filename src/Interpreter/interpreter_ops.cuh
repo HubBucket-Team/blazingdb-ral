@@ -603,8 +603,7 @@ private:
 						* right_value,
 						buffer,
 						output_position);
-			}// #ifdef USE_FEW_OPERATORS 
-			/*else if(oper == GDF_DIV || oper == GDF_FLOOR_DIV){
+			}/*else if(oper == GDF_DIV || oper == GDF_FLOOR_DIV){
 				store_data_in_buffer<OutputTypeOperator>(
 						left_value
 						/ right_value,
@@ -676,8 +675,7 @@ private:
 						buffer,
 						output_position);
 			}*/
-			//#endif // FEW_OPERATORS 
-			
+ 			
 		}else{
 			//unary op
 			gdf_unary_operator oper = this->unary_operations[op_index];
@@ -724,7 +722,7 @@ private:
 				computed = sin(left_value);
 			}else if(oper == GDF_COS){
 				computed = cos(left_value);
-			}//#ifdef USE_FEW_OPERATORS 		
+			} 	
 			/*else if(oper == GDF_ASIN){
 				computed = asin(left_value);
 			}else if(oper == GDF_ACOS){
@@ -783,8 +781,7 @@ private:
 				}else{
 					computed = extract_second_op(left_value);
 				}
-			}
-			#endif // FEW_OPERATORS 
+			}*/
 			
 			store_data_in_buffer<OutputTypeOperator>(
 					computed,

@@ -170,7 +170,7 @@ static int64_t scale_to_64_bit_return_bytes(gdf_scalar input){
 	return data;
 }
 
-static __device__ __forceinline__
+static __device__ __host__ __forceinline__
 bool isInt(gdf_dtype type){
 	return (type == GDF_INT32) ||
 			(type == GDF_INT64) ||
@@ -574,6 +574,7 @@ private:
 
 			RightType right_value;
 			if(right_position == -2){
+
 				right_value = ((RightType *) this->scalars_right)[op_index];
 			}else if(right_position == -3){
 				//right is null doo whatever
@@ -709,7 +710,7 @@ private:
 	GDF_INVALID_UNARY
 			 */
 			OutputTypeOperator computed = left_value;
-			
+
 			if(oper == GDF_FLOOR){
 				computed = floor(left_value);
 			}else if(oper == GDF_CEIL){
@@ -922,24 +923,24 @@ public:
 
 		char * cur_temp_space = temp_space;
 
+		//VERY IMPORTANT!!!!
+		//the temporary space MUST be allocated in space from largest to smallest elements, if you don't follow this pattern you end up in
+		// a situation where you can makme misaligned accesses to memory.
+
 		column_data = (void **) cur_temp_space;
 		cur_temp_space += sizeof(void *) * num_columns;
 		output_data = (void **) cur_temp_space;
 		cur_temp_space += sizeof(void *) * num_final_outputs;
+		scalars_left = (int64_t *) cur_temp_space;
+		cur_temp_space += sizeof(int64_t) * num_operations;
+		scalars_right = (int64_t *) cur_temp_space;
+		cur_temp_space += sizeof(int64_t) * num_operations;
 		valid_ptrs = (temp_gdf_valid_type **) cur_temp_space;
 		cur_temp_space += sizeof(temp_gdf_valid_type *) * num_columns;
 		valid_ptrs_out = (temp_gdf_valid_type **) cur_temp_space;
 		cur_temp_space += sizeof(temp_gdf_valid_type *) * num_final_outputs;
 		input_column_types = (gdf_dtype *) cur_temp_space;
 		cur_temp_space += sizeof(gdf_dtype) * num_columns;
-		left_input_positions = (short *) cur_temp_space;
-		cur_temp_space += sizeof(short) * num_operations;
-		right_input_positions = (short *) cur_temp_space;
-		cur_temp_space += sizeof(short) * num_operations;
-		output_positions = (short *) cur_temp_space;
-		cur_temp_space += sizeof(short) * num_operations;
-		final_output_positions = (short *) cur_temp_space;
-		cur_temp_space += sizeof(short) * num_final_outputs;
 		input_types_left = (gdf_dtype *) cur_temp_space;
 		cur_temp_space += sizeof(gdf_dtype) * num_operations;
 		input_types_right= (gdf_dtype *) cur_temp_space;
@@ -954,9 +955,14 @@ public:
 		cur_temp_space += sizeof(gdf_unary_operator) * num_operations;
 		null_counts_inputs = (gdf_size_type *) cur_temp_space;
 		cur_temp_space += sizeof(gdf_size_type) * num_columns;
-		scalars_left = (int64_t *) cur_temp_space;
-		cur_temp_space += sizeof(int64_t) * num_operations;
-		scalars_right = (int64_t *) cur_temp_space;
+		left_input_positions = (short *) cur_temp_space;
+		cur_temp_space += sizeof(short) * num_operations;
+		right_input_positions = (short *) cur_temp_space;
+		cur_temp_space += sizeof(short) * num_operations;
+		output_positions = (short *) cur_temp_space;
+		cur_temp_space += sizeof(short) * num_operations;
+		final_output_positions = (short *) cur_temp_space;
+		cur_temp_space += sizeof(short) * num_final_outputs;
 
 
 
@@ -1026,7 +1032,13 @@ public:
 						left_input_types_vec[cur_operation] = left_scalars[cur_operation].dtype;
 					}else if(left_index == -2){
 						//get scalars type
-						left_input_types_vec[cur_operation] = left_scalars[cur_operation].dtype;
+						if(isInt(left_scalars[cur_operation].dtype)){
+							left_input_types_vec[cur_operation] = GDF_INT64;
+
+						}else{
+							left_input_types_vec[cur_operation] = GDF_FLOAT64;
+						}
+
 						left_scalars_host[cur_operation] = scale_to_64_bit_return_bytes(left_scalars[cur_operation]);
 					}
 				}else{
@@ -1046,7 +1058,12 @@ public:
 						right_input_types_vec[cur_operation] = right_scalars[cur_operation].dtype;
 					}else if(right_index == -2){
 						//get scalars type
-						right_input_types_vec[cur_operation] = right_scalars[cur_operation].dtype;
+
+						if(isInt(right_scalars[cur_operation].dtype)){
+							right_input_types_vec[cur_operation] = GDF_INT64;
+						}else{
+							right_input_types_vec[cur_operation] = GDF_FLOAT64;
+						}
 						right_scalars_host[cur_operation] = scale_to_64_bit_return_bytes(right_scalars[cur_operation]);
 					}else if(right_index == -1){
 						//right wont be used its a unary operation

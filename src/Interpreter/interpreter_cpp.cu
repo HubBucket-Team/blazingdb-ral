@@ -136,6 +136,8 @@ std::vector<column_index_type> & left_inputs,
 					temp_space);
 		transformKernel<<<32 * BlazingConfig::getInstance()->get_number_of_sms()
 		,THREAD_BLOCK_SIZE_8,
+	//	transformKernel<<<1
+	//	,1,
 						shared_memory_per_thread * THREAD_BLOCK_SIZE_8,
 						stream>>>(op, num_rows);
 

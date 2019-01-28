@@ -97,6 +97,14 @@ TEST_F(EvaluateQueryTest, TEST_00)
     input_columns[1] = input_columns_cpp[1].get_gdf_column();
     input_columns[2] = input_columns_cpp[2].get_gdf_column();
 
+    // //  + * + $0 $1 $2 $1 , + $1 2
+    // //      + $0 $1
+    // //  + * $5      $2 $1 , + $1 2
+    // //   * $5 $2 
+    // //  + $5 $1 , + $1 2
+    // //  + $3 , + $1 2
+    
+
     std::vector<column_index_type> left_inputs =  {0, 5, 5,      1};
     std::vector<column_index_type> right_inputs = {1, 2, 1,     -2};
     std::vector<column_index_type> outputs =      {5, 5, 3,      4};
@@ -261,7 +269,6 @@ TEST_F(EvaluateQueryTest, TEST_SCALAR_ADD)
         "emps",
         {
             {"o1", [](Index i) -> DType<GDF_INT32> { return 0; }},
-            {"o2", [](Index i) -> DType<GDF_INT32> { return 0; }},
         }}.Build(5);
 
     input_table.print(std::cout); 
@@ -269,16 +276,16 @@ TEST_F(EvaluateQueryTest, TEST_SCALAR_ADD)
     std::vector<gdf_column_cpp> input_columns_cpp = input_table.ToGdfColumnCpps();
     std::vector<gdf_column_cpp> output_columns_cpp = output_table.ToGdfColumnCpps();
 
-    std::vector<gdf_column *> output_columns(2);
+    std::vector<gdf_column *> output_columns(1);
     output_columns[0] = output_columns_cpp[0].get_gdf_column();
-    output_columns[1] = output_columns_cpp[1].get_gdf_column();
+    //output_columns[1] = output_columns_cpp[1].get_gdf_column();
 
     std::vector<gdf_column *> input_columns(3);
     input_columns[0] = input_columns_cpp[0].get_gdf_column();
     input_columns[1] = input_columns_cpp[1].get_gdf_column();
     input_columns[2] = input_columns_cpp[2].get_gdf_column();
 
-    // select $0 * 1 from customer
+    // select $0 + 1 from customer
     std::vector<column_index_type> left_inputs =  {0};
     std::vector<column_index_type> right_inputs = {-2};
     std::vector<column_index_type> outputs =      {3};
@@ -301,7 +308,7 @@ TEST_F(EvaluateQueryTest, TEST_SCALAR_ADD)
     std::vector<gdf_scalar> left_scalars = {junk};
     std::vector<gdf_scalar> right_scalars = {scalar_val};
 
-    std::vector<column_index_type> new_input_indices = {0, 1, 2};
+    std::vector<column_index_type> new_input_indices = {0, -1, -1};
 
     auto error = perform_operation(output_columns, input_columns, left_inputs, right_inputs, outputs, final_output_positions, operators, unary_operators, left_scalars, right_scalars, new_input_indices);
     ASSERT_EQ(error, GDF_SUCCESS);

@@ -462,12 +462,10 @@ private:
 	__device__
 	__forceinline__ void process_operator(size_t op_index,  BufferType * buffer){
 		gdf_dtype type = this->input_types_left[op_index];
-		if(isInt(type)){
-			process_operator_1<int64_t>(op_index,buffer);
-		}else if(isFloat(type)){
+		if(isFloat(type)){
 			process_operator_1<double>(op_index,buffer);
-		}else if(isUnsignedInt(type)){
-			process_operator_1<uint64_t>(op_index,buffer);
+		}else {
+			process_operator_1<int64_t>(op_index,buffer);
 		}
 	}
 
@@ -476,12 +474,10 @@ private:
 	__device__
 	__forceinline__ void process_operator_1(size_t op_index,  BufferType * buffer){
 		gdf_dtype type = this->input_types_right[op_index];
-		if(isInt(type)){
-			process_operator_2<LeftType,int64_t>(op_index,buffer);
-		}else if(isFloat(type)){
+		if(isFloat(type)){
 			process_operator_2<LeftType,double>(op_index,buffer);
-		}else if(isUnsignedInt(type)){
-			process_operator_2<LeftType,uint64_t>(op_index,buffer);
+		}else {
+			process_operator_2<LeftType,int64_t>(op_index,buffer);
 		}
 	}
 
@@ -489,12 +485,10 @@ private:
 	__device__
 	__forceinline__ void process_operator_2(size_t op_index,  BufferType * buffer){
 		gdf_dtype type = this->output_types[op_index];
-		if(isInt(type)){
-			process_operator_3<LeftType,RightType,int64_t>(op_index,buffer);
-		}else if(isFloat(type)){
+		if(isFloat(type)){
 			process_operator_3<LeftType,RightType,double>(op_index,buffer);
-		}else if(isUnsignedInt(type)){
-			process_operator_3<LeftType,RightType,uint64_t>(op_index,buffer);
+		}else {
+			process_operator_3<LeftType,RightType,int64_t>(op_index,buffer);
 		}
 	}
 

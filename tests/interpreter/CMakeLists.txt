@@ -40,7 +40,7 @@ configure_test(interpreter_tests "${interpreter_tests_src}")
  
 set(project_tests_src
     ${source_files_src}
-    project_tests.cu
+    process_project_tests.cu
 ) 
 
 configure_test(project_tests "${project_tests_src}")

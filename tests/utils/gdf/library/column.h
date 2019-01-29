@@ -238,6 +238,7 @@ private:
 
 inline ColumnBuilder::ImplBase::~ImplBase() = default;
 
+
 template <gdf_dtype id>
 class Literals {
 public:
@@ -311,7 +312,7 @@ private:
   public:
     Impl(const std::string &name, Literals<id> literals)
       : name_{name}, literals_{literals},
-        builder_{ColumnBuilder(name_, [this](Index i) -> DType<id> {
+        builder_{ColumnBuilder(name_, std::move(literals.valids()), [this](Index i) -> DType<id> {
           return *(literals_.values().begin() + static_cast<std::ptrdiff_t>(i));
         })} {}
 

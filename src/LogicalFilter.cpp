@@ -487,11 +487,11 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 
 //processing in reverse we never need to have more than TWO spaces to work in
 //
+
 gdf_error evaluate_expression(
 		blazing_frame inputs,
 		std::string expression,
-		gdf_column_cpp output,
-		gdf_column_cpp temp){
+		gdf_column_cpp output){
 	//make temp a column of size 8 bytes so it can accomodate the largest possible size
 	static CodeTimer timer;
 	timer.reset();
@@ -500,65 +500,79 @@ gdf_error evaluate_expression(
 
 	std::stack<std::string> operand_stack;
 
+	std::vector<column_index_type> final_output_positions(1);
+	std::vector<gdf_column *> output_columns(1);
+	output_columns[0] = output.get_gdf_column();
+	std::vector<gdf_column *> input_columns;
 
+	std::vector<gdf_dtype> output_type_expressions(1); //contains output types for columns that are expressions, if they are not expressions we skip over it
+	output_type_expressions[0] = output.dtype();
+
+	std::vector<bool> input_used_in_expression(inputs.get_size_columns(),false);
 	while(position > 0){
 		std::string token = get_last_token(clean_expression,&position);
-		//std::cout<<"Token is ==> "<<token<<"\n";
 
-		if(is_operator_token(token)){
-
-			//Todo: Check correctness
-			/*if (token == "OR") {
-				auto op1 = operand_stack.top();
-				operand_stack.pop();
-				auto op2 = operand_stack.top();
-				operand_stack.pop();
-
-				std::string equal = { "MOD + " };
-				equal.append(op1 + " " + op2 + " 2");
-				clean_expression.erase(position, 2);
-				clean_expression.insert(position, equal);
-				position += equal.length();
-				continue;
-			}*/
-
-			if(is_binary_operator_token(token)){
-				process__binary_operation_column_column(
-						token,
-						operand_stack,
-						inputs,
-						output,
-						temp,
-						position == 0 ? true : false  //set to true if we write to output
-				);
-
-			}else if(is_unary_operator_token(token)){
-				process_unary_operation(
-						token,
-						operand_stack,
-						inputs,
-						output,
-						temp,
-						position == 0 ? true : false  //set to true if we write to output
-				);
-			} else if (is_other_binary_operator_token(token)){
-				process_other_binary_operation(
-						token,
-						operand_stack,
-						inputs,
-						output,
-						temp,
-						position == 0 ? true : false  //set to true if we write to output
-				);
-			} else {
-				return GDF_INVALID_API_CALL;
-			}
-
-
-		}else{
-			operand_stack.push(token);
+		if(!is_operator_token(token) && !is_literal(token)){
+			size_t index = get_index(token);
+			input_used_in_expression[index] = true;
 		}
 	}
+
+
+	std::vector<column_index_type>  left_inputs;
+	std::vector<column_index_type>  right_inputs;
+	std::vector<column_index_type>  outputs;
+
+	std::vector<gdf_binary_operator>  operators;
+	std::vector<gdf_unary_operator>  unary_operators;
+
+
+	std::vector<gdf_scalar>  left_scalars;
+	std::vector<gdf_scalar>  right_scalars;
+
+	std::vector<column_index_type> new_column_indices(input_used_in_expression.size());
+	size_t input_columns_used = 0;
+	for(int i = 0; i < input_used_in_expression.size(); i++){
+		if(input_used_in_expression[i]){
+			new_column_indices[i] = input_columns_used;
+			input_columns.push_back( inputs.get_column(i).get_gdf_column());
+			input_columns_used++;
+
+		}else{
+			new_column_indices[i] = -1; //won't be uesd anyway
+		}
+	}
+
+	final_output_positions[0] = input_columns_used;
+
+
+	gdf_error err = add_expression_to_plan(	inputs,
+						clean_expression,
+						0,
+						1,
+						input_columns_used,
+						left_inputs,
+						right_inputs,
+						outputs,
+						operators,
+						unary_operators,
+						left_scalars,
+						right_scalars,
+						new_column_indices);
+
+
+	err = perform_operation( output_columns,
+				input_columns,
+				left_inputs,
+				right_inputs,
+				outputs,
+				final_output_positions,
+				operators,
+				unary_operators,
+				left_scalars,
+				right_scalars,
+				new_column_indices);
+
 
 	output.update_null_count();
 
@@ -566,3 +580,4 @@ gdf_error evaluate_expression(
 
 	return GDF_SUCCESS;
 }
+

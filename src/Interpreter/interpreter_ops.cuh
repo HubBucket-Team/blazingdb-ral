@@ -597,7 +597,7 @@ private:
 						* right_value,
 						buffer,
 						output_position);
-			}/*else if(oper == GDF_DIV || oper == GDF_FLOOR_DIV){
+			}else if(oper == GDF_DIV || oper == GDF_FLOOR_DIV){
 				store_data_in_buffer<OutputTypeOperator>(
 						left_value
 						/ right_value,
@@ -668,7 +668,7 @@ private:
 						>= right_value,
 						buffer,
 						output_position);
-			}*/
+			}
  			
 		}else{
 			//unary op
@@ -717,7 +717,7 @@ private:
 			}else if(oper == GDF_COS){
 				computed = cos(left_value);
 			} 	
-			/*else if(oper == GDF_ASIN){
+			else if(oper == GDF_ASIN){
 				computed = asin(left_value);
 			}else if(oper == GDF_ACOS){
 				computed = acos(left_value);
@@ -775,7 +775,7 @@ private:
 				}else{
 					computed = extract_second_op(left_value);
 				}
-			}*/
+			}
 			
 			store_data_in_buffer<OutputTypeOperator>(
 					computed,

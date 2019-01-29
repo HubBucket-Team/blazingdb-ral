@@ -19,8 +19,7 @@ typedef short column_index_type;
 gdf_error evaluate_expression(
 		blazing_frame inputs,
 		std::string expression,
-		gdf_column_cpp output,
-		gdf_column_cpp temp);
+		gdf_column_cpp output);
 
 
 gdf_error add_expression_to_plan(	blazing_frame & inputs,

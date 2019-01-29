@@ -479,8 +479,7 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 			gdf_error err = evaluate_expression(
 					input,
 					expression,
-					output,
-					temp);
+					output);
 
 			columns[i] = output;
 
@@ -793,8 +792,7 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		return err;
 	}
 
-	gdf_column_cpp temp;
-	gdf_dtype max_temp_type = GDF_invalid;
+
 	std::vector<gdf_dtype> aggregation_input_types;
 
 	size_t size = input.get_column(0).size();
@@ -802,23 +800,12 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 
 	for(int i = 0; i < aggregation_types.size(); i++){
 		if(contains_evaluation(aggregation_input_expressions[i])){
-
+			gdf_dtype max_temp_type;
 			gdf_error err = get_output_type_expression(&input, &aggregation_input_types[i], &max_temp_type, aggregation_input_expressions[i]);
-			if(get_width_dtype(max_temp_type) < get_width_dtype(aggregation_input_types[i])){
-				max_temp_type = aggregation_input_types[i];
-				//by doing this we can now use the temp space as where we put our reductions then output our reductions right back into the input
-				//so long as the input isnt an ipc one
-			}
-			//temp.create_gdf_column(GDF_INT64,size,nullptr,8);
-			//break;
 		}
 	}
 
-	//TODO de donde saco el nombre de la columna aqui???
-	if(max_temp_type != GDF_invalid){
-		temp.create_gdf_column(max_temp_type,size,nullptr,get_width_dtype(max_temp_type), "");
 
-	}
 
 	gdf_column ** group_by_columns_ptr = new gdf_column *[group_columns.size()];
 	gdf_column ** group_by_columns_ptr_out = new gdf_column *[group_columns.size()];
@@ -854,8 +841,7 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 			gdf_error err = evaluate_expression(
 					input,
 					expression,
-					aggregation_input,
-					temp);
+					aggregation_input);
 
 			if(err != GDF_SUCCESS){
 				//TODO: clean up everything here so we dont run out of memory
@@ -1200,9 +1186,6 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 		//panic then do wonderful things here to fix everything
 		//im really liking Andrescus talk on control flow blah blah something i forget his name
 	}
-	//TODO de donde saco el nombre de la columna aqui???
-	gdf_column_cpp temp;
-	temp.create_gdf_column(max_temp_type,input.get_column(0).size(),nullptr,get_width_dtype(max_temp_type), "");
 
 	Library::Logging::Logger().logInfo("-> Filter sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
 
@@ -1213,8 +1196,7 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 	err = evaluate_expression(
 			input,
 			conditional_expression,
-			stencil,
-			temp);
+			stencil);
 
 	// Library::Logging::Logger().logInfo("-> Filter sub block 4 took " + std::to_string(timer.getDuration()) + " ms");
 

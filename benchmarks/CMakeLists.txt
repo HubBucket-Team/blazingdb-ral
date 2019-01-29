@@ -5,7 +5,7 @@
 
 #pass the dependency libraries as optional arguments using ${ARGN}
 #NOTE the order of libraries matter, so try to link first with the most high level lib
-function(configure_benchmarks BENCHMARK_NAME Bench_SRCS)
+function(configure_benchmark BENCHMARK_NAME Bench_SRCS)
     include_directories(${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/tests/utils ${GBENCHMARK_INCLUDE_DIR})
     link_directories(${GBENCHMARK_LIBRARY_DIR})
 
@@ -57,7 +57,8 @@ endfunction()
 # -------------------
 message(STATUS "******** Configuring Benchmarks ********")
 
-#add_subdirectory(utils)
+add_subdirectory(jit)
+add_subdirectory(interops)
 
 
 message(STATUS "******** Benchmarks are ready ********")

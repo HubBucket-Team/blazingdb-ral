@@ -196,7 +196,7 @@ project_plan_params parse_project_plan(blazing_frame& input, std::string query_p
 
 	gdf_error err = GDF_SUCCESS;
 
-	std::cout<<"starting process_project"<<std::endl;
+	// std::cout<<"starting process_project"<<std::endl;
 
 	size_t size = input.get_column(0).size();
 
@@ -411,7 +411,7 @@ gdf_error execute_project_plan(blazing_frame & input, std::string query_part){
 
 gdf_error process_project(blazing_frame & input, std::string query_part){
 
-	std::cout<<"starting process_project"<<std::endl;
+	// std::cout<<"starting process_project"<<std::endl;
 
 	size_t size = input.get_column(0).size();
 
@@ -514,8 +514,8 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 	}
 
 
-	input.clear();
-	input.add_table(columns);
+	// input.clear();
+	// input.add_table(columns);
 
 	//free_gdf_column(&temp);
 	return GDF_SUCCESS;

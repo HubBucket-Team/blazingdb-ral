@@ -46,32 +46,7 @@ struct EvaluateQueryTest : public ::testing::Test
                                        }}.Build()}}
     {
     }
-
-    void create_input()
-    {
-        // LiteralTableGroupBuilder{
-        //       {"main.emps",
-        //         {"$0", Literals<GDF_INT32>{Literals<GDF_INT32>::vector{10, 20, 10, 20, 10, 20, 10, 20, 10, 2}}},
-        //         {"$1", Literals<GDF_INT32>{Literals<GDF_INT32>::vector{9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000, 0}}}}}
-
-        auto input_table = gdf::library::LiteralTableBuilder{"customer",
-                                                             {
-                                                                 gdf::library::LiteralColumnBuilder{
-                                                                     "x",
-                                                                     Literals<GDF_FLOAT32>{Literals<GDF_FLOAT32>::vector{1.1, 3.6, 5.3, 7.9, 9.35}},
-                                                                 },
-                                                                 gdf::library::LiteralColumnBuilder{
-                                                                     "y",
-                                                                     Literals<GDF_FLOAT32>{Literals<GDF_FLOAT32>::vector{1, 1, 1, 1, 1}},
-                                                                 },
-                                                                 gdf::library::LiteralColumnBuilder{
-                                                                     "z",
-                                                                     Literals<GDF_FLOAT32>{Literals<GDF_FLOAT32>::vector{0, 2, 4, 6, 8}},
-                                                                 },
-                                                             }} 
-                               .Build();
-    }
-
+ 
     void CHECK_RESULT(gdf::library::Table &computed_solution,
                       gdf::library::Table &reference_solution)
     {
@@ -83,8 +58,11 @@ struct EvaluateQueryTest : public ::testing::Test
             const auto &reference_column = reference_solution[index];
             const auto &computed_column = computed_solution[index];
 
-            // auto valid = ((int)computed_column.getValids()[0] & 1);
-            // EXPECT_TRUE(valid == valid_result[index]);
+            auto reference_valids = reference_column.getValids();
+            auto solution_valids = computed_column.getValids();
+            for (size_t i = 0; i < reference_valids.size(); i++)
+                std::cout << (int)reference_valids[i] << " - " << (int)solution_valids[i] << std::endl;
+            EXPECT_TRUE(reference_valids == solution_valids);
 
             auto a = reference_column.to_string();
             auto b = computed_column.to_string();
@@ -92,37 +70,6 @@ struct EvaluateQueryTest : public ::testing::Test
         }
     }
 };
-
-TEST_F(EvaluateQueryTest, LiteralTableWithNulls)
-{
-    Literals<GDF_FLOAT64>::vector values = {7, 5, 6, 3, 1, 2, 8, 4, 1, 2, 8, 4, 1, 2, 8, 4};
-    Literals<GDF_FLOAT64>::valid_vector valids = {0xF0, 0x0F};
-    auto t = LiteralTableBuilder("emps",
-                                 {
-                                     LiteralColumnBuilder{
-                                         "x",
-                                         Literals<GDF_FLOAT64>{Literals<GDF_FLOAT64>::vector{values}, Literals<GDF_FLOAT64>::valid_vector{valids}},
-                                     },
-                                 })
-                 .Build();
-    t.print(std::cout);
-    auto u = GdfColumnCppsTableBuilder{"emps", t.ToGdfColumnCpps()}.Build();
-
-    for (std::size_t i = 0; i < 16; i++) {
-        std::cout << t[0][i].get<GDF_FLOAT64>() << std::endl;
-        EXPECT_EQ( values[i], t[0][i].get<GDF_FLOAT64>());
-    }
-    const auto &computed_valids = t[0].getValids();
-    std::cout << "valids.size: " << valids.size() << std::endl;
-    std::cout << "computed_valids.size: " << computed_valids.size() << std::endl;
-
-    for (std::size_t i = 0; i < valids.size(); i++) {
-        std::cout << "valids.size: " << valids[i] << std::endl;
-        std::cout << "computed_valids.size: " << computed_valids[i] << std::endl;
-        EXPECT_EQ(valids[i], computed_valids[i]); 
-    }
-    EXPECT_EQ(t, u);
-}
 
 // EnumerableTableScan(table=[[main, emps]])
 TEST_F(EvaluateQueryTest, TEST_01)

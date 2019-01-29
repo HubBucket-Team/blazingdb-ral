@@ -71,15 +71,15 @@ TEST(UtilsTest, FrameFromTableGroup)
 
 TEST(UtilsTest, TableFromLiterals)
 {
-  auto t = LiteralTableBuilder{ .name = "emps",
-    .columns = {
+  auto t = LiteralTableBuilder{"emps",
+    {
       {
-        .name = "x",
-        .values = Literals<GDF_FLOAT64>{ 1, 3, 5, 7, 9 },
+        "x",
+        Literals<GDF_FLOAT64>{ 1, 3, 5, 7, 9 },
       },
       {
-        .name = "y",
-        .values = Literals<GDF_INT64>{ 0, 2, 4, 6, 8 },
+        "y",
+        Literals<GDF_INT64>{ 0, 2, 4, 6, 8 },
       },
     } }
              .Build();
@@ -93,9 +93,9 @@ TEST(UtilsTest, TableFromLiterals)
   using DataTuple = VTableBuilder::DataTuple;
 
   gdf::library::Table table = VTableBuilder{
-    .name = "emps",
-    .headers = { "Id", "Weight", "Age", "Name" },
-    .rows = {
+    "emps",
+    { "Id", "Weight", "Age", "Name" },
+    {
       DataTuple{ 'a', 180.2, 40, 100L },
       DataTuple{ 'b', 175.3, 38, 200L },
       DataTuple{ 'c', 140.3, 27, 300L },
@@ -108,15 +108,15 @@ TEST(UtilsTest, TableFromLiterals)
 
 TEST(UtilsTest, FrameFromGdfColumnsCpps)
 {
-  auto t = LiteralTableBuilder{ .name = "emps",
-    .columns = {
+  auto t = LiteralTableBuilder{"emps",
+    {
       {
-        .name = "x",
-        .values = Literals<GDF_FLOAT64>{ 1, 3, 5, 7, 9 },
+        "x",
+        Literals<GDF_FLOAT64>{ 1, 3, 5, 7, 9 },
       },
       {
-        .name = "y",
-        .values = Literals<GDF_INT64>{ 0, 2, 4, 6, 8 },
+        "y",
+        Literals<GDF_INT64>{ 0, 2, 4, 6, 8 },
       },
     } }
              .Build();
@@ -129,6 +129,39 @@ TEST(UtilsTest, FrameFromGdfColumnsCpps)
   }
 
   EXPECT_EQ(t, u);
+}
+
+
+
+TEST(UtilsTest, LiteralTableWithNulls)
+{
+    Literals<GDF_FLOAT64>::vector values = {7, 5, 6, 3, 1, 2, 8, 4, 1, 2, 8, 4, 1, 2, 8, 4};
+    Literals<GDF_FLOAT64>::valid_vector valids = {0xF0, 0x0F};
+    auto t = LiteralTableBuilder("emps",
+                                 {
+                                     LiteralColumnBuilder{
+                                         "x",
+                                         Literals<GDF_FLOAT64>{Literals<GDF_FLOAT64>::vector{values}, Literals<GDF_FLOAT64>::valid_vector{valids}},
+                                     },
+                                 })
+                 .Build();
+    t.print(std::cout);
+    auto u = GdfColumnCppsTableBuilder{"emps", t.ToGdfColumnCpps()}.Build();
+
+    for (std::size_t i = 0; i < 16; i++) {
+        std::cout << t[0][i].get<GDF_FLOAT64>() << std::endl;
+        EXPECT_EQ( values[i], t[0][i].get<GDF_FLOAT64>());
+    }
+    const auto &computed_valids = t[0].getValids();
+    std::cout << "valids.size: " << valids.size() << std::endl;
+    std::cout << "computed_valids.size: " << computed_valids.size() << std::endl;
+
+    for (std::size_t i = 0; i < valids.size(); i++) {
+        std::cout << "valids.size: " << valids[i] << std::endl;
+        std::cout << "computed_valids.size: " << computed_valids[i] << std::endl;
+        EXPECT_EQ(valids[i], computed_valids[i]); 
+    }
+    EXPECT_EQ(t, u);
 }
 
 // TEST(UtilsTest, CSVReaderForCustomerFile)

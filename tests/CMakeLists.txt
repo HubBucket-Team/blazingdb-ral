@@ -62,7 +62,6 @@ enable_testing()
 # -------------------
 message(STATUS "******** Configuring tests ********")
 
-add_subdirectory(utils)
 
 add_subdirectory(logical-filter)
 add_subdirectory(calcite-interpreter)
@@ -81,6 +80,8 @@ add_subdirectory(union)
 add_subdirectory(unary)
 add_subdirectory(groupbywoagg)
 add_subdirectory(interpreter)
+add_subdirectory(utils)
+# add_subdirectory(utils)
 
 
 message(STATUS "******** Tests are ready ********")

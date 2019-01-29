@@ -138,5 +138,4 @@ TEST_F(EvaluateQueryTest, TEST_01)
     auto reference_table =
         GdfColumnCppsTableBuilder{"output_table", bz_frame.get_columns()[0]}.Build();
     CHECK_RESULT(output_table, reference_table);
-}
-// hola felipe! ya te ve
+} 

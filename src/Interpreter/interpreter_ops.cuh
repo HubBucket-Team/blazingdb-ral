@@ -1239,7 +1239,7 @@ public:
 			process_valids = process_valids || (this->valid_ptrs_out[out_index] != nullptr);
 		}
 
-		if(process_valids && false){
+		if(process_valids){
 
 			for(column_index_type cur_column = 0; cur_column < this->num_columns; cur_column++ ){
 

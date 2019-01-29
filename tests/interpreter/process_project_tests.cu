@@ -39,9 +39,9 @@ struct EvaluateQueryTest : public ::testing::Test
                               .tableGroup =
                                   LiteralTableGroupBuilder{
                                       {"main.emps",
-                                       {{"id", Literals<GDF_INT32>{Literals<GDF_INT32>::vector{1, 2, 3, 4, 5, 6, 7, 8, 9, 1}, Literals<GDF_INT32>::valid_vector{0xF0, 0x00}}},
-                                        {"age",  Literals<GDF_INT32>{Literals<GDF_INT32>::vector{10, 20, 10, 20, 10, 20, 10, 20, 10, 2}, Literals<GDF_INT32>::valid_vector{0xF0, 0x00}}},
-                                        {"salary", Literals<GDF_INT32>{Literals<GDF_INT32>::vector{9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000, 0}, Literals<GDF_INT32>::valid_vector{0xF0, 0x00}}}
+                                       {{"id", Literals<GDF_INT32>{Literals<GDF_INT32>::vector{1, 2, 3, 4, 5, 6, 7, 8, 9, 1}, Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 0, 0, 0, 0, 1, 1}}},
+                                        {"age",  Literals<GDF_INT32>{Literals<GDF_INT32>::vector{10, 20, 10, 20, 10, 20, 10, 20, 10, 2}, Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 0, 0, 0, 0, 1, 1}}},
+                                        {"salary", Literals<GDF_INT32>{Literals<GDF_INT32>::vector{9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000, 0}, Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 0, 0, 0, 0, 1, 1}}}
                                        }
                                        }}.Build()}}
     {
@@ -60,8 +60,6 @@ struct EvaluateQueryTest : public ::testing::Test
 
             auto reference_valids = reference_column.getValids();
             auto solution_valids = computed_column.getValids();
-            for (size_t i = 0; i < reference_valids.size(); i++)
-                std::cout << (int)reference_valids[i] << " - " << (int)solution_valids[i] << std::endl;
             EXPECT_TRUE(reference_valids == solution_valids);
 
             auto a = reference_column.to_string();
@@ -85,8 +83,12 @@ TEST_F(EvaluateQueryTest, TEST_01)
     std::vector<gdf_column_cpp> outputs;
 
     blazing_frame bz_frame;
-    for (auto &t : input_tables)
+    for (auto &t : input_tables) {
+        for (auto& col : t) {
+            print_gdf_column(col.get_gdf_column());
+        }
         bz_frame.add_table(t);
+    }
 
     std::vector<std::string> plan = StringUtil::split(logical_plan, "\n");
 
@@ -125,14 +127,16 @@ TEST_F(EvaluateQueryTest, TEST_01)
     auto output_table = GdfColumnCppsTableBuilder{"output_table", output_columns_cpp}.Build();
     output_table.print(std::cout);
 
-    err = evaluate_query(input_tables, table_names, column_names,
-                         logical_plan, outputs);
+    err = process_project(bz_frame, plan[0]);
     std::cout<< "reference_solution\n";
-    for (auto t: outputs)
-        print_gdf_column(t.get_gdf_column());
+    auto table_ref = bz_frame.get_columns()[0];
+    for (auto& c: table_ref) {
+        print_gdf_column(c.get_gdf_column());
+    }
 
     EXPECT_TRUE(err == GDF_SUCCESS);
     auto reference_table =
-        GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+        GdfColumnCppsTableBuilder{"output_table", bz_frame.get_columns()[0]}.Build();
     CHECK_RESULT(output_table, reference_table);
 }
+// hola felipe! ya te ve

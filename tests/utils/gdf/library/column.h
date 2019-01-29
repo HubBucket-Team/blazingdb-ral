@@ -15,6 +15,10 @@
 #include "types.h"
 #include "vector.h"
 
+#include <arrow/util/bit-util.h>
+#include "parquet/util/bit_util.cuh"
+
+
 namespace gdf {
 namespace library {
 
@@ -84,6 +88,7 @@ protected:
                                const gdf_dtype    dtype,
                                const std::size_t  length,
                                const void *       data,
+                               const gdf_valid_type *  valid,
                                const std::size_t  size);
 
 protected:
@@ -93,13 +98,26 @@ protected:
 
 Column::~Column() {}
 
+
+//TODO: this is slow as shit
+void convert_bools_to_valids(gdf_valid_type * valid_ptr, const std::vector<short> & input){
+  for(gdf_size_type row_index=0; row_index < input.size(); row_index++){
+    if(input[row_index]){
+      gdf::util::turn_bit_on(valid_ptr, row_index);
+    } else {
+      gdf::util::turn_bit_off(valid_ptr, row_index);
+    }
+  }
+}
+
 gdf_column_cpp Column::Create(const std::string &name,
                               const gdf_dtype    dtype,
                               const std::size_t  length,
                               const void *       data,
+                              const gdf_valid_type *  valid,
                               const std::size_t  size) {
   gdf_column_cpp column_cpp;
-  column_cpp.create_gdf_column(dtype, length, const_cast<void *>(data), size);
+  column_cpp.create_gdf_column(dtype, length, const_cast<void *>(data), const_cast<gdf_valid_type *>(valid), size);
   column_cpp.delete_set_name(name);
   return column_cpp;
 }
@@ -130,7 +148,7 @@ public:
 
   gdf_column_cpp ToGdfColumnCpp() const final {
     return Create(
-      name(), DType, this->size(), values_.data(), sizeof(value_type));
+      name(), DType, this->size(), values_.data(), valids_.data(), sizeof(value_type));
   }
 
   value_type operator[](const std::size_t i) const { return values_[i]; }
@@ -259,6 +277,8 @@ public:
   using initializer_list = std::initializer_list<value_type>;
   using vector           = std::vector<value_type>;
   using valid_vector     = std::vector<valid_type>;
+  using bool_vector     = std::vector<short>;
+  
 
   Literals(const vector &&values) : values_{std::move(values)} {}
   Literals(const initializer_list &values) : values_{values} {}
@@ -266,6 +286,16 @@ public:
   Literals(const vector&& values, valid_vector&& valids)
    : values_ {std::move(values)}, valids_ {std::move(valids)}
   { }
+
+
+  Literals(const vector& values, const bool_vector& bools)
+   : values_ {values}, valids_(gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(values.size())), 0) 
+  { 
+    assert(values.size() == bools.size());
+    gdf_valid_type* host_valids = (gdf_valid_type*)valids_.data();
+    convert_bools_to_valids(host_valids, bools);
+    // std::cout << "\tafter: " <<  gdf::util::gdf_valid_to_str(host_valids, values.size()) << std::endl;
+  }
 
   const vector &values() const { return values_; }
 

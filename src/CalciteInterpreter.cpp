@@ -514,8 +514,8 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 	}
 
 
-	// input.clear();
-	// input.add_table(columns);
+	input.clear();
+	input.add_table(columns);
 
 	//free_gdf_column(&temp);
 	return GDF_SUCCESS;

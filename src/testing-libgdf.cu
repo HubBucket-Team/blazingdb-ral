@@ -594,20 +594,33 @@ main(int argc, const char *argv[])
         //return 1;
     }*/
 
+
     std::cout << "RAL Engine starting" << std::endl;
+
+    if (argc != 2) {
+        std::cout << argv[0] << " <ral number>" << std::endl;
+        exit(1);
+    }
+
+    std::string log_name = "RAL." + std::string(argv[1]) + ".log";
+    std::string socket_name = "/tmp/ral." + std::string(argv[1]) + ".socket";
+
+    std::cout << "Log Name: " << log_name << std::endl;
+    std::cout << "Socket Name: " << socket_name << std::endl;
+
 
     FreeMemory::Initialize();
 
-    auto output = new Library::Logging::FileOutput("RAL.log", true);
+    auto output = new Library::Logging::FileOutput(log_name, true);
     Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
 
     // Init AWS S3 ... TODO see if we need to call shutdown and avoid leaks from s3 percy
     BlazingContext::getInstance()->initExternalSystems();
     
-  global_ip = "/tmp/ral.socket";
+  //global_ip = "/tmp/ral.socket";
   //global_port = atoi(port.c_str());
 
-  blazingdb::protocol::UnixSocketConnection connection("/tmp/ral.socket");
+  blazingdb::protocol::UnixSocketConnection connection(socket_name);
   blazingdb::protocol::Server server(connection);
 
   services.insert(std::make_pair(interpreter::MessageType_ExecutePlan, &executePlanService));

@@ -34,6 +34,7 @@ struct InterOpsBench : public benchmark::Fixture {
  public:
   void SetUp(benchmark::State& state) override {
     logicalPlan = "LogicalProject(EXPR$0=[+($0, $2)])";
+    logicalPlan = "LogicalProject(EXPR$0=[*(*(10, SIN(/(+($0, $2), $1))), POWER(/(-($0, $2), $1), 2))], EXPR$1=[-(FLOOR(+(POWER(SIN($1), 2), POWER(COS($1), 2))), CEIL(+(POWER(SIN(+($1, 53.42)), 2), POWER(COS(+($1, 53.42)), 2))))], EXPR$2=[+(-(/(*(FLOOR(+($1, 0.1)), POWER(MOD($0, 13), 2.0)), 5), CEIL(MOD(*(2, $2), 57))), 0.001)])";
   }
 
   void TearDown(benchmark::State& state) override {}
@@ -41,9 +42,9 @@ struct InterOpsBench : public benchmark::Fixture {
   std::string logicalPlan;
 };
 
-namespace {
-char const* LOGICAL_PLANS[] = {"LogicalProject(EXPR$0=[+($0, $2)])"};
-}
+// namespace {
+// char const* LOGICAL_PLANS[] = {"LogicalProject(EXPR$0=[+($0, $2)])"};
+// }
 
 // template <char const* logPlan>
 // struct BenchParameters {
@@ -60,7 +61,7 @@ BENCHMARK_TEMPLATE_DEFINE_F(InterOpsBench, SimpleBench, 4)
   std::generate(x.begin(), x.end(),
                 []() { return std::rand() % (RAND_MAX / 13); });
   y.resize(state.range(0));
-  std::generate(y.begin(), y.end(), []() { return std::rand() % RAND_MAX; });
+  std::generate(y.begin(), y.end(), []() { return ((std::rand() % RAND_MAX) + 1); });
   z.resize(state.range(0));
   std::generate(z.begin(), z.end(),
                 []() { return std::rand() % (RAND_MAX / 2); });
@@ -73,11 +74,16 @@ BENCHMARK_TEMPLATE_DEFINE_F(InterOpsBench, SimpleBench, 4)
           .Build();
   auto input_tables = tableGroup.ToBlazingFrame();
 
-  blazing_frame bz_frame;
+  blazing_frame bz_frame, bz_out;
   for (auto& t : input_tables) bz_frame.add_table(t);
 
   gdf_error err = GDF_SUCCESS;
   for (auto _ : state) {
+    state.PauseTiming();
+    bz_frame.clear();
+    for (auto& t : input_tables) bz_frame.add_table(t);
+    state.ResumeTiming();
+
     auto params = parse_project_plan(bz_frame, logicalPlan);
 
     // perform operations
@@ -92,8 +98,8 @@ BENCHMARK_TEMPLATE_DEFINE_F(InterOpsBench, SimpleBench, 4)
         params.operators, params.unary_operators, params.left_scalars,
         params.right_scalars, params.new_column_indices);
 
-    // bz_frame.clear();
-    // bz_frame.add_table(params.columns);
+    bz_out.clear();
+    bz_out.add_table(params.columns);
   }
 }
 

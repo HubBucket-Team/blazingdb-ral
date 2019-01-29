@@ -395,7 +395,9 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 					left_inputs.push_back(SCALAR_INDEX); //
 				}else if(is_literal(left_operand)){
 					size_t right_index = new_input_indices[get_index(right_operand)];
-					gdf_scalar left = get_scalar_from_string(left_operand,inputs.get_column(get_index(right_operand)).dtype());
+					// TODO: remove get_type_from_string dirty fix
+					// gdf_scalar right = get_scalar_from_string(left_operand,inputs.get_column(get_index(right_operand)).dtype());
+					gdf_scalar left = get_scalar_from_string(left_operand,get_type_from_string(left_operand));
 					left_scalars.push_back(left);
 					right_scalars.push_back(dummy_scalar);
 
@@ -406,7 +408,9 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 
 				}else if(is_literal(right_operand)){
 					size_t left_index = new_input_indices[get_index(left_operand)];
-					gdf_scalar right = get_scalar_from_string(right_operand,inputs.get_column(get_index(left_operand)).dtype());
+					// TODO: remove get_type_from_string dirty fix
+					// gdf_scalar right = get_scalar_from_string(right_operand,inputs.get_column(get_index(left_operand)).dtype());
+					gdf_scalar right = get_scalar_from_string(right_operand,get_type_from_string(right_operand));
 					right_scalars.push_back(right);
 					left_scalars.push_back(dummy_scalar);
 

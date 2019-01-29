@@ -597,15 +597,15 @@ private:
 						* right_value,
 						buffer,
 						output_position);
-			}/*else if(oper == GDF_DIV || oper == GDF_FLOOR_DIV){
+			}else if(oper == GDF_DIV || oper == GDF_FLOOR_DIV){
 				store_data_in_buffer<OutputTypeOperator>(
 						left_value
 						/ right_value,
 						buffer,
 						output_position);
-			}else if(oper == GDF_TRUE_DIV){
+			}/*else if(oper == GDF_TRUE_DIV){
 				//TODO: snap this requires understanding of the bitmask
-			}else if(oper == GDF_MOD){
+			}*/else if(oper == GDF_MOD){
 				//mod only makes sense with integer inputs
 				store_data_in_buffer<OutputTypeOperator>(
 						(int64_t) left_value
@@ -632,7 +632,7 @@ private:
 						data,
 						buffer,
 						output_position);
-			}else if(oper == GDF_EQUAL){
+			}/*else if(oper == GDF_EQUAL){
 				store_data_in_buffer<OutputTypeOperator>(
 						left_value
 						== right_value,

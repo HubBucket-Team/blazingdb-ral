@@ -37,6 +37,10 @@ public:
     }
     return true;
   }
+  bool is_valid(size_t i) const
+  {
+    return  valids_.size() == 0? true :  valids_[i >> size_t(3)] & (1 << (i & size_t(7)));
+  }
 
   bool operator!=(const Column &other) const { return !(*this == other); }
 
@@ -151,12 +155,20 @@ public:
   }
 
   std::string get_as_str(int index) const final {
+    //@todo, use valids_ !
     std::ostringstream out;
     if (std::is_floating_point<value_type>::value) { out.precision(1); }
     if (sizeof(value_type) == 1) {
-      out << std::fixed << (int) values_.at(index);
+      if (this->is_valid(index))
+        out << std::fixed << (int) values_.at(index);
+      else 
+        out << std::fixed << "@";
+      
     } else {
-      out << std::fixed << values_.at(index);
+      if (this->is_valid(index))
+        out << std::fixed << values_.at(index);
+      else 
+        out << std::fixed << "@";
     }
     return out.str();
   }

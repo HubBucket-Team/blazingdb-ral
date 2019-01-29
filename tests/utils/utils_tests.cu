@@ -149,7 +149,7 @@ TEST(UtilsTest, LiteralTableWithNulls)
     auto u = GdfColumnCppsTableBuilder{"emps", t.ToGdfColumnCpps()}.Build();
 
     for (std::size_t i = 0; i < 16; i++) {
-        std::cout << t[0][i].get<GDF_FLOAT64>() << std::endl;
+        // std::cout << t[0][i].get<GDF_FLOAT64>() << std::endl;
         EXPECT_EQ( values[i], t[0][i].get<GDF_FLOAT64>());
     }
     const auto &computed_valids = t[0].getValids();
@@ -157,8 +157,7 @@ TEST(UtilsTest, LiteralTableWithNulls)
     std::cout << "computed_valids.size: " << computed_valids.size() << std::endl;
 
     for (std::size_t i = 0; i < valids.size(); i++) {
-        std::cout << "valids.size: " << valids[i] << std::endl;
-        std::cout << "computed_valids.size: " << computed_valids[i] << std::endl;
+        std::cout << "\t" << (int)valids[i] << " - " << (int)computed_valids[i] << std::endl;
         EXPECT_EQ(valids[i], computed_valids[i]); 
     }
     EXPECT_EQ(t, u);

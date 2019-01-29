@@ -39,9 +39,9 @@ struct EvaluateQueryTest : public ::testing::Test
                               .tableGroup =
                                   LiteralTableGroupBuilder{
                                       {"main.emps",
-                                       {{"id", Literals<GDF_INT32>{Literals<GDF_INT32>::vector{1, 2, 3, 4, 5, 6, 7, 8, 9, 1}, Literals<GDF_INT32>::valid_vector{0xF0, 0x0F}}},
-                                        {"age",  Literals<GDF_INT32>{Literals<GDF_INT32>::vector{10, 20, 10, 20, 10, 20, 10, 20, 10, 2}, Literals<GDF_INT32>::valid_vector{0xF0, 0x0F}}},
-                                        {"salary", Literals<GDF_INT32>{Literals<GDF_INT32>::vector{9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000, 0}, Literals<GDF_INT32>::valid_vector{0xF0, 0x0F}}}
+                                       {{"id", Literals<GDF_INT32>{Literals<GDF_INT32>::vector{1, 2, 3, 4, 5, 6, 7, 8, 9, 1}, Literals<GDF_INT32>::valid_vector{0xF0, 0x00}}},
+                                        {"age",  Literals<GDF_INT32>{Literals<GDF_INT32>::vector{10, 20, 10, 20, 10, 20, 10, 20, 10, 2}, Literals<GDF_INT32>::valid_vector{0xF0, 0x00}}},
+                                        {"salary", Literals<GDF_INT32>{Literals<GDF_INT32>::vector{9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000, 0}, Literals<GDF_INT32>::valid_vector{0xF0, 0x00}}}
                                        }
                                        }}.Build()}}
     {
@@ -75,6 +75,10 @@ struct EvaluateQueryTest : public ::testing::Test
 TEST_F(EvaluateQueryTest, TEST_01)
 {
     auto logical_plan = input.logicalPlan;
+    std::cout << "input.tableGroup: " << std::endl;
+    for (size_t i = 0 ; i < input.tableGroup.size(); i++) {
+        input.tableGroup[i].print(std::cout);
+    }
     auto input_tables = input.tableGroup.ToBlazingFrame();
     auto table_names = input.tableGroup.table_names();
     auto column_names = input.tableGroup.column_names();
@@ -108,9 +112,11 @@ TEST_F(EvaluateQueryTest, TEST_01)
     //params.output_columns
     std::vector<gdf_column_cpp> output_columns_cpp;
 
+    std::cout<< "interops_solution\n";
     for (gdf_column *col : params.output_columns)
     {
         gdf_column_cpp gdf_col;
+        print_gdf_column(col);
         gdf_col.create_gdf_column(col);
         output_columns_cpp.push_back(gdf_col);
     }
@@ -121,6 +127,9 @@ TEST_F(EvaluateQueryTest, TEST_01)
 
     err = evaluate_query(input_tables, table_names, column_names,
                          logical_plan, outputs);
+    std::cout<< "reference_solution\n";
+    for (auto t: outputs)
+        print_gdf_column(t.get_gdf_column());
 
     EXPECT_TRUE(err == GDF_SUCCESS);
     auto reference_table =

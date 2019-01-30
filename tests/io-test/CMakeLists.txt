@@ -41,5 +41,19 @@ set(parse_parquet-test_SRCS
     parse_parquet.cu
 )
 
+set(parse_parquet-file-test_SRCS
+    ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
+    ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
+    ${CMAKE_SOURCE_DIR}/src/FreeMemory.cpp
+    ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
+    ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
+    ${CMAKE_SOURCE_DIR}/src/io/data_parser/ParquetParser.cpp
+    ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
+    ${parquet_reader_source_files}
+    ${source_files}
+    parse_parquet_file.cu
+)
+
 configure_test(parse_csv-test "${parse_csv-test_SRCS}")
 configure_test(parse_parquet-test "${parse_parquet-test_SRCS}")
+configure_test(parse_parquet-file-test "${parse_parquet-file-test_SRCS}")

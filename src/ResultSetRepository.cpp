@@ -69,6 +69,16 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 		GDFRefCounter::getInstance()->deregister_column(frame.get_column(i).get_gdf_column());
 	}
 
+	for(size_t i = 0; i < frame.get_width(); i++){
+		column_token_t column_token = frame.get_column(i).get_column_token();
+
+		if(column_token == 0){
+			column_token = gen_token<column_token_t>();
+			frame.get_column(i).set_column_token(column_token);
+			this->precalculated_columns[column_token] = frame.get_column(i);
+		}
+	}
+
 	{
 		std::lock_guard<std::mutex> guard(this->repo_mutex);
 		this->result_sets[token] = std::make_tuple(true, frame, duration);
@@ -113,32 +123,32 @@ void result_set_repository::remove_all_connection_tokens(connection_id_t connect
 	this->connection_result_sets.erase(connection);
 }
 
-bool result_set_repository::free_result(query_token_t token){
+bool result_set_repository::free_result(connection_id_t connection, query_token_t token){
 	std::lock_guard<std::mutex> guard(this->repo_mutex);
 
-	for(auto it = this->connection_result_sets.begin(); it != this->connection_result_sets.end(); ++it) {
-		connection_id_t connection = it->first;
-		for(size_t i = 0; i <  this->connection_result_sets[connection].size(); i++){
-			query_token_t token_test  = this->connection_result_sets[connection][i];
-			if(token == token_test){
-				std::vector<query_token_t> tokens= this->connection_result_sets[connection];
-				tokens.erase(tokens.begin() + i);
-				this->connection_result_sets[connection] = tokens;
-				std::cout<<"freed result!"<<std::endl;
-
-				blazing_frame output_frame = std::get<1>(this->result_sets[token]);
-
-				for(size_t i = 0; i < output_frame.get_width(); i++){
-					GDFRefCounter::getInstance()->free(output_frame.get_column(i).get_gdf_column());
-				}
-
-				this->result_sets.erase(token);
-				return true;
-			}
-		}
+	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
+		throw std::runtime_error{"Connection does not exist"};
 	}
-	return false;
 
+	for(size_t i = 0; i <  this->connection_result_sets[connection].size(); i++){
+		query_token_t token_test  = this->connection_result_sets[connection][i];
+		if(token == token_test){
+			std::vector<query_token_t> tokens= this->connection_result_sets[connection];
+			tokens.erase(tokens.begin() + i);
+			this->connection_result_sets[connection] = tokens;
+			std::cout<<"freed result!"<<std::endl;
+
+			blazing_frame output_frame = std::get<1>(this->result_sets[token]);
+
+			for(size_t i = 0; i < output_frame.get_width(); i++){
+				GDFRefCounter::getInstance()->free(output_frame.get_column(i).get_gdf_column());
+			}
+
+			this->result_sets.erase(token);
+			return true;
+		}
+	}	
+	return false;
 }
 
 std::tuple<blazing_frame, double> result_set_repository::get_result(connection_id_t connection, query_token_t token){
@@ -158,15 +168,25 @@ std::tuple<blazing_frame, double> result_set_repository::get_result(connection_i
 		});
 		std::cout<<"Result is after lock = "<<std::get<0>(this->result_sets[token])<<std::endl;
 
-			blazing_frame output_frame = std::get<1>(this->result_sets[token]);
+		blazing_frame output_frame = std::get<1>(this->result_sets[token]);
 
-			for(size_t i = 0; i < output_frame.get_width(); i++){
-				GDFRefCounter::getInstance()->deregister_column(output_frame.get_column(i).get_gdf_column());
-			}
-			//@todo remove from map
+		for(size_t i = 0; i < output_frame.get_width(); i++){
+			GDFRefCounter::getInstance()->deregister_column(output_frame.get_column(i).get_gdf_column());
+		}
 
-			return std::make_tuple(output_frame, std::get<2>(this->result_sets[token]));
-
+		return std::make_tuple(output_frame, std::get<2>(this->result_sets[token]));
 	}
+}
+
+gdf_column_cpp result_set_repository::get_column(connection_id_t connection, column_token_t columnToken){
+	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
+		throw std::runtime_error{"Connection does not exist"};
+	}
+
+	if(this->precalculated_columns.find(columnToken) == this->precalculated_columns.end()){
+		throw std::runtime_error{"Column does not exist"};
+	}
+
+	return this->precalculated_columns[columnToken];
 }
 

@@ -18,18 +18,35 @@
 
 #include "gdf/library/api.h"
 using namespace gdf::library;
- 
+
+struct InputTestItem
+{
+    std::string query;
+    std::string logicalPlan;
+    gdf::library::TableGroup tableGroup;
+};
+
 struct EvaluateQueryTest : public ::testing::Test
 {
-    struct InputTestItem
-    {
-        std::string query;
-        std::string logicalPlan;
-        gdf::library::TableGroup tableGroup;
-        gdf::library::Table resultTable;
-    };
- 
 
+    InputTestItem input;
+
+    EvaluateQueryTest() : input{InputTestItem{
+                              .query = "select id + salary from main.emps",
+                              .logicalPlan =
+                                  "LogicalProject(EXPR$0=[+($0, $2)])\n  "
+                                  "EnumerableTableScan(table=[[main, emps]])",
+                              .tableGroup =
+                                  LiteralTableGroupBuilder{
+                                      {"main.emps",
+                                       {{"id", Literals<GDF_INT32>{Literals<GDF_INT32>::vector{1, 2, 3, 4, 5, 6, 7, 8, 9, 1}, Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 0, 0, 0, 0, 1, 1}}},
+                                        {"age",  Literals<GDF_INT32>{Literals<GDF_INT32>::vector{10, 20, 10, 20, 10, 20, 10, 20, 10, 2}, Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 0, 0, 0, 0, 1, 1}}},
+                                        {"salary", Literals<GDF_INT32>{Literals<GDF_INT32>::vector{9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000, 0}, Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 0, 0, 0, 0, 1, 1}}}
+                                       }
+                                       }}.Build()}}
+    {
+    }
+ 
     void CHECK_RESULT(gdf::library::Table &computed_solution,
                       gdf::library::Table &reference_solution)
     {
@@ -40,44 +57,42 @@ struct EvaluateQueryTest : public ::testing::Test
         {
             const auto &reference_column = reference_solution[index];
             const auto &computed_column = computed_solution[index];
+
+            auto reference_valids = reference_column.getValids();
+            auto solution_valids = computed_column.getValids();
+            EXPECT_TRUE(reference_valids == solution_valids);
+
             auto a = reference_column.to_string();
             auto b = computed_column.to_string();
             EXPECT_EQ(a, b);
         }
     }
 };
+
+// EnumerableTableScan(table=[[main, emps]])
 TEST_F(EvaluateQueryTest, TEST_01)
 {
-    auto input = InputTestItem{
-        .query = "select id + salary from main.emps",
-        .logicalPlan =
-            "LogicalProject(EXPR$0=[+($0, $2)])",
-        .tableGroup =
-            LiteralTableGroupBuilder{
-                {"main.emps",
-                 {{"id", Literals<GDF_INT32>{1, 2, 3, 4, 5, 6, 7, 8, 9, 1}},
-                  {"age",
-                   Literals<GDF_INT32>{10, 20, 10, 20, 10, 20, 10, 20, 10, 2}},
-                  {"salary", Literals<GDF_INT32>{9000, 8000, 7000, 6000, 5000,
-                                                 4000, 3000, 2000, 1000, 0}}}}}
-                .Build(),
-        .resultTable =
-            LiteralTableBuilder{
-                "ResultSet",
-                {{"GDF_INT32", Literals<GDF_INT32>{9001, 8002, 7003, 6004, 5005,
-                                                   4006, 3007, 2008, 1009, 1}}}}
-                .Build()};
     auto logical_plan = input.logicalPlan;
+    std::cout << "input.tableGroup: " << std::endl;
+    for (size_t i = 0 ; i < input.tableGroup.size(); i++) {
+        input.tableGroup[i].print(std::cout);
+    }
     auto input_tables = input.tableGroup.ToBlazingFrame();
     auto table_names = input.tableGroup.table_names();
     auto column_names = input.tableGroup.column_names();
     std::vector<gdf_column_cpp> outputs;
 
     blazing_frame bz_frame;
-    for (auto &t : input_tables)
+    for (auto &t : input_tables) {
+        for (auto& col : t) {
+            print_gdf_column(col.get_gdf_column());
+        }
         bz_frame.add_table(t);
+    }
 
-    auto params = parse_project_plan(bz_frame, logical_plan);
+    std::vector<std::string> plan = StringUtil::split(logical_plan, "\n");
+
+    auto params = parse_project_plan(bz_frame, plan[0]);
     gdf_error err = GDF_SUCCESS;
 
     //perform operations
@@ -99,9 +114,11 @@ TEST_F(EvaluateQueryTest, TEST_01)
     //params.output_columns
     std::vector<gdf_column_cpp> output_columns_cpp;
 
+    std::cout<< "interops_solution\n";
     for (gdf_column *col : params.output_columns)
     {
         gdf_column_cpp gdf_col;
+        print_gdf_column(col);
         gdf_col.create_gdf_column(col);
         output_columns_cpp.push_back(gdf_col);
     }
@@ -109,5 +126,16 @@ TEST_F(EvaluateQueryTest, TEST_01)
     EXPECT_TRUE(err == GDF_SUCCESS);
     auto output_table = GdfColumnCppsTableBuilder{"output_table", output_columns_cpp}.Build();
     output_table.print(std::cout);
-    CHECK_RESULT(output_table, input.resultTable);
-}
+
+    err = process_project(bz_frame, plan[0]);
+    std::cout<< "reference_solution\n";
+    auto table_ref = bz_frame.get_columns()[0];
+    for (auto& c: table_ref) {
+        print_gdf_column(c.get_gdf_column());
+    }
+
+    EXPECT_TRUE(err == GDF_SUCCESS);
+    auto reference_table =
+        GdfColumnCppsTableBuilder{"output_table", bz_frame.get_columns()[0]}.Build();
+    CHECK_RESULT(output_table, reference_table);
+} 

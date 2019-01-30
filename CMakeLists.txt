@@ -48,6 +48,7 @@ include(ConfigureParquet)
 include(ConfigureLibGDF)
 include(ConfigureBlazingDBProtocol)
 include(ConfigureBlazingDBIO)
+include(ConfigureGoogleBenchmark)
 
 find_package(Threads)
 
@@ -141,6 +142,13 @@ if(BUILD_TESTING)
     else()
         message(AUTHOR_WARNING "Google C++ Testing Framework (Google Test) not found: automated tests are disabled.")
     endif()
+endif()
+
+#Benchmarks
+if(GBENCHMARK_FOUND)
+    add_subdirectory(benchmarks)
+else()
+    message(AUTHOR_WARNING "Google C++ Benchmarking Framework (Google Benchmark) not found")
 endif()
 
 # Print the project summary

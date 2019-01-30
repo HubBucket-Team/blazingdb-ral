@@ -30,18 +30,9 @@ set(source_files_src
     ${CMAKE_SOURCE_DIR}/src/Utils.cu 
 ) 
 
-set(interpreter_tests_src
+set(interops_bench_src
     ${source_files_src}
-    interpreter_tests.cu
+    interops_benchmark.cpp
 ) 
 
-configure_test(interpreter_tests "${interpreter_tests_src}")
-
- 
-set(project_tests_src
-    ${source_files_src}
-    process_project_tests.cu
-) 
-
-configure_test(project_tests "${project_tests_src}")
-
+configure_benchmark(interops_benchmark "${interops_bench_src}")

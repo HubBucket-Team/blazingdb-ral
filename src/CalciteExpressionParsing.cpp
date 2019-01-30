@@ -356,6 +356,21 @@ int64_t get_timestamp_from_string(std::string scalar_string){
 	}
 }
 
+// TODO: Remove this dirty workaround to get the type for the scalar
+gdf_dtype get_type_from_string(std::string scalar_string){
+	static const std::regex reInt{R""(^[-+]?[0-9]+$)""};
+	static const std::regex reFloat{R""(^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$)""};
+
+	if (std::regex_match(scalar_string, reInt)) {
+		return GDF_INT64;
+	}
+	else if (std::regex_match(scalar_string, reFloat)) {
+		return GDF_FLOAT64;
+	}
+	
+	return GDF_DATE64;
+}
+
 gdf_scalar get_scalar_from_string(std::string scalar_string, gdf_dtype type){
 	/*
 	 * void*    invd;

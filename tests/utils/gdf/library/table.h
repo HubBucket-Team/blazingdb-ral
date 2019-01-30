@@ -35,6 +35,7 @@ public:
 
   bool operator==(const Table &other) const {
     if ((name_ != other.name_) || (columns_.size() != other.columns_.size())) {
+      std::cerr <<  "Table: name_ != other.name_  || (columns_.size() != other.columns_.size()" << "\n";
       return false;
     }
 

@@ -58,12 +58,16 @@ struct logical_filter_TEST : public ::testing::Test {
 	void TearDown() {
 
 		cudaMemcpy(device_output, output.data(), num_values * WIDTH_PER_VALUE, cudaMemcpyDeviceToHost);
-
+		bool all_equal  = true;
 		for(int i = 0; i < num_values; i++){
-			EXPECT_TRUE(host_output[i] == device_output[i]);
-
+			//EXPECT_TRUE(host_output[i] == device_output[i]);
+			if(host_output[i] != device_output[i]){
+				all_equal = false;
+				std::cout<<"inputs "<<(int) input1[i]<<" , "<<(int) input2[i]<<" , "<<(int) input3[i]<<" , "<<(int)input4[i]<<std::endl;
+				std::cout<<"row: "<<i<<" "<<(int) host_output[i]<<" != "<<(int) device_output[i]<<std::endl;
+			}
 		}
-
+		EXPECT_TRUE(all_equal);
 		//print_column(output.get_gdf_column());
 	}
 

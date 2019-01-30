@@ -488,6 +488,15 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 //processing in reverse we never need to have more than TWO spaces to work in
 //
 
+template<typename T>
+void print_vector(std::vector<T> vec, std::string name){
+	std::cout<<std::endl<<name<<std::endl;
+	for(T val : vec){
+		std::cout<<val<<",";
+	}
+	std::cout<<std::endl;
+}
+
 gdf_error evaluate_expression(
 		blazing_frame inputs,
 		std::string expression,
@@ -560,6 +569,12 @@ gdf_error evaluate_expression(
 						right_scalars,
 						new_column_indices);
 
+
+	print_vector(left_inputs,"left_inputs");
+	print_vector(right_inputs,"right_inputs");
+	print_vector(outputs,"outputs");
+
+	print_vector(final_output_positions,"final_output_positions");
 
 	err = perform_operation( output_columns,
 				input_columns,

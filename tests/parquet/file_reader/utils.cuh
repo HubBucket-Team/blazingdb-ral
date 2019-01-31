@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include <arrow/util/bit-util.h>
+//#include <gdf_wrapper/utilities/cudf_utils.h>
 #include "parquet/util/bit_util.cuh"
 #include <cudf.h>
 #include <thrust/device_ptr.h>

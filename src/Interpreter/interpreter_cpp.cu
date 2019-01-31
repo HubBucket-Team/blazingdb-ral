@@ -4,7 +4,7 @@
 #include "gdf_wrapper/gdf_wrapper.cuh"
 
 
-const int THREAD_BLOCK_SIZE_8 = 256;
+const int THREAD_BLOCK_SIZE_8 = 512;
 const int THREAD_BLOCK_SIZE_16 = THREAD_BLOCK_SIZE_8/2;
 const int THREAD_BLOCK_SIZE_32 = THREAD_BLOCK_SIZE_8/4;
 const int THREAD_BLOCK_SIZE_64 = THREAD_BLOCK_SIZE_8/8;

@@ -55,9 +55,8 @@ using namespace blazingdb::protocol;
 #include "io/data_parser/DataParser.h"
 #include "io/data_provider/DataProvider.h"
 
-#include "Config/Config.h"
-
 #include "CodeTimer.h"
+#include "config/BlazingConfig.h"
 
 const Path FS_NAMESPACES_FILE("/tmp/file_system.bin");
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
@@ -66,8 +65,6 @@ using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);
 //TODO percy c.gonzales fix this later
 std::string global_ip;
 int global_port;
-
-std::string socket_path{};
 
 static result_pair  registerFileSystem(uint64_t accessToken, Buffer&& buffer) {
   std::cout << "registerFileSystem: " << accessToken << std::endl;
@@ -185,7 +182,7 @@ static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
   }
   interpreter::NodeConnectionDTO nodeInfo {
       .port = global_port,
-      .path = socket_path,
+      .path = ral::config::BlazingConfig::getInstance().getSocketPath(),
       .type = NodeConnectionType {NodeConnectionType_TCP}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -248,7 +245,7 @@ static result_pair loadCsvSchema(uint64_t accessToken, Buffer&& buffer) {
   }
   interpreter::NodeConnectionDTO nodeInfo {
       .port = global_port,
-      .path = socket_path,
+      .path = ral::config::BlazingConfig::getInstance().getSocketPath(),
       .type = NodeConnectionType {NodeConnectionType_TCP}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -516,7 +513,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 
   interpreter::NodeConnectionDTO nodeInfo {
       .port = global_port,
-      .path = socket_path,
+      .path = ral::config::BlazingConfig::getInstance().getSocketPath(),
       .type = NodeConnectionType {NodeConnectionType_TCP}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -552,7 +549,7 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
   }
   interpreter::NodeConnectionDTO nodeInfo {
       .port = global_port,
-      .path = socket_path,
+      .path = ral::config::BlazingConfig::getInstance().getSocketPath(),
       .type = NodeConnectionType {NodeConnectionType_TCP}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -598,24 +595,25 @@ main(int argc, const char *argv[])
         //return 1;
     }*/
 
-
     std::cout << "RAL Engine starting" << std::endl;
 
-    if (argc != 2) {
-        std::cout << argv[0] << " <ral number>" << std::endl;
-        exit(1);
+    std::string identifier {"1"};
+    if (argc == 2) {
+        identifier = std::string(argv[1]);
     }
 
-    std::string log_name = "RAL." + std::string(argv[1]) + ".log";
-    socket_path = "/tmp/ral." + std::string(argv[1]) + ".socket";
+    auto& config = ral::config::BlazingConfig::getInstance();
 
-    std::cout << "Log Name: " << log_name << std::endl;
-    std::cout << "Socket Name: " << socket_path << std::endl;
+    config.setLogName("RAL." + identifier + ".log")
+          .setSocketPath("/tmp/ral." + identifier + ".socket");
+
+    std::cout << "Log Name: " << config.getLogName() << std::endl;
+    std::cout << "Socket Name: " << config.getSocketPath() << std::endl;
 
 
     FreeMemory::Initialize();
 
-    auto output = new Library::Logging::FileOutput(log_name, true);
+    auto output = new Library::Logging::FileOutput(config.getLogName(), true);
     Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
 
     // Init AWS S3 ... TODO see if we need to call shutdown and avoid leaks from s3 percy
@@ -624,7 +622,7 @@ main(int argc, const char *argv[])
   //global_ip = "/tmp/ral.socket";
   //global_port = atoi(port.c_str());
 
-  blazingdb::protocol::UnixSocketConnection connection(socket_path);
+  blazingdb::protocol::UnixSocketConnection connection(config.getSocketPath());
   blazingdb::protocol::Server server(connection);
 
   services.insert(std::make_pair(interpreter::MessageType_ExecutePlan, &executePlanService));

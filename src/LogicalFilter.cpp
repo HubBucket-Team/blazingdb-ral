@@ -288,6 +288,7 @@ typedef struct {
 column_index_type get_first_open_position(std::vector<bool> & open_positions, column_index_type start_position){
 	for(column_index_type index =  start_position;index < open_positions.size(); index++ ){
 		if(open_positions[index]){
+			open_positions[index] = false;
 			return index;
 		}
 	}
@@ -339,6 +340,7 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 
 
 	std::string clean_expression = clean_calcite_expression(expression);
+
 	int position = clean_expression.size();
 
 
@@ -348,10 +350,10 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 	gdf_scalar dummy_scalar;
 
 	std::vector<bool> processing_space_free(512,true); //a place to stare whether or not a processing space is occupied at any point in time
-	for(size_t i = 0; i < processing_space_free.size(); i++){
-		if(i < start_processing_position){
+	for(size_t i = 0; i < start_processing_position; i++){
+
 			processing_space_free[i] = false;
-		}
+
 	}
 	//pretend they are like registers and we need to know how many registers we need to evaluate this expression
 
@@ -394,7 +396,7 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 
 					left_inputs.push_back(SCALAR_INDEX); //
 				}else if(is_literal(left_operand)){
-					size_t right_index = new_input_indices[get_index(right_operand)];
+					size_t right_index = get_index(right_operand);
 					// TODO: remove get_type_from_string dirty fix
 					// gdf_scalar right = get_scalar_from_string(left_operand,inputs.get_column(get_index(right_operand)).dtype());
 					gdf_scalar left = get_scalar_from_string(left_operand,get_type_from_string(left_operand));
@@ -407,7 +409,7 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 
 
 				}else if(is_literal(right_operand)){
-					size_t left_index = new_input_indices[get_index(left_operand)];
+					size_t left_index = get_index(left_operand);
 					// TODO: remove get_type_from_string dirty fix
 					// gdf_scalar right = get_scalar_from_string(right_operand,inputs.get_column(get_index(left_operand)).dtype());
 					gdf_scalar right = get_scalar_from_string(right_operand,get_type_from_string(right_operand));
@@ -421,8 +423,8 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 
 				}
 				else{
-					size_t left_index = new_input_indices[get_index(left_operand)];
-					size_t right_index = new_input_indices[get_index(right_operand)];
+					size_t left_index = get_index(left_operand);
+					size_t right_index =get_index(right_operand);
 
 					left_inputs.push_back(left_index);
 					right_inputs.push_back(right_index);
@@ -481,7 +483,7 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 			if(is_literal(token)){
 				operand_stack.push({token,SCALAR_INDEX});
 			}else{
-				operand_stack.push({token,get_index(token)});
+				operand_stack.push({std::string("$" + std::to_string(new_input_indices[get_index(token)])),new_input_indices[get_index(token)]});
 			}
 
 		}
@@ -560,7 +562,7 @@ gdf_error evaluate_expression(
 
 
 	gdf_error err = add_expression_to_plan(	inputs,
-						clean_expression,
+						expression,
 						0,
 						1,
 						input_columns_used,

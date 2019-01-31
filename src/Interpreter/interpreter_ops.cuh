@@ -632,7 +632,7 @@ private:
 						data,
 						buffer,
 						output_position);
-			}/*else if(oper == GDF_EQUAL){
+			}else if(oper == GDF_EQUAL){
 				store_data_in_buffer<OutputTypeOperator>(
 						left_value
 						== right_value,
@@ -934,6 +934,8 @@ public:
 		cur_temp_space += sizeof(int64_t) * num_operations;
 		scalars_right = (int64_t *) cur_temp_space;
 		cur_temp_space += sizeof(int64_t) * num_operations;
+		null_counts_inputs = (gdf_size_type *) cur_temp_space;
+		cur_temp_space += sizeof(gdf_size_type) * num_columns;
 		valid_ptrs = (temp_gdf_valid_type **) cur_temp_space;
 		cur_temp_space += sizeof(temp_gdf_valid_type *) * num_columns;
 		valid_ptrs_out = (temp_gdf_valid_type **) cur_temp_space;
@@ -952,8 +954,6 @@ public:
 		cur_temp_space += sizeof(gdf_binary_operator) * num_operations;
 		unary_operations = (gdf_unary_operator *) cur_temp_space;
 		cur_temp_space += sizeof(gdf_unary_operator) * num_operations;
-		null_counts_inputs = (gdf_size_type *) cur_temp_space;
-		cur_temp_space += sizeof(gdf_size_type) * num_columns;
 		left_input_positions = (short *) cur_temp_space;
 		cur_temp_space += sizeof(short) * num_operations;
 		right_input_positions = (short *) cur_temp_space;

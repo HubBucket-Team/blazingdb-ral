@@ -67,6 +67,8 @@ using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);
 std::string global_ip;
 int global_port;
 
+std::string socket_path{};
+
 static result_pair  registerFileSystem(uint64_t accessToken, Buffer&& buffer) {
   std::cout << "registerFileSystem: " << accessToken << std::endl;
   blazingdb::message::io::FileSystemRegisterRequestMessage message(buffer.data());
@@ -183,7 +185,7 @@ static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
   }
   interpreter::NodeConnectionDTO nodeInfo {
       .port = global_port,
-      .path = "/tmp/ral.socket",
+      .path = socket_path,
       .type = NodeConnectionType {NodeConnectionType_TCP}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -246,7 +248,7 @@ static result_pair loadCsvSchema(uint64_t accessToken, Buffer&& buffer) {
   }
   interpreter::NodeConnectionDTO nodeInfo {
       .port = global_port,
-      .path = "/tmp/ral.socket",
+      .path = socket_path,
       .type = NodeConnectionType {NodeConnectionType_TCP}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -514,7 +516,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 
   interpreter::NodeConnectionDTO nodeInfo {
       .port = global_port,
-      .path = "/tmp/ral.socket",
+      .path = socket_path,
       .type = NodeConnectionType {NodeConnectionType_TCP}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -550,7 +552,7 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
   }
   interpreter::NodeConnectionDTO nodeInfo {
       .port = global_port,
-      .path = "/tmp/ral.socket",
+      .path = socket_path,
       .type = NodeConnectionType {NodeConnectionType_TCP}
   };
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
@@ -605,10 +607,10 @@ main(int argc, const char *argv[])
     }
 
     std::string log_name = "RAL." + std::string(argv[1]) + ".log";
-    std::string socket_name = "/tmp/ral." + std::string(argv[1]) + ".socket";
+    socket_path = "/tmp/ral." + std::string(argv[1]) + ".socket";
 
     std::cout << "Log Name: " << log_name << std::endl;
-    std::cout << "Socket Name: " << socket_name << std::endl;
+    std::cout << "Socket Name: " << socket_path << std::endl;
 
 
     FreeMemory::Initialize();
@@ -622,7 +624,7 @@ main(int argc, const char *argv[])
   //global_ip = "/tmp/ral.socket";
   //global_port = atoi(port.c_str());
 
-  blazingdb::protocol::UnixSocketConnection connection(socket_name);
+  blazingdb::protocol::UnixSocketConnection connection(socket_path);
   blazingdb::protocol::Server server(connection);
 
   services.insert(std::make_pair(interpreter::MessageType_ExecutePlan, &executePlanService));

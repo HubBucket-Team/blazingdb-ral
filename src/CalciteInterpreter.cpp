@@ -7,6 +7,7 @@
 #include <thread>
 #include <regex>
 #include <string>
+#include <set>
 
 #include "Utils.cuh"
 #include "LogicalFilter.h"
@@ -351,7 +352,8 @@ project_plan_params parse_project_plan(blazing_frame& input, std::string query_p
 			//we have to make a copy of it here
 
 			gdf_column_cpp output = input.get_column(index);
-			std::memcpy(output.get_gdf_column()->col_name, name.c_str(),name.size());
+			output.delete_set_name(name);
+//			std::memcpy(output.get_gdf_column()->col_name, name.c_str(),name.size());
 			input_used_in_output[index] = true;
 			columns[i] = output;
 			//			}else{
@@ -1455,11 +1457,14 @@ query_token_t evaluate_query(
 		blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
 
 		//REMOVE any columns that were ipcd to put into the result set
+		std::set<gdf_column *> included_columns;
 		for(size_t index = 0; index < output_frame.get_size_columns(); index++){
 			gdf_column_cpp output_column = output_frame.get_column(index);
-			if(output_column.is_ipc()){
+			if(output_column.is_ipc() || included_columns.find(output_column.get_gdf_column()) != included_columns.end()){
 				output_frame.set_column(index,
 						output_column.clone(output_column.name()));
+			}else{
+				output_column.delete_set_name(output_column.name());
 			}
 		}
 		//Todo: put it on a macro for debugging purposes!

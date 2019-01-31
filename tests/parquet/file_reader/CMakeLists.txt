@@ -21,6 +21,12 @@ set(file_reader_SRCS
     utils.cu
     api-test.cu)
 
+set(parse_versus-test_SRCS
+    ${parquet_reader_source_files}
+    versus.cu
+)
+
+configure_test(parse_versus-test "${parse_versus-test_SRCS}")
 configure_test(file_reader-test "${file_reader_SRCS}")
 
 set(parquet_file_PATH

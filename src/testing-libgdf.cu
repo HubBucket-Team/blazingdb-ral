@@ -285,7 +285,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
   std::cout << "resultToken: " << request.getResultToken() << std::endl;
 
   try {
-    // remove from repository using accessToken and resultToken
+    // get result from repository using accessToken and resultToken
     std::tuple<blazing_frame, double> result = result_set_repository::get_instance().get_result(accessToken, request.getResultToken());
 
     //TODO ojo el result siempre es una sola tabla por eso indice 0
@@ -298,11 +298,13 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
       .rows = rows
     };
     std::vector<std::string> fieldNames;
+    std::vector<uint64_t> columnTokens;
     std::vector<::gdf_dto::gdf_column> values;
 
     //TODO WARNING why 0 why multitables?
     for(int i = 0; i < std::get<0>(result).get_columns()[0].size(); ++i) {
       fieldNames.push_back(std::get<0>(result).get_columns()[0][i].name());
+      columnTokens.push_back(std::get<0>(result).get_columns()[0][i].get_column_token());
 
       std::cout << "col_name: " << std::get<0>(result).get_columns()[0][i].name() << std::endl;
 
@@ -345,7 +347,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
   //    }
   //  };
 
-    interpreter::GetResultResponseMessage responsePayload(metadata, fieldNames, values);
+    interpreter::GetResultResponseMessage responsePayload(metadata, fieldNames, columnTokens, values);
     return std::make_pair(Status_Success, responsePayload.getBufferData());
 
   } catch (std::runtime_error &error) {
@@ -363,7 +365,7 @@ static result_pair freeResultService(uint64_t accessToken, Buffer&& requestPaylo
 
   interpreter::GetResultRequestMessage request(requestPayloadBuffer.data());
   std::cout << "resultToken: " << request.getResultToken() << std::endl;
-  if(result_set_repository::get_instance().free_result(request.getResultToken())){
+  if(result_set_repository::get_instance().free_result(accessToken, request.getResultToken())){
 	  ZeroMessage response{};
 	  return std::make_pair(Status_Success, response.getBufferData());
   }else{
@@ -532,7 +534,7 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
 	std::cout << "FirstColumnSize: "
 			<< requestPayload.getTableGroup().tables[0].columns[0].size
 			<< std::endl;
-  std::cout << "token: " << requestPayload.getTableGroup().tables[0].token << std::endl;
+  std::cout << "resultToken: " << requestPayload.getTableGroup().tables[0].resultToken << std::endl;
   //Library::Logging::Logger().logInfo("query:\n" + requestPayload.getLogicalPlan());
 
   std::vector<void *> handles;
@@ -588,6 +590,9 @@ int main(int argc, const char *argv[])
     auto output = new Library::Logging::FileOutput("RAL.log", true);
     Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
 
+    // Init AWS S3 ... TODO see if we need to call shutdown and avoid leaks from s3 percy
+    BlazingContext::getInstance()->initExternalSystems();
+    
   global_ip = "/tmp/ral.socket";
   //global_port = atoi(port.c_str());
 

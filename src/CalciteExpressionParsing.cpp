@@ -669,13 +669,14 @@ bool is_operator_token(std::string operand) {
 	return (operand[0] != '$' && !is_number(operand) && !is_date(operand));
 }
 
-size_t get_index(std::string operand_string){
-	std::string cleaned_expression = clean_calcite_expression(operand_string);
-	if (cleaned_expression.length() == 0) {
-		return 0;
-	}
-	size_t start = 1;
-	return std::stoull (cleaned_expression.substr(1,cleaned_expression.size()-1),0);
+std::size_t
+get_index(std::string operand_string) {
+    std::string cleaned_expression = clean_calcite_expression(operand_string);
+    if (cleaned_expression.length() == 0) { return 0; }
+    return std::stoull(
+      is_literal(cleaned_expression)
+        ? cleaned_expression
+        : cleaned_expression.substr(1, cleaned_expression.size() - 1));
 }
 
 std::string aggregator_to_string(gdf_agg_op aggregation){

@@ -524,7 +524,7 @@ private:
 
 			store_data_in_buffer<int32_t>(
 					left_valid
-					| right_valid,
+					& right_valid,
 					buffer,
 					output_position);
 		}else{

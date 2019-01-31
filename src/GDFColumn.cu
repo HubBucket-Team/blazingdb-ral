@@ -181,7 +181,7 @@ gdf_error gdf_column_cpp::compact(){
 
 void gdf_column_cpp::update_null_count()
 {
-    if (this->column->size == 0) {
+    if (this->column->size == 0 || this->column->valid == nullptr) {
         this->column->null_count = 0;
     }
     else {

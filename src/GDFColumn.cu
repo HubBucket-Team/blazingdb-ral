@@ -266,9 +266,11 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
         CheckCudaErrors(cudaMemcpy(data, input_data, num_values * width_per_value, cudaMemcpyHostToDevice));
     }
 
-    this->update_null_count();
+    if(host_valids != nullptr){
+        this->update_null_count();
+    }
+    
     GDFRefCounter::getInstance()->register_column(this->column);
-
 }
 
 //Todo: Verificar que al llamar mas de una vez al create_gdf_column se desaloque cualquier memoria alocada anteriormente

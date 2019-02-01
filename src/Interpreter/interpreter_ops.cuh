@@ -212,7 +212,7 @@ typedef short column_index_type;
  * are all doubles
  */
 
-template <typename IndexT, int BufferSize, int ThreadBlockSize>
+template <typename IndexT>
 class InterpreterFunctor {
 private:
 	void  **column_data; //these are device side pointers to the device pointer found in gdf_column.data
@@ -237,6 +237,9 @@ private:
 	int64_t * scalars_left; //if these scalars are not of invalid type we use them instead of input positions
 	int64_t * scalars_right;
 	cudaStream_t stream;
+
+	int BufferSize;
+	int ThreadBlockSize;
 
 	gdf_size_type * null_counts_inputs;
 
@@ -898,7 +901,8 @@ public:
 			std::vector<gdf_scalar> left_scalars, //should be same size as operations with most of them filled in with invalid types unless scalar is used in oepration
 			std::vector<gdf_scalar> right_scalars//,
 			,cudaStream_t stream,
-			char * temp_space
+			char * temp_space,
+			int BufferSize, int ThreadBlockSize
 			//char * temp_space
 
 	){
@@ -906,6 +910,8 @@ public:
 		//TODO: you should be able to make this faster by placing alll the memory in one
 		//pinned memory buffer then copying that over
 
+		this->BufferSize = BufferSize;
+		this->ThreadBlockSize = ThreadBlockSize;
 		this->num_final_outputs = final_output_positions_vec.size();
 		this->num_operations = _num_operations;
 
@@ -1201,10 +1207,10 @@ public:
 	}
 
 
-	__device__ __forceinline__ void operator()(const IndexT &row_index) {
+	__device__ __forceinline__ void operator()(const IndexT &row_index, int64_t total_buffer[]) {
 		//		__shared__ char buffer[BufferSize * THREADBLOCK_SIZE];
 
-		__shared__  int64_t  total_buffer[BufferSize * ThreadBlockSize ];
+
 
 
 		//here we are basically upgrading our inputs to a larger type
@@ -1230,10 +1236,10 @@ public:
 
 	}
 
-	__device__ __forceinline__ void valid_operator(const IndexT &row_index) {
+	__device__ __forceinline__ void valid_operator(const IndexT &row_index, int32_t total_buffer[]) {
 		//TODO: this should happen in configuration and be stored in a bool to reduce the number of instructions
 		//executed inthe kernel
-		__shared__  int32_t  total_buffer[BufferSize * ThreadBlockSize ];
+//		extern __shared__  int32_t  total_buffer[];
 		bool process_valids = false;
 		for(int out_index = 0; out_index < this->num_final_outputs; out_index++ ){
 			process_valids = process_valids || (this->valid_ptrs_out[out_index] != nullptr);
@@ -1319,6 +1325,7 @@ template<typename interpreted_operator>
 __global__ void transformKernel(interpreted_operator op, gdf_size_type size)
 {
 
+	extern __shared__  int64_t  total_buffer[];
 	//so that we can access valids int32_t at a time, we make the buffer an int32_t
 	//when we pass it into the actual op it casts to int64_t
 
@@ -1326,7 +1333,7 @@ __global__ void transformKernel(interpreted_operator op, gdf_size_type size)
 			i < size;
 			i += blockDim.x * gridDim.x)
 	{
-		op(i);
+		op(i,total_buffer);
 	}
 
 	//at this poitn all data has been written so we can reuse the temp space actually, how nice!
@@ -1343,7 +1350,7 @@ __global__ void transformKernel(interpreted_operator op, gdf_size_type size)
 			row_index < num_valid_elements;
 			row_index += blockDim.x * gridDim.x)
 	{
-		op.valid_operator(row_index);
+		op.valid_operator(row_index,(int32_t *) total_buffer);
 	}
 
 

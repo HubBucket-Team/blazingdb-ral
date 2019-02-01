@@ -39,7 +39,7 @@ struct EvaluateQueryTest : public ::testing::Test
                               .tableGroup =
                                   LiteralTableGroupBuilder{
                                       {"main.emps",
-                                       {{"id", Literals<GDF_INT32>{Literals<GDF_INT32>::vector{1, 2, 3, 4, 5, 6, 7, 8, 9, 1}, Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 0, 0, 0, 0, 1, 1}}},
+                                       {{"id", Literals<GDF_INT32>{Literals<GDF_INT32>::vector{1, 2, 3, 4, 5, 6, 7, 8, 9, 1}, Literals<GDF_INT32>::bool_vector{0, 1, 1, 1, 0, 0, 0, 0, 1, 1}}},
                                         {"age",  Literals<GDF_INT32>{Literals<GDF_INT32>::vector{10, 20, 10, 20, 10, 20, 10, 20, 10, 2}, Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 0, 0, 0, 0, 1, 1}}},
                                         {"salary", Literals<GDF_INT32>{Literals<GDF_INT32>::vector{9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000, 0}, Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 0, 0, 0, 0, 1, 1}}}
                                        }

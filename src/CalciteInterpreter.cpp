@@ -991,17 +991,14 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		case GDF_COUNT:
 		case GDF_COUNT_DISTINCT:
 			if(group_columns.size() == 0){
-				// output dtype is GDF_UINT64
-				// defined in 'get_aggregation_output_type' function.
-				uint64_t result = aggregation_input.get_gdf_column()->size;
-				output_column.create_gdf_column(output_type,
-						aggregation_size,
-						&result,
-						get_width_dtype(output_type),
-						aggregator_to_string(aggregation_types[i]));
-				output_columns_aggregations.pop_back();
-				output_columns_aggregations.emplace_back(output_column);
-				err = GDF_SUCCESS;
+
+                // output dtype is GDF_UINT64
+                // defined in 'get_aggregation_output_type' function.
+                uint64_t result = aggregation_input.get_gdf_column()->size - aggregation_input.get_gdf_column()->null_count;                
+				CheckCudaErrors(cudaMemcpy(output_column.get_gdf_column()->data, &result, sizeof(uint64_t), cudaMemcpyHostToDevice));			
+
+                err = GDF_SUCCESS;
+
 			}else{
 				err = gdf_group_by_count(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
 						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);

@@ -1202,16 +1202,26 @@ blazing_frame evaluate_split_query(
 		}else if(is_aggregate(query[0])){
 			blazing_timer.reset();
 			gdf_error err = process_aggregate(child_frame,query[0]);
+			if (err != GDF_SUCCESS) {
+				throw bla;
+			}
+			
 			Library::Logging::Logger().logInfo("process_aggregate took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
 			return child_frame;
 		}else if(is_sort(query[0])){
 			blazing_timer.reset();
 			gdf_error err = process_sort(child_frame,query[0]);
+			if (err != GDF_SUCCESS) {
+				throw bla;
+			}
 			Library::Logging::Logger().logInfo("process_sort took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
 			return child_frame;
 		}else if(is_filter(query[0])){
 			blazing_timer.reset();
 			gdf_error err = process_filter(child_frame,query[0]);
+			if (err != GDF_SUCCESS) {
+				throw bla;
+			}
 			Library::Logging::Logger().logInfo("process_filter took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
 			if(err != GDF_SUCCESS){
 				std::cout<<"Error in filter: "<<err<<std::endl;
@@ -1219,7 +1229,7 @@ blazing_frame evaluate_split_query(
 
 			return child_frame;
 		}else{
-			//some error
+			throw bla;
 		}
 		//return frame
 	}

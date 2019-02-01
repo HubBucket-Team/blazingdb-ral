@@ -30,10 +30,8 @@
  
  #include <gtest/gtest.h>
  
- #include "../../src/parquet/column_reader.h"
- #include "../../src/parquet/file_reader.h"
- 
- //#include <gdf_wrapper/gdf_wrapper.cuh>
+ #include <cuio/parquet/column_reader.h>
+ #include <cuio/parquet/file_reader.h>
  
  #include "utils.cuh"
  #include <gdf_wrapper/utilities/cudf_utils.h>

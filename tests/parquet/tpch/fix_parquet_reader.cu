@@ -20,6 +20,11 @@
 #include <numeric>
 #include <thread>
 
+
+#include <cassert>
+
+#include <GDFColumn.cuh>
+
 #include <arrow/util/bit-util.h>
 #include <arrow/util/logging.h>
 
@@ -50,7 +55,13 @@
 
 #include <gtest/gtest.h>
 
-#include "utils.cuh"
+
+ #ifndef PARQUET_FILE_PATH
+  #error PARQUET_FILE_PATH must be defined for precompiling
+ #define PARQUET_FILE_PATH "/"
+ #endif
+
+// #include "utils.cuh"
 
 // NOTE c.gonzales percy para el parquet file reader aqui los detalles del file 
 //file:reader-test.parquet
@@ -86,7 +97,7 @@ message schema {
 class ParquetReaderAPITest : public testing::Test {
 protected:
     ParquetReaderAPITest()
-      : filename("/home/aocsa/Downloads/DataSet50mb/lineitem_0_0.parquet") {}
+      : filename(PARQUET_FILE_PATH) {}
 
   
     const std::string filename;
@@ -98,8 +109,11 @@ protected:
 
 
 TEST_F(ParquetReaderAPITest, ReadAll) {
-
+    std::cout << "reading..." << PARQUET_FILE_PATH << std::endl;
     gdf_error error_code = gdf::parquet::read_parquet(filename.c_str(), nullptr, &columns, &columns_length);
+    for (size_t i=0;i < columns_length; i++) {
+      print_gdf_column(&columns[i]);
+    }
 
     EXPECT_EQ(GDF_SUCCESS, error_code);
  

@@ -701,23 +701,16 @@ ColumnReader<DataType>::ToGdfColumn(const gdf_column &   column,
 
     do {
         values_to_read = num_buffered_values_ - num_decoded_values_;
-        // int64_t rows_read =
-        //   ReadBatchSpaced(values_to_read,
-        //                   d_definition_levels + rows_read_total,
-        //                   nullptr,
-        //                   static_cast<T *>(values + rows_read_total),
-        //                   d_valid_bits,
-        //                   rows_read_total + (offset % 8),
-        //                   &levels_read,
-        //                   &values_read,
-        //                   &nulls_count);
-
-     int64_t rows_read = ReadBatch(values_to_read,
+        int64_t rows_read =
+          ReadBatchSpaced(values_to_read,
                           d_definition_levels + rows_read_total,
                           nullptr,
-                          static_cast<T *>(values + rows_read_total), 
-                          &values_read);
-
+                          static_cast<T *>(values + rows_read_total),
+                          d_valid_bits,
+                          rows_read_total + (offset % 8),
+                          &levels_read,
+                          &values_read,
+                          &nulls_count);
         rows_read_total += rows_read;
     } while (this->HasNext());
     return static_cast<std::size_t>(rows_read_total);

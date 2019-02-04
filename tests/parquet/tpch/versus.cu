@@ -39,6 +39,12 @@
 
 #include <rmm.h>
 
+
+ #ifndef PARQUET_FILE_PATH
+  #error PARQUET_FILE_PATH must be defined for precompiling
+ #define PARQUET_FILE_PATH "/"
+ #endif
+
 enum ReaderType : std::uint8_t { kGdf, kParquet };
 
 template <ReaderType T>
@@ -126,7 +132,7 @@ PARQUET_TRAITS_FACTORY(parquet::Type::DOUBLE, double, GDF_FLOAT64);
 class ParquetReaderAPITest : public testing::Test {
 protected:
     ParquetReaderAPITest()
-            : filename("/tmp/DataSet50mb/lineitem_0_0.parquet") {}
+            : filename(PARQUET_FILE_PATH) {}
  
 
     static constexpr std::size_t kGroups       = 1;

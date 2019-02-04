@@ -119,7 +119,7 @@ _ReadColumn(const std::shared_ptr<GdfRowGroupReader> &row_group_reader,
         const std::shared_ptr<::parquet::ColumnReader> column_reader =
           row_group_reader->Column(
             static_cast<int>(column_indices[column_reader_index]));
-        size_t work_group_size = row_group_reader->metadata()->num_rows();
+        size_t row_group_size = row_group_reader->metadata()->num_rows();
         switch (column_reader->type()) {
 #define WHEN(TYPE)                                                             \
     case ::parquet::Type::TYPE: {                                              \
@@ -129,7 +129,7 @@ _ReadColumn(const std::shared_ptr<GdfRowGroupReader> &row_group_reader,
             ::parquet::DataType<::parquet::Type::TYPE>>>(column_reader);       \
         if (reader->HasNext()) {                                               \
             offsets[column_reader_index] +=                                    \
-              reader->ToGdfColumn(_gdf_column, work_group_size, offsets[column_reader_index]);  \
+              reader->ToGdfColumn(_gdf_column, row_group_size, offsets[column_reader_index]);  \
         }                                                                      \
     } break
             WHEN(BOOLEAN);
@@ -137,6 +137,7 @@ _ReadColumn(const std::shared_ptr<GdfRowGroupReader> &row_group_reader,
             WHEN(INT64);
             WHEN(FLOAT);
             WHEN(DOUBLE);
+            // tipo logico date32, ???? 
         default:
 #ifdef GDF_DEBUG
             std::cerr << "Column type error from file" << std::endl;

@@ -21,13 +21,24 @@ set(file_reader_SRCS
     utils.cu
     api-test.cu)
 
-set(parse_versus-test_SRCS
+set(parquet_versus-test_SRCS
     ${parquet_reader_source_files}
     versus.cu
 )
+set (parquet_bug_fix-test_SRCS
+    ${parquet_reader_source_files}
+    fix_parquet_reader.cu
+)
 
-configure_test(parse_versus-test "${parse_versus-test_SRCS}")
+set (def_level-test_SRCS
+    ${parquet_reader_source_files}
+    definition_level.cu
+)
+
+configure_test(parquet_bug_fix-test "${parquet_bug_fix-test_SRCS}")
+configure_test(parquet_versus-test "${parquet_versus-test_SRCS}")
 configure_test(file_reader-test "${file_reader_SRCS}")
+configure_test(def_level-test "${def_level-test_SRCS}")
 
 set(parquet_file_PATH
     ${CMAKE_SOURCE_DIR}/tests/parquet/file_reader/reader-test.parquet)

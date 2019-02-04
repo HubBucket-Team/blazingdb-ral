@@ -66,7 +66,7 @@ const std::
       {::parquet::LogicalType::LIST, GDF_invalid},
       {::parquet::LogicalType::ENUM, GDF_invalid},
       {::parquet::LogicalType::DECIMAL, GDF_invalid},
-      {::parquet::LogicalType::DATE, GDF_DATE32},
+      {::parquet::LogicalType::DATE, GDF_INT32}, //@todo, use GDF_DATE32 when: libgdf.GDF_DATE32: np.int32, # DIRTY HACK ??
       {::parquet::LogicalType::TIME_MILLIS, GDF_invalid},
       {::parquet::LogicalType::TIME_MICROS, GDF_invalid},
       {::parquet::LogicalType::TIMESTAMP_MILLIS, GDF_TIMESTAMP},

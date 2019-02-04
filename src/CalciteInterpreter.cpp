@@ -190,12 +190,11 @@ gdf_error perform_avg(gdf_column* column_output, gdf_column* column_input) {
 }
 
 
-gdf_error process_project(blazing_frame & input, std::string query_part){
+void process_project(blazing_frame & input, std::string query_part){
 
 	std::cout<<"starting process_project"<<std::endl;
 
 	size_t size = input.get_column(0).size();
-
 
 	// LogicalProject(x=[$0], y=[$1], z=[$2], e=[$3], join_x=[$4], y0=[$5], EXPR$6=[+($0, $5)])
 	const std::string combined_expression = query_part.substr(
@@ -212,7 +211,6 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 	std::vector<gdf_column_cpp> columns(expressions.size());
 	std::vector<std::string> names(expressions.size());
 
-
 	gdf_dtype max_temp_type = GDF_invalid;
 	std::vector<gdf_dtype> output_type_expressions(expressions.size()); //contains output types for columns that are expressions, if they are not expressions we skip over it
 
@@ -227,10 +225,7 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 		);
 
 		if(contains_evaluation(expression)){
-			gdf_error err = get_output_type_expression(&input, &output_type_expressions[i], &max_temp_type, expression);
-			if(err != GDF_SUCCESS){
-				//lets do something some day!!!
-			}
+			output_type_expressions[i] = get_output_type_expression(&input, &max_temp_type, expression);
 		}
 	}
 
@@ -239,7 +234,6 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 		//TODO de donde saco el nombre de la columna aqui???
 		temp.create_gdf_column(max_temp_type,size,nullptr,get_width_dtype(max_temp_type), "");
 	}
-
 
 	for(int i = 0; i < expressions.size(); i++){ //last not an expression
 		std::string expression = expressions[i].substr(
@@ -257,18 +251,9 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 			gdf_column_cpp output;
 			output.create_gdf_column(output_type_expressions[i],size,nullptr,get_width_dtype(output_type_expressions[i]), name);
 
-			gdf_error err = evaluate_expression(
-					input,
-					expression,
-					output,
-					temp);
+			evaluate_expression(input, expression,  output, temp);
 
 			columns[i] = output;
-
-			if(err != GDF_SUCCESS){
-				//TODO: clean up everything here so we dont run out of memory
-				return err;
-			}
 		}else{
 			int index = get_index(expression);
 
@@ -294,12 +279,10 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 		}
 	}
 
-
 	input.clear();
 	input.add_table(columns);
 
 	//free_gdf_column(&temp);
-	return GDF_SUCCESS;
 }
 
 std::string get_named_expression(std::string query_part, std::string expression_name){
@@ -327,26 +310,22 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 	std::string condition = get_condition_expression(query_part);
 	std::string join_type = get_named_expression(query_part,"joinType");
 
-
-	gdf_error err = evaluate_join(
+	evaluate_join(
 			condition,
 			join_type,
 			input,
 			left_indices.get_gdf_column(),
 			right_indices.get_gdf_column()
 	);
+
+	//TODO: On error clean up everything here so we dont run out of memory
+
 	Library::Logging::Logger().logInfo("-> Join sub block 1 took " + std::to_string(timer.getDuration()) + " ms");
 	// std::cout<<"Indices are starting!"<<std::endl;
 	// print_gdf_column(left_indices.get_gdf_column());
 	// print_gdf_column(right_indices.get_gdf_column());
 	// std::cout<<"Indices are done!"<<std::endl;
 
-
-
-	if(err != GDF_SUCCESS){
-		//TODO: clean up everything here so we dont run out of memory
-		//return err;
-	}
 	//the options get interesting here. So if the join nis smaller than the input
 	// you could write the output in place, saving time for allocations then shrink later on
 	// the simplest solution is to reallocate space and free up the old after copying it over
@@ -359,7 +338,7 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 	for(int column_index = 0; column_index < input.get_size_columns(); column_index++){
 		gdf_column_cpp output;
 
-		get_column_byte_width(input.get_column(column_index).get_gdf_column(), &column_width);
+		CUDF_CALL( get_column_byte_width(input.get_column(column_index).get_gdf_column(), &column_width) );
 
 		//TODO de donde saco el nombre de la columna aqui???
 		output.create_gdf_column(input.get_column(column_index).dtype(),left_indices.size(),nullptr,column_width, input.get_column(column_index).name());
@@ -367,19 +346,17 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 		if(column_index < first_table_end_index)
 		{
 			//materialize with left_indices
-			err = materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),left_indices.get_gdf_column());
+			materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),left_indices.get_gdf_column());
 			// std::cout<<"left table output"<<std::endl;
 			// print_gdf_column(output.get_gdf_column());
 		}else{
 			//materialize with right indices
-			err = materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),right_indices.get_gdf_column());
+			materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),right_indices.get_gdf_column());
 			// std::cout<<"right table output"<<std::endl;
 			// print_gdf_column(output.get_gdf_column());
 		}
-		if(err != GDF_SUCCESS){
-			//TODO: clean up all the resources
-			//return err;
-		}
+
+		//TODO: On error clean up all the resources
 		//free_gdf_column(input.get_column(column_index));
 		output.update_null_count();
 
@@ -394,13 +371,12 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 blazing_frame process_union(blazing_frame& left, blazing_frame& right, std::string query_part){
 	bool isUnionAll = (get_named_expression(query_part, "all") == "true");
 	if (!isUnionAll) {
-		// throw std::domain_error("UNION is not supported, use UNION ALL");
-		return blazing_frame{};
+		throw std::runtime_error{"In process_union function: UNION is not supported, use UNION ALL"};
 	}	
 
 	// Check same number of columns
 	if (left.get_size_column(0) != right.get_size_column(0)) {
-		return blazing_frame{};
+		throw std::runtime_error{"In process_union function: left frame and right frame have different number of columns"};
 	}
 
 	// Check columns have the same data type
@@ -408,16 +384,16 @@ blazing_frame process_union(blazing_frame& left, blazing_frame& right, std::stri
 	for(size_t i = 0; i < ncols; i++)
 	{
 		if (left.get_column(i).get_gdf_column()->dtype != right.get_column(i).get_gdf_column()->dtype) {
-			return blazing_frame{};
+			throw std::runtime_error{"In process_union function: left column and right column have different dtypes"};
 		}
 	}
-	
+
 	std::vector<gdf_column_cpp> new_table;
 	for(size_t i = 0; i < ncols; i++)
 	{
 		auto gdf_col_left = left.get_column(i).get_gdf_column();
 		auto gdf_col_right = right.get_column(i).get_gdf_column();
-		
+
 		std::vector<gdf_column*> columns;
 		columns.push_back(gdf_col_left);
 		columns.push_back(gdf_col_right);
@@ -426,15 +402,13 @@ blazing_frame process_union(blazing_frame& left, blazing_frame& right, std::stri
 		gdf_column_cpp output_col;
 		output_col.create_gdf_column(gdf_col_left->dtype, col_total_size, nullptr, get_width_dtype(gdf_col_left->dtype), left.get_column(i).name());
 
-		gdf_error err = gdf_column_concat(output_col.get_gdf_column(),
+		CUDF_CALL( gdf_column_concat(output_col.get_gdf_column(),
 										  columns.data(),
-										  columns.size());
-		if (err != GDF_SUCCESS)
-			return blazing_frame{};
-		
+										  columns.size()) );
+
 		new_table.push_back(output_col);
 	}
-	
+
 	blazing_frame result_frame;
 	result_frame.add_table(new_table);
 	
@@ -569,7 +543,7 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 
 	for(int i = 0; i < aggregation_types.size(); i++){
 		if(contains_evaluation(aggregation_input_expressions[i])){
-			gdf_error err = get_output_type_expression(&input, &aggregation_input_types[i], &max_temp_type, aggregation_input_expressions[i]);
+			aggregation_input_types[i] = get_output_type_expression(&input, &max_temp_type, aggregation_input_expressions[i]);
 			if(get_width_dtype(max_temp_type) < get_width_dtype(aggregation_input_types[i])){
 				max_temp_type = aggregation_input_types[i];
 			}
@@ -912,91 +886,76 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 	std::string conditional_expression = get_condition_expression(query_part);
 	Library::Logging::Logger().logInfo("-> Filter sub block 3 took " + std::to_string(timer.getDuration()) + " ms");
 	// timer.reset();
-	err = evaluate_expression(
-			input,
-			conditional_expression,
-			stencil,
-			temp);
-	
+	evaluate_expression(input, conditional_expression, stencil, temp);
+
 	// Library::Logging::Logger().logInfo("-> Filter sub block 4 took " + std::to_string(timer.getDuration()) + " ms");
+
+	//apply filter to all the columns
+	// for(int i = 0; i < input.get_width(); i++){
+	// 	temp.create_gdf_column(input.get_column(i).dtype(), input.get_column(i).size(), nullptr, get_width_dtype(input.get_column(i).dtype()));
+	// 	//temp.set_dtype(input.get_column(i).dtype());
+
+	// 	//			cudaPointerAttributes attributes;
+	// 	//			cudaError_t err2 = cudaPointerGetAttributes ( &attributes, (void *) temp.data );
+	// 	//			err2 = cudaPointerGetAttributes ( &attributes, (void *) input.get_column(i)->data );
+	// 	//			err2 = cudaPointerGetAttributes ( &attributes, (void *) stencil.data );
+
+
+	// 	//just for testing
+	// 	//			cudaMalloc((void **)&(temp.data),1000);
+	// 	//			cudaMalloc((void **)&(temp.valid),1000);
+
+	// 	err = gpu_apply_stencil(
+	// 			input.get_column(i).get_gdf_column(),
+	// 			stencil.get_gdf_column(),
+	// 			temp.get_gdf_column()
+	// 	);
+	// 	if(err != GDF_SUCCESS){
+	// 		return err;
+	// 	}
+
+	// 	input.set_column(i,temp.clone());
+	// }
 	
-	if(err == GDF_SUCCESS){
-		//apply filter to all the columns
-		// for(int i = 0; i < input.get_width(); i++){
-		// 	temp.create_gdf_column(input.get_column(i).dtype(), input.get_column(i).size(), nullptr, get_width_dtype(input.get_column(i).dtype()));
-		// 	//temp.set_dtype(input.get_column(i).dtype());
+	timer.reset();
+	gdf_column_cpp index_col;
+	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
+	gdf_sequence(static_cast<int32_t*>(index_col.get_gdf_column()->data), input.get_column(0).size(), 0);
+	// std::vector<int32_t> idx(input.get_column(0).size());
+	// std::iota(idx.begin(),idx.end(),0);
+	// CheckCudaErrors(cudaMemcpy(index_col.get_gdf_column()->data, idx.data(), idx.size() * sizeof(int32_t), cudaMemcpyHostToDevice));
+	Library::Logging::Logger().logInfo("-> Filter sub block 5 took " + std::to_string(timer.getDuration()) + " ms");
 
-		// 	//			cudaPointerAttributes attributes;
-		// 	//			cudaError_t err2 = cudaPointerGetAttributes ( &attributes, (void *) temp.data );
-		// 	//			err2 = cudaPointerGetAttributes ( &attributes, (void *) input.get_column(i)->data );
-		// 	//			err2 = cudaPointerGetAttributes ( &attributes, (void *) stencil.data );
-
-
-		// 	//just for testing
-		// 	//			cudaMalloc((void **)&(temp.data),1000);
-		// 	//			cudaMalloc((void **)&(temp.valid),1000);
-
-		// 	err = gpu_apply_stencil(
-		// 			input.get_column(i).get_gdf_column(),
-		// 			stencil.get_gdf_column(),
-		// 			temp.get_gdf_column()
-		// 	);
-		// 	if(err != GDF_SUCCESS){
-		// 		return err;
-		// 	}
-
-
-		// 	input.set_column(i,temp.clone());
-		// }
-		
-		timer.reset();
-		gdf_column_cpp index_col;
-		index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
-		gdf_sequence(static_cast<int32_t*>(index_col.get_gdf_column()->data), input.get_column(0).size(), 0);
-		// std::vector<int32_t> idx(input.get_column(0).size());
-		// std::iota(idx.begin(),idx.end(),0);
-		// CheckCudaErrors(cudaMemcpy(index_col.get_gdf_column()->data, idx.data(), idx.size() * sizeof(int32_t), cudaMemcpyHostToDevice));
-		Library::Logging::Logger().logInfo("-> Filter sub block 5 took " + std::to_string(timer.getDuration()) + " ms");
-
-		gdf_column_cpp temp_idx;
-		temp_idx.create_gdf_column(GDF_INT32, input.get_column(0).size(), nullptr, get_width_dtype(GDF_INT32));
-		
-		timer.reset();
-		err = gpu_apply_stencil(
-					index_col.get_gdf_column(),
-					stencil.get_gdf_column(),
-					temp_idx.get_gdf_column()
+	gdf_column_cpp temp_idx;
+	temp_idx.create_gdf_column(GDF_INT32, input.get_column(0).size(), nullptr, get_width_dtype(GDF_INT32));
+	
+	timer.reset();
+	CUDF_CALL( gpu_apply_stencil(
+				index_col.get_gdf_column(),
+				stencil.get_gdf_column(),
+				temp_idx.get_gdf_column())
 			);
-		Library::Logging::Logger().logInfo("-> Filter sub block 6 took " + std::to_string(timer.getDuration()) + " ms");
-		if(err != GDF_SUCCESS){
-			return err;
-		}
+	Library::Logging::Logger().logInfo("-> Filter sub block 6 took " + std::to_string(timer.getDuration()) + " ms");
 
-		timer.reset();
-		gdf_column_cpp materialize_temp;
-		materialize_temp.create_gdf_column(input.get_column(0).dtype(),temp_idx.size(),nullptr,get_width_dtype(max_temp_type), "");
-		for(int i = 0; i < input.get_width();i++){
-			materialize_temp.set_dtype(input.get_column(i).dtype());
+	timer.reset();
+	gdf_column_cpp materialize_temp;
+	materialize_temp.create_gdf_column(input.get_column(0).dtype(),temp_idx.size(),nullptr,get_width_dtype(max_temp_type), "");
+	for(int i = 0; i < input.get_width();i++){
+		materialize_temp.set_dtype(input.get_column(i).dtype());
 
-			gdf_error err = materialize_column(
-					input.get_column(i).get_gdf_column(),
-					materialize_temp.get_gdf_column(),
-					temp_idx.get_gdf_column()
-			);
+		materialize_column(
+				input.get_column(i).get_gdf_column(),
+				materialize_temp.get_gdf_column(),
+				temp_idx.get_gdf_column()
+		);
 
-			materialize_temp.update_null_count();
-			input.set_column(i,materialize_temp.clone(input.get_column(i).name()));
-		}
-		Library::Logging::Logger().logInfo("-> Filter sub block 7 took " + std::to_string(timer.getDuration()) + " ms");
-	}else{
-		//free_gdf_column(&stencil);
-		//free_gdf_column(&temp);
-		return err;
+		materialize_temp.update_null_count();
+		input.set_column(i,materialize_temp.clone(input.get_column(i).name()));
 	}
+	Library::Logging::Logger().logInfo("-> Filter sub block 7 took " + std::to_string(timer.getDuration()) + " ms");
+
 	//free_gdf_column(&stencil);
 	//free_gdf_column(&temp);
-	return GDF_SUCCESS;
-
 }
 
 //Returns the index from table if exists
@@ -1120,14 +1079,14 @@ blazing_frame evaluate_split_query(
 		//process self
 		if(is_project(query[0])){
 			blazing_timer.reset();
-			gdf_error err = process_project(child_frame,query[0]);
+			process_project(child_frame,query[0]);
 			Library::Logging::Logger().logInfo("process_project took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
 			return child_frame;
 		}else if(is_aggregate(query[0])){
 			blazing_timer.reset();
 			gdf_error err = process_aggregate(child_frame,query[0]);
 			if (err != GDF_SUCCESS) {
-				throw bla;
+				//throw bla;
 			}
 			
 			Library::Logging::Logger().logInfo("process_aggregate took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
@@ -1136,7 +1095,7 @@ blazing_frame evaluate_split_query(
 			blazing_timer.reset();
 			gdf_error err = process_sort(child_frame,query[0]);
 			if (err != GDF_SUCCESS) {
-				throw bla;
+				//throw bla;
 			}
 			Library::Logging::Logger().logInfo("process_sort took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
 			return child_frame;
@@ -1144,7 +1103,7 @@ blazing_frame evaluate_split_query(
 			blazing_timer.reset();
 			gdf_error err = process_filter(child_frame,query[0]);
 			if (err != GDF_SUCCESS) {
-				throw bla;
+				//throw bla;
 			}
 			Library::Logging::Logger().logInfo("process_filter took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
 			if(err != GDF_SUCCESS){
@@ -1153,7 +1112,7 @@ blazing_frame evaluate_split_query(
 
 			return child_frame;
 		}else{
-			throw bla;
+			//throw bla;
 		}
 		//return frame
 	}

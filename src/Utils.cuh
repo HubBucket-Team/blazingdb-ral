@@ -282,6 +282,18 @@ static const char *_cudaGetErrorEnum(cudaError_t error) {
   return "<unknown>";
 }
 
+#define CUDF_CALL( call )                                             \
+{                                                                     \
+    gdf_error err = call;                                             \
+    if ( err != GDF_SUCCESS )                                         \
+    {                                                                 \
+        std::cerr << "ERROR: CUDF Runtime call " << #call             \
+                  << " failed with " << gdf_error_get_name(err)       \
+                  << " (" << err << ").\n";                           \
+        throw std::runtime_error("In " + std::string(#call) + " function: " + gdf_error_get_name(err));\
+    }                                                                 \
+}
+
 template <typename T>
 void check(T result, char const *const func, const char *const file,
            int const line) {

@@ -14,7 +14,7 @@
 #include "DataFrame.h"
 #include "Utils.cuh"
 
-gdf_error evaluate_expression(
+void evaluate_expression(
 		blazing_frame inputs,
 		std::string expression,
 		gdf_column_cpp output,

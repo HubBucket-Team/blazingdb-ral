@@ -279,28 +279,23 @@ gdf_error process__binary_operation_literal_column(
 
 
 
-//processing in reverse we never need to have more than TWO spaces to work in
-//
-gdf_error evaluate_expression(
+// processing in reverse we never need to have more than TWO spaces to work in
+// make temp a column of size 8 bytes so it can accomodate the largest possible size
+void evaluate_expression(
 		blazing_frame inputs,
 		std::string expression,
 		gdf_column_cpp output,
 		gdf_column_cpp temp){
-	//make temp a column of size 8 bytes so it can accomodate the largest possible size
 	static CodeTimer timer;
 	timer.reset();
+
 	std::string clean_expression = clean_calcite_expression(expression);
 	int position = clean_expression.size();
-
 	std::stack<std::string> operand_stack;
-
-
 	while(position > 0){
 		std::string token = get_last_token(clean_expression,&position);
-		//std::cout<<"Token is ==> "<<token<<"\n";
 
 		if(is_operator_token(token)){
-
 			//Todo: Check correctness
 			/*if (token == "OR") {
 				auto op1 = operand_stack.top();
@@ -345,7 +340,7 @@ gdf_error evaluate_expression(
 						position == 0 ? true : false  //set to true if we write to output
 				);
 			} else {
-				return GDF_INVALID_API_CALL;
+				throw std::runtime_error("In evaluate_expression function: unsupported operator token");
 			}
 
 
@@ -357,6 +352,4 @@ gdf_error evaluate_expression(
 	output.update_null_count();
 
 	Library::Logging::Logger().logInfo("-> evaluate_expression took " + std::to_string(timer.getDuration()) + " ms processing expression:\n" + expression);
-
-	return GDF_SUCCESS;
 }

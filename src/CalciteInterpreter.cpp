@@ -126,7 +126,7 @@ bool contains_evaluation(std::string expression){
 	return (cleaned_expression.find("(") != std::string::npos);
 }
 
-gdf_error create_null_value_gdf_column(int64_t output_value,
+void create_null_value_gdf_column(int64_t output_value,
                                        gdf_dtype output_type,
                                        std::size_t output_size,
                                        std::string&& output_name,
@@ -143,8 +143,6 @@ gdf_error create_null_value_gdf_column(int64_t output_value,
 
     output_vector.pop_back();
     output_vector.emplace_back(output_column);
-
-    return GDF_SUCCESS;
 }
 
 gdf_error perform_avg(gdf_column* column_output, gdf_column* column_input) {
@@ -472,51 +470,37 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 	 *
 	 * 			As you can see the project following aggregate expects the columns to be grouped by to appear BEFORE the expressions
 	 */
-	gdf_error err{GDF_SUCCESS};
-    {
-        auto pos = query_part.find("(") + 1;
-        if (pos == std::string::npos) {
-            throw std::runtime_error{"process_aggregate, parse error, " + query_part};
-        }
-        auto count = query_part.length() - pos - 1;
-        if (count == 0) {
-            throw std::runtime_error{"process_aggregate, parse error, " + query_part};
-        }
-        query_part = query_part.substr(pos, count);
-    }
-
+	
 	//get groups
+	int pos = query_part.find("(") + 1;
+	int count = query_part.length() - pos - 1;
+	query_part = query_part.substr(pos, count);
 	std::vector<int> group_columns = get_group_columns(query_part);
 
 	//get aggregations
 	std::vector<gdf_agg_op> aggregation_types;
 	std::vector<std::string>  aggregation_input_expressions;
 	std::vector<std::string>  aggregation_column_assigned_aliases;
-
-	bool expressionFound = true;
-
 	std::vector<std::string> expressions = get_expressions_from_expression_list(query_part);
+	for(std::string expr : expressions)
+	{
+		std::string expression = std::regex_replace(expr, std::regex("^ +| +$|( ) +"), "$1");
+		if (expression.find("group=") == std::string::npos)
+		{
+			gdf_agg_op operation = get_aggregation_operation(expression);
+			aggregation_types.push_back(operation);
+			aggregation_input_expressions.push_back(get_string_between_outer_parentheses(expression));
 
-	  for(std::string expr : expressions)
-	  {
-		  //std::cout << expr << '\n';
-		  std::string group_str("group");
-		  std::string expression = std::regex_replace(expr, std::regex("^ +| +$|( ) +"), "$1");
-		  if (expression.find("group=") == std::string::npos)
-		  {
-				gdf_agg_op operation;
-				err = get_aggregation_operation(expression,&operation);
-				aggregation_types.push_back(operation);
-				aggregation_input_expressions.push_back(get_string_between_outer_parentheses(expression));
+			// if the aggregation has an alias, lets capture it here, otherwise we'll figure out what to call the aggregation based on its input
+			if (expression.find("EXPR$") == 0)
+				aggregation_column_assigned_aliases.push_back("");
+			else 
+				aggregation_column_assigned_aliases.push_back(expression.substr(0, expression.find("=[")));
+		}
+	}
 
-				// if the aggregation has an alias, lets capture it here, otherwise we'll figure out what to call the aggregation based on its input
-				if (expression.find("EXPR$") == 0)
-					aggregation_column_assigned_aliases.push_back("");
-				else 
-					aggregation_column_assigned_aliases.push_back(expression.substr(0, expression.find("=[")));
-		  }
-	  }
-
+	gdf_error err = GDF_SUCCESS;
+	
 	// Group by without aggregation 
 	if (aggregation_types.size() == 0) {
 		size_t num_group_columns = group_columns.size();
@@ -566,9 +550,9 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		for(int i = 0; i < num_group_columns; i++){
 			temp_output.set_dtype(output_columns_group[i].dtype());
 
-			err = materialize_column(group_by_columns_ptr_out[i],
-									temp_output.get_gdf_column(),
-									index_col.get_gdf_column());
+			materialize_column(group_by_columns_ptr_out[i],
+								temp_output.get_gdf_column(),
+								index_col.get_gdf_column());
 			temp_output.update_null_count();
 			input.set_column(i,temp_output.clone(input.get_column(i).name()));
 		}
@@ -581,19 +565,14 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 	std::vector<gdf_dtype> aggregation_input_types;
 
 	size_t size = input.get_column(0).size();
-	size_t aggregation_size = group_columns.size() == 0? 1 : size; //if you have no groups you will output onlu one row
+	size_t aggregation_size = group_columns.size() == 0 ? 1 : size; //if you have no groups you will output onlu one row
 
 	for(int i = 0; i < aggregation_types.size(); i++){
 		if(contains_evaluation(aggregation_input_expressions[i])){
-
 			gdf_error err = get_output_type_expression(&input, &aggregation_input_types[i], &max_temp_type, aggregation_input_expressions[i]);
 			if(get_width_dtype(max_temp_type) < get_width_dtype(aggregation_input_types[i])){
 				max_temp_type = aggregation_input_types[i];
-				//by doing this we can now use the temp space as where we put our reductions then output our reductions right back into the input
-				//so long as the input isnt an ipc one
 			}
-			//temp.create_gdf_column(GDF_INT64,size,nullptr,8);
-			//break;
 		}
 	}
 
@@ -629,27 +608,14 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		std::string expression = aggregation_input_expressions[i];
 		gdf_column_cpp aggregation_input;
 		if(contains_evaluation(expression)){
-
 			//we dont knwo what the size of this input will be so allcoate max size
 			//TODO de donde saco el nombre de la columna aqui???
 			aggregation_input.create_gdf_column(aggregation_input_types[i],size,nullptr,get_width_dtype(aggregation_input_types[i]),"");
-
-			gdf_error err = evaluate_expression(
-					input,
-					expression,
-					aggregation_input,
-					temp);
-
-			if(err != GDF_SUCCESS){
-				//TODO: clean up everything here so we dont run out of memory
-				return err;
-			}
+			evaluate_expression(input, expression, aggregation_input, temp);
 		}else{
 			aggregation_input = input.get_column(get_index(expression));
 		}
 
-
-		gdf_error err;
 		gdf_dtype output_type = get_aggregation_output_type(aggregation_input.dtype(),aggregation_types[i], group_columns.size());
 
         /*
@@ -672,8 +638,6 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		ctxt.flag_distinct = aggregation_types[i] == GDF_COUNT_DISTINCT ? true : false;
 		ctxt.flag_method = GDF_HASH;
 		ctxt.flag_sort_result = 1;
-
-
 		switch(aggregation_types[i]){
 		case GDF_SUM:
             if (group_columns.size() == 0) {
@@ -681,33 +645,22 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
                     err = gdf_sum(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
                 }
                 else {
-                    err = create_null_value_gdf_column(0,
-                                                       output_type,
-                                                       aggregation_size,
-                                                       aggregator_to_string(aggregation_types[i]),
-                                                       output_column,
-                                                       output_columns_aggregations);
+                    create_null_value_gdf_column(0,
+                                                output_type,
+                                                aggregation_size,
+                                                aggregator_to_string(aggregation_types[i]),
+                                                output_column,
+                                                output_columns_aggregations);
                 }
 			}else{
-//				std::cout<<"before"<<std::endl;
-//				print_gdf_column(output_columns_group[0].get_gdf_column());
 				err = gdf_group_by_sum(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
 						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);
-//				std::cout<<"after"<<std::endl;
-//				print_gdf_column(output_columns_group[0].get_gdf_column());
 //				std::cout<<"direct "<<(group_by_columns_ptr_out[0] == nullptr)<<std::endl;
 //								print_gdf_column(group_by_columns_ptr_out[0]);
 //								std::cout<<"direct done"<<std::endl;
 //
 //								std::cout<<"output column"<<std::endl;
 //								print_gdf_column(output_column.get_gdf_column());
-			}
-
-			if(err == GDF_SUCCESS){
-				aggregation_size = output_column.size();
-				//so that subsequent iterations won't be too large
-			}else{
-				//be just as responsible as all the other times we didn't do anything when we got an error bback!
 			}
 			break;
 		case GDF_MIN:
@@ -716,22 +669,16 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
                     err = gdf_min(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
                 }
                 else {
-                    err = create_null_value_gdf_column(0,
-                                                       output_type,
-                                                       aggregation_size,
-                                                       aggregator_to_string(aggregation_types[i]),
-                                                       output_column,
-                                                       output_columns_aggregations);
+                    create_null_value_gdf_column(0,
+                                                output_type,
+                                                aggregation_size,
+                                                aggregator_to_string(aggregation_types[i]),
+                                                output_column,
+                                                output_columns_aggregations);
                 }
 			}else{
 				err = gdf_group_by_min(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
 						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);
-			}
-			if(err == GDF_SUCCESS){
-				aggregation_size = output_column.size();
-				//so that subsequent iterations won't be too large
-			}else{
-				//be just as responsible as all the other times we didn't do anything when we got an error bback!
 			}
 			break;
 		case GDF_MAX:
@@ -740,22 +687,16 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
                     err = gdf_max(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
                 }
                 else {
-                    err = create_null_value_gdf_column(0,
-                                                       output_type,
-                                                       aggregation_size,
-                                                       aggregator_to_string(aggregation_types[i]),
-                                                       output_column,
-                                                       output_columns_aggregations);
+                     create_null_value_gdf_column(0,
+                                                output_type,
+                                                aggregation_size,
+                                                aggregator_to_string(aggregation_types[i]),
+                                                output_column,
+                                                output_columns_aggregations);
                 }
 			}else{
 				err = gdf_group_by_max(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
 						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);
-			}
-			if(err == GDF_SUCCESS){
-				aggregation_size = output_column.size();
-				//so that subsequent iterations won't be too large
-			}else{
-				//be just as responsible as all the other times we didn't do anything when we got an error bback!
 			}
 			break;
 		case GDF_AVG:
@@ -764,23 +705,17 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
                     err = perform_avg(output_column.get_gdf_column(), aggregation_input.get_gdf_column());
                 }
                 else {
-                    err = create_null_value_gdf_column(0,
-                                                       output_type,
-                                                       aggregation_size,
-                                                       aggregator_to_string(aggregation_types[i]),
-                                                       output_column,
-                                                       output_columns_aggregations);
+                    create_null_value_gdf_column(0,
+                                                output_type,
+                                                aggregation_size,
+                                                aggregator_to_string(aggregation_types[i]),
+                                                output_column,
+                                                output_columns_aggregations);
                 }
             }
 			else{
 				err = gdf_group_by_avg(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
 						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);
-			}
-			if(err == GDF_SUCCESS){
-				aggregation_size = output_column.size();
-				//so that subsequent iterations won't be too large
-			}else{
-				//be just as responsible as all the other times we didn't do anything when we got an error bback!
 			}
 			break;
 		case GDF_COUNT:
@@ -790,22 +725,19 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
                 // defined in 'get_aggregation_output_type' function.
                 uint64_t result = aggregation_input.get_gdf_column()->size - aggregation_input.get_gdf_column()->null_count;                
 				CheckCudaErrors(cudaMemcpy(output_column.get_gdf_column()->data, &result, sizeof(uint64_t), cudaMemcpyHostToDevice));			
-
-                err = GDF_SUCCESS;
 			}else{
 				err = gdf_group_by_count(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
 						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);
 			}
-			if(err == GDF_SUCCESS){
-				aggregation_size = output_column.size();
-				//so that subsequent iterations won't be too large
-			}else{
-				//be just as responsible as all the other times we didn't do anything when we got an error bback!
-			}
 			break;
-
 		}
 
+		if(err == GDF_SUCCESS){
+			//so that subsequent iterations won't be too large
+			aggregation_size = output_column.size();
+		}else{
+			return err;
+		}
 		/*
 		 * GDF_SUM = 0,
   GDF_MIN,
@@ -827,7 +759,6 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 
 	//TODO: consider compacting columns here before moving on
 	for(int i = 0; i < output_columns_aggregations.size(); i++){
-
 		output_columns_aggregations[i].resize(aggregation_size);
 		output_columns_aggregations[i].compact();
 		output_columns_aggregations[i].update_null_count();
@@ -846,9 +777,8 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 	input.add_table(output_columns_aggregations);
 	input.consolidate_tables();
 
+	return GDF_SUCCESS;
 }
-
-
 
 gdf_error process_sort(blazing_frame & input, std::string query_part){
 	static CodeTimer timer;
@@ -894,6 +824,7 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 		return err;
 
 	timer.reset();
+	//find the widest possible column
 	int widest_column = 0;
 	for(int i = 0; i < input.get_width();i++){
 		int cur_width;
@@ -903,7 +834,6 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 		}
 
 	}
-	//find the widest possible column
 
 	gdf_column_cpp temp_output;
 	//TODO de donde saco el nombre de la columna aqui???
@@ -913,7 +843,7 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 	for(int i = 0; i < input.get_width();i++){
 		temp_output.set_dtype(input.get_column(i).dtype());
 
-		gdf_error err = materialize_column(
+		materialize_column(
 				input.get_column(i).get_gdf_column(),
 				temp_output.get_gdf_column(),
 				index_col.get_gdf_column()
@@ -950,8 +880,6 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 
 //TODO: this does not compact the allocations which would be nice if it could
 gdf_error process_filter(blazing_frame & input, std::string query_part){
-
-	//assert(input.get_column(0) != nullptr);
 	static CodeTimer timer;
 
 	size_t size = input.get_column(0).size();
@@ -972,12 +900,8 @@ gdf_error process_filter(blazing_frame & input, std::string query_part){
 
 	Library::Logging::Logger().logInfo("-> Filter sub block 1 took " + std::to_string(timer.getDuration()) + " ms");
 	timer.reset();
-	gdf_dtype output_type; // this is junk since we know the output types here
-	gdf_error err = get_output_type_expression(&input, &output_type, &max_temp_type, get_condition_expression(query_part));
-	if(err != GDF_SUCCESS){
-		//panic then do wonderful things here to fix everything
-		//im really liking Andrescus talk on control flow blah blah something i forget his name
-	}
+	gdf_dtype output_type = get_output_type_expression(&input, &max_temp_type, get_condition_expression(query_part));
+
 	//TODO de donde saco el nombre de la columna aqui???
 	gdf_column_cpp temp;
 	temp.create_gdf_column(max_temp_type,input.get_column(0).size(),nullptr,get_width_dtype(max_temp_type), "");

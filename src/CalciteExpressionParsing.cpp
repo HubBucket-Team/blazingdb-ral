@@ -431,7 +431,7 @@ int64_t  tmst;  // GDF_TIMESTAMP
 }
 
 //must pass in temp type as invalid if you are not setting it to something to begin with
-gdf_error get_output_type_expression(blazing_frame * input, gdf_dtype * output_type, gdf_dtype * max_temp_type, std::string expression){
+gdf_dtype get_output_type_expression(blazing_frame * input, gdf_dtype * max_temp_type, std::string expression){
 	std::string clean_expression = clean_calcite_expression(expression);
 	int position = clean_expression.size();
 	if(*max_temp_type == GDF_invalid){
@@ -441,7 +441,6 @@ gdf_error get_output_type_expression(blazing_frame * input, gdf_dtype * output_t
 	std::stack<gdf_dtype> operands;
 	while(position > 0){
 		std::string token = get_last_token(clean_expression,&position);
-		//std::cout<<"Token is ==> "<<token<<"\n";
 
 		if(is_operator_token(token)){
 			if(is_binary_operator_token(token) || is_other_binary_operator_token(token)){
@@ -451,14 +450,10 @@ gdf_error get_output_type_expression(blazing_frame * input, gdf_dtype * output_t
 				operands.pop();
 
 				if(left_operand == GDF_invalid){
-
-
 					if(right_operand == GDF_invalid){
-						return GDF_INVALID_API_CALL;
+						throw std::runtime_error("In get_output_type_expression function: invalid operands");
 					}else{
-
 						left_operand = right_operand;
-
 					}
 				}else{
 					if(right_operand == GDF_invalid){
@@ -489,7 +484,7 @@ gdf_error get_output_type_expression(blazing_frame * input, gdf_dtype * output_t
 					*max_temp_type = operands.top();
 				}
 			} else {
-				return GDF_INVALID_API_CALL;
+				throw std::runtime_error("In get_output_type_expression function: unsupported operator token");
 			}
 
 		}else{
@@ -501,12 +496,11 @@ gdf_error get_output_type_expression(blazing_frame * input, gdf_dtype * output_t
 
 		}
 	}
-	*output_type = operands.top();
-	return GDF_SUCCESS;
+	return operands.top();
 }
 
 
-gdf_error get_aggregation_operation(std::string operator_string, gdf_agg_op * operation){
+gdf_agg_op get_aggregation_operation(std::string operator_string){
 
 	operator_string = operator_string.substr(
 			operator_string.find("=[") + 2,
@@ -516,21 +510,20 @@ gdf_error get_aggregation_operation(std::string operator_string, gdf_agg_op * op
 	//remove expression
 	operator_string = operator_string.substr(0,operator_string.find("("));
 	if(operator_string == "SUM"){
-		*operation = GDF_SUM;
+		return GDF_SUM;
 	}else if(operator_string == "AVG"){
-		*operation = GDF_AVG;
+		return GDF_AVG;
 	}else if(operator_string == "MIN"){
-		*operation = GDF_MIN;
+		return GDF_MIN;
 	}else if(operator_string == "MAX"){
-		*operation = GDF_MAX;
+		return GDF_MAX;
 	}else if(operator_string == "COUNT"){
-		*operation = GDF_COUNT;
+		return GDF_COUNT;
 	}else if(operator_string == "COUNT_DISTINCT"){
-		*operation = GDF_COUNT_DISTINCT;
-	}else{
-		return GDF_INVALID_API_CALL;
+		return GDF_COUNT_DISTINCT;
 	}
-	return GDF_SUCCESS;
+	
+	throw std::runtime_error("In get_aggregation_operation function: aggregation type not supported");
 }
 
 gdf_error get_operation(

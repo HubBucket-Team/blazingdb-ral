@@ -59,6 +59,7 @@ public:
     /// \param[in,out] column with data appended
     /// \param[in] offset of `column` to start append data
     std::size_t ToGdfColumn(const gdf_column &   column,
+                            const size_t work_group_size,
                             const std::ptrdiff_t offset = 0);
 
     /// \brief Append data from column to gdf column
@@ -71,6 +72,7 @@ public:
                             std::int16_t *       d_definition_levels);
 
     std::size_t ToGdfColumn(const gdf_column &   column,
+                            const size_t work_group_size,
                             const std::ptrdiff_t offset,
                             std::uint8_t &       first_valid_byte,
                             std::uint8_t &       last_valid_byte);

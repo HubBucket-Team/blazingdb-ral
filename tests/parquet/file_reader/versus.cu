@@ -37,6 +37,8 @@
 #include "cuio/parquet/column_reader.h"
 #include "cuio/parquet/file_reader.h"
 
+#include <rmm.h>
+
 enum ReaderType : std::uint8_t { kGdf, kParquet };
 
 template <ReaderType T>
@@ -86,8 +88,7 @@ struct Readers<kGdf> {
     typedef typename gdf::parquet::FloatReader  FloatReader;          
     typedef typename gdf::parquet::DoubleReader DoubleReader;          
     typedef typename gdf::parquet::FileReader   FileReader;            
-     
-
+      
     static inline gdf_error init_gdf_buffers(void **device_values, gdf_valid_type** device_valid, int16_t** def_levels, uint32_t values_malloc_size, gdf_size_type column_size){
         cudaError_t cuda_error = cudaMalloc(device_values, values_malloc_size);
          auto n_bytes =  gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(column_size));
@@ -125,166 +126,19 @@ PARQUET_TRAITS_FACTORY(parquet::Type::DOUBLE, double, GDF_FLOAT64);
 class ParquetReaderAPITest : public testing::Test {
 protected:
     ParquetReaderAPITest()
-            : filename("/tmp/sample.parquet") {}
-
-    std::int32_t
-    genInt32(int i) {
-        if (i >= 100 && i < 150) {
-            return 10000;
-        } else if (i >= 200 && i < 300) {
-            return 20000;
-        } else if (i >= 310 && i < 350) {
-            return 30000;
-        } else if (i >= 450 && i < 550) {
-            return 40000;
-        } else if (i >= 800 && i < 950) {
-            return 50000;
-        } else {
-            return i * 100;
-        }
-    }
-
-    std::int64_t
-    genInt64(int i) {
-        if (i >= 100 && i < 150) {
-            return 10000;
-        } else if (i >= 200 && i < 300) {
-            return 20000;
-        } else if (i >= 310 && i < 350) {
-            return 30000;
-        } else if (i >= 450 && i < 550) {
-            return 40000;
-        } else if (i >= 800 && i < 950) {
-            return 50000;
-        } else {
-            return i * 100000;
-        }
-    }
+            : filename("/tmp/DataSet50mb/lineitem_0_0.parquet") {}
+ 
 
     static constexpr std::size_t kGroups       = 1;
     static constexpr std::size_t kRowsPerGroup = 524289;
+  
 
-    void
-    SetUp() final {
-        try {
-
-            std::shared_ptr<::arrow::io::FileOutputStream> stream;
-            PARQUET_THROW_NOT_OK(
-                    ::arrow::io::FileOutputStream::Open(filename, &stream));
-
-            std::shared_ptr<::parquet::schema::GroupNode> schema =
-                    CreateSchema();
-
-            ::parquet::WriterProperties::Builder builder;
-            builder.compression(::parquet::Compression::SNAPPY);
-            std::shared_ptr<::parquet::WriterProperties> properties =
-                    builder.build();
-
-            std::shared_ptr<::parquet::ParquetFileWriter> file_writer =
-                    ::parquet::ParquetFileWriter::Open(stream, schema, properties);
-
-            std::int16_t repetition_level = 0;
-
-            for (std::size_t i = 0; i < kGroups; i++) {
-                ::parquet::RowGroupWriter *row_group_writer =
-                        file_writer->AppendRowGroup(kRowsPerGroup);
-
-                ::parquet::BoolWriter *bool_writer =
-                        static_cast<::parquet::BoolWriter *>(
-                                row_group_writer->NextColumn());
-                for (std::size_t j = 0; j < kRowsPerGroup; j++) {
-                    int ind = i * kRowsPerGroup + j;
-                    std::int16_t definition_level = ind % 3 > 0 ? 1 : 0;
-                    bool         bool_value       = true;
-                    bool_writer->WriteBatch(
-                            1, &definition_level, &repetition_level, &bool_value);
-                }
-
-                ::parquet::Int32Writer *int32_writer =
-                        static_cast<::parquet::Int32Writer *>(
-                                row_group_writer->NextColumn());
-                for (std::size_t j = 0; j < kRowsPerGroup; j++) {
-                    int ind = i * kRowsPerGroup + j;
-                    std::int16_t definition_level = ind % 3 > 0 ? 1 : 0;
-                    std::int32_t int32_value = genInt32(ind);
-                    int32_writer->WriteBatch(
-                            1, &definition_level, &repetition_level, &int32_value);
-                }
-
-                ::parquet::Int64Writer *int64_writer =
-                        static_cast<::parquet::Int64Writer *>(
-                                row_group_writer->NextColumn());
-                for (std::size_t j = 0; j < kRowsPerGroup; j++) {
-                    int ind = i * kRowsPerGroup + j;
-                    std::int16_t definition_level = ind % 3 > 0 ? 1 : 0;
-                    std::int64_t int64_value = genInt64(ind);
-                    int64_writer->WriteBatch(
-                            1, &definition_level, &repetition_level, &int64_value);
-                }
-
-                ::parquet::DoubleWriter *double_writer =
-                        static_cast<::parquet::DoubleWriter *>(
-                                row_group_writer->NextColumn());
-                for (std::size_t j = 0; j < kRowsPerGroup; j++) {
-                    int ind = i * kRowsPerGroup + j;
-                    std::int16_t definition_level = ind % 3 > 0 ? 1 : 0;
-                    double       double_value     = (double)ind;
-                    double_writer->WriteBatch(
-                            1, &definition_level, &repetition_level, &double_value);
-                }
-            }
-
-            file_writer->Close();
-
-            DCHECK(stream->Close().ok());
-        } catch (const std::exception &e) {
-            FAIL() << "Generate file" << e.what();
-        }
-    }
-
-    std ::shared_ptr<::parquet::schema::GroupNode>
-    CreateSchema() {
-        return std::static_pointer_cast<::parquet::schema::GroupNode>(
-                ::parquet::schema::GroupNode::Make(
-                        "schema",
-                        ::parquet::Repetition::REQUIRED,
-                        ::parquet::schema::NodeVector{
-                                ::parquet::schema::PrimitiveNode::Make(
-                                        "boolean_field",
-                                        ::parquet::Repetition::OPTIONAL,
-                                        ::parquet::Type::BOOLEAN,
-                                        ::parquet::LogicalType::NONE),
-                                ::parquet::schema::PrimitiveNode::Make(
-                                        "int32_field",
-                                        ::parquet::Repetition::OPTIONAL,
-                                        ::parquet::Type::INT32,
-                                        ::parquet::LogicalType::NONE),
-                                ::parquet::schema::PrimitiveNode::Make(
-                                        "int64_field",
-                                        ::parquet::Repetition::OPTIONAL,
-                                        ::parquet::Type::INT64,
-                                        ::parquet::LogicalType::NONE),
-                                ::parquet::schema::PrimitiveNode::Make(
-                                        "double_field",
-                                        ::parquet::Repetition::OPTIONAL,
-                                        ::parquet::Type::DOUBLE,
-                                        ::parquet::LogicalType::NONE),
-                        }));
-    }
-
-    void
-    TearDown() final {
-        //if (std::remove(filename.c_str())) { FAIL() << "Remove file"; }
-    }
-
-
-
-
-
+    //! Allocate a array of gdf columns to `gdf_columns` of `file_reade` filtering
+    //  by row group indices and column indices
 
     template <ReaderType T, class ColumnReaderType, parquet::Type::type C>
     static inline gdf_error
-    convert(gdf_column *column, ColumnReaderType *column_reader, int64_t amount_to_read, uint32_t batch_size) {
+    convert(gdf_column *column, ColumnReaderType *column_reader, int64_t amount_to_read){
         typedef typename parquet_traits<C>::parquet_type    parquet_type;
         parquet_type* values_buffer;
         gdf_valid_type* valid_bits;
@@ -296,7 +150,7 @@ protected:
         std::int64_t levels_read;
         std::int64_t values_read = 0;
         std::int64_t nulls_count;
-
+        auto batch_size = amount_to_read * 0.3;
         int64_t rows_read_total = 0;
         while (column_reader->HasNext() && rows_read_total < amount_to_read) {
             int64_t rows_read = column_reader->ReadBatchSpaced(batch_size,
@@ -310,20 +164,21 @@ protected:
                                                                &nulls_count);
             rows_read_total += rows_read;
         }
-        std::cout << "columntype: " << typeid(ColumnReaderType).name() << std::endl;
+        std::cout << "total_read|columntype: " << rows_read_total << "|" << typeid(ColumnReaderType).name() << std::endl;
+
         Readers<T>::buffer_to_gdf_column(column, (void *)values_buffer, valid_bits, values_malloc_size, amount_to_read, parquet_traits<C>::gdf_type());
         return GDF_SUCCESS;
     }
 
     template <ReaderType T>
-    static inline gdf_error containerFrom(gdf_column *column, std::shared_ptr<parquet::ColumnReader> column_reader, int64_t numRecords, uint32_t batch_size) {
+    static inline gdf_error containerFrom(gdf_column *column, std::shared_ptr<parquet::ColumnReader> column_reader, int64_t numRecords) {
 
         parquet::Type::type parquetDataType = column_reader->type();
 
 #define WHEN(dataType, Prefix)                                  \
         if ((dataType) == parquetDataType)                          \
             return convert<T, typename Readers<T>::Prefix##Reader, dataType>       \
-                    (column, static_cast<typename Readers<T>::Prefix##Reader*>(column_reader.get()), numRecords, batch_size)
+                    (column, static_cast<typename Readers<T>::Prefix##Reader*>(column_reader.get()), numRecords)
 
         WHEN(parquet::Type::BOOLEAN, Bool);
         WHEN(parquet::Type::INT32, Int32);
@@ -336,51 +191,149 @@ protected:
         std::cout << "ERROR: Bad parquet column type\n";
     }
 
+    template <class T>
+    static inline std::vector<const ::parquet::ColumnDescriptor *>
+    _ColumnDescriptorsFrom(const T &file_reader, const std::vector<std::size_t> & indices) {
+        const auto &row_group_reader = file_reader->RowGroup(0);
+
+        std::vector<const parquet::ColumnDescriptor *> column_descriptors;
+        column_descriptors.reserve(indices.size());
+
+        for (const std::size_t i : indices) {
+            column_descriptors.emplace_back(row_group_reader->Column(i)->descr());
+        }
+
+        return column_descriptors;
+    }
+
+
+    //! \returns a vector with the column indices of `raw_names` in `file_reader`
+    template <class T>
+    static inline std::vector<std::size_t>
+    _GetColumnIndices(const T &file_reader, const char *const *const  raw_names) {
+
+        std::vector<std::size_t> indices;
+
+        const std::shared_ptr<const ::parquet::FileMetaData> &metadata =
+        file_reader->metadata();
+
+        const std::size_t num_columns =
+        static_cast<std::size_t>(metadata->num_columns());
+
+        auto schema = file_reader->RowGroup(0)->metadata()->schema();
+
+        std::vector<std::pair<std::string, std::size_t>> parquet_columns;
+        parquet_columns.reserve(num_columns);
+
+        for (std::size_t i = 0; i < num_columns; i++) {
+            if (schema->Column(i)->physical_type() != ::parquet::Type::BYTE_ARRAY
+                && schema->Column(i)->physical_type()
+                    != ::parquet::Type::FIXED_LEN_BYTE_ARRAY) {
+
+                parquet_columns.push_back(
+                std::make_pair(schema->Column(i)->name(), i));
+            }
+        }
+
+        if (raw_names != nullptr) {
+            for (const char *const *name_ptr = raw_names; *name_ptr != nullptr;
+                name_ptr++) {
+
+                std::string filter_name = *name_ptr;
+                for (std::size_t i = 0; i < parquet_columns.size(); i++) {
+                    if (filter_name == parquet_columns[i].first) {
+                        indices.push_back(parquet_columns[i].second);
+                        break;
+                    }
+                }
+            }
+        } else {
+            for (std::size_t i = 0; i < parquet_columns.size(); i++) {
+                indices.push_back(parquet_columns[i].second);
+            }
+        }
+        return indices;
+    }
+
     template <ReaderType T>
     inline static void
-    readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &parquet_reader, uint32_t batch_size) {
+    readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &file_reader) {
 
-        std::shared_ptr<parquet::FileMetaData> file_metadata = parquet_reader->metadata();
+        const std::vector<std::size_t> column_indices = _GetColumnIndices(file_reader, nullptr);
+        const std::vector<const parquet::ColumnDescriptor *> column_descriptors = _ColumnDescriptorsFrom(file_reader, column_indices);
+        
+        std::shared_ptr<parquet::FileMetaData> file_metadata = file_reader->metadata();
         const parquet::SchemaDescriptor *schema = file_metadata->schema();
         int numRowGroups = file_metadata->num_row_groups();
 
+        std::vector<std::size_t> row_group_indices;
+        for (std::size_t index = 0; index < numRowGroups; index++){
+            row_group_indices.push_back(index);
+        }
+
+        int64_t num_rows = 0;
+        for (std::size_t row_group_index_in_set = 0;
+            row_group_index_in_set < row_group_indices.size();
+            row_group_index_in_set++) {
+
+            std::size_t row_group_index = row_group_indices[row_group_index_in_set];
+
+            const auto row_group_reader = file_reader->RowGroup(static_cast<int>(row_group_index));
+
+            num_rows += row_group_reader->metadata()->num_rows();
+        }
+        std::cout << "num_rows: " << num_rows << std::endl;
+        const std::size_t num_columns = column_indices.size();
+        std::cout << "num_columns: " << num_columns << std::endl;
+
         std::vector<gdf_column> columns;
 
+        cudaStream_t cudaStream;
+        cudaError_t  cudaError = cudaStreamCreate(&cudaStream);
+
+        // if (_AllocateGdfColumns(file_reader,
+        //                         row_group_indices,
+        //                         column_indices,
+        //                         cudaStream,
+        //                         gdf_columns)
+        //     != GDF_SUCCESS) {
+        //     return GDF_FILE_ERROR;
+        // }
+
         for (int rowGroupIndex = 0; rowGroupIndex < numRowGroups; rowGroupIndex++) {
-            auto groupReader = parquet_reader->RowGroup(rowGroupIndex);
-            const parquet::RowGroupMetaData *rowGroupMetadata = groupReader->metadata();
-            for (int columnIndex = 0; columnIndex < file_metadata->num_columns(); columnIndex++) {
+            auto groupReader = file_reader->RowGroup(rowGroupIndex);
+            for (int column_reader_index = 0; column_reader_index < num_columns; column_reader_index++) {
+                auto columnIndex = column_indices[column_reader_index];
                 const parquet::ColumnDescriptor *column = schema->Column(columnIndex);
-                std::unique_ptr<parquet::ColumnChunkMetaData> columnMetaData = rowGroupMetadata->ColumnChunk(
-                        columnIndex);
                 parquet::Type::type type = column->physical_type();
 
-                if (type != parquet::Type::BYTE_ARRAY){
-                    const std::shared_ptr<parquet::ColumnReader> columnReader = groupReader->Column(columnIndex);
-                    int64_t numRecords = rowGroupMetadata->num_rows();
+                const std::shared_ptr<parquet::ColumnReader> columnReader = groupReader->Column(columnIndex);
 
-                    gdf_column output;
-                    containerFrom<T>(&output, columnReader, numRecords, batch_size);
-                    columns.push_back(output);
-                }
+                gdf_column output;
+                containerFrom<T>(&output, columnReader, num_rows); // @todo
+                columns.push_back(output);
             }
         }
+        cudaStreamDestroy(cudaStream);
+
     }
     const std::string filename;
 
     std::size_t columns_length = 0;
 };
 
+
 TEST_F(ParquetReaderAPITest, ParquetCpp) {
     std::unique_ptr<typename Readers<kParquet>::FileReader> reader = Readers<kParquet>::FileReader::OpenFile(filename);
     
-    readRowGroup<kParquet>(reader, kRowsPerGroup);
+    readRowGroup<kParquet>(reader);
     
 }
-TEST_F(ParquetReaderAPITest, CuIOParquetCpp) {
+// /home/aocsa/blazingsql/workspace/blazingdb-ral_project/blazingdb-io-parquet/blazingdb-ral/tests/io-test/lineitem_0_0.parquet
+TEST_F(ParquetReaderAPITest, CuIOParquet) {
     std::unique_ptr<typename Readers<kGdf>::FileReader> reader = Readers<kGdf>::FileReader::OpenFile(filename);
     
-    readRowGroup<kGdf>(reader, kRowsPerGroup);
+    readRowGroup<kGdf>(reader);
     
 }
 

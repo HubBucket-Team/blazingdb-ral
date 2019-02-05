@@ -237,12 +237,13 @@ gdf_error process_other_binary_operation(
 				gdf_column_cpp temp_scalar;
 				temp_scalar.create_gdf_column(right.dtype, 1, nullptr, get_width_dtype(right.dtype));
 				CheckCudaErrors(cudaMemcpy(temp_scalar.data(), &(right.data), get_width_dtype(right.dtype), cudaMemcpyHostToDevice));
-
-				err = gdf_replace_nulls(output.get_gdf_column(), expression_input.get_gdf_column(), temp_scalar.get_gdf_column());
+				//TODO: this function isnt used anymore but where is this replace nulls anyway?
+			//	err = gdf_replace_nulls(output.get_gdf_column(), expression_input.get_gdf_column(), temp_scalar.get_gdf_column());
 			} else {
 				// call replace_null
 				size_t right_index = get_index(right_operand);
-				err = gdf_replace_nulls(output.get_gdf_column(), inputs.get_column(left_index).get_gdf_column(), inputs.get_column(right_index).get_gdf_column());
+				//TODO: this function isnt used anymore but where is this replace nulls anyway?
+	//			err = gdf_replace_nulls(output.get_gdf_column(), inputs.get_column(left_index).get_gdf_column(), inputs.get_column(right_index).get_gdf_column());
 			}
 			if(err == GDF_SUCCESS){
 				inputs.add_column(temp.clone());

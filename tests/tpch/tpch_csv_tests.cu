@@ -420,6 +420,47 @@ TEST_F(EvaluateQueryTest, TEST_NULL_OUTER_JOIN) {
 }
 
 
+TEST_F(EvaluateQueryTest, TEST_NULL_OUTER_JOIN_2) {
+  auto input = InputTestItem{
+      .query =
+          "select n.n_nationkey, r.r_regionkey from dfs.tmp.`nation` as n left outer join dfs.tmp.`region` as r on n.n_regionkey = r.r_regionkey where n.n_nationkey < 10 and n.n_nationkey > 5",
+      .logicalPlan =
+    		  "LogicalProject(n_nationkey=[$0], r_regionkey=[$4])\n"
+    		  "  LogicalJoin(condition=[=($2, $4)], joinType=[left])\n"
+    		  "    LogicalFilter(condition=[AND(<($0, 10), >=($0, 5))])\n"
+    		  "      EnumerableTableScan(table=[[main, nation]])\n"
+    		  "    EnumerableTableScan(table=[[main, region]])",
+      .filePaths = {"/tmp/nation.psv","/tmp/region.psv"},
+      .tableNames = {"main.nation", "main.region"},
+      .columnNames = {{"n_nationkey", "n_name","n_regionkey", "n_comment"},{"r_regionkey","r_name","r_comment"}},
+      .columnTypes = {{"int32", "int64", "int32", "int64"},{"int32", "int64", "int64"}},
+      .resultTable =
+          LiteralTableBuilder{
+              "ResultSet",
+              {{"n_nationkey", Literals<GDF_INT32>{5,6,7,8,9}},
+              {"r_regionkey", Literals<GDF_INT32>{Literals<GDF_INT32>::vector{0,3,3,2,2}, Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 1}}},
+              }}
+              .Build()};
+  auto logical_plan = input.logicalPlan;
+  auto input_tables =
+      ToBlazingFrame(input.filePaths, input.columnNames, input.columnTypes);
+  GdfColumnCppsTableBuilder{"input_table", input_tables[0]}.Build().print(std::cout);
+  GdfColumnCppsTableBuilder{"input_table", input_tables[1]}.Build().print(std::cout);
+
+  auto table_names = input.tableNames;
+  auto column_names = input.columnNames;
+  std::vector<gdf_column_cpp> outputs;
+  gdf_error err = evaluate_query(input_tables, table_names, column_names,
+                                 logical_plan, outputs);
+  std::cout<<"null count is "<<outputs[1].null_count()<<std::endl;
+  EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
+}
+
+
+
         TEST_F(EvaluateQueryTest, TEST_NULL_TRANSFORM_AGGREGATIONS) {
           auto input = InputTestItem{
               .query =

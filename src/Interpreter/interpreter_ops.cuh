@@ -1304,6 +1304,7 @@ public:
 						if((row_index+1) * (sizeof(int32_t)*8) > this->num_rows){
 							num_bits_to_shift = 32 - (this->num_rows % (sizeof(int32_t)*8));
 						}
+					//	printf("num_bits_to_shift %i\n", num_bits_to_shift);
 						last_value = last_value << num_bits_to_shift;
 
 						temp_null_counts[out_index] += (sizeof(int32_t) * 8) - __popc(last_value) - num_bits_to_shift; //num_bits_to_shift are bits we set to 0 , we want to pretend like they are 1's
@@ -1404,6 +1405,7 @@ __global__ void transformKernel(interpreted_operator op, gdf_size_type size)
 		op.valid_operator(row_index,(int32_t *) total_buffer,num_valid_elements,null_counts);
 	}
 
+	delete null_counts;
 
 	return;
 }

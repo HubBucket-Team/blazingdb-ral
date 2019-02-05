@@ -20,6 +20,7 @@ set(without-groupby-test_SRCS
     ${CMAKE_SOURCE_DIR}/src/ColumnManipulation.cu
     ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
     ${CMAKE_SOURCE_DIR}/src/JoinProcessor.cpp
+    ${CMAKE_SOURCE_DIR}/src/FreeMemory.cpp
     ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
     ${CMAKE_SOURCE_DIR}/src/Interpreter/interpreter_cpp.cu
     ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp

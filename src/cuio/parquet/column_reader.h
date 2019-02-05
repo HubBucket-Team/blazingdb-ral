@@ -19,9 +19,12 @@
 #ifndef _GDF_PARQUET_COLUMN_READER_H
 #define _GDF_PARQUET_COLUMN_READER_H
 
+#include <mutex>
+#include <thread>
+
 #include "decoder/cu_level_decoder.h"
 #include <cudf.h>
-#include <parquet/column_reader.h>
+#include <parquet/column_reader.h> 
 
 namespace gdf {
 namespace parquet {
@@ -60,7 +63,8 @@ public:
     /// \param[in] offset of `column` to start append data
     std::size_t ToGdfColumn(const gdf_column &   column,
                             const size_t row_group_size,
-                            const std::ptrdiff_t offset = 0);
+                            const std::ptrdiff_t offset = 0,
+                            std::mutex *mutex = nullptr);
 
     /// \brief Append data from column to gdf column
     /// \param[in,out] column with data appended
@@ -69,13 +73,15 @@ public:
     //              of each item appended to `column` from parquet file
     std::size_t ToGdfColumn(const gdf_column &   column,
                             const std::ptrdiff_t offset,
-                            std::int16_t *       d_definition_levels);
+                            std::int16_t *       d_definition_levels,
+                            std::mutex *mutex = nullptr);
 
     std::size_t ToGdfColumn(const gdf_column &   column,
                             const size_t row_group_size,
                             const std::ptrdiff_t offset,
                             std::uint8_t &       first_valid_byte,
-                            std::uint8_t &       last_valid_byte);
+                            std::uint8_t &       last_valid_byte, 
+                            std::mutex &mutex);
 
     int64_t ReadDefinitionLevels(int64_t batch_size, int16_t *levels) {
         if (descr_->max_definition_level() == 0) { return 0; }
@@ -90,6 +96,8 @@ private:
     std::unordered_map<int, std::shared_ptr<DecoderType> > decoders_;
     DecoderType *                                          current_decoder_;
     gdf::parquet::decoder::CUDALevelDecoder                def_level_decoder_;
+
+
 };
 
 using BoolReader   = ColumnReader< ::parquet::BooleanType>;

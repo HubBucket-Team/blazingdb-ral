@@ -259,7 +259,7 @@ _ProcessParquetReaderJobsThread(std::vector<ParquetReaderJob> &jobs,
                                 row_group_size,                                \
                                 jobs[current_job].offset,                      \
                                 jobs[current_job].first_valid_byte,            \
-                                jobs[current_job].last_valid_byte);            \
+                                jobs[current_job].last_valid_byte, lock);            \
         }                                                                      \
     } break
             WHEN(BOOLEAN);

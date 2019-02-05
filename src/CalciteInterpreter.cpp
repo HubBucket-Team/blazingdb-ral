@@ -539,13 +539,17 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		gdf_column_cpp index_col;
 		index_col.create_gdf_column(GDF_INT32,nrows,nullptr,get_width_dtype(GDF_INT32), "");
 
+		gdf_context ctxt;
+		ctxt->flag_nulls_sort_behavior = 0; //  Nulls are are treated as largest
+		ctxt-> flag_groupby_include_nulls = 1; // Nulls are treated as values in group by keys where NULL == NULL (SQL style)
+
 		err = gdf_group_by_wo_aggregations(num_group_columns,
 											cols.data(),
 											num_group_columns,
 											group_columns.data(),
 											group_by_columns_ptr_out.data(),
 											index_col.get_gdf_column(),
-											0);
+											ctxt);
 		
 		if (err != GDF_SUCCESS) {
 			return err;

@@ -596,7 +596,7 @@ main(int argc, const char *argv[])
         //return 1;
     }*/
 
-    std::cout << "RAL Engine starting" << std::endl;
+    std::cout << "RAL Engine starting v0.21" << std::endl;
 
     FreeMemory::Initialize();
 

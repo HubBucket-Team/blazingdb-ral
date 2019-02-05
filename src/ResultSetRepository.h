@@ -17,7 +17,7 @@
 #include <condition_variable>
 
 typedef void * response_descriptor; //this shoudl be substituted for something that can generate a response
-
+typedef std::tuple<blazing_frame, double, std::string> result_set_type;
 //singleton class
 
 class result_set_repository {
@@ -32,16 +32,16 @@ public:
 	}
 
 	query_token_t register_query(connection_id_t connection);
-	void update_token(query_token_t token, blazing_frame frame, double duration);
+	void update_token(query_token_t token, blazing_frame frame, double duration, std::string errorMsg = "");
 	connection_id_t init_session();
 	void remove_all_connection_tokens(connection_id_t connection);
-	std::tuple<blazing_frame, double> get_result(connection_id_t connection, query_token_t token);
+	result_set_type get_result(connection_id_t connection, query_token_t token);
 	gdf_column_cpp get_column(connection_id_t connection, column_token_t columnToken);
 
 	result_set_repository(result_set_repository const&)	= delete;
 	void operator=(result_set_repository const&)		= delete;
 private:
-	std::map<query_token_t,std::tuple<bool, blazing_frame, double> > result_sets;
+	std::map<query_token_t,std::tuple<bool, blazing_frame, double, std::string> > result_sets;
 	std::map<connection_id_t,std::vector<query_token_t> > connection_result_sets;
 	std::map<column_token_t,gdf_column_cpp> precalculated_columns;
 

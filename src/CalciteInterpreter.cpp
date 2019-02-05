@@ -1087,41 +1087,33 @@ query_token_t evaluate_query(
 		std::string logicalPlan,
 		connection_id_t connection,
 		std::vector<void *> handles){
+	//register the query so we can receive result requests for it
+	query_token_t token = result_set_repository::get_instance().register_query(connection);
 
-	std::cout<<"Input\n";
-//	print_column<int8_t>(input_tables[0][0].get_gdf_column());
-
-	query_token_t token = result_set_repository::get_instance().register_query(connection); //register the query so we can receive result requests for it
-
-	 std::thread t = std::thread([=]{
-	
-	CodeTimer blazing_timer;
-
-	std::vector<std::string> splitted = StringUtil::split(logicalPlan, "\n");
-	if (splitted[splitted.size() - 1].length() == 0) {
-		splitted.erase(splitted.end() -1);
-	}
-	blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
-	
-	//Todo: put it on a macro for debugging purposes!
-	/*std::cout<<"Result\n";
-	for (auto outputTable : output_frame.get_columns()) {
-		for (auto outputColumn : outputTable) {
-			print_gdf_column(outputColumn.get_gdf_column());
+	std::thread t = std::thread([=]	{
+		std::vector<std::string> splitted = StringUtil::split(logicalPlan, "\n");
+		if (splitted[splitted.size() - 1].length() == 0) {
+			splitted.erase(splitted.end() -1);
 		}
-	}
-	std::cout<<"end:Result\n";*/
 
-	double duration = blazing_timer.getDuration();
-	result_set_repository::get_instance().update_token(token, output_frame, duration);
+		try
+		{
+			CodeTimer blazing_timer;
+			blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
+			double duration = blazing_timer.getDuration();
+			result_set_repository::get_instance().update_token(token, output_frame, duration);
+		}
+		catch(const std::exception& e)
+		{
+			std::cerr << "evaluate_split_query error => " << e.what() << '\n';
+			result_set_repository::get_instance().update_token(token, blazing_frame{}, 0.0, e.what());
+		}
 
-	//@todo: hablar con felipe sobre cudaIpcCloseMemHandle
-	for(int i = 0; i < handles.size(); i++){
-		cudaIpcCloseMemHandle (handles[i]);
-	}
-	//			std::cout<<"Result\n";
-	//			print_column<int8_t>(output_frame.get_columns()[0][0].get_gdf_column());
-	 });;
+		//@todo: hablar con felipe sobre cudaIpcCloseMemHandle
+		for(int i = 0; i < handles.size(); i++){
+			cudaIpcCloseMemHandle(handles[i]);
+		}
+	});
 
 	//@todo: hablar con felipe sobre detach
 	 t.detach();

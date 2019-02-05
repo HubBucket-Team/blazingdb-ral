@@ -12,7 +12,6 @@
 #include "io/data_provider/UriDataProvider.h"
 #include "io/data_parser/DataParser.h"
 #include "io/data_provider/DataProvider.h"
-#include "io/DataLoader.h"
 
 #include <DataFrame.h>
 #include <fstream>

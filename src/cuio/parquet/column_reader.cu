@@ -598,20 +598,22 @@ TYPE_TRAITS_FACTORY(::parquet::DoubleType, GDF_FLOAT64);
 template <class DataType>
 std::size_t
 ColumnReader<DataType>::ToGdfColumn(const gdf_column &   column,
+                                    const size_t row_group_size,
                                     const std::ptrdiff_t offset,
                                     std::uint8_t &       first_valid_byte,
-                                    std::uint8_t &       last_valid_byte) {
+                                    std::uint8_t &       last_valid_byte,
+                                    std::mutex &         mutex) {
 
     if (!HasNext()) { return 0; }
     std::int64_t values_to_read = num_buffered_values_ - num_decoded_values_;
 
-    thrust::device_vector<int16_t> d_def_levels(
-      values_to_read);  //this size is work group size
+    thrust::device_vector<int16_t> d_def_levels(row_group_size);  //this size is work group size
     std::int16_t *d_definition_levels =
       thrust::raw_pointer_cast(d_def_levels.data());
 
     std::size_t rows_read_total =
-      ToGdfColumn(column, offset, d_definition_levels);
+      ToGdfColumn(column, offset, d_definition_levels, &mutex);
+
 
     std::int16_t max_definition_level = descr_->max_definition_level();
 
@@ -667,24 +669,31 @@ ColumnReader<DataType>::ToGdfColumn(const gdf_column &   column,
 
 template <class DataType>
 std::size_t
-ColumnReader<DataType>::ToGdfColumn(const gdf_column &   column,
-                                    const std::ptrdiff_t offset) {
+ColumnReader<DataType>::ToGdfColumn(const gdf_column &   column,                                     
+                                    const size_t row_group_size,
+                                    const std::ptrdiff_t offset,
+                                    std::mutex *         mutex /* = nullptr*/) {
     if (!HasNext()) { return 0; }
     std::int64_t values_to_read = num_buffered_values_ - num_decoded_values_;
 
-    thrust::device_vector<int16_t> d_def_levels(
-      values_to_read);  //this size is work group size
+    thrust::device_vector<int16_t> d_def_levels(row_group_size);  //this size is work group size
     std::int16_t *d_definition_levels =
       thrust::raw_pointer_cast(d_def_levels.data());
 
-    return ToGdfColumn(column, offset, d_definition_levels);
+    // gdf_column* ptr_column = const_cast<gdf_column*>(&column);
+    // int count;
+    // gdf_error result = gdf_count_nonzero_mask(ptr_column->valid, ptr_column->size, &count);
+    // assert(result == GDF_SUCCESS);
+    // ptr_column->null_count = ptr_column->size - static_cast<gdf_size_type>(count);
+    return  ToGdfColumn(column, offset, d_definition_levels, mutex);
 }
 
 template <class DataType>
 std::size_t
 ColumnReader<DataType>::ToGdfColumn(const gdf_column &   column,
                                     const std::ptrdiff_t offset,
-                                    std::int16_t *       d_definition_levels) {
+                                    std::int16_t *       d_definition_levels,
+                                    std::mutex *         mutex  /* = nullptr*/) {
     if (!HasNext()) { return 0; }
     using c_type = typename DataType::c_type;
 
@@ -711,7 +720,17 @@ ColumnReader<DataType>::ToGdfColumn(const gdf_column &   column,
                           &levels_read,
                           &values_read,
                           &nulls_count);
-
+        
+        gdf_column* ptr_column = const_cast<gdf_column*>(&column);
+        if (mutex) {
+            mutex->lock();
+            ptr_column->null_count += nulls_count;
+            mutex->unlock();
+        }    
+        else {
+            ptr_column->null_count += nulls_count;
+        }
+        
         rows_read_total += rows_read;
     } while (this->HasNext());
     return static_cast<std::size_t>(rows_read_total);

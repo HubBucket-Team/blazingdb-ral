@@ -6,7 +6,7 @@
 #include <iostream>
 
 #include <arrow/util/bit-util.h>
-#include "parquet/util/bit_util.cuh"
+#include "cuio/parquet/util/bit_util.cuh"
 #include <cudf.h>
 #include <thrust/device_ptr.h>
 #include <thrust/functional.h>

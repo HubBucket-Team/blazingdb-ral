@@ -437,7 +437,7 @@ _AllocateGdfColumn(const std::size_t                        num_rows,
 
     _gdf_column.size  = num_rows;
     _gdf_column.dtype = _DTypeFrom(column_descriptor);
-
+    _gdf_column.null_count = 0;
     return GDF_SUCCESS;
 }  // namespace
 

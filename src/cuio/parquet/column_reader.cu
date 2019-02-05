@@ -711,6 +711,8 @@ ColumnReader<DataType>::ToGdfColumn(const gdf_column &   column,
                           &levels_read,
                           &values_read,
                           &nulls_count);
+        gdf_column* ptr_column = const_cast<gdf_column*>(&column);
+        ptr_column->null_count = nulls_count;
         rows_read_total += rows_read;
     } while (this->HasNext());
     return static_cast<std::size_t>(rows_read_total);

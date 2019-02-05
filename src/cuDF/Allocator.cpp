@@ -1,5 +1,5 @@
 #include "cuDF/Allocator.h"
-#include "rmm.h"
+#include "rmm/rmm.h"
 
 #include "../FreeMemory.h"
 

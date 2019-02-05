@@ -15,7 +15,7 @@
 #include <thrust/iterator/iterator_adaptor.h>
 #include <thrust/iterator/transform_iterator.h>
 
-
+#include "Utils.cuh"
 
 template <typename InputType>
 struct negative_to_zero : public thrust::unary_function< InputType, InputType>
@@ -79,10 +79,10 @@ void materialize_valid_ptrs(gdf_column * input, gdf_column * output, gdf_column 
 	int grid_size, block_size;
 
 	CheckCudaErrors(cudaOccupancyMaxPotentialBlockSize(&grid_size,&block_size,gather_bits<unsigned int, int>));
-	
+
 	gather_bits<<<grid_size, block_size>>>((int *) row_indices->data,(int *) input->valid,(int *) output->valid, row_indices->size);
-	
-	cuda_error = cudaGetLastError();
+
+	cudaError_t cuda_error = cudaGetLastError();
 	if(cuda_error != cudaSuccess){
 		throw std::runtime_error("In materialize_valid_ptrs function: cuda error");
 	}
@@ -144,4 +144,3 @@ void materialize_column(gdf_column * input, gdf_column * output, gdf_column * ro
 	
 	throw std::runtime_error("In materialize_column function: unsupported type");
 }
-

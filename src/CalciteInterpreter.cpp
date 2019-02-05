@@ -145,8 +145,7 @@ void create_null_value_gdf_column(int64_t output_value,
     output_vector.emplace_back(output_column);
 }
 
-gdf_error perform_avg(gdf_column* column_output, gdf_column* column_input) {
-    gdf_error error;
+void perform_avg(gdf_column* column_output, gdf_column* column_input) {
     gdf_column_cpp column_avg;
     uint64_t avg_sum = 0;
     uint64_t avg_count = column_input->size;
@@ -154,10 +153,7 @@ gdf_error perform_avg(gdf_column* column_output, gdf_column* column_input) {
         auto dtype = column_input->dtype;
         auto dtype_size = get_width_dtype(dtype);
         column_avg.create_gdf_column(dtype, 1, nullptr, dtype_size);
-        error = gdf_sum(column_input, column_avg.get_gdf_column()->data, dtype_size);
-        if (error != GDF_SUCCESS) {
-            return error;
-        }
+        CUDF_CALL( gdf_sum(column_input, column_avg.get_gdf_column()->data, dtype_size) );
         CheckCudaErrors(cudaMemcpy(&avg_sum, column_avg.get_gdf_column()->data, dtype_size, cudaMemcpyDeviceToHost));
     }
     {
@@ -183,10 +179,9 @@ gdf_error perform_avg(gdf_column* column_output, gdf_column* column_input) {
 //            }
         }
         else {
-            error = GDF_UNSUPPORTED_DTYPE;
+            throw std::runtime_error{"In perform_avg function: unsupported dtype"};
         }
     }
-    return error;
 }
 
 
@@ -433,7 +428,7 @@ std::vector<int> get_group_columns(std::string query_part){
 
 
 
-gdf_error process_aggregate(blazing_frame & input, std::string query_part){
+void process_aggregate(blazing_frame & input, std::string query_part){
 	/*
 	 * 			String sql = "select sum(e), sum(z), x, y from hr.emps group by x , y";
 	 * 			generates the following calcite relational algebra
@@ -473,8 +468,6 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		}
 	}
 
-	gdf_error err = GDF_SUCCESS;
-	
 	// Group by without aggregation 
 	if (aggregation_types.size() == 0) {
 		size_t num_group_columns = group_columns.size();
@@ -497,18 +490,14 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		gdf_column_cpp index_col;
 		index_col.create_gdf_column(GDF_INT32,nrows,nullptr,get_width_dtype(GDF_INT32), "");
 
-		err = gdf_group_by_wo_aggregations(num_group_columns,
+		CUDF_CALL( gdf_group_by_wo_aggregations(num_group_columns,
 											cols.data(),
 											num_group_columns,
 											group_columns.data(),
 											group_by_columns_ptr_out.data(),
 											index_col.get_gdf_column(),
-											0);
-		
-		if (err != GDF_SUCCESS) {
-			return err;
-		}
-				
+											0) );
+
 		//find the widest possible column
 		int widest_column = 0;
 		for(int i = 0; i < input.get_width();i++){
@@ -530,8 +519,6 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 			temp_output.update_null_count();
 			input.set_column(i,temp_output.clone(input.get_column(i).name()));
 		}
-
-		return err;
 	}
 
 	gdf_column_cpp temp;
@@ -553,7 +540,6 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 	//TODO de donde saco el nombre de la columna aqui???
 	if(max_temp_type != GDF_invalid){
 		temp.create_gdf_column(max_temp_type,size,nullptr,get_width_dtype(max_temp_type), "");
-
 	}
 
 	gdf_column ** group_by_columns_ptr = new gdf_column *[group_columns.size()];
@@ -616,7 +602,7 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		case GDF_SUM:
             if (group_columns.size() == 0) {
                 if (aggregation_input.get_gdf_column()->size != 0) {
-                    err = gdf_sum(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
+                    CUDF_CALL( gdf_sum(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type)) );
                 }
                 else {
                     create_null_value_gdf_column(0,
@@ -627,8 +613,8 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
                                                 output_columns_aggregations);
                 }
 			}else{
-				err = gdf_group_by_sum(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
-						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);
+				CUDF_CALL( gdf_group_by_sum(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt) );
 //				std::cout<<"direct "<<(group_by_columns_ptr_out[0] == nullptr)<<std::endl;
 //								print_gdf_column(group_by_columns_ptr_out[0]);
 //								std::cout<<"direct done"<<std::endl;
@@ -640,7 +626,7 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		case GDF_MIN:
 			if(group_columns.size() == 0){
                 if (aggregation_input.get_gdf_column()->size != 0) {
-                    err = gdf_min(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
+                    CUDF_CALL( gdf_min(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type)) );
                 }
                 else {
                     create_null_value_gdf_column(0,
@@ -651,14 +637,14 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
                                                 output_columns_aggregations);
                 }
 			}else{
-				err = gdf_group_by_min(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
-						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);
+				CUDF_CALL( gdf_group_by_min(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt) );
 			}
 			break;
 		case GDF_MAX:
 			if(group_columns.size() == 0){
                 if (aggregation_input.get_gdf_column()->size != 0) {
-                    err = gdf_max(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type));
+                    CUDF_CALL( gdf_max(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type)) );
                 }
                 else {
                      create_null_value_gdf_column(0,
@@ -669,14 +655,14 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
                                                 output_columns_aggregations);
                 }
 			}else{
-				err = gdf_group_by_max(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
-						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);
+				CUDF_CALL( gdf_group_by_max(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt) );
 			}
 			break;
 		case GDF_AVG:
             if(group_columns.size() == 0){
                 if (aggregation_input.get_gdf_column()->size != 0) {
-                    err = perform_avg(output_column.get_gdf_column(), aggregation_input.get_gdf_column());
+                    perform_avg(output_column.get_gdf_column(), aggregation_input.get_gdf_column());
                 }
                 else {
                     create_null_value_gdf_column(0,
@@ -688,8 +674,8 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
                 }
             }
 			else{
-				err = gdf_group_by_avg(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
-						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);
+				CUDF_CALL( gdf_group_by_avg(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt) );
 			}
 			break;
 		case GDF_COUNT:
@@ -700,18 +686,15 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
                 uint64_t result = aggregation_input.get_gdf_column()->size - aggregation_input.get_gdf_column()->null_count;                
 				CheckCudaErrors(cudaMemcpy(output_column.get_gdf_column()->data, &result, sizeof(uint64_t), cudaMemcpyHostToDevice));			
 			}else{
-				err = gdf_group_by_count(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
-						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);
+				CUDF_CALL( gdf_group_by_count(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt) );
 			}
 			break;
 		}
 
-		if(err == GDF_SUCCESS){
-			//so that subsequent iterations won't be too large
-			aggregation_size = output_column.size();
-		}else{
-			return err;
-		}
+		//so that subsequent iterations won't be too large
+		aggregation_size = output_column.size();
+
 		/*
 		 * GDF_SUM = 0,
   GDF_MIN,
@@ -750,11 +733,9 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 	input.add_table(output_columns_group);
 	input.add_table(output_columns_aggregations);
 	input.consolidate_tables();
-
-	return GDF_SUCCESS;
 }
 
-gdf_error process_sort(blazing_frame & input, std::string query_part){
+void process_sort(blazing_frame & input, std::string query_part){
 	static CodeTimer timer;
 	timer.reset();
 	std::cout<<"about to process sort"<<std::endl;
@@ -786,16 +767,13 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 	gdf_column_cpp index_col;
 	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
 
-	gdf_error err = gdf_order_by(cols.data(),
+	CUDF_CALL( gdf_order_by(cols.data(),
 								 (int8_t*)(asc_desc_col.get_gdf_column()->data),
 								 num_sort_columns,
 								 index_col.get_gdf_column(),
-								 flag_nulls_are_smallest);
+								 flag_nulls_are_smallest) );
 
 	Library::Logging::Logger().logInfo("-> Sort sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
-
-	if (err != GDF_SUCCESS)
-		return err;
 
 	timer.reset();
 	//find the widest possible column
@@ -806,7 +784,6 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 		if(cur_width > widest_column){
 			widest_column = cur_width;
 		}
-
 	}
 
 	gdf_column_cpp temp_output;
@@ -849,11 +826,10 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 		//free_gdf_column(&empty);*/
 	}
 	Library::Logging::Logger().logInfo("-> Sort sub block 3 took " + std::to_string(timer.getDuration()) + " ms");
-	return GDF_SUCCESS;
 }
 
 //TODO: this does not compact the allocations which would be nice if it could
-gdf_error process_filter(blazing_frame & input, std::string query_part){
+void process_filter(blazing_frame & input, std::string query_part){
 	static CodeTimer timer;
 
 	size_t size = input.get_column(0).size();
@@ -986,7 +962,7 @@ blazing_frame evaluate_split_query(
 		std::vector<std::string> query, int call_depth = 0){
 	assert(input_tables.size() == table_names.size());
 	
-	static CodeTimer blazing_timer;			
+	static CodeTimer blazing_timer;
 
 	if(query.size() == 1){
 		//process yourself and return
@@ -1062,7 +1038,7 @@ blazing_frame evaluate_split_query(
 			Library::Logging::Logger().logInfo("process_union took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(left_frame.get_column(0).size()) + " rows");
 			return result_frame;
 		}else{
-			//probably an error here
+			throw std::runtime_error{"In evaluate_split_query function: unsupported query operator"};
 		}
 
 	}else{
@@ -1084,35 +1060,21 @@ blazing_frame evaluate_split_query(
 			return child_frame;
 		}else if(is_aggregate(query[0])){
 			blazing_timer.reset();
-			gdf_error err = process_aggregate(child_frame,query[0]);
-			if (err != GDF_SUCCESS) {
-				//throw bla;
-			}
-			
+			process_aggregate(child_frame,query[0]);		
 			Library::Logging::Logger().logInfo("process_aggregate took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
 			return child_frame;
 		}else if(is_sort(query[0])){
 			blazing_timer.reset();
-			gdf_error err = process_sort(child_frame,query[0]);
-			if (err != GDF_SUCCESS) {
-				//throw bla;
-			}
+			process_sort(child_frame,query[0]);
 			Library::Logging::Logger().logInfo("process_sort took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
 			return child_frame;
 		}else if(is_filter(query[0])){
 			blazing_timer.reset();
-			gdf_error err = process_filter(child_frame,query[0]);
-			if (err != GDF_SUCCESS) {
-				//throw bla;
-			}
+			process_filter(child_frame,query[0]);
 			Library::Logging::Logger().logInfo("process_filter took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
-			if(err != GDF_SUCCESS){
-				std::cout<<"Error in filter: "<<err<<std::endl;
-			}
-
 			return child_frame;
 		}else{
-			//throw bla;
+			throw std::runtime_error{"In evaluate_split_query function: unsupported query operator"};
 		}
 		//return frame
 	}

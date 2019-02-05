@@ -882,15 +882,16 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 	asc_desc_col.create_gdf_column(GDF_INT8,num_sort_columns,nullptr,1, "");
 	CheckCudaErrors(cudaMemcpy(asc_desc_col.get_gdf_column()->data, sort_order_types.data(), sort_order_types.size() * sizeof(int8_t), cudaMemcpyHostToDevice));
 
-	int flag_nulls_are_smallest = 0;  // TODO: need to be able to specify this based on the query
 	gdf_column_cpp index_col;
 	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
 
+	gdf_context context;
+	context.flag_nulls_sort_behavior = 0; // Nulls are are treated as largest
 	gdf_error err = gdf_order_by(cols.data(),
 								 (int8_t*)(asc_desc_col.get_gdf_column()->data),
 								 num_sort_columns,
 								 index_col.get_gdf_column(),
-								 flag_nulls_are_smallest);
+								 &context);
 
 	Library::Logging::Logger().logInfo("-> Sort sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
 

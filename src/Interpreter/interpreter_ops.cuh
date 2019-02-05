@@ -242,7 +242,7 @@ private:
 	int ThreadBlockSize;
 
 	gdf_size_type * null_counts_inputs;
-
+	gdf_size_type * null_counts_outputs;
 
 
 	template<typename LocalStorageType, typename BufferType>
@@ -844,9 +844,21 @@ public:
 		space += (sizeof(gdf_dtype) * num_final_outputs); //space for pointers to types for each input_index, e.g. if input_index = 1 then this value should contain column_1 type
 		space += sizeof(gdf_binary_operator) * _num_operations;
 		space += sizeof(gdf_unary_operator) * _num_operations;
-		space += sizeof(gdf_size_type) * num_inputs;
+		space += sizeof(gdf_size_type) * num_inputs; //space for null_counts_inputs
+		space += sizeof(gdf_size_type) * num_final_outputs; //space for null count outputs
 		space += sizeof(int64_t) * _num_operations * 2; //space for scalar inputs
 		return space;
+	}
+
+	void update_columns_null_count(std::vector<gdf_column *> output_columns){
+		gdf_size_type * outputs = new gdf_size_type[output_columns.size()];
+		cudaMemcpyAsync(outputs,this->null_counts_outputs,sizeof(gdf_size_type) * output_columns.size(),cudaMemcpyDeviceToHost,this->stream);
+		cudaStreamSynchronize(this->stream);
+		for(int i = 0; i < output_columns.size(); i++){
+			//std::cout<<"outputs["<<i<<"] = "<<outputs[i]<<std::endl;
+			output_columns[i]->null_count = outputs[i];
+		}
+		delete outputs;
 	}
 	//does not perform allocations
 	InterpreterFunctor(void  ** column_data, //these are device side pointers to the device pointer found in gdf_column.data
@@ -883,6 +895,12 @@ public:
 
 	}
 
+	__device__
+	void zero_null_counts(){
+		for(int out_index = 0; out_index < this->num_final_outputs; out_index++){
+			this->null_counts_outputs[out_index] = 0;
+		}
+	}
 
 	//simpler api and requires allocating just one block of temp space with
 	// char * to make sure it can be dereferenced at one byte boundaries
@@ -942,6 +960,8 @@ public:
 		cur_temp_space += sizeof(int64_t) * num_operations;
 		null_counts_inputs = (gdf_size_type *) cur_temp_space;
 		cur_temp_space += sizeof(gdf_size_type) * num_columns;
+		null_counts_outputs = (gdf_size_type *) cur_temp_space;
+		cur_temp_space += sizeof(gdf_size_type) * num_final_outputs;
 		valid_ptrs = (temp_gdf_valid_type **) cur_temp_space;
 		cur_temp_space += sizeof(temp_gdf_valid_type *) * num_columns;
 		valid_ptrs_out = (temp_gdf_valid_type **) cur_temp_space;
@@ -1206,6 +1226,9 @@ public:
 
 	}
 
+	__device__ short get_num_outputs(){
+		return this->num_final_outputs;
+	}
 
 	__device__ __forceinline__ void operator()(const IndexT &row_index, int64_t total_buffer[]) {
 		//		__shared__ char buffer[BufferSize * THREADBLOCK_SIZE];
@@ -1236,7 +1259,7 @@ public:
 
 	}
 
-	__device__ __forceinline__ void valid_operator(const IndexT &row_index, int32_t total_buffer[]) {
+	__device__ __forceinline__ void valid_operator(const IndexT &row_index, int32_t total_buffer[],gdf_size_type num_valid_elements, gdf_size_type temp_null_counts[]) {
 		//TODO: this should happen in configuration and be stored in a bool to reduce the number of instructions
 		//executed inthe kernel
 //		extern __shared__  int32_t  total_buffer[];
@@ -1270,11 +1293,33 @@ public:
 			for(column_index_type out_index = 0; out_index < this->num_final_outputs; out_index++ ){
 				if(this->valid_ptrs_out[out_index] != nullptr){
 					//	 void write_valid_data(column_index_type cur_column, column_index_type cur_buffer, int32_t * buffer,const size_t & row_index)
+
 					write_valid_data<int32_t>(out_index,this->final_output_positions[out_index],total_buffer,row_index);
+
+					if(row_index + (blockDim.x * gridDim.x) >= num_valid_elements){
+						//can't use popc because it will count bits that aren't relevant
+						int last_value = get_data_from_buffer<int32_t>(total_buffer,this->final_output_positions[out_index]);
+						//right shift out all the bits that are not relevant
+						int num_bits_to_shift = 0;
+						if((row_index+1) * (sizeof(int32_t)*8) > this->num_rows){
+							num_bits_to_shift = 32 - (this->num_rows % (sizeof(int32_t)*8));
+						}
+						last_value = last_value << num_bits_to_shift;
+
+						temp_null_counts[out_index] += (sizeof(int32_t) * 8) - __popc(last_value) - num_bits_to_shift; //num_bits_to_shift are bits we set to 0 , we want to pretend like they are 1's
+					//	printf("temp_null_counts %ull\n",(unsigned long long)temp_null_counts[out_index]);
+					//	printf("before total_null counts %ull\n",this->null_counts_outputs[out_index]);
+						atomicAdd((unsigned long long *) this->null_counts_outputs + out_index,(unsigned long long)temp_null_counts[out_index]);
+					//	printf("after total_null counts %ull\n",this->null_counts_outputs[out_index]);
+					}else{
+						temp_null_counts[out_index] += (sizeof(int32_t) * 8) - __popc(get_data_from_buffer<int32_t>(total_buffer,this->final_output_positions[out_index]));
+					}
 
 				}
 
 			}
+
+
 		}
 
 
@@ -1346,11 +1391,17 @@ __global__ void transformKernel(interpreted_operator op, gdf_size_type size)
 	gdf_size_type rows_per_element = sizeof(temp_gdf_valid_type) * 8;
 	gdf_size_type num_valid_elements =  (size +(rows_per_element - 1)) / rows_per_element;
 
+	gdf_size_type * null_counts = new gdf_size_type[op.get_num_outputs()];
+	for(int out_index = 0; out_index < op.get_num_outputs(); out_index++ ){
+		null_counts[out_index] = 0;
+
+	}
+	op.zero_null_counts();
 	for (gdf_size_type row_index = blockIdx.x * blockDim.x + threadIdx.x;
 			row_index < num_valid_elements;
 			row_index += blockDim.x * gridDim.x)
 	{
-		op.valid_operator(row_index,(int32_t *) total_buffer);
+		op.valid_operator(row_index,(int32_t *) total_buffer,num_valid_elements,null_counts);
 	}
 
 

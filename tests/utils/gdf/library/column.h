@@ -167,7 +167,13 @@ public:
     std::ostringstream stream;
 
     for (std::size_t i = 0; i < values_.size(); i++) {
-      stream << values_.at(i) << ",";
+    	if(this->is_valid(i)){
+    	      stream << values_.at(i)<< ",";
+
+    	}else{
+    	      stream << "@" << ",";
+
+    	}
     }
     return std::string{stream.str()};
   }

@@ -275,13 +275,15 @@ gdf_error perform_operation(	std::vector<gdf_column *> output_columns,
 			left_scalars,
 			right_scalars
 			,stream,
-			temp_space,8,block_size);
+			temp_space,max_output,block_size);
 	transformKernel<<<min_grid_size
 					,block_size,
 					//	transformKernel<<<1
 					//	,1,
 					shared_memory_per_thread * block_size,
 					stream>>>(op, num_rows);
+
+	op.update_columns_null_count(output_columns);
 
 	cuDF::Allocator::deallocate(temp_space,stream);
 	cudaStreamSynchronize(stream);

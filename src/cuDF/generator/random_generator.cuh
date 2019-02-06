@@ -44,8 +44,8 @@ namespace generator {
         std::vector<T> operator()(std::size_t size) {
             thrust::device_vector<T> data(size);
 
-            thrust::transform(thrust::counting_iterator<T>(min_value),
-                              thrust::counting_iterator<T>(max_value),
+            thrust::transform(thrust::counting_iterator<T>(0),
+                              thrust::counting_iterator<T>(size),
                               data.begin(),
                               UniformRandomGenerator<T>(min_value, max_value, time(NULL)));
 

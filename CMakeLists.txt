@@ -70,8 +70,8 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/src/cuDF)
 get_directory_property(cudf_adapter_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/cuDF DEFINITION source_files)
 
 ## ParquetReader source files
-add_subdirectory(${CMAKE_SOURCE_DIR}/src/parquet)
-get_directory_property(parquet_reader_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/parquet DEFINITION source_files)
+add_subdirectory(${CMAKE_SOURCE_DIR}/src/cuio/parquet)
+get_directory_property(parquet_reader_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/cuio/parquet DEFINITION source_files)
 
 ## Target source files
 set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp

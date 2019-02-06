@@ -60,7 +60,7 @@ INSTANTIATE_TEST_CASE_P(
   testing::ValuesIn({
     Item{// select count(*) from main.nation
          "LogicalAggregate(group=[{}], EXPR$0=[COUNT()])\n"
-         "  LogicalProject($f0=[0])\n"
+         "  LogicalProject(f0=[$0])\n"
          "    EnumerableTableScan(table=[[main, nation]])",
          1,
          {7}},

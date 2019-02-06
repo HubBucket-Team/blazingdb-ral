@@ -58,12 +58,16 @@ struct logical_filter_TEST : public ::testing::Test {
 	void TearDown() {
 
 		cudaMemcpy(device_output, output.data(), num_values * WIDTH_PER_VALUE, cudaMemcpyDeviceToHost);
-
+		bool all_equal  = true;
 		for(int i = 0; i < num_values; i++){
-			EXPECT_TRUE(host_output[i] == device_output[i]);
-
+			//EXPECT_TRUE(host_output[i] == device_output[i]);
+			if(host_output[i] != device_output[i]){
+				all_equal = false;
+				std::cout<<"inputs "<<(int) input1[i]<<" , "<<(int) input2[i]<<" , "<<(int) input3[i]<<" , "<<(int)input4[i]<<std::endl;
+				std::cout<<"row: "<<i<<" "<<(int) host_output[i]<<" != "<<(int) device_output[i]<<std::endl;
+			}
 		}
-
+		EXPECT_TRUE(all_equal);
 		//print_column(output.get_gdf_column());
 	}
 
@@ -94,8 +98,7 @@ TEST_F(logical_filter_TEST, processing_expressions0) {
 		evaluate_expression(
 				blzframe,
 				expression,
-				output,
-				temp);
+				output);
 
 		for(int i = 0; i < num_values; i++){
 			host_output[i] = input2[i] > 5 ? 1 : 0;
@@ -112,8 +115,7 @@ TEST_F(logical_filter_TEST, processing_expressions1) {
 		evaluate_expression(
 				blzframe,
 				expression,
-				output,
-				temp);
+				output);
 
 		for(int i = 0; i < num_values; i++){
 			host_output[i] = ((input1[i] * input2[i]) + input3[i]);
@@ -129,8 +131,7 @@ TEST_F(logical_filter_TEST, processing_expressions2) {
 		evaluate_expression(
 				blzframe,
 				expression,
-				output,
-				temp);
+				output);
 
 		for(int i = 0; i < num_values; i++){
 			host_output[i] = ((input1[i] == input2[i]) == input3[i]) ? 1 : 0;
@@ -146,8 +147,7 @@ TEST_F(logical_filter_TEST, processing_expressions3) {
 		evaluate_expression(
 				blzframe,
 				expression,
-				output,
-				temp);
+				output);
 
 		for(int i = 0; i < num_values; i++){
 			host_output[i] = input1[i] * input1[i];
@@ -163,8 +163,7 @@ TEST_F(logical_filter_TEST, processing_expressions4) {
 		evaluate_expression(
 				blzframe,
 				expression,
-				output,
-				temp);
+				output);
 
 		for(int i = 0; i < num_values; i++){
 			host_output[i] = ((input1[i] * input1[i]) == 1) ? 1 : 0;
@@ -180,8 +179,7 @@ TEST_F(logical_filter_TEST, processing_expressions5) {
 		evaluate_expression(
 				blzframe,
 				expression,
-				output,
-				temp);
+				output);
 
 		for(int i = 0; i < num_values; i++){
 			host_output[i] = (input2[i] == input3[i]) ? 1 : 0;
@@ -215,8 +213,7 @@ TEST_F(logical_filter_TEST, processing_logical_expressions1) {
 		evaluate_expression(
 				blzframe,
 				expression,
-				output,
-				temp);
+				output);
 
 		for(int i = 0; i < num_values; i++){
 			host_output[i] = ((input1[i] * input1[i]) == 1) && (input2[i] == 2) ? 1 : 0;
@@ -232,8 +229,7 @@ TEST_F(logical_filter_TEST, processing_logical_expressions2) {
 		evaluate_expression(
 				blzframe,
 				expression,
-				output,
-				temp);
+				output);
 
 		for(int i = 0; i < num_values; i++){
 			host_output[i] = ((input1[i] * input1[i]) == 1) && (input2[i] == 2) && (input3[i] > 0) ? 1 : 0;
@@ -249,8 +245,7 @@ TEST_F(logical_filter_TEST, processing_logical_expressions3) {
 		evaluate_expression(
 				blzframe,
 				expression,
-				output,
-				temp);
+				output);
 
 		for(int i = 0; i < num_values; i++){
 			host_output[i] = (input1[i] == 1) && (input2[i] > 5) && (input3[i] > 0) ? 1 : 0;
@@ -266,8 +261,7 @@ TEST_F(logical_filter_TEST, processing_logical_expressions31) {
 		evaluate_expression(
 				blzframe,
 				expression,
-				output,
-				temp);
+				output);
 
 		for(int i = 0; i < num_values; i++){
 			host_output[i] = (input1[i] == 1) && (input2[i] > 5) && (input4[i] > 10) ? 1 : 0;
@@ -283,8 +277,7 @@ TEST_F(logical_filter_TEST, processing_logical_expressions4) {
 		evaluate_expression(
 				blzframe,
 				expression,
-				output,
-				temp);
+				output);
 
 		for(int i = 0; i < num_values; i++){
 			host_output[i] = (input1[i] == 1) && (input2[i] > 5) ? 1 : 0;
@@ -300,8 +293,7 @@ TEST_F(logical_filter_TEST, processing_logical_expressions5) {
 		evaluate_expression(
 				blzframe,
 				expression,
-				output,
-				temp);
+				output);
 
 		for(int i = 0; i < num_values; i++){
 			host_output[i] = (input2[i] > 5) && (input3[i] > 0) ? 1 : 0;
@@ -317,8 +309,7 @@ TEST_F(logical_filter_TEST, processing_logical_expressions51) {
 		evaluate_expression(
 				blzframe,
 				expression,
-				output,
-				temp);
+				output);
 
 		for(int i = 0; i < num_values; i++){
 			host_output[i] = (input2[i] > 50) && (input3[i] > 0) ? 1 : 0;
@@ -334,8 +325,7 @@ TEST_F(logical_filter_TEST, processing_logical_expressions52) {
 		evaluate_expression(
 				blzframe,
 				expression,
-				output,
-				temp);
+				output);
 
 		for(int i = 0; i < num_values; i++){
 			host_output[i] = (input2[i] > 5) && (input3[i] > 100) ? 1 : 0;
@@ -351,8 +341,7 @@ TEST_F(logical_filter_TEST, processing_logical_expressions6) {
 		evaluate_expression(
 				blzframe,
 				expression,
-				output,
-				temp);
+				output);
 
 		for(int i = 0; i < num_values; i++){
 			host_output[i] = (input1[i] == 1) && (input2[i] > 5) && (input3[i] == 0) && (input4[i] > 5) ? 1 : 0;
@@ -368,8 +357,7 @@ TEST_F(logical_filter_TEST, processing_logical_expressions7) {
 		evaluate_expression(
 				blzframe,
 				expression,
-				output,
-				temp);
+				output);
 
 		for(int i = 0; i < num_values; i++){
 			host_output[i] = (input1[i] == 1) && (input2[i] > 5) && (input3[i] == 1) && (input4[i] > 5) ? 1 : 0;

@@ -162,11 +162,13 @@ TEST_F(EvaluateQueryTest, TEST_03) {
   std::vector<gdf_column_cpp> outputs;
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
+  
   EXPECT_TRUE(err == GDF_SUCCESS);
 
   auto output_table =
       GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
-
+  std::cout << "output with nulls\n";
+  output_table.print(std::cout);
   std::vector<int> valid_result {1, 0, 0, 0, 0};
   CHECK_RESULT(output_table, input.resultTable, valid_result);
 }

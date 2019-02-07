@@ -273,13 +273,11 @@ static result_pair closeConnectionService(uint64_t accessToken, Buffer&& request
   std::cout << "accessToken: " << accessToken << std::endl;
 
   try {
-  result_set_repository::get_instance().remove_all_connection_tokens(accessToken);
-
-  // NOTE: use next 3 lines to check with "/usr/local/cuda/bin/cuda-memcheck  --leak-check full  ./testing-libgdf"   
-  // GDFRefCounter::getInstance()->show_summary();
-  // cudaDeviceReset();
-  // exit(0);
-
+    result_set_repository::get_instance().remove_all_connection_tokens(accessToken);
+    // NOTE: use next 3 lines to check with "/usr/local/cuda/bin/cuda-memcheck  --leak-check full  ./testing-libgdf"   
+    // GDFRefCounter::getInstance()->show_summary();
+    // cudaDeviceReset();
+    // exit(0);
   } catch (std::runtime_error &error) {
      std::cout << error.what() << std::endl;
      ResponseErrorMessage errorMessage{ std::string{error.what()} };
@@ -398,24 +396,12 @@ template<class FileParserType>
 void load_files(FileParserType&& parser, const std::vector<Uri>& uris, std::vector<gdf_column_cpp>& out_columns) {
 	auto provider = std::make_unique<ral::io::uri_data_provider>(uris);
 	std::vector<std::vector<gdf_column_cpp>> all_parts;
-  try
-  {
-    while (provider->has_next()) {
-      std::vector<gdf_column_cpp> columns;
-      std::string user_readable_file_handle = provider->get_current_user_readable_file_handle();
 
-      gdf_error error = parser.parse(provider->get_next(), columns);
-      if(error != GDF_SUCCESS){
-        //TODO: probably want to pass this up as an error
-        std::cout<<"Could not parse "<<user_readable_file_handle<<std::endl;
-      }else{
-        all_parts.push_back(columns);
-      }
-    }
-  }
-  catch(const std::exception& e)
-  {
-    std::cerr << e.what() << '\n';
+  while (provider->has_next()) {
+    std::vector<gdf_column_cpp> columns;
+    std::string user_readable_file_handle = provider->get_current_user_readable_file_handle();
+    parser.parse(provider->get_next(), columns);
+    all_parts.push_back(columns);
   }
 
   size_t num_files = all_parts.size();
@@ -443,12 +429,8 @@ void load_files(FileParserType&& parser, const std::vector<Uri>& uris, std::vect
       gdf_column_cpp output_col;
       auto & lhs = all_parts[0][index_col];
       output_col.create_gdf_column(lhs.dtype(), col_total_size, nullptr, get_width_dtype(lhs.dtype()), lhs.name());
-      gdf_error err = gdf_column_concat(output_col.get_gdf_column(), columns.data(), columns.size());
-      if (err == GDF_SUCCESS) {
-        out_columns.push_back(output_col);
-      } else {
-        std::cerr << "ERROR: gdf_column_concat\n";
-      }
+      CUDF_CALL(gdf_column_concat(output_col.get_gdf_column(), columns.data(), columns.size()));
+      out_columns.push_back(output_col);
     }
   }
 }
@@ -465,57 +447,41 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 	std::cout << "FirstColumn File: "
 			<< requestPayload.tableGroup.tables[0].files[0]
 			<< std::endl;
-  std::vector<std::vector<gdf_column_cpp>> input_tables;
-  std::vector<std::string> table_names;
-  std::vector<std::vector<std::string>> all_column_names;
-
-  for(size_t i = 0; i < requestPayload.tableGroup.tables.size(); i++) {
-    auto table_info = requestPayload.tableGroup.tables[i];
-    std::cout << "\n SchemaType: " << table_info.schemaType << std::endl;
-    std::vector<gdf_column_cpp> table_cpp;
-    if (table_info.schemaType ==  blazingdb::protocol::io::FileSchemaType_PARQUET) {
-      std::vector<Uri> uris;
-      for (auto file_path : table_info.files) {
-        uris.push_back(Uri{file_path});
-      }
-      ral::io::parquet_parser parser;
-      load_files(std::move(parser), uris, table_cpp);
-    } else {
-      std::vector<Uri> uris = { Uri{table_info.files[0]} }; //@todo, concat many files in one single table
-      auto csv_params = table_info.csv;
-      std::vector<gdf_dtype> types;
-      for(auto val : csv_params.dtypes) {
-        types.push_back( (gdf_dtype) val );
-      }
-      ral::io::csv_parser parser(csv_params.delimiter, csv_params.line_terminator, csv_params.skip_rows, csv_params.names, types);
-      load_files(std::move(parser), uris, table_cpp);
-    }
-    input_tables.push_back(table_cpp);
-    table_names.push_back(table_info.name);
-    all_column_names.push_back(table_info.columnNames);
-  }
-
+  
   uint64_t resultToken = 0L;
   try {
-    resultToken = result_set_repository::get_instance().register_query(accessToken);
+    // Read files
+    std::vector<std::vector<gdf_column_cpp>> input_tables;
+    std::vector<std::string> table_names;
+    std::vector<std::vector<std::string>> all_column_names;
+    for(size_t i = 0; i < requestPayload.tableGroup.tables.size(); i++) {
+      auto table_info = requestPayload.tableGroup.tables[i];
+      std::cout << "\n SchemaType: " << table_info.schemaType << std::endl;
+      std::vector<gdf_column_cpp> table_cpp;
+      if (table_info.schemaType ==  blazingdb::protocol::io::FileSchemaType_PARQUET) {
+        std::vector<Uri> uris;
+        for (auto file_path : table_info.files) {
+          uris.push_back(Uri{file_path});
+        }
+        ral::io::parquet_parser parser;
+        load_files(std::move(parser), uris, table_cpp);
+      } else {
+        std::vector<Uri> uris = { Uri{table_info.files[0]} }; //@todo, concat many files in one single table
+        auto csv_params = table_info.csv;
+        std::vector<gdf_dtype> types;
+        for(auto val : csv_params.dtypes) {
+          types.push_back( (gdf_dtype) val );
+        }
+        ral::io::csv_parser parser(csv_params.delimiter, csv_params.line_terminator, csv_params.skip_rows, csv_params.names, types);
+        load_files(std::move(parser), uris, table_cpp);
+      }
+      input_tables.push_back(table_cpp);
+      table_names.push_back(table_info.name);
+      all_column_names.push_back(table_info.columnNames);
+    }
 
-    // void data_loader<DataProvider, FileParser>::load_data(std::vector<gdf_column_cpp> & columns, std::vector<bool> include_column){
-
-    std::thread t = std::thread([=]{
-        CodeTimer blazing_timer;
-
-        blazing_frame output_frame;
-
-        std::vector<gdf_column_cpp> columns;
-        gdf_error error = evaluate_query(input_tables, table_names, all_column_names, requestPayload.statement, columns);
-
-        output_frame.add_table(columns);
-
-        double duration = blazing_timer.getDuration();
-        result_set_repository::get_instance().update_token(resultToken, output_frame, duration);
-    });
-    t.detach();
-
+    // Execute query
+    resultToken = evaluate_query(input_tables, table_names, all_column_names, requestPayload.statement, accessToken, {} );
   } catch (std::exception& error) {
      std::cout << error.what() << std::endl;
      ResponseErrorMessage errorMessage{ std::string{error.what()} };
@@ -552,7 +518,7 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
     std::tuple<std::vector<std::vector<gdf_column_cpp>>, std::vector<std::string>, std::vector<std::vector<std::string>>> request = libgdf::toBlazingDataframe(accessToken, requestPayload.getTableGroup(),handles);
 
     resultToken = evaluate_query(std::get<0>(request), std::get<1>(request), std::get<2>(request),
-                                        requestPayload.getLogicalPlan(), accessToken,handles);
+                                        requestPayload.getLogicalPlan(), accessToken, handles);
   } catch (std::exception& error) {
      std::cout << error.what() << std::endl;
      ResponseErrorMessage errorMessage{ std::string{error.what()} };

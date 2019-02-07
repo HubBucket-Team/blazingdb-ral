@@ -8,6 +8,7 @@
 #include "CSVParser.h"
 #include "cudf/io_types.h"
 #include "cudf/io_functions_cpp.h"
+#include "../Utils.cuh"
 #include <iostream>
 namespace ral {
 namespace io {
@@ -86,7 +87,7 @@ csv_parser::csv_parser(const std::string & delimiter,
 		
 	this->column_names = names;
 	this->dtype_strings.resize(num_columns);
-	std::cout<<"made it here"<<std::endl;
+
 	args.names = new const char *[num_columns];
 	args.dtype = new const char *[num_columns]; //because dynamically allocating metadata is fun
 	for(int column_index = 0; column_index < num_columns; column_index++){
@@ -94,7 +95,7 @@ csv_parser::csv_parser(const std::string & delimiter,
 		args.dtype[column_index] = this->dtype_strings[column_index].c_str();
 		args.names[column_index] = this->column_names[column_index].c_str();
 	}
-	std::cout<<"made it here too"<<std::endl;
+
 	// args.num_cols = num_columns; //why not?
 	// args.delim_whitespace = 0;
 	// args.skipinitialspace = 0;
@@ -129,7 +130,7 @@ csv_parser::~csv_parser() {
 	delete []args.names;
 }
 
-gdf_error csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file, std::vector<gdf_column_cpp> & columns) {
+void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file, std::vector<gdf_column_cpp> & columns) {
 	csv_read_arg raw_args{};
     raw_args.num_cols		= args.num_cols;
     raw_args.names			= args.names;
@@ -137,8 +138,8 @@ gdf_error csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file, s
     raw_args.delimiter		= args.delimiter;
     raw_args.lineterminator = args.lineterminator;
     
+	CUDF_CALL(read_csv_arrow(&raw_args,file));
 
-	gdf_error error = read_csv_arrow(&raw_args,file);
 	std::cout << "args.num_cols_out " << raw_args.num_cols_out << std::endl;
 	std::cout << "args.num_rows_out " <<raw_args.num_rows_out << std::endl;
 	assert(raw_args.num_cols_out > 0);
@@ -149,10 +150,9 @@ gdf_error csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file, s
 		c.delete_set_name(std::string{raw_args.names[i]});
 		columns.push_back(c);
 	}
-	return error;
 }
 
-gdf_error csv_parser::parse(const char *fname, std::vector<gdf_column_cpp> & columns) {
+void csv_parser::parse(const char *fname, std::vector<gdf_column_cpp> & columns) {
 	args.file_path		= fname;
 	csv_read_arg raw_args{};
     raw_args.file_path		= fname;
@@ -162,7 +162,7 @@ gdf_error csv_parser::parse(const char *fname, std::vector<gdf_column_cpp> & col
     raw_args.delimiter		= args.delimiter;
     raw_args.lineterminator = args.lineterminator;
     
-	gdf_error error = read_csv(&raw_args);
+	CUDF_CALL(read_csv(&raw_args));
 
 	std::cout << "raw_args.num_cols_out " << raw_args.num_cols_out << std::endl;
 	std::cout << "raw_args.num_rows_out " <<raw_args.num_rows_out << std::endl;
@@ -174,10 +174,9 @@ gdf_error csv_parser::parse(const char *fname, std::vector<gdf_column_cpp> & col
 		c.delete_set_name(std::string{raw_args.names[i]});
 		columns.push_back(c);
 	}
-	return error;
 }
 
-gdf_error csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
+void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		std::vector<gdf_column_cpp> & columns,
 		std::vector<bool> include_column){
 
@@ -188,7 +187,7 @@ gdf_error csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
     raw_args.delimiter		= args.delimiter;
     raw_args.lineterminator = args.lineterminator;
     
-	gdf_error error = read_csv_arrow(&raw_args,file);
+	CUDF_CALL(read_csv_arrow(&raw_args,file));
 
 	std::cout << "args.num_cols_out " << raw_args.num_cols_out << std::endl;
 	std::cout << "args.num_rows_out " <<raw_args.num_rows_out << std::endl;
@@ -209,12 +208,10 @@ gdf_error csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 			columns.push_back(c);
 		}
 	}
-	return error;
 }
-gdf_error csv_parser::parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> file, std::vector<gdf_column_cpp> & gdf_columns_out)  {
-	gdf_error error;
 
-	return error;
+void csv_parser::parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> file, std::vector<gdf_column_cpp> & gdf_columns_out)  {
+	gdf_error error;
 }
 } /* namespace io */
 } /* namespace ral */

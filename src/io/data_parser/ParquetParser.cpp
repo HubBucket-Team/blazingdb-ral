@@ -37,13 +37,15 @@ parquet_parser::~parquet_parser() {
 	// TODO Auto-generated destructor stub
 }
 
-gdf_error parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file, std::vector<gdf_column_cpp> & columns) {
-	gdf_error error;
+void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file, std::vector<gdf_column_cpp> & columns) {
 	size_t num_row_groups;
 	size_t num_cols;
 	std::vector< ::parquet::Type::type> parquet_dtypes;
 	std::vector< std::string> column_names;
-	error = gdf::parquet::read_schema(file, num_row_groups, num_cols, parquet_dtypes, column_names);
+
+	// TODO: The return value of this function is just a placeholder,
+	// doesn't return a meaningful value 
+	gdf_error error = gdf::parquet::read_schema(file, num_row_groups, num_cols, parquet_dtypes, column_names);
 
  	std::vector<bool> 	include_column;
 
@@ -62,16 +64,16 @@ gdf_error parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> fil
 			default:
 		        include_column.push_back(false);
 				std::cerr << parquet_dtypes[i] << " - Column type not supported" << std::endl;
+				throw std::runtime_error("In parquet_parser::parse: column type not supported");
 		  }
 	}
 
 #undef WHEN
 
-	
-	return this->parse(file, columns, include_column);
+	this->parse(file, columns, include_column);
 }
 
-gdf_error parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
+void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 			std::vector<gdf_column_cpp> & gdf_columns_out,
 			std::vector<bool> include_column){
 
@@ -80,6 +82,9 @@ gdf_error parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> fil
 	size_t num_cols;
 	std::vector< ::parquet::Type::type> parquet_dtypes;
 	std::vector< std::string> column_names;
+
+	// TODO: The return value of this function is just a placeholder,
+	// doesn't return a meaningful value 
 	error = gdf::parquet::read_schema(file, num_row_groups, num_cols, parquet_dtypes, column_names);	
 
 	std::vector<std::size_t> column_indices;
@@ -93,7 +98,13 @@ gdf_error parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> fil
     std::iota(row_group_ind.begin(), row_group_ind.end(), 0);
 
     std::vector<gdf_column *> columns_out;
-	error = gdf::parquet::read_parquet_by_ids(file, row_group_ind, column_indices, columns_out);	
+
+	// TODO: Fix this error handling
+	error = gdf::parquet::read_parquet_by_ids(file, row_group_ind, column_indices, columns_out);
+	if (error != GDF_SUCCESS) {
+		throw std::runtime_error("In parquet_parser::parse: error in gdf::parquet::read_parquet_by_ids");
+	}
+	
 	auto n_cols = columns_out.size();
 	gdf_columns_out.resize(n_cols);
 
@@ -103,23 +114,23 @@ gdf_error parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> fil
  		gdf_columns_out[i].create_gdf_column(column);
 		gdf_columns_out[i].delete_set_name(column_names[ column_indices[i] ]);
 	}
-	return error;
 }
 
-gdf_error parquet_parser::parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> file, std::vector<gdf_column_cpp> & gdf_columns_out)  {
-	gdf_error error;
+void parquet_parser::parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> file, std::vector<gdf_column_cpp> & gdf_columns_out)  {
 	size_t num_row_groups;
 	size_t num_cols;
 	std::vector< ::parquet::Type::type> parquet_dtypes;
 	std::vector< std::string> column_names;
-	error = gdf::parquet::read_schema(file, num_row_groups, num_cols, parquet_dtypes, column_names);
+
+	// TODO: The return value of this function is just a placeholder,
+	// doesn't return a meaningful value 
+	gdf_error error = gdf::parquet::read_schema(file, num_row_groups, num_cols, parquet_dtypes, column_names);
  
 	std::vector<std::size_t> row_group_ind(num_row_groups); // check, include all row groups
     std::iota(row_group_ind.begin(), row_group_ind.end(), 0);
 
 	auto n_cols = column_names.size();
 	gdf_columns_out.resize(n_cols);
-
 
 	for (size_t i = 0; i < parquet_dtypes.size(); i++) {
 		switch (parquet_dtypes[i]) {
@@ -134,11 +145,10 @@ gdf_error parquet_parser::parse_schema(std::shared_ptr<arrow::io::RandomAccessFi
             WHEN(GDF_FLOAT64, DOUBLE);
 			default:
 				std::cerr << parquet_dtypes[i] << " - Column type not supported" << std::endl;
-	
+				throw std::runtime_error("In parquet_parser::parse_schema: column type not supported");
 			#undef WHEN
 		}
 	}
-	return error;
 }
 
 } /* namespace io */

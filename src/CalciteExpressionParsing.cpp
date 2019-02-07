@@ -444,6 +444,10 @@ gdf_dtype get_output_type_expression(blazing_frame * input, gdf_dtype * max_temp
 
 		if(is_operator_token(token)){
 			if(is_binary_operator_token(token) || is_other_binary_operator_token(token)){
+
+				if(operands.size()<2)
+					throw std::runtime_error("In function get_output_type_expression, the operator cannot be processed on less than one or zero elements");
+
 				gdf_dtype left_operand = operands.top();
 				operands.pop();
 				gdf_dtype right_operand = operands.top();
@@ -484,7 +488,7 @@ gdf_dtype get_output_type_expression(blazing_frame * input, gdf_dtype * max_temp
 					*max_temp_type = operands.top();
 				}
 			} else {
-				throw std::runtime_error("In get_output_type_expression function: unsupported operator token");
+				throw std::runtime_error("In get_output_type_expression function: unsupported operator token, " + token);
 			}
 
 		}else{
@@ -493,7 +497,6 @@ gdf_dtype get_output_type_expression(blazing_frame * input, gdf_dtype * max_temp
 			}else{
 				operands.push(input->get_column(get_index(token)).dtype() );
 			}
-
 		}
 	}
 	return operands.top();
@@ -523,7 +526,7 @@ gdf_agg_op get_aggregation_operation(std::string operator_string){
 		return GDF_COUNT_DISTINCT;
 	}
 	
-	throw std::runtime_error("In get_aggregation_operation function: aggregation type not supported");
+	throw std::runtime_error("In get_aggregation_operation function: aggregation type not supported, " + operator_string);
 }
 
 gdf_error get_operation(

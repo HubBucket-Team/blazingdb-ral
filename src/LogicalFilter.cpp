@@ -38,6 +38,9 @@ gdf_error process__binary_operation_column_column(
 		return err;
 	}
 
+	if(operands.size()<2)
+		throw std::runtime_error("In function process__binary_operation_column_column, the operator cannot be processed on less than one or zero elements");
+
 	std::string left_operand = operands.top();
 	operands.pop();
 	std::string right_operand = operands.top();
@@ -213,6 +216,9 @@ gdf_error process_other_binary_operation(
 	if(err != GDF_SUCCESS){
 		return err;
 	}
+
+	if(operands.size()<2)
+		throw std::runtime_error("In function process_other_binary_operation, the operator cannot be processed on less than one or zero elements");
 
 	std::string left_operand = operands.top();
 	operands.pop();

@@ -244,6 +244,8 @@ void evaluate_join(std::string condition,
 
 //			err = gdf_outer_join( left_columns,operator_count,join_cols, right_columns,operator_count,join_cols,operator_count,0, nullptr,left_result, right_result, &ctxt);
 		CUDF_CALL( gdf_full_join(left_columns,operator_count,join_cols, right_columns,operator_count,join_cols,operator_count,0, nullptr,left_result, right_result, &ctxt) );
+	}else{
+		throw std::runtime_error("In evaluate_join function: unsupported join operator, " + join_type);
 	}
 
 	delete[] left_columns;

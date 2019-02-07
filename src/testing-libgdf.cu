@@ -161,9 +161,7 @@ query_token_t loadParquetAndInsertToResultRepository(std::string path, connectio
       double duration = blazing_timer.getDuration();
 
       result_set_repository::get_instance().update_token(token, output_frame, duration);
-    }
-    catch(const std::exception& e)
-    {
+    } catch(const std::exception& e) {
       std::cerr << e.what() << '\n';
       result_set_repository::get_instance().update_token(token, blazing_frame{}, 0.0, e.what());
     }
@@ -181,9 +179,9 @@ static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
     // @todo, what about other parameters
     resultToken = loadParquetAndInsertToResultRepository(message.fileSchema()->path, accessToken);
 
-  } catch (std::exception& error) {
-     std::cout << error.what() << std::endl;
-     ResponseErrorMessage errorMessage{ std::string{error.what()} };
+  } catch (const std::exception& e) {
+     std::cerr << e.what() << std::endl;
+     ResponseErrorMessage errorMessage{ std::string{e.what()} };
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   interpreter::NodeConnectionDTO nodeInfo {
@@ -230,9 +228,7 @@ query_token_t loadCsvAndInsertToResultRepository(std::string path, std::vector<s
       double duration = blazing_timer.getDuration();
       
       result_set_repository::get_instance().update_token(token, output_frame, duration);
-    }
-    catch(const std::exception& e)
-    {
+    } catch (const std::exception& e){
       std::cerr << e.what() << '\n';
       result_set_repository::get_instance().update_token(token, blazing_frame{}, 0.0, e.what());
     }
@@ -252,9 +248,9 @@ static result_pair loadCsvSchema(uint64_t accessToken, Buffer&& buffer) {
   uint64_t resultToken = 0L;
   try {
     resultToken = loadCsvAndInsertToResultRepository(schema->path, schema->names, types, schema->delimiter, schema->line_terminator, schema->skip_rows, accessToken);
-  } catch (std::exception& error) {
-     std::cout << error.what() << std::endl;
-     ResponseErrorMessage errorMessage{ std::string{error.what()} };
+  } catch (const std::exception& e) {
+     std::cerr << e.what() << std::endl;
+     ResponseErrorMessage errorMessage{ std::string{e.what()} };
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   interpreter::NodeConnectionDTO nodeInfo {
@@ -278,9 +274,9 @@ static result_pair closeConnectionService(uint64_t accessToken, Buffer&& request
     // GDFRefCounter::getInstance()->show_summary();
     // cudaDeviceReset();
     // exit(0);
-  } catch (std::runtime_error &error) {
-     std::cout << error.what() << std::endl;
-     ResponseErrorMessage errorMessage{ std::string{error.what()} };
+  } catch (const std::exception& e) {
+     std::cerr << e.what() << std::endl;
+     ResponseErrorMessage errorMessage{ std::string{e.what()} };
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
 
@@ -367,9 +363,9 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
     interpreter::GetResultResponseMessage responsePayload(metadata, fieldNames, columnTokens, values);
     return std::make_pair(Status_Success, responsePayload.getBufferData());
 
-  } catch (std::runtime_error &error) {
-     std::cout << error.what() << std::endl;
-     ResponseErrorMessage errorMessage{ std::string{error.what()} };
+  } catch (const std::exception& e) {
+     std::cerr << e.what() << std::endl;
+     ResponseErrorMessage errorMessage{ std::string{e.what()} };
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   } catch (...) {
     ResponseErrorMessage errorMessage{ std::string{"Unknown error"} };
@@ -482,9 +478,9 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 
     // Execute query
     resultToken = evaluate_query(input_tables, table_names, all_column_names, requestPayload.statement, accessToken, {} );
-  } catch (std::exception& error) {
-     std::cout << error.what() << std::endl;
-     ResponseErrorMessage errorMessage{ std::string{error.what()} };
+  } catch (const std::exception& e) {
+     std::cerr << e.what() << std::endl;
+     ResponseErrorMessage errorMessage{ std::string{e.what()} };
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
 
@@ -519,9 +515,9 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
 
     resultToken = evaluate_query(std::get<0>(request), std::get<1>(request), std::get<2>(request),
                                         requestPayload.getLogicalPlan(), accessToken, handles);
-  } catch (std::exception& error) {
-     std::cout << error.what() << std::endl;
-     ResponseErrorMessage errorMessage{ std::string{error.what()} };
+  } catch (const std::exception& e) {
+     std::cerr << e.what() << std::endl;
+     ResponseErrorMessage errorMessage{ std::string{e.what()} };
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   interpreter::NodeConnectionDTO nodeInfo {

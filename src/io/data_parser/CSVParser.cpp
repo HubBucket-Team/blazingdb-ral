@@ -147,7 +147,7 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file, std::v
 	for(size_t i = 0; i < raw_args.num_cols_out; i++ ){
 		gdf_column_cpp c;
 		c.create_gdf_column(raw_args.data[i]); 
-		c.delete_set_name(std::string{raw_args.names[i]});
+		c.set_name(std::string{raw_args.names[i]});
 		columns.push_back(c);
 	}
 }
@@ -171,7 +171,7 @@ void csv_parser::parse(const char *fname, std::vector<gdf_column_cpp> & columns)
 	for(size_t i = 0; i < raw_args.num_cols_out; i++ ){
 		gdf_column_cpp c;
 		c.create_gdf_column(raw_args.data[i]); 
-		c.delete_set_name(std::string{raw_args.names[i]});
+		c.set_name(std::string{raw_args.names[i]});
 		columns.push_back(c);
 	}
 }
@@ -204,7 +204,7 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		if(include_column[i]) {
 			gdf_column_cpp c;
 			c.create_gdf_column(raw_args.data[i]); 
-			c.delete_set_name(std::string{raw_args.names[i]});
+			c.set_name(std::string{raw_args.names[i]});
 			columns.push_back(c);
 		}
 	}

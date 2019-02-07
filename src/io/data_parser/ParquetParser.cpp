@@ -64,7 +64,6 @@ void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file, st
 			default:
 		        include_column.push_back(false);
 				std::cerr << parquet_dtypes[i] << " - Column type not supported" << std::endl;
-				throw std::runtime_error("In parquet_parser::parse: column type not supported");
 		  }
 	}
 
@@ -112,7 +111,7 @@ void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	    gdf_column	*column = columns_out[i];
 		column->col_name = nullptr;
  		gdf_columns_out[i].create_gdf_column(column);
-		gdf_columns_out[i].delete_set_name(column_names[ column_indices[i] ]);
+		gdf_columns_out[i].set_name(column_names[ column_indices[i] ]);
 	}
 }
 
@@ -145,7 +144,6 @@ void parquet_parser::parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> f
             WHEN(GDF_FLOAT64, DOUBLE);
 			default:
 				std::cerr << parquet_dtypes[i] << " - Column type not supported" << std::endl;
-				throw std::runtime_error("In parquet_parser::parse_schema: column type not supported");
 			#undef WHEN
 		}
 	}

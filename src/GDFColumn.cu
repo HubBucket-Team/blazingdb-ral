@@ -67,49 +67,27 @@ gdf_column_cpp::gdf_column_cpp(gdf_column_cpp& col)
 
 }
 
-
 void gdf_column_cpp::set_name(std::string name){
-		this->column_name = name;
-		//why the fuck isnt the name a fixed size
+	this->column_name = name;
+	this->column->col_name = const_cast<char*>(this->column_name.c_str());
+}
 
-		this->column->col_name = new char[name.size() + 1];
-		this->column->col_name[name.size()] = 0;
-		std::copy(name.begin(), name.end(),
-				this->column->col_name);
-
-
-
-	}
 void gdf_column_cpp::set_name_cpp_only(std::string name){
 	this->column_name = name;
 }
 
-void gdf_column_cpp::delete_set_name(std::string name){
-	delete [] this->column->col_name;
-	this->set_name(name);
-}
 std::string gdf_column_cpp::name() const{
 	return this->column_name;
 }
+
 gdf_column_cpp gdf_column_cpp::clone(std::string name)  // TODO clone needs to register
 {
-
-
-
-
 	char * data_dev = nullptr;
 	char * valid_dev = nullptr;
 
-    try {
-        cuDF::Allocator::allocate((void**)&data_dev, allocated_size_data);
-        if (column->valid != nullptr) {
-            cuDF::Allocator::allocate((void**)&valid_dev, allocated_size_valid);
-        }
-    }
-    catch (const cuDF::Allocator::Exception& exception) {
-        std::cerr << exception.what() << std::endl;
-        cudaDeviceReset();
-        exit(EXIT_FAILURE);
+    cuDF::Allocator::allocate((void**)&data_dev, allocated_size_data);
+    if (column->valid != nullptr) {
+        cuDF::Allocator::allocate((void**)&valid_dev, allocated_size_valid);
     }
 
     CheckCudaErrors(cudaMemcpy(data_dev, this->column->data, this->allocated_size_data, cudaMemcpyDeviceToDevice));
@@ -117,7 +95,6 @@ gdf_column_cpp gdf_column_cpp::clone(std::string name)  // TODO clone needs to r
     if (this->column->valid != nullptr) {
 	    CheckCudaErrors(cudaMemcpy(valid_dev, this->column->valid, this->allocated_size_valid, cudaMemcpyDeviceToDevice));
     }
-
 
 	gdf_column_cpp col1;
     col1.column = new gdf_column;
@@ -133,10 +110,6 @@ gdf_column_cpp gdf_column_cpp::clone(std::string name)  // TODO clone needs to r
 	}else{
 		col1.set_name(name);
 	}
-
-
-
-//	print_gdf_column(col1.get_gdf_column());
 
 	GDFRefCounter::getInstance()->register_column(col1.column);
 
@@ -199,14 +172,7 @@ gdf_valid_type * gdf_column_cpp::allocate_valid(){
     gdf_valid_type * valid_device;
 	this->allocated_size_valid = gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(num_values)); //so allocations are supposed to be 64byte aligned
 
-    try {
-        cuDF::Allocator::allocate((void**)&valid_device, allocated_size_valid);
-    }
-    catch (const cuDF::Allocator::Exception& exception) {
-        std::cerr << exception.what() << std::endl;
-        cudaDeviceReset();
-        exit(EXIT_FAILURE);
-    }
+    cuDF::Allocator::allocate((void**)&valid_device, allocated_size_valid);
 
     CheckCudaErrors(cudaMemset(valid_device, (gdf_valid_type)255, allocated_size_valid)); //assume all relevant bits are set to on
 	return valid_device;
@@ -246,21 +212,13 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     gdf_valid_type * valid_device = allocate_valid();
     this->allocated_size_data = (((width_per_value * num_values) + 63) /64) * 64;
 
-    try {
-        cuDF::Allocator::allocate((void**)&data, allocated_size_data);
-    }
-    catch (const cuDF::Allocator::Exception& exception) {
-        std::cerr << exception.what() << std::endl;
-        cudaDeviceReset();
-        exit(EXIT_FAILURE);
-    }
+    cuDF::Allocator::allocate((void**)&data, allocated_size_data);
 
     gdf_column_view(this->column, (void *) data, valid_device, num_values, type);
     this->set_name(column_name);
     if(input_data != nullptr){
         CheckCudaErrors(cudaMemcpy(data, input_data, num_values * width_per_value, cudaMemcpyHostToDevice));
     }
-
 
     GDFRefCounter::getInstance()->register_column(this->column);
 

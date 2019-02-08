@@ -113,19 +113,17 @@ BlazingFrame ToBlazingFrame(std::vector<std::string> filePaths, std::vector<std:
     std::transform(columnNames[index].begin(), columnNames[index].end(), std::back_inserter(columnNamesPointers),
                    [](std::string &s)  { return s.c_str(); });
 
-    const char* names[]	= { "c_custkey", "c_name", "c_address", "c_nationkey",
-                       "c_phone", "c_acctbal", "c_mktsegment", "c_comment"};
-	  const char* types[]	= {"int32", "int64", "int64", "int32", "int64", "float32",
-                       "int64", "int64"};
+
 
     if (checkFile(file_path.c_str())) {
     	csv_read_arg args{};
       args.file_path		= file_path.c_str();
-      args.num_cols		= std::extent<decltype(names)>::value;
+      args.num_cols		=  columnNames[index].size();
       args.names			= columnNamesPointers.data();
       args.dtype			= columnDTypes[index].data();
       args.delimiter		= '|';
       args.lineterminator = '\n';
+      args.decimal = '.';
 
       error = read_csv(&args);
       assert(error == GDF_SUCCESS);

@@ -53,8 +53,8 @@ endmacro()
 macro(CONFIGURE_CUDA_COMPILER compute_capability)
     include_directories(${CUDA_INCLUDE_DIRS})
 
-    #set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -gencode=arch=compute_60,code=sm_60 -gencode=arch=compute_61,code=sm_61")
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -gencode=arch=compute_60,code=sm_60")
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -gencode=arch=compute_60,code=sm_60 -gencode=arch=compute_61,code=sm_61")
+    #set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -gencode=arch=compute_60,code=sm_60")
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -gencode=arch=compute_70,code=sm_70 -gencode=arch=compute_70,code=compute_70")
 
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda --expt-relaxed-constexpr")
@@ -69,6 +69,7 @@ macro(CONFIGURE_CUDA_COMPILER compute_capability)
     if(CMAKE_BUILD_TYPE MATCHES Debug)
         message(STATUS "Building with debugging flags")
         set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G -Xcompiler -rdynamic")
+	set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -G -g" )
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -rdynamic")
     endif(CMAKE_BUILD_TYPE MATCHES Debug)
 

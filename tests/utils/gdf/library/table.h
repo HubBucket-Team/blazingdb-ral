@@ -35,8 +35,10 @@ public:
 
   bool operator==(const Table &other) const {
     if ((name_ != other.name_) || (columns_.size() != other.columns_.size())) {
+      std::cerr <<  "Table: name_ != other.name_  || (columns_.size() != other.columns_.size()" << "\n";
       return false;
     }
+
     for (std::size_t i = 0; i < columns_.size(); i++) {
       if ((*columns_[i]) != (*other.columns_[i])) { return false; }
     }
@@ -295,7 +297,7 @@ struct _GetValuesLambda {
 struct _FillColumnLambda {
   std::vector<std::vector<linb::any> > &values;
   std::vector<ColumnFiller> &           builders;
-  std::vector<std::string> &            headers;
+  std::vector<std::string>              headers;
   mutable size_t                        i;
 
   _FillColumnLambda(std::vector<std::vector<linb::any> > &values,
@@ -305,6 +307,7 @@ struct _FillColumnLambda {
 
   template <typename T>
   void operator()(T value) const {
+    assert (i < headers.size() );
     auto                         name = headers[i];
     std::vector<decltype(value)> column_values;
     for (auto &&any_val : values[i]) {
@@ -322,7 +325,7 @@ public:
 
   TableRowBuilder(const std::string &              name,
                   std::vector<std::string>         headers,
-                  std::vector<DataTuple> rows)
+                  std::initializer_list<DataTuple> rows)
     : name_{name}, headers_(headers), rows_{rows},
       ncols_{std::tuple_size<DataTuple>::value}, nrows_{rows.size()} {}
 

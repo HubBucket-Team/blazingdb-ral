@@ -11,6 +11,7 @@
 #include <cuda_runtime.h>
 #include <memory>
 #include <algorithm>
+#include <sstream>
 #include <thread>
 #include "CalciteInterpreter.h"
 #include "ResultSetRepository.h"
@@ -548,27 +549,15 @@ auto  interpreterServices(const blazingdb::protocol::Buffer &requestPayloadBuffe
   return Buffer{responseObject.getBufferData()};
 }
 
-
-main(int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
-    /*std::string iphost;
-    std::string port;
 
-    switch (argc) {
-    case 2:
-        iphost = argv[1];
-        port   = "8892";
-        break;
-    case 3:
-        iphost = argv[1];
-        port   = argv[2];
-        break;
-        //default:
-        //std::cout << "usage: " << argv[0] << " <IP|HOSTNAME> <PORT>" << std::endl;
-        //return 1;
-    }*/
-
+  #ifndef VERBOSE
+  std::cout.rdbuf(nullptr); // substitute internal std::cout buffer with
+  #endif // VERBOSE 
+  
     std::cout << "RAL Engine starting" << std::endl;
+
 
     FreeMemory::Initialize();
 

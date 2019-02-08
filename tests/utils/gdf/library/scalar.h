@@ -18,7 +18,8 @@
 #ifndef GDF_TESTS_BINARY_OPERATION_UTIL_SCALAR_H
 #define GDF_TESTS_BINARY_OPERATION_UTIL_SCALAR_H
 
-#include "gdf/gdf.h"
+
+#include <cudf.h>
 #include "types.h"
 
 namespace gdf {

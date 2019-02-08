@@ -147,13 +147,8 @@ void load_files(FileParserType&& parser, const std::vector<Uri>& uris, std::vect
 
       std::shared_ptr<arrow::io::RandomAccessFile> file = provider->get_next();
       if(file != nullptr){
-        gdf_error error = parser.parse(file, columns);
-        if(error != GDF_SUCCESS){
-          //TODO: probably want to pass this up as an error
-          std::cout<<"Could not parse "<<user_readable_file_handle<<std::endl;
-        }else{
-          all_parts.push_back(columns);
-        }
+        parser.parse(file, columns);
+        all_parts.push_back(columns);
       }else{
         std::cout<<"Was unable to open "<<user_readable_file_handle<<std::endl;
       }

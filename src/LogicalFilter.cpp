@@ -34,11 +34,7 @@ gdf_error process__binary_operation_column_column(
 	}else{
 		output = temp;
 	}
-	gdf_binary_operator operation;
-	gdf_error err = get_operation(operator_string,&operation);
-	if(err != GDF_SUCCESS){
-		return err;
-	}
+	gdf_binary_operator operation = get_binary_operation(operator_string);
 
 	if(operands.size()<2)
 		throw std::runtime_error("In function process__binary_operation_column_column, the operator cannot be processed on less than one or zero elements");
@@ -112,19 +108,13 @@ gdf_error process_unary_operation(
 		output = temp;
 	}
 
-	gdf_unary_operator operation; //need to define this
-
-	gdf_error err = get_operation(operator_string,&operation);
-	if(err != GDF_SUCCESS){
-		return err;
-	}
+	//need to define this
+	gdf_unary_operator operation = get_unary_operation(operator_string);
 
 	std::string left_operand = operands.top();
 	operands.pop();
 
 	if(is_literal(left_operand)){
-
-
 		return GDF_INVALID_API_CALL;
 	}else{
 		size_t left_index = get_index(left_operand);
@@ -198,7 +188,7 @@ gdf_error process_unary_operation(
 	}
 }
 
-gdf_error process_other_binary_operation(
+void process_other_binary_operation(
 		std::string operator_string,
 		std::stack<std::string> & operands,
 		blazing_frame & inputs,
@@ -213,11 +203,7 @@ gdf_error process_other_binary_operation(
 		output = temp;
 	}
 
-	gdf_other_binary_operator operation; 
-	gdf_error err = get_operation(operator_string,&operation);
-	if(err != GDF_SUCCESS){
-		return err;
-	}
+	gdf_other_binary_operator operation = get_other_binary_operation(operator_string);
 
 	if(operands.size()<2)
 		throw std::runtime_error("In function process_other_binary_operation, the operator cannot be processed on less than one or zero elements");
@@ -230,7 +216,7 @@ gdf_error process_other_binary_operation(
 	switch (operation){
 	case GDF_COALESCE:
 		if(is_literal(left_operand)){
-			return GDF_INVALID_API_CALL;
+			throw std::runtime_error("In function process_other_binary_operation: unsupported operand, " + left_operand);
 		} else {
 			size_t left_index = get_index(left_operand);
 
@@ -251,17 +237,14 @@ gdf_error process_other_binary_operation(
 				//TODO: this function isnt used anymore but where is this replace nulls anyway?
 	//			err = gdf_replace_nulls(output.get_gdf_column(), inputs.get_column(left_index).get_gdf_column(), inputs.get_column(right_index).get_gdf_column());
 			}
-			if(err == GDF_SUCCESS){
-				inputs.add_column(temp.clone());
-				operands.push("$" + std::to_string(inputs.get_size_column()-1));
-			}
+			
+			inputs.add_column(temp.clone());
+			operands.push("$" + std::to_string(inputs.get_size_column()-1));
 		}
 		break;
 	default:
-		err = GDF_INVALID_API_CALL;
+		throw std::runtime_error("In function process_other_binary_operation: unsupported operation, " + operator_string);
 	}
-
-	return err;
 }
 
 
@@ -385,8 +368,7 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 				}
 				operand_stack.pop();
 
-				gdf_binary_operator operation;
-				gdf_error err = get_operation(token,&operation);
+				gdf_binary_operator operation = get_binary_operation(token);
 				operators.push_back(operation);
 				unary_operators.push_back(GDF_INVALID_UNARY);
 
@@ -453,8 +435,7 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 								}
 								operand_stack.pop();
 
-				gdf_unary_operator operation;
-				gdf_error err = get_operation(token,&operation);
+				gdf_unary_operator operation = get_unary_operation(token);
 				operators.push_back(GDF_INVALID_BINARY);
 				unary_operators.push_back(operation);
 

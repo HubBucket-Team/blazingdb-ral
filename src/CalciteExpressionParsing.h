@@ -15,20 +15,11 @@
 
 class blazing_frame;
 
-gdf_error get_operation(
-		std::string operator_string,
-		gdf_binary_operator * operation
-);
+gdf_binary_operator get_binary_operation(std::string operator_string);
 
-gdf_error get_operation(
-		std::string operator_string,
-		gdf_unary_operator * operation
-);
+gdf_unary_operator get_unary_operation(std::string operator_string);
 
-gdf_error get_operation(
-		std::string operator_string,
-		gdf_other_binary_operator * operation
-);
+gdf_other_binary_operator get_other_binary_operation(std::string operator_string);
 
 bool is_binary_operator_token(std::string token);
 

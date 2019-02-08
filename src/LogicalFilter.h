@@ -22,7 +22,7 @@ void evaluate_expression(
 		gdf_column_cpp output);
 
 
-gdf_error add_expression_to_plan(	blazing_frame & inputs,
+void add_expression_to_plan(	blazing_frame & inputs,
 		std::string expression,
 		column_index_type expression_position,
 		column_index_type num_outputs,

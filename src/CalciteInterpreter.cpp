@@ -314,7 +314,7 @@ project_plan_params parse_project_plan(blazing_frame& input, std::string query_p
 
 			output_columns.push_back(output.get_gdf_column());
 
-			gdf_error err = add_expression_to_plan(	input,
+			add_expression_to_plan(	input,
 					expression,
 					cur_expression_out,
 					num_expressions_out,
@@ -375,15 +375,12 @@ project_plan_params parse_project_plan(blazing_frame& input, std::string query_p
 	};
 }
 
-gdf_error execute_project_plan(blazing_frame & input, std::string query_part){
-	
-	gdf_error err = GDF_SUCCESS;
-
+void execute_project_plan(blazing_frame & input, std::string query_part){
 	project_plan_params params = parse_project_plan(input, query_part);
 	
 	//perform operations
 	if(params.num_expressions_out > 0){
-		err = perform_operation( params.output_columns,
+		perform_operation( params.output_columns,
 			params.input_columns,
 			params.left_inputs,
 			params.right_inputs,
@@ -394,12 +391,10 @@ gdf_error execute_project_plan(blazing_frame & input, std::string query_part){
 			params.left_scalars,
 			params.right_scalars,
 			params.new_column_indices);
-
 	}
 
 	input.clear();
 	input.add_table(params.columns);
-	return err;
 }
 
 void process_project(blazing_frame & input, std::string query_part){

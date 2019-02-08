@@ -79,14 +79,13 @@ BENCHMARK_TEMPLATE_DEFINE_F(JitBench, SimpleBench, 4)
 
   blazing_frame bz_frame;
 
-  gdf_error err = GDF_SUCCESS;
   for (auto _ : state) {
     state.PauseTiming();
     bz_frame.clear();
     for (auto& t : input_tables) bz_frame.add_table(t);
     state.ResumeTiming();
 
-    err = process_project(bz_frame, logicalPlan);
+    process_project(bz_frame, logicalPlan);
   }
 }
 

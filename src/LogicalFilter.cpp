@@ -289,7 +289,7 @@ column_index_type get_first_open_position(std::vector<bool> & open_positions, co
 /**
  * Creates a physical plan for the expression that can be added to the total plan
  */
-gdf_error add_expression_to_plan(	blazing_frame & inputs,
+void add_expression_to_plan(	blazing_frame & inputs,
 		std::string expression,
 		column_index_type expression_position,
 		column_index_type num_outputs,
@@ -334,16 +334,12 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 	int position = clean_expression.size();
 
 
-
-
 	std::stack<operand_position> operand_stack;
 	gdf_scalar dummy_scalar;
 
 	std::vector<bool> processing_space_free(512,true); //a place to stare whether or not a processing space is occupied at any point in time
 	for(size_t i = 0; i < start_processing_position; i++){
-
-			processing_space_free[i] = false;
-
+		processing_space_free[i] = false;
 	}
 	//pretend they are like registers and we need to know how many registers we need to evaluate this expression
 
@@ -372,9 +368,6 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 				operators.push_back(operation);
 				unary_operators.push_back(GDF_INVALID_UNARY);
 
-
-
-
 				if(is_literal(left_operand) && is_literal(right_operand)){
 					//both are literal have to deduce types, nuts
 					//TODO: this is not working yet becuase we have to deduce the types..
@@ -394,9 +387,6 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 
 					left_inputs.push_back(left.is_valid ? SCALAR_INDEX : SCALAR_NULL_INDEX);
 					right_inputs.push_back(right_index);
-
-
-
 				}else if(is_literal(right_operand)){
 					size_t left_index = get_index(left_operand);
 					// TODO: remove get_type_from_string dirty fix
@@ -407,9 +397,6 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 
 					right_inputs.push_back(right.is_valid ? SCALAR_INDEX : SCALAR_NULL_INDEX);
 					left_inputs.push_back(left_index);
-
-
-
 				}
 				else{
 					size_t left_index = get_index(left_operand);
@@ -420,20 +407,15 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 
 					left_scalars.push_back(dummy_scalar);
 					right_scalars.push_back(dummy_scalar);
-
 				}
-
-
-
 			}else if(is_unary_operator_token(token)){
-
 				std::string left_operand = operand_stack.top().token;
-								if(!is_literal(left_operand)){
-									if(operand_stack.top().position >= start_processing_position){
-										processing_space_free[operand_stack.top().position] = true;
-									}
-								}
-								operand_stack.pop();
+				if(!is_literal(left_operand)){
+					if(operand_stack.top().position >= start_processing_position){
+						processing_space_free[operand_stack.top().position] = true;
+					}
+				}
+				operand_stack.pop();
 
 				gdf_unary_operator operation = get_unary_operation(token);
 				operators.push_back(GDF_INVALID_BINARY);
@@ -539,7 +521,7 @@ void evaluate_expression(
 	final_output_positions[0] = input_columns_used;
 
 
-	gdf_error err = add_expression_to_plan(	inputs,
+	add_expression_to_plan(	inputs,
 						expression,
 						0,
 						1,
@@ -555,7 +537,7 @@ void evaluate_expression(
 
 
 
-	err = perform_operation( output_columns,
+	perform_operation( output_columns,
 				input_columns,
 				left_inputs,
 				right_inputs,

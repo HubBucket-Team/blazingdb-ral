@@ -9,6 +9,10 @@
 #include "DataFrame.h"
 
 
+bool is_null(std::string token){
+	return token == "null";
+}
+
 bool is_type_signed(gdf_dtype type){
 	return (GDF_INT8 == type ||
 			GDF_INT16 == type ||
@@ -352,6 +356,21 @@ int64_t get_timestamp_from_string(std::string scalar_string){
 	}
 }
 
+// TODO: Remove this dirty workaround to get the type for the scalar
+gdf_dtype get_type_from_string(std::string scalar_string){
+	static const std::regex reInt{R""(^[-+]?[0-9]+$)""};
+	static const std::regex reFloat{R""(^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$)""};
+
+	if (std::regex_match(scalar_string, reInt)) {
+		return GDF_INT64;
+	}
+	else if (std::regex_match(scalar_string, reFloat)) {
+		return GDF_FLOAT64;
+	}
+	
+	return GDF_DATE64;
+}
+
 gdf_scalar get_scalar_from_string(std::string scalar_string, gdf_dtype type){
 	/*
 	 * void*    invd;
@@ -369,6 +388,10 @@ int32_t  dt32;  // GDF_DATE32
 int64_t  dt64;  // GDF_DATE64
 int64_t  tmst;  // GDF_TIMESTAMP
 };*/
+	if(scalar_string == "null"){
+		gdf_data data;
+		return {data, GDF_INT8, false};
+	}
 	if(type == GDF_INT8){
 		gdf_data data;
 		data.si08 = stoi(scalar_string);

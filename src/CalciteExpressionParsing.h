@@ -62,6 +62,7 @@ std::string get_string_between_outer_parentheses(std::string operator_string);
 gdf_error get_output_type_expression(blazing_frame * input, gdf_dtype * output_type, gdf_dtype * max_temp_type, std::string expression);
 gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregation, std::size_t group_size);
 
+gdf_dtype get_type_from_string(std::string scalar_string);
 gdf_scalar get_scalar_from_string(std::string scalar_string, gdf_dtype type);
 
 size_t get_width_dtype(gdf_dtype type);
@@ -74,5 +75,14 @@ int find_closing_char(const std::string & expression, int start);
 // takes a comma delimited list of expressions and splits it into separate expressions
 // if the flag trim is true, leading and trailing spaces are removed
 std::vector<std::string> get_expressions_from_expression_list(const std::string & combined_expressions, bool trim = true);
+
+bool is_null(std::string token);
+
+bool is_type_signed(gdf_dtype type);
+
+bool is_type_float(gdf_dtype type);
+bool is_date_type(gdf_dtype type);
+gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type, gdf_binary_operator operation);
+gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_unary_operator operation);
 
 #endif /* CALCITEEXPRESSIONPARSING_H_ */

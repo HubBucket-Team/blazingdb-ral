@@ -579,11 +579,13 @@ auto  interpreterServices(const blazingdb::protocol::Buffer &requestPayloadBuffe
 
 int main(int argc, const char *argv[])
 {
+
   #ifndef VERBOSE
   std::cout.rdbuf(nullptr); // substitute internal std::cout buffer with
   #endif // VERBOSE 
   
     std::cout << "RAL Engine starting" << std::endl;
+
 
     FreeMemory::Initialize();
 

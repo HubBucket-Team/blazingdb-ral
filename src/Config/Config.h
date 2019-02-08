@@ -105,7 +105,7 @@ class BlazingConfig {
 			return this->sequentialFolders;
 		}
 
-		const double transformationProcessorOverhead() const {
+		double transformationProcessorOverhead() const {
 			return TRANSFORMATION_PROCESSOR_OVERHEAD;
 		}
 
@@ -189,7 +189,7 @@ class BlazingConfig {
 		return numThreadsLoadingFromDiskCache;
 	}
 
-
+	int get_number_of_sms();
 	unsigned long long getMaxParquetReadBatchSize() const {
 		return maxParquetReadBatchSize;
 	}
@@ -264,6 +264,7 @@ class BlazingConfig {
 		unsigned long long diskCacheSize;
 
 		unsigned long long maxParquetReadBatchSize;
+		int number_of_sms = -1;
 };
 
 typedef union {

@@ -1,8 +1,9 @@
 include_directories(
     ${CMAKE_SOURCE_DIR}/thirdparty/jitify
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper)
+ 
 
-set(source_files
+set(source_files_src
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/code/gdf-data.cpp
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/code/kernel.cpp
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/code/operation.cpp
@@ -13,26 +14,34 @@ set(source_files
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/util/type.cpp
     #todo remove when the PR https://github.com/rapidsai/cudf/pull/643 is accepted 
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/replace/replace.cu
-)
-
-set(without-groupby-test_SRCS
-    ${CMAKE_SOURCE_DIR}/src/Utils.cu
+    ${CMAKE_SOURCE_DIR}/src/Config/Config.cpp
+    ${CMAKE_SOURCE_DIR}/src/Interpreter/interpreter_cpp.cu
+    ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
+    ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
+    ${CMAKE_SOURCE_DIR}/src/ColumnManipulation.cu
     ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
     ${CMAKE_SOURCE_DIR}/src/FreeMemory.cpp
     ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
-    ${CMAKE_SOURCE_DIR}/src/ColumnManipulation.cu
-    ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
     ${CMAKE_SOURCE_DIR}/src/JoinProcessor.cpp
-    ${CMAKE_SOURCE_DIR}/src/FreeMemory.cpp
-    ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
-    ${CMAKE_SOURCE_DIR}/src/Interpreter/interpreter_cpp.cu
     ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp
-    ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
+    ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
     ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
-    ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
+    ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
+    ${CMAKE_SOURCE_DIR}/src/Utils.cu 
+) 
 
-    ${source_files}
-    without-groupby-test.cpp
-)
+set(interpreter_tests_src
+    ${source_files_src}
+    interpreter_tests.cu
+) 
 
-configure_test(count-without-groupby-test "${without-groupby-test_SRCS}")
+configure_test(interpreter_tests "${interpreter_tests_src}")
+
+ 
+set(project_tests_src
+    ${source_files_src}
+    process_project_tests.cu
+) 
+
+configure_test(project_tests "${project_tests_src}")
+

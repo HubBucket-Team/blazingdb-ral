@@ -59,6 +59,8 @@ using namespace blazingdb::protocol;
 
 #include "CodeTimer.h"
 
+#include <rmm/rmm_api.h>
+
 const Path FS_NAMESPACES_FILE("/tmp/file_system.bin");
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);
@@ -605,6 +607,9 @@ main(int argc, const char *argv[])
 
     // Init AWS S3 ... TODO see if we need to call shutdown and avoid leaks from s3 percy
     BlazingContext::getInstance()->initExternalSystems();
+
+  // rmmOptions_t options = {PoolAllocation, 2^30, false};
+  // rmmError_t rmmErr = rmmInitialize(&options);
     
   global_ip = "/tmp/ral.socket";
   //global_port = atoi(port.c_str());

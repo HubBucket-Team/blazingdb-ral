@@ -252,7 +252,7 @@ gdf_error perform_operation(	std::vector<gdf_column *> output_columns,
 	gdf_size_type num_rows = input_columns[0]->size;
 
 	cudaStream_t stream;
-	CUDA_TRY(cudaStreamCreate(&stream));
+	cudaStreamCreate(&stream);
 	
 	size_t shared_memory_per_thread = (max_output+1) * sizeof(int64_t);
 	int min_grid_size;
@@ -286,8 +286,8 @@ gdf_error perform_operation(	std::vector<gdf_column *> output_columns,
 
 	cuDF::Allocator::deallocate(temp_space,stream);
 	
-	CUDA_TRY(cudaStreamSynchronize(stream));
-	CUDA_TRY(cudaStreamDestroy(stream));
+	cudaStreamSynchronize(stream);
+	cudaStreamDestroy(stream);
 
 	return GDF_SUCCESS;
 }

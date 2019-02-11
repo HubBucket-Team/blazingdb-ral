@@ -852,8 +852,8 @@ public:
 
 	void update_columns_null_count(std::vector<gdf_column *> output_columns){
 		gdf_size_type * outputs = new gdf_size_type[output_columns.size()];
-		cudaMemcpyAsync(outputs,this->null_counts_outputs,sizeof(gdf_size_type) * output_columns.size(),cudaMemcpyDeviceToHost,this->stream);
-		cudaStreamSynchronize(this->stream);
+		CheckCudaErrors(cudaMemcpyAsync(outputs,this->null_counts_outputs,sizeof(gdf_size_type) * output_columns.size(),cudaMemcpyDeviceToHost,this->stream));
+		CheckCudaErrors(cudaStreamSynchronize(this->stream));
 		for(int i = 0; i < output_columns.size(); i++){
 			//std::cout<<"outputs["<<i<<"] = "<<outputs[i]<<std::endl;
 			output_columns[i]->null_count = outputs[i];

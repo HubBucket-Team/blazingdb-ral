@@ -153,9 +153,9 @@ gdf_error csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file, s
 }
 
 gdf_error csv_parser::parse(const char *fname, std::vector<gdf_column_cpp> & columns) {
-	args.file_path		= fname;
+	args.filepath_or_buffer		= fname;
 	csv_read_arg raw_args{};
-    raw_args.file_path		= fname;
+    raw_args.filepath_or_buffer		= fname;
     raw_args.num_cols		= args.num_cols;
     raw_args.names			= args.names;
     raw_args.dtype			= args.dtype;

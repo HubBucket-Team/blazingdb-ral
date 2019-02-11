@@ -12,7 +12,7 @@
 #include <thrust/device_ptr.h>
 #include <thrust/sequence.h>
 
-#include <rmm.h>
+#include <rmm/rmm.h>
 
 
 #ifndef DEVICE_RESET

@@ -56,7 +56,7 @@ public:
 		//return nullptr; //error
 	}
 
-	std::vector< std::vector<gdf_column_cpp> > get_columns(){
+	std::vector< std::vector<gdf_column_cpp> >& get_columns(){
 		return columns;
 	}
 	void add_table(std::vector<gdf_column_cpp> columns_to_add){

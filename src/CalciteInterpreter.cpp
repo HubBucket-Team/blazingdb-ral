@@ -408,7 +408,13 @@ gdf_error execute_project_plan(blazing_frame & input, std::string query_part){
 
 	input.clear();
 	input.add_table(params.columns);
-	return err;
+
+	for(size_t i = 0; i < input.get_width(); i++)
+	{
+		input.get_column(i).update_null_count();
+	}
+	
+	return err;	
 }
 
 gdf_error process_project(blazing_frame & input, std::string query_part){

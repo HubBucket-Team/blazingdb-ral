@@ -25,6 +25,7 @@ class gdf_column_cpp
 		void set_name(std::string name);
 		int8_t is_ipc_column;
 		column_token_t column_token;
+		bool is_ipc_column_valid_local = false;
 	//	gdf_column_cpp(void* _data, gdf_valid_type* _valid, gdf_dtype _dtype, size_t _size, gdf_size_type _null_count, const std::string &column_name = "");
 	public:
 

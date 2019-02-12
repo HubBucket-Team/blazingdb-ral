@@ -223,7 +223,10 @@ void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,g
     gdf_column_view(this->column, col_data, valid_data, num_values, type);
     get_column_byte_width(this->column, &width);
     this->allocated_size_data = num_values * width;
-    this->allocate_set_valid();
+    if (valid_data == nullptr) {
+        this->allocate_set_valid();
+        this->is_ipc_column_valid_local = true;
+    }
     is_ipc_column = true;
     this->column_token = 0;
     this->set_name(column_name);
@@ -349,6 +352,7 @@ gdf_column_cpp::~gdf_column_cpp()
 		//TODO: this is a big memory leak. we probably just need to have anothe reference
 		//counter, the valid pointer was allocated on our side
 		//we cant free it here because we dont know if this ipc column is used somewhere else
+        
 	}else{
 	    GDFRefCounter::getInstance()->decrement(this->column);
 	}

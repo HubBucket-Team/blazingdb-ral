@@ -16,7 +16,7 @@
 #include "vector.h"
 
 #include <arrow/util/bit-util.h>
-#include "parquet/util/bit_util.cuh"
+#include "cuio/parquet/util/bit_util.cuh"
 
 
 namespace gdf {

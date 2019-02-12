@@ -62,8 +62,8 @@ std::tuple<std::vector<std::vector<gdf_column_cpp>>,
       if (table.columnTokens[column_index] == 0){
         const std::string column_name = table.columnNames.at(column_index);
         
-        // col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),(gdf_valid_type*)libgdf::CudaIpcMemHandlerFrom(column.valid),column.size,column_name);
-        col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),nullptr,column.size,column_name);
+        col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),(gdf_valid_type*)libgdf::CudaIpcMemHandlerFrom(column.valid),column.size,column_name);
+        // col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),nullptr,column.size,column_name);
         handles.push_back(col.data());
 
         if(col.valid() == nullptr){

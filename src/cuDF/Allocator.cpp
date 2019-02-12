@@ -11,14 +11,18 @@ const std::string BASE_MESSAGE {"ERROR, cuDF::Allocator, "};
 void throwException(rmmError_t error);
 
 void allocate(void** pointer, std::size_t size, cudaStream_t stream) {
-    auto error = RMM_ALLOC(pointer, size, stream);
-    FreeMemory::registerRawPointer(*pointer);
-    if (error != RMM_SUCCESS) {
-        throwException(error);
-    }
+
+    cudaMalloc(pointer, size);
+
+    // auto error = RMM_ALLOC(pointer, size, stream);
+    // FreeMemory::registerRawPointer(*pointer);
+    // if (error != RMM_SUCCESS) {
+    //     throwException(error);
+    // }
 }
 
 void reallocate(void **pointer, std::size_t size, cudaStream_t stream) {
+    
     const void *actual = *pointer;
     auto error = RMM_REALLOC(pointer, size, stream);
     FreeMemory::updateRawPointer(actual, *pointer);
@@ -28,11 +32,14 @@ void reallocate(void **pointer, std::size_t size, cudaStream_t stream) {
 }
 
 void deallocate(void* pointer, cudaStream_t stream) {
-    auto error = RMM_FREE(pointer, stream);
-    FreeMemory::removeRawPointer(pointer);
-    if (error != RMM_SUCCESS) {
-        throwException(error);
-    }
+
+    cudaFree(pointer);
+
+    // auto error = RMM_FREE(pointer, stream);
+    // FreeMemory::removeRawPointer(pointer);
+    // if (error != RMM_SUCCESS) {
+    //     throwException(error);
+    // }
 }
 
 void throwException(rmmError_t error) {

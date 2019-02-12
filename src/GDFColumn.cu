@@ -201,7 +201,7 @@ gdf_valid_type * gdf_column_cpp::allocate_valid(){
 	this->allocated_size_valid = gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(num_values)); //so allocations are supposed to be 64byte aligned
 
     try {
-        cuDF::Allocator::allocate((void**)&valid_device, allocated_size_valid);
+        cuDF::Allocator::allocate((void**)&valid_device, this->allocated_size_valid);
     }
     catch (const cuDF::Allocator::Exception& exception) {
         std::cerr << exception.what() << std::endl;
@@ -210,7 +210,7 @@ gdf_valid_type * gdf_column_cpp::allocate_valid(){
     }
 
 //TODO: this will fail gloriously whenever the valid type cahnges
-    CheckCudaErrors(cudaMemset(valid_device, (gdf_valid_type)255, allocated_size_valid)); //assume all relevant bits are set to on
+    CheckCudaErrors(cudaMemset((void*)valid_device, (gdf_valid_type)255, this->allocated_size_valid)); //assume all relevant bits are set to on
 	return valid_device;
 }
 
@@ -223,7 +223,7 @@ void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,g
     gdf_column_view(this->column, col_data, valid_data, num_values, type);
     get_column_byte_width(this->column, &width);
     this->allocated_size_data = num_values * width;
-    this->allocate_valid();
+    this->allocate_set_valid();
     is_ipc_column = true;
     this->column_token = 0;
     this->set_name(column_name);

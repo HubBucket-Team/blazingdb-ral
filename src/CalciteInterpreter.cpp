@@ -104,21 +104,6 @@ std::string extract_table_name(std::string query_part){
 
 }
 
-/*void create_output_and_evaluate(size_t size, gdf_column * output, gdf_column * temp){
-	int width;
-	get_column_byte_width(output, &width);
-	create_gdf_column(output,output->dtype,size,nullptr,width);
-	create_gdf_column(temp,GDF_INT64,size,nullptr,8);
-
-
-	gdf_error err = evaluate_expression(
-			input,
-			get_expression(query_part),
-			&output,
-			&temp);
-
-}*/
-
 std::string get_condition_expression(std::string query_part){
 	return get_named_expression(query_part,"condition");
 }
@@ -461,13 +446,6 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 		}
 	}
 
-	gdf_column_cpp temp;
-	if(max_temp_type != GDF_invalid){
-		//TODO de donde saco el nombre de la columna aqui???
-		temp.create_gdf_column(max_temp_type,size,nullptr,get_width_dtype(max_temp_type), "");
-	}
-
-
 	for(int i = 0; i < expressions.size(); i++){ //last not an expression
 		std::string expression = expressions[i].substr(
 				expressions[i].find("=[") + 2 ,
@@ -524,7 +502,6 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 	input.clear();
 	input.add_table(columns);
 
-	//free_gdf_column(&temp);
 	return GDF_SUCCESS;
 }
 

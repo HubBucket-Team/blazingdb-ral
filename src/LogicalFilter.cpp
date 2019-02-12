@@ -583,8 +583,7 @@ gdf_error evaluate_expression(
 				new_column_indices);
 
 
-	output.update_null_count();
-
+	
 	// Library::Logging::Logger().logInfo("-> evaluate_expression took " + std::to_string(timer.getDuration()) + " ms processing expression:\n" + expression);
 
 	return GDF_SUCCESS;

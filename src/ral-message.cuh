@@ -66,7 +66,7 @@ std::tuple<std::vector<std::vector<gdf_column_cpp>>,
         col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),nullptr,column.size,column_name);
         handles.push_back(col.data());
 
-        if(col.valid() == nullptr){
+        if(col.null_count() == 0 || col.valid() == nullptr){
           //TODO: we can remove this when libgdf properly
           //implements all algorithsm with valid == nullptr support
           //it crashes somethings like group by

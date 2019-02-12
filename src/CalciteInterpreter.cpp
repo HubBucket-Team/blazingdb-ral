@@ -1463,13 +1463,9 @@ query_token_t evaluate_query(
 		std::set<gdf_column *> included_columns;
 		for(size_t index = 0; index < output_frame.get_size_columns(); index++){
 			gdf_column_cpp output_column = output_frame.get_column(index);
-			if(output_column.is_ipc() || included_columns.find(output_column.get_gdf_column()) != included_columns.end()){
-				output_frame.set_column(index,
-						output_column.clone(output_column.name()));
-			}else{
-				output_column.delete_set_name(output_column.name());
-			}
+			output_frame.set_column(index, output_column.clone(output_column.name()));
 		}
+
 		//Todo: put it on a macro for debugging purposes!
 		/*std::cout<<"Result\n";
 	for (auto outputTable : output_frame.get_columns()) {

@@ -44,6 +44,7 @@ function(configure_test TEST_NAME Tests_SRCS)
         Boost::filesystem
         Boost::system
         Boost::regex
+
     )
 
     set_target_properties(${TEST_NAME} PROPERTIES
@@ -61,7 +62,6 @@ enable_testing()
 # -------------------
 message(STATUS "******** Configuring tests ********")
 
-add_subdirectory(utils)
 
 add_subdirectory(logical-filter)
 add_subdirectory(calcite-interpreter)
@@ -78,7 +78,11 @@ add_subdirectory(io-test)
 add_subdirectory(parquet)
 add_subdirectory(union)
 add_subdirectory(unary)
+add_subdirectory(count)
 add_subdirectory(groupbywoagg)
+add_subdirectory(interpreter)
+add_subdirectory(utils)
+# add_subdirectory(utils)
 
 
 message(STATUS "******** Tests are ready ********")

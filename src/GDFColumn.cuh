@@ -11,6 +11,7 @@
 #include "gdf_wrapper/gdf_wrapper.cuh"
 #include "GDFCounter.cuh"
 #include "Utils.cuh"
+#include "Types.h"
 #include <string>
 
 class gdf_column_cpp
@@ -23,6 +24,7 @@ class gdf_column_cpp
 		gdf_valid_type * allocate_valid();
 		void set_name(std::string name);
 		int8_t is_ipc_column;
+		column_token_t column_token;
 	//	gdf_column_cpp(void* _data, gdf_valid_type* _valid, gdf_dtype _dtype, size_t _size, gdf_size_type _null_count, const std::string &column_name = "");
 	public:
 
@@ -41,6 +43,10 @@ class gdf_column_cpp
     gdf_size_type null_count();
 
     gdf_dtype_extra_info dtype_info();
+	
+	column_token_t get_column_token();
+
+	void set_column_token(column_token_t column_token);
 
 	void set_dtype(gdf_dtype dtype);
 	bool is_ipc();
@@ -61,7 +67,7 @@ class gdf_column_cpp
 
 	void create_gdf_column(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value, const std::string &column_name = "");
 
-	//void realloc_gdf_column(gdf_dtype type, size_t size, size_t width);
+	void create_gdf_column(gdf_dtype type, size_t num_values, void * input_data, gdf_valid_type * host_valid, size_t width_per_value, const std::string &column_name = "");
 
 	gdf_error gdf_column_view(gdf_column *column, void *data, gdf_valid_type *valid, gdf_size_type size, gdf_dtype dtype);
 

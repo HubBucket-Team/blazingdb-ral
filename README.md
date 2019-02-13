@@ -164,8 +164,6 @@ Also, if you don't define any of these optional arguments then the cmake process
 
 Finally, if don't want to use conda and need the nvstrings library, just download https://anaconda.org/nvidia/nvstrings/0.0.3/download/linux-64/nvstrings-0.0.3-cuda9.2_py35_0.tar.bz2 and uncompress the folder, this folder is the NVSTRINGS_INSTALL_DIR.
 
-## Build options
-
 ### Verbose mode
 
 If you want to show verbose, add these args to cmake:
@@ -173,7 +171,6 @@ If you want to show verbose, add these args to cmake:
 ```bash
 CUDACXX=/usr/local/cuda-9.2/bin/nvcc cmake -DCUDA_DEFINES=-DVERBOSE -DCXX_DEFINES=-DVERBOSE ...etc...
 ```
-
 # Integration Tests
 
 ```bash

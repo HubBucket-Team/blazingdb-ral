@@ -50,6 +50,8 @@ struct EvaluateQueryTest : public ::testing::Test {
       EXPECT_EQ(a, b);
     }
   }
+
+
   virtual void SetUp() {
 	std::ofstream outfile("/tmp/customer.psv", std::ofstream::out);
 	auto content = 
@@ -202,11 +204,51 @@ R"(1|Customer#000000001|IVhzIApeRb ot,c,E|15|25-989-741-2988|711.56|BUILDING|to 
 147|Customer#000000147|6VvIwbVdmcsMzuu,C84GtBWPaipGfi7DV|18|28-803-187-4335|8071.4|AUTOMOBILE|ress packages above the blithely regular packages sleep fluffily blithely ironic accounts. 
 148|Customer#000000148|BhSPlEWGvIJyT9swk vCWE|11|21-562-498-6636|2135.6|HOUSEHOLD|ing to the carefully ironic requests. carefully regular dependencies about the theodolites wake furious
 149|Customer#000000149|3byTHCp2mNLPigUrrq|19|29-797-439-6760|8959.65|AUTOMOBILE|al instructions haggle against the slyly bold w
-150|Customer#000000150|zeoGShTjCwGPplOWFkLURrh41O0AZ8dwNEEN4 |18|28-328-564-7630|3849.48|MACHINERY|ole blithely among the furiously pending packages. furiously bold ideas wake fluffily ironic idea
-)";
+150|Customer#000000150|zeoGShTjCwGPplOWFkLURrh41O0AZ8dwNEEN4 |18|28-328-564-7630|3849.48|MACHINERY|ole blithely among the furiously pending packages. furiously bold ideas wake fluffily ironic idea)";
 	outfile <<	content << std::endl;
 	outfile.close();
-   } 
+
+	std::ofstream outfile_nation("/tmp/nation.psv", std::ofstream::out);
+	content =
+R"(0|ALGERIA|0| haggle. carefully final deposits detect slyly agai
+1|ARGENTINA|1|al foxes promise slyly according to the regular accounts. bold requests alon
+2|BRAZIL|1|y alongside of the pending deposits. carefully special packages are about the ironic forges. slyly special 
+3|CANADA|1|eas hang ironic, silent packages. slyly regular packages are furiously over the tithes. fluffily bold
+4|EGYPT|4|y above the carefully unusual theodolites. final dugouts are quickly across the furiously regular d
+5|ETHIOPIA|0|ven packages wake quickly. regu
+6|FRANCE|3|refully final requests. regular, ironi
+7|GERMANY|3|l platelets. regular accounts x-ray: unusual, regular acco
+8|INDIA|2|ss excuses cajole slyly across the packages. deposits print aroun
+9|INDONESIA|2| slyly express asymptotes. regular deposits haggle slyly. carefully ironic hockey players sleep blithely. carefull
+10|IRAN|4|efully alongside of the slyly final dependencies. 
+11|IRAQ|4|nic deposits boost atop the quickly final requests? quickly regula
+12|JAPAN|2|ously. final, express gifts cajole a
+13|JORDAN|4|ic deposits are blithely about the carefully regular pa
+14|KENYA|0| pending excuses haggle furiously deposits. pending, express pinto beans wake fluffily past t
+15|MOROCCO|0|rns. blithely bold courts among the closely regular packages use furiously bold platelets?
+16|MOZAMBIQUE|0|s. ironic, unusual asymptotes wake blithely r
+17|PERU|1|platelets. blithely pending dependencies use fluffily across the even pinto beans. carefully silent accoun
+18|CHINA|2|c dependencies. furiously express notornis sleep slyly regular accounts. ideas sleep. depos
+19|ROMANIA|3|ular asymptotes are about the furious multipliers. express dependencies nag above the ironically ironic account
+20|SAUDI ARABIA|4|ts. silent requests haggle. closely express packages sleep across the blithely
+21|VIETNAM|2|hely enticingly express accounts. even, final 
+22|RUSSIA|3| requests against the platelets use never according to the quickly regular pint
+23|UNITED KINGDOM|3|eans boost carefully special requests. accounts are. carefull
+24|UNITED STATES|1|y final packages. slow foxes cajole quickly. quickly silent platelets breach ironic accounts. unusual pinto be)";
+
+	outfile_nation <<	content << std::endl;
+	outfile_nation.close();
+
+	std::ofstream outfile_region("/tmp/region.psv", std::ofstream::out);
+	content =
+R"(0|AFRICA|lar deposits. blithely final packages cajole. regular waters are final requests. regular accounts are according to 
+1|AMERICA|hs use ironic, even requests. s
+2|ASIA|ges. thinly even pinto beans ca
+3|EUROPE|ly final courts cajole furiously final excuse
+4|MIDDLE EAST|uickly special accounts cajole carefully blithely close requests. carefully final asymptotes haggle furiousl)";
+	outfile_region <<	content << std::endl;
+	outfile_region.close();
+  }
 };
 
 // AUTO GENERATED UNIT TESTS
@@ -246,6 +288,7 @@ TEST_F(EvaluateQueryTest, TEST_00) {
   std::vector<gdf_column_cpp> outputs;
   gdf_error err = evaluate_query(input_tables, table_names, column_names,
                                  logical_plan, outputs);
+
   EXPECT_TRUE(err == GDF_SUCCESS);
   auto output_table =
       GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
@@ -288,3 +331,173 @@ TEST_F(EvaluateQueryTest, TEST_01) {
       GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
   CHECK_RESULT(output_table, input.resultTable);
 }
+
+
+TEST_F(EvaluateQueryTest, TEST_NULL_BINARY) {
+  auto input = InputTestItem{
+      .query =
+          "SELECT n.n_nationkey + 1, n.n_regionkey from main.nation AS n INNER JOIN main.region AS r ON n.n_regionkey = r.r_regionkey and n.n_nationkey = 5",
+      .logicalPlan =
+          "LogicalProject(EXPR$0=[$1], n_regionkey=[$0])\n"
+          "  LogicalJoin(condition=[AND(=($0, $3), $2)], joinType=[inner])\n"
+          "    LogicalProject(n_regionkey=[$2], +=[+($0, 1)], ==[=($0, 5)])\n"
+    	  "      LogicalFilter(condition=[=($0, 5)])\n"
+    	  "        EnumerableTableScan(table=[[main, nation]])\n"
+    	  "    LogicalProject(r_regionkey=[$0])\n"
+          "      EnumerableTableScan(table=[[main, region]])",
+      .filePaths = {"/tmp/nation.psv","/tmp/region.psv"},
+      .tableNames = {"main.nation", "main.region"},
+      .columnNames = {{"n_nationkey", "n_name","n_regionkey", "n_comment"},{"r_regionkey","r_name","r_comment"}},
+      .columnTypes = {{"int32", "int64", "int32", "int64"},{"int32", "int64", "int64"}},
+      .resultTable =
+          LiteralTableBuilder{
+              "ResultSet",
+              {{"EXPR$0", Literals<GDF_INT32>{6}},
+               {"n_regionkey", Literals<GDF_INT32>{0}},
+              }}
+              .Build()};
+  auto logical_plan = input.logicalPlan;
+  auto input_tables =
+      ToBlazingFrame(input.filePaths, input.columnNames, input.columnTypes);
+  GdfColumnCppsTableBuilder{"input_table", input_tables[0]}.Build().print(std::cout);
+  GdfColumnCppsTableBuilder{"input_table", input_tables[1]}.Build().print(std::cout);
+
+  auto table_names = input.tableNames;
+  auto column_names = input.columnNames;
+  std::vector<gdf_column_cpp> outputs;
+  gdf_error err = evaluate_query(input_tables, table_names, column_names,
+                                 logical_plan, outputs);
+
+  EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
+}
+
+
+
+
+TEST_F(EvaluateQueryTest, TEST_NULL_OUTER_JOIN) {
+  auto input = InputTestItem{
+      .query =
+          "SELECT n.n_nationkey, n.n_regionkey, n.n_nationkey + n.n_regionkey  from main.nation AS n INNER JOIN main.region AS r ON n.n_regionkey = r.r_regionkey and n.n_nationkey < 10",
+      .logicalPlan =
+    		  "LogicalProject(n_nationkey=[$0], r_regionkey=[$1], EXPR$2=[+($0, $1)])\n"
+    		  "  LogicalJoin(condition=[=($0, $1)], joinType=[left])\n"
+    		  "    LogicalProject(n_nationkey=[$0])\n"
+    		  "      LogicalFilter(condition=[<($0, 10)])\n"
+    		  "        EnumerableTableScan(table=[[main, nation]])\n"
+    		  "    LogicalProject(r_regionkey=[$0])\n"
+    		  "      EnumerableTableScan(table=[[main, region]])\n",
+      .filePaths = {"/tmp/nation.psv","/tmp/region.psv"},
+      .tableNames = {"main.nation", "main.region"},
+      .columnNames = {{"n_nationkey", "n_name","n_regionkey", "n_comment"},{"r_regionkey","r_name","r_comment"}},
+      .columnTypes = {{"int32", "int64", "int32", "int64"},{"int32", "int64", "int64"}},
+      .resultTable =
+          LiteralTableBuilder{
+              "ResultSet",
+              {{"n_nationkey", Literals<GDF_INT32>{0,1,2,3,4,5,6,7,8,9}},
+              {"r_regionkey", Literals<GDF_INT32>{Literals<GDF_INT32>::vector{0,1,2,3,4,0,0,0,0,0}, Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 1, 0, 0, 0, 0, 0}}},
+              {"EXPR$2", Literals<GDF_INT32>{Literals<GDF_INT32>::vector{0,2,4,6,8,0,0,0,0,0}, Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 1, 0, 0, 0, 0, 0}}},
+              }}
+              .Build()};
+  auto logical_plan = input.logicalPlan;
+  auto input_tables =
+      ToBlazingFrame(input.filePaths, input.columnNames, input.columnTypes);
+  GdfColumnCppsTableBuilder{"input_table", input_tables[0]}.Build().print(std::cout);
+  GdfColumnCppsTableBuilder{"input_table", input_tables[1]}.Build().print(std::cout);
+
+  auto table_names = input.tableNames;
+  auto column_names = input.columnNames;
+  std::vector<gdf_column_cpp> outputs;
+  gdf_error err = evaluate_query(input_tables, table_names, column_names,
+                                 logical_plan, outputs);
+  std::cout<<"null count is "<<outputs[2].null_count()<<std::endl;
+  EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
+}
+
+
+TEST_F(EvaluateQueryTest, TEST_NULL_OUTER_JOIN_2) {
+  auto input = InputTestItem{
+      .query =
+          "select n.n_nationkey, r.r_regionkey from dfs.tmp.`nation` as n left outer join dfs.tmp.`region` as r on n.n_regionkey = r.r_regionkey where n.n_nationkey < 10 and n.n_nationkey > 5",
+      .logicalPlan =
+    		  "LogicalProject(n_nationkey=[$0], r_regionkey=[$4])\n"
+    		  "  LogicalJoin(condition=[=($2, $4)], joinType=[left])\n"
+    		  "    LogicalFilter(condition=[AND(<($0, 10), >=($0, 5))])\n"
+    		  "      EnumerableTableScan(table=[[main, nation]])\n"
+    		  "    EnumerableTableScan(table=[[main, region]])",
+      .filePaths = {"/tmp/nation.psv","/tmp/region.psv"},
+      .tableNames = {"main.nation", "main.region"},
+      .columnNames = {{"n_nationkey", "n_name","n_regionkey", "n_comment"},{"r_regionkey","r_name","r_comment"}},
+      .columnTypes = {{"int32", "int64", "int32", "int64"},{"int32", "int64", "int64"}},
+      .resultTable =
+          LiteralTableBuilder{
+              "ResultSet",
+              {{"n_nationkey", Literals<GDF_INT32>{5,6,7,8,9}},
+              {"r_regionkey", Literals<GDF_INT32>{Literals<GDF_INT32>::vector{0,3,3,2,2}, Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 1}}},
+              }}
+              .Build()};
+  auto logical_plan = input.logicalPlan;
+  auto input_tables =
+      ToBlazingFrame(input.filePaths, input.columnNames, input.columnTypes);
+  GdfColumnCppsTableBuilder{"input_table", input_tables[0]}.Build().print(std::cout);
+  GdfColumnCppsTableBuilder{"input_table", input_tables[1]}.Build().print(std::cout);
+
+  auto table_names = input.tableNames;
+  auto column_names = input.columnNames;
+  std::vector<gdf_column_cpp> outputs;
+  gdf_error err = evaluate_query(input_tables, table_names, column_names,
+                                 logical_plan, outputs);
+  std::cout<<"null count is "<<outputs[1].null_count()<<std::endl;
+  EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
+}
+
+
+
+        TEST_F(EvaluateQueryTest, TEST_NULL_TRANSFORM_AGGREGATIONS) {
+          auto input = InputTestItem{
+              .query =
+                  "select count(c_custkey) + sum(c_acctbal) + avg(c_acctbal), min(c_custkey) - max(c_nationkey), c_nationkey * 2 as key from main.customer where  c_nationkey * 2 < 40 group by  c_nationkey * 2",
+              .logicalPlan =
+            		  "LogicalProject(EXPR$0=[+(+($1, $2), $3)], EXPR$1=[-($4, $5)], key=[$0])\n"
+            		  "  LogicalAggregate(group=[{0}], agg#0=[COUNT($1)], agg#1=[SUM($2)], agg#2=[AVG($2)], agg#3=[MIN($1)], agg#4=[MAX($3)])\n"
+            		  "    LogicalProject(key=[*($3, 2)], c_custkey=[$0], c_acctbal=[$5], c_nationkey=[+($3, 0)])\n"
+            		  "      LogicalFilter(condition=[<(*($3, 2), 40)])\n"
+            		  "        EnumerableTableScan(table=[[main, customer]])",
+            	      .filePaths = {"/tmp/customer.psv"},
+            	      .tableNames = {"main.customer"},
+            	      .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
+            	                       "c_phone", "c_acctbal", "c_mktsegment", "c_comment"}},
+            	      .columnTypes = {{"int32", "int64", "int64", "int32", "int64", "float32",
+            	                       "int64", "int64"}},
+              .resultTable =
+                  LiteralTableBuilder{
+                      "ResultSet",
+                      {{"EXPR$0", Literals<GDF_FLOAT32>{37496.2,47956.6,17314.9,29051.7,18251.4,27370.2, 20676.5,16785.2, 32370.1, 56047.8,41177.7,31379.0, 29994.1,34806.4, 3839.33,
+                      38188.1, 46194.8,24929.0,58479.7,45247.3}},
+                      {"EXPR$1", Literals<GDF_FLOAT32>{29,2,15,2,0,5,12,55,1,36,6,41,13,-11,75,-14,28,-9,-11,24}},
+                      {"key", Literals<GDF_FLOAT32>{0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38}},
+                      }}
+                      .Build()};
+          auto logical_plan = input.logicalPlan;
+          auto input_tables =
+              ToBlazingFrame(input.filePaths, input.columnNames, input.columnTypes);
+          GdfColumnCppsTableBuilder{"input_table", input_tables[0]}.Build().print(std::cout);
+          auto table_names = input.tableNames;
+          auto column_names = input.columnNames;
+          std::vector<gdf_column_cpp> outputs;
+          gdf_error err = evaluate_query(input_tables, table_names, column_names,
+                                         logical_plan, outputs);
+          std::cout<<"null count is "<<outputs[2].null_count()<<std::endl;
+          EXPECT_TRUE(err == GDF_SUCCESS);
+          auto output_table =
+              GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+          CHECK_RESULT(output_table, input.resultTable);
+        }

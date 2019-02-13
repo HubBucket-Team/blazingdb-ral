@@ -23,26 +23,46 @@
 namespace gdf {
 namespace library {
 
-    namespace helper {
-        void setScalar(gdf_scalar& scalar, int8_t value);
+     namespace helper {
+        void setScalar(gdf_scalar& scalar, int8_t value) {
+            scalar.data.si08 = value;
+        }
 
-        void setScalar(gdf_scalar& scalar, int16_t value);
+        void setScalar(gdf_scalar& scalar, int16_t value) {
+            scalar.data.si16 = value;
+        }
 
-        void setScalar(gdf_scalar& scalar, int32_t value);
+        void setScalar(gdf_scalar& scalar, int32_t value) {
+            scalar.data.si32 = value;
+        }
 
-        void setScalar(gdf_scalar& scalar, int64_t value);
+        void setScalar(gdf_scalar& scalar, int64_t value) {
+            scalar.data.si64 = value;
+        }
 
-        void setScalar(gdf_scalar& scalar, uint8_t value);
+        void setScalar(gdf_scalar& scalar, uint8_t value) {
+            scalar.data.ui08 = value;
+        }
 
-        void setScalar(gdf_scalar& scalar, uint16_t value);
+        void setScalar(gdf_scalar& scalar, uint16_t value) {
+            scalar.data.ui16 = value;
+        }
 
-        void setScalar(gdf_scalar& scalar, uint32_t value);
+        void setScalar(gdf_scalar& scalar, uint32_t value) {
+            scalar.data.ui32 = value;
+        }
 
-        void setScalar(gdf_scalar& scalar, uint64_t value);
+        void setScalar(gdf_scalar& scalar, uint64_t value) {
+            scalar.data.ui64 = value;
+        }
 
-        void setScalar(gdf_scalar& scalar, float value);
+        void setScalar(gdf_scalar& scalar, float value) {
+            scalar.data.fp32 = value;
+        }
 
-        void setScalar(gdf_scalar& scalar, double value);
+        void setScalar(gdf_scalar& scalar, double value) {
+            scalar.data.fp64 = value;
+        }
     }
 
     namespace helper {
@@ -173,27 +193,67 @@ namespace library {
         helper::setScalar(scalar, value);
     }
 
-    const char* getTypeName(gdf_dtype type);
+    static inline const char* getTypeName(gdf_dtype type) {
+        switch (type) {
+            case GDF_INT8:
+                return "GDF_INT8";
+            case GDF_INT16:
+                return "GDF_INT16";
+            case GDF_INT32:
+                return "GDF_INT32";
+            case GDF_INT64:
+                return "GDF_INT64";
+            case GDF_FLOAT32:
+                return "GDF_FLOAT32";
+            case GDF_FLOAT64:
+                return "GDF_FLOAT64";
+            case GDF_DATE32:
+                return "GDF_DATE32";
+            case GDF_DATE64:
+                return "GDF_DATE64";
+            case GDF_TIMESTAMP:
+                return "GDF_TIMESTAMP";
+        }
+    }
+    int8_t getScalar(int8_t, gdf_scalar* scalar) {
+        return scalar->data.si08;
+    }
 
-    int8_t getScalar(int8_t, gdf_scalar* scalar);
+    int16_t getScalar(int16_t, gdf_scalar* scalar) {
+        return scalar->data.si16;
+    }
 
-    int16_t getScalar(int16_t, gdf_scalar* scalar);
+    int32_t getScalar(int32_t, gdf_scalar* scalar) {
+        return scalar->data.si32;
+    }
 
-    int32_t getScalar(int32_t, gdf_scalar* scalar);
+    int64_t getScalar(int64_t, gdf_scalar* scalar) {
+        return scalar->data.si64;
+    }
 
-    int64_t getScalar(int64_t, gdf_scalar* scalar);
+    uint8_t getScalar(uint8_t, gdf_scalar* scalar) {
+        return scalar->data.ui08;
+    }
 
-    uint8_t getScalar(uint8_t, gdf_scalar* scalar);
+    uint16_t getScalar(uint16_t, gdf_scalar* scalar) {
+        return scalar->data.ui16;
+    }
 
-    uint16_t getScalar(uint16_t, gdf_scalar* scalar);
+    uint32_t getScalar(uint32_t, gdf_scalar* scalar) {
+        return scalar->data.ui32;
+    }
 
-    uint32_t getScalar(uint32_t, gdf_scalar* scalar);
+    uint64_t getScalar(uint64_t, gdf_scalar* scalar) {
+        return scalar->data.ui64;
+    }
 
-    uint64_t getScalar(uint64_t, gdf_scalar* scalar);
+    float getScalar(float, gdf_scalar* scalar) {
+        return scalar->data.fp32;
+    }
 
-    float getScalar(float, gdf_scalar* scalar);
-
-    double getScalar(double, gdf_scalar* scalar);
+    double getScalar(double, gdf_scalar* scalar) {
+        return scalar->data.fp64;
+    }
 
 } // namespace library
 } // namespace gdf

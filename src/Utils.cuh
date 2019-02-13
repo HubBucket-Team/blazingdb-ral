@@ -14,11 +14,11 @@
 
 #include <rmm.h>
 
-
 #ifndef DEVICE_RESET
 #define DEVICE_RESET cudaDeviceReset();
 #endif
 
+#ifndef COMMON_HELPER_CUDA_H_ 
 
 static const char *_cudaGetErrorEnum(cudaError_t error) {
   switch (error) {
@@ -281,7 +281,6 @@ static const char *_cudaGetErrorEnum(cudaError_t error) {
 
   return "<unknown>";
 }
-
 template <typename T>
 void check(T result, char const *const func, const char *const file,
            int const line) {
@@ -312,6 +311,8 @@ inline void __getLastCudaError(const char *errorMessage, const char *file,
     exit(EXIT_FAILURE);
   }
 }
+
+#endif //COMMON_HELPER_CUDA_H_
 
 static constexpr int ValidSize = 32;
 using ValidType = uint32_t;

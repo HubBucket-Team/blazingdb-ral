@@ -13,6 +13,7 @@ set(source_files
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/util/type.cpp
     #todo remove when the PR https://github.com/rapidsai/cudf/pull/643 is accepted 
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/replace/replace.cu
+        ${CMAKE_SOURCE_DIR}/src/Config/Config.cpp
 )
 
 
@@ -40,6 +41,6 @@ set(parse_parquet-test_SRCS
     ${source_files}
     parse_parquet.cu
 )
-
+ 
 configure_test(parse_csv-test "${parse_csv-test_SRCS}")
-configure_test(parse_parquet-test "${parse_parquet-test_SRCS}")
+configure_test(parse_parquet-test "${parse_parquet-test_SRCS}") 

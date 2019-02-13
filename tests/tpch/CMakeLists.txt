@@ -13,7 +13,8 @@ set(source_files
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/util/type.cpp
     #todo remove when the PR https://github.com/rapidsai/cudf/pull/643 is accepted 
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/replace/replace.cu
-
+        ${CMAKE_SOURCE_DIR}/src/Config/Config.cpp
+    ${CMAKE_SOURCE_DIR}/src/Interpreter/interpreter_cpp.cu
     ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
     ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
     ${CMAKE_SOURCE_DIR}/src/ColumnManipulation.cu
@@ -41,7 +42,8 @@ set(tpch_csv_tests_src
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/util/type.cpp
     #todo remove when the PR https://github.com/rapidsai/cudf/pull/643 is accepted 
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/replace/replace.cu
-
+        ${CMAKE_SOURCE_DIR}/src/Config/Config.cpp
+    ${CMAKE_SOURCE_DIR}/src/Interpreter/interpreter_cpp.cu
     ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
     ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
     ${CMAKE_SOURCE_DIR}/src/ColumnManipulation.cu

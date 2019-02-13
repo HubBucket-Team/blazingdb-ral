@@ -651,22 +651,12 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 	 *
 	 * 			As you can see the project following aggregate expects the columns to be grouped by to appear BEFORE the expressions
 	 */
-
-	{
-		auto pos = query_part.find("(") + 1;
-		if (pos == std::string::npos) {
-			throw std::runtime_error{"In function process_aggregate: parse error, " + query_part};
-		}
-		auto count = query_part.length() - pos - 1;
-		if (count == 0) {
-			throw std::runtime_error{"In function process_aggregate: parse error, " + query_part};
-		}
-		query_part = query_part.substr(pos, count);
-	}
-
+	
 	//get groups
 	int pos = query_part.find("(") + 1;
+	assert(pos != std::string::npos);
 	int count = query_part.length() - pos - 1;
+	assert(count > 0);
 	query_part = query_part.substr(pos, count);
 	std::vector<int> group_columns = get_group_columns(query_part);
 

@@ -59,7 +59,7 @@ public:
 	std::vector< std::vector<gdf_column_cpp> >& get_columns(){
 		return columns;
 	}
-	void add_table(std::vector<gdf_column_cpp> columns_to_add){
+	void add_table(std::vector<gdf_column_cpp>& columns_to_add){
 		columns.push_back(columns_to_add);
 		if(columns_to_add.size() > 0){
 			//fill row_indeces with 0 to n

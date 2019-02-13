@@ -1,0 +1,11 @@
+#pragma once
+
+#include <string>
+
+namespace bdb {
+namespace test {
+
+    const std::string database_path = "@concat_merge_database_path@";
+
+} // namespace test
+} // namespace bdb

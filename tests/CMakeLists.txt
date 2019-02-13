@@ -65,6 +65,7 @@ message(STATUS "******** Configuring tests ********")
 
 add_subdirectory(logical-filter)
 add_subdirectory(calcite-interpreter)
+add_subdirectory(cudf/concat)
 add_subdirectory(integration)
 add_subdirectory(dtypes)
 add_subdirectory(pjoins)

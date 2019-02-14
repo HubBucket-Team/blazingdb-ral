@@ -9,67 +9,81 @@ namespace concat {
                            blazing_frame& output_frame,
                            bool destroy_inputs) {
 
+        // verify whether there is data to concatenate
         if (input_frames.size() == 0) {
             return GDF_DATASET_EMPTY;
         }
 
-        // verify whether all the gdf_column have the same dtype
+        // use std::vector<std::vector<gdf_column_cpp>> as input
+        auto& input_frame_vectors = input_frames[0].get_columns();
 
-        auto& input_frame = input_frames[0].get_columns();
-
+        // reserve output data
+        // use std::vector<gdf_column_cpp> as output
         output_frame.get_columns().resize(1);
-        output_frame.get_columns()[0].resize(input_frame.size());
+        auto& output_frame_vector = output_frame.get_columns()[0];
+        output_frame_vector.reserve(input_frame_vectors.size());
 
-        std::transform(input_frame.begin(),
-                       input_frame.end(),
-                       output_frame.get_columns()[0].begin(),
-                       [destroy_inputs](std::vector<gdf_column_cpp>& input_vector) -> gdf_column_cpp {
+        // execute concatenation
+        for (std::size_t i = 0; i < input_frame_vectors.size(); ++i) {
+            // verify if dataset is empty
+            if (input_frame_vectors[i].size() == 0) {
+                continue;
+            }
 
-                           std::size_t total_size_concat = 0;
-                           std::for_each(input_vector.begin(),
-                                         input_vector.end(),
-                                         [&total_size_concat](gdf_column_cpp& column) {
-                                             total_size_concat += column.size();
-                                         });
+            // get first input
+            auto& first_input = input_frame_vectors[i][0];
 
-                           gdf_column_cpp output_column;
-                           auto& input = input_vector[0];
+            // get the size of the dtype
+            int width;
+            auto error = get_column_byte_width(first_input.get_gdf_column(), &width);
+            if (error != GDF_SUCCESS) {
+                output_frame.clear();
+                return error;
+            }
 
-                           int width;
-                           auto error = get_column_byte_width(input.get_gdf_column(), &width);
-                           if (error != GDF_SUCCESS) {
-                               //exception: GDF_UNSUPPORTED_DTYPE
-                               return gdf_column_cpp();
-                           }
-                           output_column.create_gdf_column(input.dtype(),
-                                                           total_size_concat,
-                                                           nullptr,
-                                                           width,
-                                                           "concat-" + input.name());
+            // get total size of the input data.
+            // verify whether all the gdf_column_cpp have the same dtype.
+            std::size_t total_size_concat = 0;
+            gdf_dtype dtype_concat = first_input.dtype();
+            for (std::size_t k = 0; k < input_frame_vectors[i].size(); ++k) {
+                auto& column = input_frame_vectors[i][k];
+                if (dtype_concat != column.dtype()) {
+                    output_frame.clear();
+                    return GDF_DTYPE_MISMATCH;
+                }
+                total_size_concat += column.size();
+            }
 
-                           std::vector<gdf_column*> columns;
-                           std::transform(input_vector.begin(),
-                                          input_vector.end(),
-                                          std::back_inserter(columns),
-                                          [](gdf_column_cpp& input) {
-                                              return input.get_gdf_column();
-                                          });
+            // create output gdf_column
+            gdf_column_cpp output_column;
+            output_column.create_gdf_column(first_input.dtype(),
+                                            total_size_concat,
+                                            nullptr,
+                                            width,
+                                            "concat-" + first_input.name());
 
-                           error = gdf_column_concat(output_column.get_gdf_column(), columns.data(), columns.size());
+            // create a container with all of the gdf_column inputs
+            std::vector<gdf_column*> columns;
+            columns.reserve(input_frame_vectors[i].size());
+            for (std::size_t k = 0; k < input_frame_vectors[i].size(); ++k) {
+                columns.emplace_back(input_frame_vectors[i][k].get_gdf_column());
+            }
 
-                           if (destroy_inputs) {
-                               std::for_each(input_vector.begin(),
-                                             input_vector.end(),
-                                             [](gdf_column_cpp& input) {
-                                                 input = gdf_column_cpp();
-                                             });
-                           }
-                           //if (destroy_inputs) {
-                           //    input_vector.clear();
-                           //}
+            // perform concat function
+            error = gdf_column_concat(output_column.get_gdf_column(), columns.data(), columns.size());
+            if (error != GDF_SUCCESS) {
+                output_frame.clear();
+                return error;
+            }
 
-                           return output_column;
-                       });
+            // add concat column to the output
+            output_frame_vector.emplace_back(output_column);
+        }
+
+        // clear input
+        if (destroy_inputs) {
+            input_frames.clear();
+        }
 
         return GDF_SUCCESS;
     }

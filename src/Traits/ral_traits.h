@@ -28,6 +28,16 @@ namespace traits {
         static constexpr gdf_dtype type = GDF_INT64;
     };
 
+    template <>
+    struct get_dtype_from_type<float> {
+        static constexpr gdf_dtype type = GDF_FLOAT32;
+    };
+
+    template <>
+    struct get_dtype_from_type<double> {
+        static constexpr gdf_dtype type = GDF_FLOAT64;
+    };
+
     template <typename T>
     constexpr gdf_dtype get_dtype_from_type_v = get_dtype_from_type<T>::type;
 

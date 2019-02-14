@@ -259,4 +259,135 @@ namespace {
         }
     }
 
+
+    TEST_F(ConcatMergeTest, Int8_Int16_Float32_Float64) {
+        // create sequences
+        std::vector<Sequence> sequences;
+        sequences.emplace_back(Sequence{ .index = 0, .size = 1 });
+        sequences.emplace_back(Sequence{ .index = 1, .size = 2 });
+        sequences.emplace_back(Sequence{ .index = 3, .size = 3 });
+        sequences.emplace_back(Sequence{ .index = 6, .size = 4 });
+
+        // create input frame
+        std::vector<blazing_frame> input_frame(1);
+
+        // populate input frame
+        createInputFrame<int8_t>(input_frame, sequences[0]);
+        createInputFrame<int16_t>(input_frame, sequences[1]);
+        createInputFrame<float>(input_frame, sequences[2]);
+        createInputFrame<double>(input_frame, sequences[3]);
+
+        // create output frame
+        blazing_frame output_frame;
+
+        // perform test - concat merge
+        auto error = cudf::concat::concat_merge(input_frame, output_frame);
+        ASSERT_TRUE(error == GDF_SUCCESS);
+
+        // verify test
+        verify_data<int8_t>(output_frame, 0, sequences[0]);
+        verify_mask(output_frame, 0, sequences[0]);
+        verify_data<int16_t>(output_frame, 1, sequences[1]);
+        verify_mask(output_frame, 1, sequences[1]);
+        verify_data<float>(output_frame, 2, sequences[2]);
+        verify_mask(output_frame, 2, sequences[2]);
+        verify_data<double>(output_frame, 3, sequences[3]);
+        verify_mask(output_frame, 3, sequences[3]);
+    }
+
+
+    TEST_F(ConcatMergeTest, DestroySelected) {
+        // create sequences
+        std::vector<Sequence> sequences;
+        sequences.emplace_back(Sequence{ .index = 2, .size = 1 });
+        sequences.emplace_back(Sequence{ .index = 6, .size = 2 });
+
+        // create input frame
+        std::vector<blazing_frame> input_frame(1);
+
+        // populate input frame
+        for (const auto& sequence : sequences) {
+            createInputFrame<int8_t>(input_frame, sequence);
+        }
+
+        // create output frame
+        blazing_frame output_frame;
+
+        // perform test - concat merge
+        auto error = cudf::concat::concat_merge(input_frame, output_frame, true);
+        ASSERT_EQ(error, GDF_SUCCESS);
+        ASSERT_EQ(input_frame.size(), 0);
+
+        // verify test
+        for (int k = 0; k < (int)sequences.size(); ++k) {
+            verify_data<int8_t>(output_frame, k, sequences[k]);
+            verify_mask(output_frame, k, sequences[k]);
+        }
+    }
+
+
+    TEST_F(ConcatMergeTest, InputError_EmptyBlazingFrame) {
+        // create input frame
+        std::vector<blazing_frame> input_frame;
+
+        // create output frame
+        blazing_frame output_frame;
+
+        // perform test - concat merge
+        auto error = cudf::concat::concat_merge(input_frame, output_frame);
+
+        // verify
+        ASSERT_EQ(error, GDF_DATASET_EMPTY);
+        ASSERT_EQ(output_frame.get_columns().size(), 0);
+    }
+
+
+    TEST_F(ConcatMergeTest, InputError_DifferentTypeBlazingFrame) {
+        // create input frame
+        std::vector<blazing_frame> input_frame(1);
+
+        // set input frame
+        {
+            Sequence sequence1{ .index = 0, .size = 1 };
+            Sequence sequence2{ .index = 1, .size = 1 };
+
+            // create data vector
+            auto column_data_1 = create_data_vector<int8_t>(sequence1);
+            auto column_data_2 = create_data_vector<int64_t>(sequence2);
+
+            // create valid vector
+            auto column_mask_1 = create_mask_vector(sequence1);
+            auto column_mask_2 = create_mask_vector(sequence2);
+
+            // create gdf_columns
+            std::vector<gdf_column_cpp> columns(2);
+            columns[0].create_gdf_column(ral::traits::get_dtype_from_type_v<int8_t>,
+                                         meta.size_column,
+                                         column_data_1[0].data(),
+                                         column_mask_1[0].data(),
+                                         sizeof(int8_t),
+                                         "");
+
+            columns[1].create_gdf_column(ral::traits::get_dtype_from_type_v<int64_t>,
+                                         meta.size_column,
+                                         column_data_2[0].data(),
+                                         column_mask_2[0].data(),
+                                         sizeof(int64_t),
+                                         "");
+
+            // add gdf_columns to frame
+            input_frame[0].add_table(columns);
+        }
+
+        // create output frame
+        blazing_frame output_frame;
+
+        // perform test - concat merge
+        auto error = cudf::concat::concat_merge(input_frame, output_frame);
+
+        // verify
+        ASSERT_EQ(error, GDF_DTYPE_MISMATCH);
+        ASSERT_EQ(output_frame.get_columns().size(), 0);
+    }
+
 } // namespace

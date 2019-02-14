@@ -285,15 +285,15 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
 
   try {
     // get result from repository using accessToken and resultToken
-    std::tuple<blazing_frame, double> result = result_set_repository::get_instance().get_result(accessToken, request.getResultToken());
+    result_set_t result = result_set_repository::get_instance().get_result(accessToken, request.getResultToken());
 
     //TODO ojo el result siempre es una sola tabla por eso indice 0
-    const int rows = std::get<0>(result).get_columns()[0][0].size();
+    const int rows = result.result_frame.get_columns()[0][0].size();
 
     interpreter::BlazingMetadataDTO  metadata = {
       .status = "OK",
       .message = "metadata message",
-      .time = std::get<1>(result),
+      .time = result.duration,
       .rows = rows
     };
     std::vector<std::string> fieldNames;
@@ -301,21 +301,21 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
     std::vector<::gdf_dto::gdf_column> values;
 
     //TODO WARNING why 0 why multitables?
-    for(int i = 0; i < std::get<0>(result).get_columns()[0].size(); ++i) {
-      fieldNames.push_back(std::get<0>(result).get_columns()[0][i].name());
-      columnTokens.push_back(std::get<0>(result).get_columns()[0][i].get_column_token());
+    for(int i = 0; i < result.result_frame.get_columns()[0].size(); ++i) {
+      fieldNames.push_back(result.result_frame.get_columns()[0][i].name());
+      columnTokens.push_back(result.result_frame.get_columns()[0][i].get_column_token());
 
-      std::cout << "col_name: " << std::get<0>(result).get_columns()[0][i].name() << std::endl;
+      std::cout << "col_name: " << result.result_frame.get_columns()[0][i].name() << std::endl;
 
-      auto data = libgdf::BuildCudaIpcMemHandler(std::get<0>(result).get_columns()[0][i].get_gdf_column()->data);
-      auto valid = libgdf::BuildCudaIpcMemHandler(std::get<0>(result).get_columns()[0][i].get_gdf_column()->valid);
+      auto data = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->data);
+      auto valid = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->valid);
 
       auto col = ::gdf_dto::gdf_column {
             .data = data,
             .valid = valid,
-            .size = std::get<0>(result).get_columns()[0][i].size(),
-            .dtype = (gdf_dto::gdf_dtype)std::get<0>(result).get_columns()[0][i].dtype(),
-            .null_count = std::get<0>(result).get_columns()[0][i].null_count(),
+            .size = result.result_frame.get_columns()[0][i].size(),
+            .dtype = (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype(),
+            .null_count = result.result_frame.get_columns()[0][i].null_count(),
             .dtype_info = gdf_dto::gdf_dtype_extra_info {
               .time_unit = (gdf_dto::gdf_time_unit)0,
             }

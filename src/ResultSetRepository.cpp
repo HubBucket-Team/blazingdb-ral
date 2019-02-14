@@ -110,6 +110,21 @@ connection_id_t result_set_repository::init_session(){
 	return session;
 }
 
+void result_set_repository::free_result(connection_id_t connection, query_token_t token){
+	std::vector<query_token_t>& tokens = this->connection_result_sets[connection];
+	tokens.erase(std::remove(tokens.begin(), tokens.end(), token), tokens.end()); //remove
+
+	std::cout<<"freed result!"<<std::endl;
+
+	blazing_frame output_frame = this->result_sets[token].result_frame;
+
+	for(size_t i = 0; i < output_frame.get_width(); i++){
+		GDFRefCounter::getInstance()->free(output_frame.get_column(i).get_gdf_column());
+	}
+
+	this->result_sets.erase(token);
+}
+
 void result_set_repository::remove_all_connection_tokens(connection_id_t connection){
 	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
 		//TODO percy uncomment this later
@@ -119,28 +134,14 @@ void result_set_repository::remove_all_connection_tokens(connection_id_t connect
 
 	std::lock_guard<std::mutex> guard(this->repo_mutex);
 	for(query_token_t token : this->connection_result_sets[connection]){
-		//this->free_result(connection, token);
-		if(this->result_sets[token].ref_counter == 0)
-		{
-			std::vector<query_token_t>& tokens = this->connection_result_sets[connection];
-			tokens.erase(std::remove(tokens.begin(), tokens.end(), token), tokens.end()); //remove
-
-			std::cout<<"freed result!"<<std::endl;
-
-			blazing_frame output_frame = this->result_sets[token].result_frame;
-
-			for(size_t i = 0; i < output_frame.get_width(); i++){
-				GDFRefCounter::getInstance()->free(output_frame.get_column(i).get_gdf_column());
-			}
-
-			this->result_sets.erase(token);
+		if(this->result_sets[token].ref_counter == 0){
+			this->free_result(connection, token);
 		}
-		//	this->result_sets.erase(token);
 	}
 	//this->connection_result_sets.erase(connection);
 }
 
-bool result_set_repository::free_result(connection_id_t connection, query_token_t token){
+bool result_set_repository::try_free_result(connection_id_t connection, query_token_t token){
 	std::lock_guard<std::mutex> guard(this->repo_mutex);
 
 	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
@@ -149,18 +150,7 @@ bool result_set_repository::free_result(connection_id_t connection, query_token_
 
 	if(this->result_sets.find(token) != this->result_sets.end()){
 		if(this->result_sets[token].ref_counter == 1 ){ //this is the last one reference
-			std::vector<query_token_t>& tokens = this->connection_result_sets[connection];
-			tokens.erase(std::remove(tokens.begin(), tokens.end(), token), tokens.end()); //remove
-
-			std::cout<<"freed result!"<<std::endl;
-
-			blazing_frame output_frame = this->result_sets[token].result_frame;
-
-			for(size_t i = 0; i < output_frame.get_width(); i++){
-				GDFRefCounter::getInstance()->free(output_frame.get_column(i).get_gdf_column());
-			}
-
-			this->result_sets.erase(token);
+			this->free_result(connection, token);
 		}
 		else{ //it is being referenced yet
 			std::cout<<"can't free result, still has at least one reference!"<<std::endl;

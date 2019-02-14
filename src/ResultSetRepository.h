@@ -29,7 +29,8 @@ struct result_set_t {
 class result_set_repository {
 public:
 
-	bool free_result(connection_id_t connection, query_token_t token);
+	bool try_free_result(connection_id_t connection, query_token_t token);
+	void free_result(connection_id_t connection, query_token_t token);
 	virtual ~result_set_repository();
 	result_set_repository();
 	static result_set_repository & get_instance(){

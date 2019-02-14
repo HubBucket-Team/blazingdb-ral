@@ -69,8 +69,10 @@ namespace {
             return column_mask;
         }
 
-        template <typename T>
+        template <gdf_dtype E>
         void verify_data(blazing_frame& frame, int index, const Sequence& sequence) {
+            using T = ral::traits::get_type_t<E>;
+
             auto column_data = create_data_vector<T>(sequence);
             auto gdf_column = frame.get_columns()[0][index];
 
@@ -113,8 +115,10 @@ namespace {
             }
         }
 
-        template <typename T>
+        template <gdf_dtype E>
         void createInputFrame(std::vector<blazing_frame>& frame, const Sequence& sequence) {
+            using T = ral::traits::get_type_t<E>;
+
             // create data vector
             auto column_data = create_data_vector<T>(sequence);
 
@@ -124,7 +128,7 @@ namespace {
             // create gdf_columns
             std::vector<gdf_column_cpp> columns(sequence.size);
             for (std::size_t i = 0; i < sequence.size; ++i) {
-                columns[i].create_gdf_column(ral::traits::get_dtype_from_type_v<T>,
+                columns[i].create_gdf_column(E,
                                              meta.size_column,
                                              column_data[i].data(),
                                              column_mask[i].data(),
@@ -152,7 +156,7 @@ namespace {
 
         // populate input frame
         for (const auto& sequence : sequences) {
-            createInputFrame<int8_t>(input_frame, sequence);
+            createInputFrame<GDF_INT8>(input_frame, sequence);
         }
 
         // create output frame
@@ -164,7 +168,7 @@ namespace {
 
         // verify test
         for (int k = 0; k < (int)sequences.size(); ++k) {
-            verify_data<int8_t>(output_frame, k, sequences[k]);
+            verify_data<GDF_INT8>(output_frame, k, sequences[k]);
             verify_mask(output_frame, k, sequences[k]);
         }
     }
@@ -181,7 +185,7 @@ namespace {
 
         // populate input frame
         for (const auto& sequence : sequences) {
-            createInputFrame<int16_t>(input_frame, sequence);
+            createInputFrame<GDF_INT16>(input_frame, sequence);
         }
 
         // create output frame
@@ -193,7 +197,7 @@ namespace {
 
         // verify test
         for (int k = 0; k < (int)sequences.size(); ++k) {
-            verify_data<int16_t>(output_frame, k, sequences[k]);
+            verify_data<GDF_INT16>(output_frame, k, sequences[k]);
             verify_mask(output_frame, k, sequences[k]);
         }
     }
@@ -211,7 +215,7 @@ namespace {
 
         // populate input frame
         for (const auto& sequence : sequences) {
-            createInputFrame<int32_t>(input_frame, sequence);
+            createInputFrame<GDF_INT32>(input_frame, sequence);
         }
 
         // create output frame
@@ -223,7 +227,7 @@ namespace {
 
         // verify test
         for (int k = 0; k < (int)sequences.size(); ++k) {
-            verify_data<int32_t>(output_frame, k, sequences[k]);
+            verify_data<GDF_INT32>(output_frame, k, sequences[k]);
             verify_mask(output_frame, k, sequences[k]);
         }
     }
@@ -242,7 +246,7 @@ namespace {
 
         // populate input frame
         for (const auto& sequence : sequences) {
-            createInputFrame<int64_t>(input_frame, sequence);
+            createInputFrame<GDF_INT64>(input_frame, sequence);
         }
 
         // create output frame
@@ -254,7 +258,7 @@ namespace {
 
         // verify test
         for (int k = 0; k < (int)sequences.size(); ++k) {
-            verify_data<int64_t>(output_frame, k, sequences[k]);
+            verify_data<GDF_INT64>(output_frame, k, sequences[k]);
             verify_mask(output_frame, k, sequences[k]);
         }
     }
@@ -272,10 +276,10 @@ namespace {
         std::vector<blazing_frame> input_frame(1);
 
         // populate input frame
-        createInputFrame<int8_t>(input_frame, sequences[0]);
-        createInputFrame<int16_t>(input_frame, sequences[1]);
-        createInputFrame<float>(input_frame, sequences[2]);
-        createInputFrame<double>(input_frame, sequences[3]);
+        createInputFrame<GDF_INT8>(input_frame, sequences[0]);
+        createInputFrame<GDF_INT16>(input_frame, sequences[1]);
+        createInputFrame<GDF_FLOAT32>(input_frame, sequences[2]);
+        createInputFrame<GDF_FLOAT64>(input_frame, sequences[3]);
 
         // create output frame
         blazing_frame output_frame;
@@ -285,13 +289,13 @@ namespace {
         ASSERT_TRUE(error == GDF_SUCCESS);
 
         // verify test
-        verify_data<int8_t>(output_frame, 0, sequences[0]);
+        verify_data<GDF_INT8>(output_frame, 0, sequences[0]);
         verify_mask(output_frame, 0, sequences[0]);
-        verify_data<int16_t>(output_frame, 1, sequences[1]);
+        verify_data<GDF_INT16>(output_frame, 1, sequences[1]);
         verify_mask(output_frame, 1, sequences[1]);
-        verify_data<float>(output_frame, 2, sequences[2]);
+        verify_data<GDF_FLOAT32>(output_frame, 2, sequences[2]);
         verify_mask(output_frame, 2, sequences[2]);
-        verify_data<double>(output_frame, 3, sequences[3]);
+        verify_data<GDF_FLOAT64>(output_frame, 3, sequences[3]);
         verify_mask(output_frame, 3, sequences[3]);
     }
 
@@ -307,7 +311,7 @@ namespace {
 
         // populate input frame
         for (const auto& sequence : sequences) {
-            createInputFrame<int8_t>(input_frame, sequence);
+            createInputFrame<GDF_INT8>(input_frame, sequence);
         }
 
         // create output frame
@@ -320,7 +324,7 @@ namespace {
 
         // verify test
         for (int k = 0; k < (int)sequences.size(); ++k) {
-            verify_data<int8_t>(output_frame, k, sequences[k]);
+            verify_data<GDF_INT8>(output_frame, k, sequences[k]);
             verify_mask(output_frame, k, sequences[k]);
         }
     }
@@ -361,14 +365,14 @@ namespace {
 
             // create gdf_columns
             std::vector<gdf_column_cpp> columns(2);
-            columns[0].create_gdf_column(ral::traits::get_dtype_from_type_v<int8_t>,
+            columns[0].create_gdf_column(GDF_INT8,
                                          meta.size_column,
                                          column_data_1[0].data(),
                                          column_mask_1[0].data(),
                                          sizeof(int8_t),
                                          "");
 
-            columns[1].create_gdf_column(ral::traits::get_dtype_from_type_v<int64_t>,
+            columns[1].create_gdf_column(GDF_INT64,
                                          meta.size_column,
                                          column_data_2[0].data(),
                                          column_mask_2[0].data(),

@@ -16,15 +16,18 @@
 
 class gdf_column_cpp
 {
+private:
+    gdf_column* column{};
+    std::size_t allocated_size_data{};
+    std::size_t allocated_size_valid{};
+    std::string column_name{};
+    int8_t is_ipc_column{};
+    column_token_t column_token{};
+
 	private:
-		gdf_column * column;
-		size_t allocated_size_data;
-		size_t allocated_size_valid;
-		std::string column_name;
 		gdf_valid_type * allocate_valid();
 		void set_name(std::string name);
-		int8_t is_ipc_column;
-		column_token_t column_token;
+
 	//	gdf_column_cpp(void* _data, gdf_valid_type* _valid, gdf_dtype _dtype, size_t _size, gdf_size_type _null_count, const std::string &column_name = "");
 	public:
 
@@ -79,6 +82,13 @@ class gdf_column_cpp
 
 public:
     std::size_t get_valid_size() const;
+
+private:
+    inline void decrement_counter(gdf_column* column) {
+        if (column != nullptr) {
+            GDFRefCounter::getInstance()->decrement(column);
+        }
+    }
 };
 
 #endif /* GDFCOLUMN_H_ */

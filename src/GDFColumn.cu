@@ -72,6 +72,9 @@ gdf_column_cpp::gdf_column_cpp(gdf_column_cpp& col)
 void gdf_column_cpp::set_name(std::string name){
 		this->column_name = name;
 		//why the fuck isnt the name a fixed size
+		if (name.empty()) {
+		    return;
+		}
 
 		this->column->col_name = new char[name.size() + 1];
 		this->column->col_name[name.size()] = 0;
@@ -146,7 +149,12 @@ gdf_column_cpp gdf_column_cpp::clone(std::string name)  // TODO clone needs to r
 
 void gdf_column_cpp::operator=(const gdf_column_cpp& col)
 {
-	column = col.column;
+    if (column == col.column) {
+        return;
+    }
+    decrement_counter(column);
+
+    column = col.column;
     this->allocated_size_data = col.allocated_size_data;
     this->allocated_size_valid = col.allocated_size_valid;
     this->set_name(col.column_name);
@@ -216,6 +224,8 @@ gdf_valid_type * gdf_column_cpp::allocate_valid(){
 
 void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,gdf_valid_type * valid_data,size_t num_values,std::string column_name){
     assert(type != GDF_invalid);
+    decrement_counter(column);
+
     int width;
 
     //TODO crate column here
@@ -236,7 +246,9 @@ void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,g
 void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void * input_data, gdf_valid_type * host_valids, size_t width_per_value, const std::string &column_name)
 {
     assert(type != GDF_invalid);
-    this->column = new gdf_column;
+    decrement_counter(column);
+
+    this->column = new gdf_column();
 
     //TODO: this is kind of bad its a chicken and egg situation with column_view requiring a pointer to device and allocate_valid
     //needing to not require numvalues so it can be called rom outside
@@ -277,6 +289,8 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
 void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value, const std::string &column_name)
 {
     assert(type != GDF_invalid);
+    decrement_counter(column);
+
     this->column = new gdf_column;
 
     //TODO: this is kind of bad its a chicken and egg situation with column_view requiring a pointer to device and allocate_valid
@@ -309,6 +323,8 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
 
 }
 void gdf_column_cpp::create_gdf_column(gdf_column * column){
+    decrement_counter(column);
+
 	this->column = column;
 	int width_per_value;
 	gdf_error err = get_column_byte_width(column, &width_per_value);
@@ -328,7 +344,7 @@ void gdf_column_cpp::create_gdf_column(gdf_column * column){
 /*
 void gdf_column_cpp::realloc_gdf_column(gdf_dtype type, size_t size, size_t width){
 	const std::string col_name = this->column_name;
-    GDFRefCounter::getInstance()->decrement(&this->column); //decremeting reference, deallocating space
+    //GDFRefCounter::getInstance()->decrement(&this->column); //decremeting reference, deallocating space
 
 	this->create_gdf_column(type, size, nullptr, width, col_name);
 }*/

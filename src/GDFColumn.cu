@@ -146,6 +146,11 @@ gdf_column_cpp gdf_column_cpp::clone(std::string name)  // TODO clone needs to r
 
 void gdf_column_cpp::operator=(const gdf_column_cpp& col)
 {
+    if (column == col.column) {
+        return;
+    }
+    decrement_counter(column);
+
 	column = col.column;
     this->allocated_size_data = col.allocated_size_data;
     this->allocated_size_valid = col.allocated_size_valid;
@@ -216,6 +221,8 @@ gdf_valid_type * gdf_column_cpp::allocate_valid(){
 
 void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,gdf_valid_type * valid_data,size_t num_values,std::string column_name){
     assert(type != GDF_invalid);
+    decrement_counter(column);
+
     int width;
 
     //TODO crate column here
@@ -236,6 +243,8 @@ void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,g
 void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void * input_data, gdf_valid_type * host_valids, size_t width_per_value, const std::string &column_name)
 {
     assert(type != GDF_invalid);
+    decrement_counter(column);
+
     this->column = new gdf_column;
 
     //TODO: this is kind of bad its a chicken and egg situation with column_view requiring a pointer to device and allocate_valid
@@ -277,6 +286,8 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
 void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value, const std::string &column_name)
 {
     assert(type != GDF_invalid);
+    decrement_counter(column);
+
     this->column = new gdf_column;
 
     //TODO: this is kind of bad its a chicken and egg situation with column_view requiring a pointer to device and allocate_valid
@@ -308,7 +319,10 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     GDFRefCounter::getInstance()->register_column(this->column);
 
 }
+
 void gdf_column_cpp::create_gdf_column(gdf_column * column){
+    decrement_counter(this->column);
+
 	this->column = column;
 	int width_per_value;
 	gdf_error err = get_column_byte_width(column, &width_per_value);

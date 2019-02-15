@@ -135,3 +135,12 @@ GDFRefCounter* GDFRefCounter::getInstance()
         Instance=new GDFRefCounter();
     return Instance;
 }
+
+std::size_t GDFRefCounter::column_ref_value(gdf_column* column) {
+    std::lock_guard<std::mutex> lock(gc_mutex);
+    auto it = map.find(column);
+    if (it == map.end()) {
+        return 0;
+    }
+    return it->second;
+}

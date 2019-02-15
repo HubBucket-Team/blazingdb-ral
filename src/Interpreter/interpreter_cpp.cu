@@ -259,7 +259,7 @@ gdf_error perform_operation(	std::vector<gdf_column *> output_columns,
 	int min_grid_size;
 	int block_size;
 
-	calculate_grid(&min_grid_size, &block_size, max_output);
+	calculate_grid(&min_grid_size, &block_size, max_output+1);
 
 
 	cuDF::Allocator::allocate((void **)&temp_space,interpreter_functor_8::get_temp_size(input_columns.size(),left_inputs.size(),final_output_positions.size()), stream);

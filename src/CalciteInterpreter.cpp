@@ -408,7 +408,13 @@ gdf_error execute_project_plan(blazing_frame & input, std::string query_part){
 
 	input.clear();
 	input.add_table(params.columns);
-	return err;
+
+	for(size_t i = 0; i < input.get_width(); i++)
+	{
+		input.get_column(i).update_null_count();
+	}
+	
+	return err;	
 }
 
 gdf_error process_project(blazing_frame & input, std::string query_part){
@@ -809,9 +815,8 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 
 
 
-	gdf_column ** group_by_columns_ptr = new gdf_column *[group_columns.size()];
-	gdf_column ** group_by_columns_ptr_out = new gdf_column *[group_columns.size()];
-
+	std::vector<gdf_column *> group_by_columns_ptr{group_columns.size()};
+	std::vector<gdf_column *> group_by_columns_ptr_out{group_columns.size()};
 	std::vector<gdf_column_cpp> output_columns_group;
 	std::vector<gdf_column_cpp> output_columns_aggregations;
 
@@ -896,8 +901,8 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 			}else{
 				//				std::cout<<"before"<<std::endl;
 				//				print_gdf_column(output_columns_group[0].get_gdf_column());
-				err = gdf_group_by_sum(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
-						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);
+				err = gdf_group_by_sum(group_columns.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out.data(),output_column.get_gdf_column(),&ctxt);
 				//				std::cout<<"after"<<std::endl;
 				//				print_gdf_column(output_columns_group[0].get_gdf_column());
 				//				std::cout<<"direct "<<(group_by_columns_ptr_out[0] == nullptr)<<std::endl;
@@ -929,8 +934,8 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 							output_columns_aggregations);
 				}
 			}else{
-				err = gdf_group_by_min(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
-						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);
+				err = gdf_group_by_min(group_columns.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out.data(),output_column.get_gdf_column(),&ctxt);
 			}
 			if(err == GDF_SUCCESS){
 				aggregation_size = output_column.size();
@@ -953,8 +958,8 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 							output_columns_aggregations);
 				}
 			}else{
-				err = gdf_group_by_max(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
-						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);
+				err = gdf_group_by_max(group_columns.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out.data(),output_column.get_gdf_column(),&ctxt);
 			}
 			if(err == GDF_SUCCESS){
 				aggregation_size = output_column.size();
@@ -978,8 +983,8 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 				}
 			}
 			else{
-				err = gdf_group_by_avg(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
-						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);
+				err = gdf_group_by_avg(group_columns.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out.data(),output_column.get_gdf_column(),&ctxt);
 			}
 			if(err == GDF_SUCCESS){
 				aggregation_size = output_column.size();
@@ -1000,8 +1005,8 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
                 err = GDF_SUCCESS;
 
 			}else{
-				err = gdf_group_by_count(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
-						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt);
+				err = gdf_group_by_count(group_columns.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out.data(),output_column.get_gdf_column(),&ctxt);
 			}
 			if(err == GDF_SUCCESS){
 				aggregation_size = output_column.size();
@@ -1457,13 +1462,9 @@ query_token_t evaluate_query(
 		std::set<gdf_column *> included_columns;
 		for(size_t index = 0; index < output_frame.get_size_columns(); index++){
 			gdf_column_cpp output_column = output_frame.get_column(index);
-			if(output_column.is_ipc() || included_columns.find(output_column.get_gdf_column()) != included_columns.end()){
-				output_frame.set_column(index,
-						output_column.clone(output_column.name()));
-			}else{
-				output_column.delete_set_name(output_column.name());
-			}
+			output_frame.set_column(index, output_column.clone(output_column.name()));
 		}
+
 		//Todo: put it on a macro for debugging purposes!
 		/*std::cout<<"Result\n";
 	for (auto outputTable : output_frame.get_columns()) {

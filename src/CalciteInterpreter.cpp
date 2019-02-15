@@ -344,7 +344,6 @@ project_plan_params parse_project_plan(blazing_frame& input, std::string query_p
 
 			gdf_column_cpp output = input.get_column(index);
 			output.set_name(name);
-//			std::memcpy(output.get_gdf_column()->col_name, name.c_str(),name.size());
 			input_used_in_output[index] = true;
 			columns[i] = output;
 			//			}else{
@@ -480,8 +479,6 @@ void process_project(blazing_frame & input, std::string query_part){
 			//we have to make a copy of it here
 
 			gdf_column_cpp output = input.get_column(index).clone(name);
-
-			std::memcpy(output.get_gdf_column()->col_name, name.c_str(),name.size());
 			input_used_in_output[index] = true;
 			columns[i] = output;
 			//			}else{

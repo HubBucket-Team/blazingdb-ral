@@ -364,7 +364,7 @@ static result_pair freeResultService(uint64_t accessToken, Buffer&& requestPaylo
 
   interpreter::GetResultRequestMessage request(requestPayloadBuffer.data());
   std::cout << "resultToken: " << request.getResultToken() << std::endl;
-  if(result_set_repository::get_instance().free_result(accessToken, request.getResultToken())){
+  if(result_set_repository::get_instance().try_free_result(accessToken, request.getResultToken())){
 	  ZeroMessage response{};
 	  return std::make_pair(Status_Success, response.getBufferData());
   }else{

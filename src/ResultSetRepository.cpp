@@ -138,7 +138,7 @@ void result_set_repository::remove_all_connection_tokens(connection_id_t connect
 			this->free_result(connection, token);
 		}
 	}
-	//this->connection_result_sets.erase(connection);
+	this->connection_result_sets.erase(connection);
 }
 
 bool result_set_repository::try_free_result(connection_id_t connection, query_token_t token){

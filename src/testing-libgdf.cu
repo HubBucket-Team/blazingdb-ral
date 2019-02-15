@@ -11,7 +11,6 @@
 #include <cuda_runtime.h>
 #include <memory>
 #include <algorithm>
-#include <sstream>
 #include <thread>
 #include "CalciteInterpreter.h"
 #include "ResultSetRepository.h"
@@ -548,6 +547,7 @@ auto  interpreterServices(const blazingdb::protocol::Buffer &requestPayloadBuffe
   ResponseMessage responseObject{result.first, result.second};
   return Buffer{responseObject.getBufferData()};
 }
+
 
 int main(int argc, const char *argv[])
 {

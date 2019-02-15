@@ -208,7 +208,8 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     //needing to not require numvalues so it can be called rom outside
     this->get_gdf_column()->size = num_values;
     char * data;
-    is_ipc_column = false;
+    this->is_ipc_column = false;
+    this->column_token = 0;
 
     gdf_valid_type * valid_device = allocate_valid();
     this->allocated_size_data = (width_per_value * num_values); 
@@ -242,7 +243,7 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     //needing to not require numvalues so it can be called rom outside
     this->get_gdf_column()->size = num_values;
     char * data;
-    is_ipc_column = false;
+    this->is_ipc_column = false;
     this->column_token = 0;
 
     gdf_valid_type * valid_device = allocate_valid();

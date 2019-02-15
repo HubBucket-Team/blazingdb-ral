@@ -395,6 +395,13 @@ void execute_project_plan(blazing_frame & input, std::string query_part){
 
 	input.clear();
 	input.add_table(params.columns);
+
+	for(size_t i = 0; i < input.get_width(); i++)
+	{
+		input.get_column(i).update_null_count();
+	}
+	
+	
 }
 
 void process_project(blazing_frame & input, std::string query_part){
@@ -753,9 +760,8 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 
 
 
-	gdf_column ** group_by_columns_ptr = new gdf_column *[group_columns.size()];
-	gdf_column ** group_by_columns_ptr_out = new gdf_column *[group_columns.size()];
-
+	std::vector<gdf_column *> group_by_columns_ptr{group_columns.size()};
+	std::vector<gdf_column *> group_by_columns_ptr_out{group_columns.size()};
 	std::vector<gdf_column_cpp> output_columns_group;
 	std::vector<gdf_column_cpp> output_columns_aggregations;
 
@@ -826,8 +832,8 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 			}else{
 				//				std::cout<<"before"<<std::endl;
 				//				print_gdf_column(output_columns_group[0].get_gdf_column());
-				CUDF_CALL( gdf_group_by_sum(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
-						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt) );
+				CUDF_CALL( gdf_group_by_sum(group_columns.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out.data(),output_column.get_gdf_column(),&ctxt));
 				//				std::cout<<"after"<<std::endl;
 				//				print_gdf_column(output_columns_group[0].get_gdf_column());
 				//				std::cout<<"direct "<<(group_by_columns_ptr_out[0] == nullptr)<<std::endl;
@@ -852,8 +858,8 @@ void process_aggregate(blazing_frame & input, std::string query_part){
                                                 output_columns_aggregations);
                 }
 			}else{
-				CUDF_CALL( gdf_group_by_min(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
-						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt) );
+				CUDF_CALL( gdf_group_by_min(group_columns.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out.data(),output_column.get_gdf_column(),&ctxt));
 			}
 			break;
 		case GDF_MAX:
@@ -870,8 +876,8 @@ void process_aggregate(blazing_frame & input, std::string query_part){
                                                 output_columns_aggregations);
                 }
 			}else{
-				CUDF_CALL( gdf_group_by_max(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
-						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt) );
+				CUDF_CALL( gdf_group_by_max(group_columns.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out.data(),output_column.get_gdf_column(),&ctxt));
 			}
 			break;
 		case GDF_AVG:
@@ -889,8 +895,8 @@ void process_aggregate(blazing_frame & input, std::string query_part){
                 }
             }
 			else{
-				CUDF_CALL( gdf_group_by_avg(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
-						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt) );
+				CUDF_CALL( gdf_group_by_avg(group_columns.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out.data(),output_column.get_gdf_column(),&ctxt));
 			}
 			break;
 		case GDF_COUNT:
@@ -902,8 +908,8 @@ void process_aggregate(blazing_frame & input, std::string query_part){
                 uint64_t result = aggregation_input.get_gdf_column()->size - aggregation_input.get_gdf_column()->null_count;                
 				CheckCudaErrors(cudaMemcpy(output_column.get_gdf_column()->data, &result, sizeof(uint64_t), cudaMemcpyHostToDevice));			
 			}else{
-				CUDF_CALL( gdf_group_by_count(group_columns.size(),group_by_columns_ptr,aggregation_input.get_gdf_column(),
-						nullptr,group_by_columns_ptr_out,output_column.get_gdf_column(),&ctxt) );
+			CUDF_CALL( gdf_group_by_count(group_columns.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out.data(),output_column.get_gdf_column(),&ctxt));
 			}
 			break;
 		}
@@ -1318,13 +1324,20 @@ query_token_t evaluate_query(
 			std::set<gdf_column *> included_columns;
 			for(size_t index = 0; index < output_frame.get_size_columns(); index++){
 				gdf_column_cpp output_column = output_frame.get_column(index);
-				if(output_column.is_ipc() || included_columns.find(output_column.get_gdf_column()) != included_columns.end()){
-					output_frame.set_column(index,
-							output_column.clone(output_column.name()));
+				output_frame.set_column(index, output_column.clone(output_column.name()));
+				
+				// WSM IS THIS CORRECT, THIS IS PRIOR TO MERGE NEED TO LOOK INTO THIS
+				/*if(output_column.is_ipc() || included_columns.find(output_column.get_gdf_column()) != included_columns.end()){
+				output_frame.set_column(index,
+						output_column.clone(output_column.name()));
 				}else{
-					output_column.set_name(output_column.name());
-				}
-		}
+					output_column.delete_set_name(output_column.name());
+				}*/
+				
+				
+			}
+		
+
 
 			result_set_repository::get_instance().update_token(token, output_frame, duration);
 		}

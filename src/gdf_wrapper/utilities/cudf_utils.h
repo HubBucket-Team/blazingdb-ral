@@ -53,7 +53,8 @@ static inline int64_t PaddedLength(int64_t nbytes, int32_t alignment = kArrowAli
  */
 CUDA_HOST_DEVICE_CALLABLE
 gdf_size_type get_number_of_bytes_for_valid(gdf_size_type column_size) {
-    return gdf::util::div_rounding_up_safe(column_size, GDF_VALID_BITSIZE);
+    // return gdf::util::div_rounding_up_safe(column_size, GDF_VALID_BITSIZE);
+	return (column_size + (gdf_size_type)GDF_VALID_BITSIZE - 1) / ((gdf_size_type)GDF_VALID_BITSIZE);
 }
 
 /* --------------------------------------------------------------------------*/

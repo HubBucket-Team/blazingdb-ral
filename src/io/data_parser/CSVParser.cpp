@@ -7,8 +7,12 @@
 
 #include "CSVParser.h"
 #include "cudf/io_types.h"
-#include "cudf/io_functions_cpp.h"
+#include <arrow/io/interfaces.h>
+#include <arrow/io/file.h>
 #include <iostream>
+
+#define checkError(error, txt)  if ( error != GDF_SUCCESS) { std::cerr << "ERROR:  " << error <<  "  in "  << txt << std::endl;  return error; }
+
 namespace ral {
 namespace io {
 

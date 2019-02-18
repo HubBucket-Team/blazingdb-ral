@@ -1310,7 +1310,7 @@ public:
 						temp_null_counts[out_index] += (sizeof(int32_t) * 8) - __popc(last_value) - num_bits_to_shift; //num_bits_to_shift are bits we set to 0 , we want to pretend like they are 1's
 					//	printf("temp_null_counts %ull\n",(unsigned long long)temp_null_counts[out_index]);
 					//	printf("before total_null counts %ull\n",this->null_counts_outputs[out_index]);
-						atomicAdd((unsigned long long *) this->null_counts_outputs + out_index,(unsigned long long)temp_null_counts[out_index]);
+						atomicAdd( this->null_counts_outputs + out_index,temp_null_counts[out_index]);
 					//	printf("after total_null counts %ull\n",this->null_counts_outputs[out_index]);
 					}else{
 						temp_null_counts[out_index] += (sizeof(int32_t) * 8) - __popc(get_data_from_buffer<int32_t>(total_buffer,this->final_output_positions[out_index]));

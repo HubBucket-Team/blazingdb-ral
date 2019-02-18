@@ -223,7 +223,7 @@ void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,g
     gdf_column_view(this->column, col_data, valid_data, num_values, type);
     get_column_byte_width(this->column, &width);
     this->allocated_size_data = num_values * width;
-    this->allocate_valid();
+    this->allocate_set_valid();
     is_ipc_column = true;
     this->column_token = 0;
     this->set_name(column_name);

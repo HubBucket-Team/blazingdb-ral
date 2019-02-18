@@ -461,13 +461,7 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 		}
 	}
 
-	gdf_column_cpp temp;
-	if(max_temp_type != GDF_invalid){
-		//TODO de donde saco el nombre de la columna aqui???
-		temp.create_gdf_column(max_temp_type,size,nullptr,get_width_dtype(max_temp_type), "");
-	}
-
-
+	
 	for(int i = 0; i < expressions.size(); i++){ //last not an expression
 		std::string expression = expressions[i].substr(
 				expressions[i].find("=[") + 2 ,
@@ -524,7 +518,6 @@ gdf_error process_project(blazing_frame & input, std::string query_part){
 	input.clear();
 	input.add_table(columns);
 
-	//free_gdf_column(&temp);
 	return GDF_SUCCESS;
 }
 
@@ -763,13 +756,17 @@ gdf_error process_aggregate(blazing_frame & input, std::string query_part){
 		gdf_column_cpp index_col;
 		index_col.create_gdf_column(GDF_INT32,nrows,nullptr,get_width_dtype(GDF_INT32), "");
 
+		gdf_context ctxt;
+		ctxt.flag_nulls_sort_behavior = 0; //  Nulls are are treated as largest
+		ctxt.flag_groupby_include_nulls = 1; // Nulls are treated as values in group by keys where NULL == NULL (SQL style)
+
 		err = gdf_group_by_wo_aggregations(num_group_columns,
 				cols.data(),
 				num_group_columns,
 				group_columns.data(),
 				group_by_columns_ptr_out.data(),
 				index_col.get_gdf_column(),
-				0);
+				&ctxt);
 
 		if (err != GDF_SUCCESS) {
 			return err;
@@ -1090,15 +1087,17 @@ gdf_error process_sort(blazing_frame & input, std::string query_part){
 	asc_desc_col.create_gdf_column(GDF_INT8,num_sort_columns,nullptr,1, "");
 	CheckCudaErrors(cudaMemcpy(asc_desc_col.get_gdf_column()->data, sort_order_types.data(), sort_order_types.size() * sizeof(int8_t), cudaMemcpyHostToDevice));
 
-	int flag_nulls_are_smallest = 0;  // TODO: need to be able to specify this based on the query
 	gdf_column_cpp index_col;
 	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
+
+	gdf_context context;
+	context.flag_nulls_sort_behavior = 0; // Nulls are are treated as largest
 
 	gdf_error err = gdf_order_by(cols.data(),
 			(int8_t*)(asc_desc_col.get_gdf_column()->data),
 			num_sort_columns,
 			index_col.get_gdf_column(),
-			flag_nulls_are_smallest);
+			&context);
 
 	Library::Logging::Logger().logInfo("-> Sort sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
 

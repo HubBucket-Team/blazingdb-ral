@@ -7,6 +7,7 @@
 
 #include "CSVParser.h"
 #include "cudf/io_types.h"
+#include <arrow/status.h>
 #include <arrow/io/interfaces.h>
 #include <arrow/io/file.h>
 #include <iostream>

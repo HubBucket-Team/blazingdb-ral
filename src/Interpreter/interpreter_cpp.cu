@@ -283,7 +283,7 @@ gdf_error perform_operation(	std::vector<gdf_column *> output_columns,
 					shared_memory_per_thread * block_size,
 					stream>>>(op, num_rows);
 
-	op.update_columns_null_count(output_columns);
+	// op.update_columns_null_count(output_columns);
 
 	cuDF::Allocator::deallocate(temp_space,stream);
 	cudaStreamSynchronize(stream);

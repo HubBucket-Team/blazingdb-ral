@@ -39,25 +39,17 @@ bool uri_data_provider::has_next(){
 }
 
 std::shared_ptr<arrow::io::RandomAccessFile> uri_data_provider::get_next(){
-	//TODO: rethrow exceptions so we can do something nicer and just write out to the console :)
-	try{
-		std::shared_ptr<arrow::io::RandomAccessFile> file =
-				BlazingContext::getInstance()->getFileSystemManager()->openReadable(
-						this->file_uris[this->current_file]);
-		this->current_file++;
-		this->opened_files.push_back(file);
-		return file;
+	// TODO: Take a look at this later, just calling this function to ensure
+	// the uri is in a valid state otherwise throw an exception
+	// because openReadable doens't  validate it and just return a nullptr
+	auto fileStatus = BlazingContext::getInstance()->getFileSystemManager()->getFileStatus(this->file_uris[this->current_file]);
 
-	}catch(const BlazingInvalidPathException & e){
-		std::cout<<e.what()<<std::endl;
-		this->errors.push_back(e.what());
-		this->current_file++;
-		return nullptr;
-	}catch(const BlazingFileSystemException & e){
-		std::cout<<e.what()<<std::endl;
-		this->errors.push_back(e.what());
-		this->current_file++;
-		return nullptr;	}
+	std::shared_ptr<arrow::io::RandomAccessFile> file =
+			BlazingContext::getInstance()->getFileSystemManager()->openReadable(
+					this->file_uris[this->current_file]);
+	this->current_file++;
+	this->opened_files.push_back(file);
+	return file;
 }
 
 std::vector<std::string> uri_data_provider::get_errors(){

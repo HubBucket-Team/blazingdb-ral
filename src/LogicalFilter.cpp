@@ -34,11 +34,10 @@ gdf_error process__binary_operation_column_column(
 	}else{
 		output = temp;
 	}
-	gdf_binary_operator operation;
-	gdf_error err = get_operation(operator_string,&operation);
-	if(err != GDF_SUCCESS){
-		return err;
-	}
+	gdf_binary_operator operation = get_binary_operation(operator_string);
+
+	if(operands.size()<2)
+		throw std::runtime_error("In function process__binary_operation_column_column, the operator cannot be processed on less than one or zero elements");
 
 	std::string left_operand = operands.top();
 	operands.pop();
@@ -109,19 +108,13 @@ gdf_error process_unary_operation(
 		output = temp;
 	}
 
-	gdf_unary_operator operation; //need to define this
-
-	gdf_error err = get_operation(operator_string,&operation);
-	if(err != GDF_SUCCESS){
-		return err;
-	}
+	//need to define this
+	gdf_unary_operator operation = get_unary_operation(operator_string);
 
 	std::string left_operand = operands.top();
 	operands.pop();
 
 	if(is_literal(left_operand)){
-
-
 		return GDF_INVALID_API_CALL;
 	}else{
 		size_t left_index = get_index(left_operand);
@@ -195,7 +188,7 @@ gdf_error process_unary_operation(
 	}
 }
 
-gdf_error process_other_binary_operation(
+void process_other_binary_operation(
 		std::string operator_string,
 		std::stack<std::string> & operands,
 		blazing_frame & inputs,
@@ -210,11 +203,10 @@ gdf_error process_other_binary_operation(
 		output = temp;
 	}
 
-	gdf_other_binary_operator operation; 
-	gdf_error err = get_operation(operator_string,&operation);
-	if(err != GDF_SUCCESS){
-		return err;
-	}
+	gdf_other_binary_operator operation = get_other_binary_operation(operator_string);
+
+	if(operands.size()<2)
+		throw std::runtime_error("In function process_other_binary_operation, the operator cannot be processed on less than one or zero elements");
 
 	std::string left_operand = operands.top();
 	operands.pop();
@@ -224,7 +216,7 @@ gdf_error process_other_binary_operation(
 	switch (operation){
 	case GDF_COALESCE:
 		if(is_literal(left_operand)){
-			return GDF_INVALID_API_CALL;
+			throw std::runtime_error("In function process_other_binary_operation: unsupported operand, " + left_operand);
 		} else {
 			size_t left_index = get_index(left_operand);
 
@@ -245,17 +237,14 @@ gdf_error process_other_binary_operation(
 				//TODO: this function isnt used anymore but where is this replace nulls anyway?
 	//			err = gdf_replace_nulls(output.get_gdf_column(), inputs.get_column(left_index).get_gdf_column(), inputs.get_column(right_index).get_gdf_column());
 			}
-			if(err == GDF_SUCCESS){
-				inputs.add_column(temp.clone());
-				operands.push("$" + std::to_string(inputs.get_size_column()-1));
-			}
+			
+			inputs.add_column(temp.clone());
+			operands.push("$" + std::to_string(inputs.get_size_column()-1));
 		}
 		break;
 	default:
-		err = GDF_INVALID_API_CALL;
+		throw std::runtime_error("In function process_other_binary_operation: unsupported operation, " + operator_string);
 	}
-
-	return err;
 }
 
 
@@ -300,7 +289,7 @@ column_index_type get_first_open_position(std::vector<bool> & open_positions, co
 /**
  * Creates a physical plan for the expression that can be added to the total plan
  */
-gdf_error add_expression_to_plan(	blazing_frame & inputs,
+void add_expression_to_plan(	blazing_frame & inputs,
 		std::string expression,
 		column_index_type expression_position,
 		column_index_type num_outputs,
@@ -345,16 +334,12 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 	int position = clean_expression.size();
 
 
-
-
 	std::stack<operand_position> operand_stack;
 	gdf_scalar dummy_scalar;
 
 	std::vector<bool> processing_space_free(512,true); //a place to stare whether or not a processing space is occupied at any point in time
 	for(size_t i = 0; i < start_processing_position; i++){
-
-			processing_space_free[i] = false;
-
+		processing_space_free[i] = false;
 	}
 	//pretend they are like registers and we need to know how many registers we need to evaluate this expression
 
@@ -379,13 +364,9 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 				}
 				operand_stack.pop();
 
-				gdf_binary_operator operation;
-				gdf_error err = get_operation(token,&operation);
+				gdf_binary_operator operation = get_binary_operation(token);
 				operators.push_back(operation);
 				unary_operators.push_back(GDF_INVALID_UNARY);
-
-
-
 
 				if(is_literal(left_operand) && is_literal(right_operand)){
 					//both are literal have to deduce types, nuts
@@ -406,9 +387,6 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 
 					left_inputs.push_back(left.is_valid ? SCALAR_INDEX : SCALAR_NULL_INDEX);
 					right_inputs.push_back(right_index);
-
-
-
 				}else if(is_literal(right_operand)){
 					size_t left_index = get_index(left_operand);
 					// TODO: remove get_type_from_string dirty fix
@@ -419,9 +397,6 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 
 					right_inputs.push_back(right.is_valid ? SCALAR_INDEX : SCALAR_NULL_INDEX);
 					left_inputs.push_back(left_index);
-
-
-
 				}
 				else{
 					size_t left_index = get_index(left_operand);
@@ -432,23 +407,17 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 
 					left_scalars.push_back(dummy_scalar);
 					right_scalars.push_back(dummy_scalar);
-
 				}
-
-
-
 			}else if(is_unary_operator_token(token)){
-
 				std::string left_operand = operand_stack.top().token;
-								if(!is_literal(left_operand)){
-									if(operand_stack.top().position >= start_processing_position){
-										processing_space_free[operand_stack.top().position] = true;
-									}
-								}
-								operand_stack.pop();
+				if(!is_literal(left_operand)){
+					if(operand_stack.top().position >= start_processing_position){
+						processing_space_free[operand_stack.top().position] = true;
+					}
+				}
+				operand_stack.pop();
 
-				gdf_unary_operator operation;
-				gdf_error err = get_operation(token,&operation);
+				gdf_unary_operator operation = get_unary_operation(token);
 				operators.push_back(GDF_INVALID_BINARY);
 				unary_operators.push_back(operation);
 
@@ -492,20 +461,18 @@ gdf_error add_expression_to_plan(	blazing_frame & inputs,
 }
 
 
-//processing in reverse we never need to have more than TWO spaces to work in
-//
-
-
-gdf_error evaluate_expression(
+// processing in reverse we never need to have more than TWO spaces to work in
+void evaluate_expression(
 		blazing_frame inputs,
 		std::string expression,
 		gdf_column_cpp output){
-	//make temp a column of size 8 bytes so it can accomodate the largest possible size
+
+	// make temp a column of size 8 bytes so it can accomodate the largest possible size
 	static CodeTimer timer;
 	timer.reset();
+
 	std::string clean_expression = clean_calcite_expression(expression);
 	int position = clean_expression.size();
-
 	std::stack<std::string> operand_stack;
 
 	std::vector<column_index_type> final_output_positions(1);
@@ -554,7 +521,7 @@ gdf_error evaluate_expression(
 	final_output_positions[0] = input_columns_used;
 
 
-	gdf_error err = add_expression_to_plan(	inputs,
+	add_expression_to_plan(	inputs,
 						expression,
 						0,
 						1,
@@ -570,7 +537,7 @@ gdf_error evaluate_expression(
 
 
 
-	err = perform_operation( output_columns,
+	perform_operation( output_columns,
 				input_columns,
 				left_inputs,
 				right_inputs,
@@ -586,7 +553,5 @@ gdf_error evaluate_expression(
 	output.update_null_count();
 
 	// Library::Logging::Logger().logInfo("-> evaluate_expression took " + std::to_string(timer.getDuration()) + " ms processing expression:\n" + expression);
-
-	return GDF_SUCCESS;
 }
 

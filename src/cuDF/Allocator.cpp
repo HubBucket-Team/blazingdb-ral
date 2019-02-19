@@ -55,51 +55,51 @@ void throwException(rmmError_t error) {
 }
 
 
-Message::Message(std::string&& message)
+CudfAllocatorError::CudfAllocatorError(std::string&& message)
  : message{message}
 { }
 
-const char* Message::what() const noexcept {
+const char* CudfAllocatorError::what() const noexcept {
     return message.c_str();
 }
 
 CudaError::CudaError()
- : Message(BASE_MESSAGE +
+ : CudfAllocatorError(BASE_MESSAGE +
            "RMM_ERROR_CUDA_ERROR:" +
            std::to_string(RMM_ERROR_CUDA_ERROR) +
            ", Error in CUDA")
 { }
 
 InvalidArgument::InvalidArgument()
- : Message(BASE_MESSAGE +
+ : CudfAllocatorError(BASE_MESSAGE +
            "RMM_ERROR_INVALID_ARGUMENT:" +
            std::to_string(RMM_ERROR_INVALID_ARGUMENT) +
            ", Invalid argument was passed")
 { }
 
 NotInitialized::NotInitialized()
- : Message(BASE_MESSAGE +
+ : CudfAllocatorError(BASE_MESSAGE +
            "RMM_ERROR_NOT_INITIALIZED:" +
            std::to_string(RMM_ERROR_NOT_INITIALIZED) +
            ", RMM API called before rmmInitialize()")
 { }
 
 OutOfMemory::OutOfMemory()
- : Message(BASE_MESSAGE +
+ : CudfAllocatorError(BASE_MESSAGE +
            "RMM_ERROR_OUT_OF_MEMORY:" +
            std::to_string(RMM_ERROR_OUT_OF_MEMORY) +
            ", Unable to allocate more memory")
 { }
 
 Unknown::Unknown()
- : Message(BASE_MESSAGE +
+ : CudfAllocatorError(BASE_MESSAGE +
            "RMM_ERROR_UNKNOWN:" +
            std::to_string(RMM_ERROR_UNKNOWN) +
            ", Unknown error")
 { }
 
 InputOutput::InputOutput()
- : Message(BASE_MESSAGE +
+ : CudfAllocatorError(BASE_MESSAGE +
            "RMM_ERROR_IO:" +
            std::to_string(RMM_ERROR_IO) +
            ", Stats output error")

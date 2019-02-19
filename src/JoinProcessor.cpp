@@ -121,7 +121,7 @@ struct bit_mask_pack_op : public thrust::unary_function<int64_t,gdf_valid_type>
 	*/
 //}
 
-gdf_error evaluate_join(std::string condition,
+void evaluate_join(std::string condition,
 		std::string join_type,
 		blazing_frame data_frame,
 		gdf_column * left_result,
@@ -158,7 +158,7 @@ gdf_error evaluate_join(std::string condition,
 				//so far only equijoins are supported in libgdf
 				operator_count++;
 			}else if(token != "AND"){
-				return GDF_INVALID_API_CALL;
+				throw std::runtime_error("In evaluate_join function: unsupported non-equijoins operator");
 			}
 		}else{
 			operand.push(token);
@@ -166,97 +166,93 @@ gdf_error evaluate_join(std::string condition,
 	}
 
 	if(operator_count > 3 && join_type == OUTER_JOIN){
-		return GDF_JOIN_TOO_MANY_COLUMNS;
+		throw std::runtime_error("In evaluate_join function: too many columns for join");
 	}
-	gdf_error err;
-			gdf_column ** left_columns = new gdf_column*[operator_count];
-		gdf_column ** right_columns = new gdf_column*[operator_count];
-		gdf_context ctxt{0, GDF_HASH, 0};
-		int join_cols[operator_count];
-		for(int i = 0; i < operator_count; i++){
-			join_cols[i] = i;
-			int right_index = get_index(operand.top());
-			operand.pop();
-			int left_index = get_index(operand.top());
-			operand.pop();
 
-			if(right_index < left_index){
-				int temp_index = left_index;
-				left_index = right_index;
-				right_index = temp_index;
-			}
+	gdf_column ** left_columns = new gdf_column*[operator_count];
+	gdf_column ** right_columns = new gdf_column*[operator_count];
+	gdf_context ctxt{0, GDF_HASH, 0};
+	int join_cols[operator_count];
+	for(int i = 0; i < operator_count; i++){
+		join_cols[i] = i;
+		int right_index = get_index(operand.top());
+		operand.pop();
+		int left_index = get_index(operand.top());
+		operand.pop();
 
-			left_columns[i] = data_frame.get_column(left_index).get_gdf_column();
-			right_columns[i] = data_frame.get_column(right_index).get_gdf_column();
-
+		if(right_index < left_index){
+			int temp_index = left_index;
+			left_index = right_index;
+			right_index = temp_index;
 		}
 
-		if(join_type == INNER_JOIN){
-			err = gdf_inner_join( left_columns,operator_count,join_cols, right_columns,operator_count,join_cols,operator_count,0, nullptr,left_result, right_result, &ctxt);
+		left_columns[i] = data_frame.get_column(left_index).get_gdf_column();
+		right_columns[i] = data_frame.get_column(right_index).get_gdf_column();
 
-			/*
-			 * gdf_error gdf_inner_join(
-                         gdf_column **left_cols,
-                         int num_left_cols,
-                         int left_join_cols[],
-                         gdf_column **right_cols,
-                         int num_right_cols,
-                         int right_join_cols[],
-                         int num_cols_to_join,
-                         int result_num_cols,
-                         gdf_column **result_cols,
-                         gdf_column * left_indices,
-                         gdf_column * right_indices,
-                         gdf_context *join_context);
+	}
 
-			 *
-			 *//* --------------------------------------------------------------------------*/
-			/**
-			 * @Synopsis  Joins two dataframes (left, right) together on the specified columns
-			 *
-			 * @Param[in] left_cols[] The columns of the left dataframe
-			 * @Param[in] num_left_cols The number of columns in the left dataframe
-			 * @Param[in] left_join_cols[] The column indices of columns from the left dataframe
-			 * to join on
-			 * @Param[in] right_cols[] The columns of the right dataframe
-			 * @Param[in] num_right_cols The number of columns in the right dataframe
-			 * @Param[in] right_join_cols[] The column indices of columns from the right dataframe
-			 * to join on
-			 * @Param[in] num_cols_to_join The total number of columns to join on
-			 * @Param[in] result_num_cols The number of columns in the resulting dataframe
-			 * @Param[out] gdf_column *result_cols[] If not nullptr, the dataframe that results from joining
-			 * the left and right tables on the specified columns
-			 * @Param[out] gdf_column * left_indices If not nullptr, indices of rows from the left table that match rows in the right table
-			 * @Param[out] gdf_column * right_indices If not nullptr, indices of rows from the right table that match rows in the left table
-			 * @Param[in] join_context The context to use to control how the join is performed,e.g.,
-			 * sort vs hash based implementation
-			 *
-			 * @Returns
-			 */
-		}else if(join_type == LEFT_JOIN){
+	if(join_type == INNER_JOIN){
+		CUDF_CALL( gdf_inner_join( left_columns,operator_count,join_cols, right_columns,operator_count,join_cols,operator_count,0, nullptr,left_result, right_result, &ctxt) );
+
+		/*
+			* gdf_error gdf_inner_join(
+						gdf_column **left_cols,
+						int num_left_cols,
+						int left_join_cols[],
+						gdf_column **right_cols,
+						int num_right_cols,
+						int right_join_cols[],
+						int num_cols_to_join,
+						int result_num_cols,
+						gdf_column **result_cols,
+						gdf_column * left_indices,
+						gdf_column * right_indices,
+						gdf_context *join_context);
+
+			*
+			*//* --------------------------------------------------------------------------*/
+		/**
+		 * @Synopsis  Joins two dataframes (left, right) together on the specified columns
+		 *
+		 * @Param[in] left_cols[] The columns of the left dataframe
+		 * @Param[in] num_left_cols The number of columns in the left dataframe
+		 * @Param[in] left_join_cols[] The column indices of columns from the left dataframe
+		 * to join on
+		 * @Param[in] right_cols[] The columns of the right dataframe
+		 * @Param[in] num_right_cols The number of columns in the right dataframe
+		 * @Param[in] right_join_cols[] The column indices of columns from the right dataframe
+		 * to join on
+		 * @Param[in] num_cols_to_join The total number of columns to join on
+		 * @Param[in] result_num_cols The number of columns in the resulting dataframe
+		 * @Param[out] gdf_column *result_cols[] If not nullptr, the dataframe that results from joining
+		 * the left and right tables on the specified columns
+		 * @Param[out] gdf_column * left_indices If not nullptr, indices of rows from the left table that match rows in the right table
+		 * @Param[out] gdf_column * right_indices If not nullptr, indices of rows from the right table that match rows in the left table
+		 * @Param[in] join_context The context to use to control how the join is performed,e.g.,
+		 * sort vs hash based implementation
+		 *
+		 * @Returns
+		 */
+	}else if(join_type == LEFT_JOIN){
 //			err = gdf_left_join(operator_count, left_columns, right_columns, left_result, right_result, &ctxt);
-			err = gdf_left_join( left_columns,operator_count,join_cols, right_columns,operator_count,join_cols,operator_count,0, nullptr,left_result, right_result, &ctxt);
+		CUDF_CALL( gdf_left_join( left_columns,operator_count,join_cols, right_columns,operator_count,join_cols,operator_count,0, nullptr,left_result, right_result, &ctxt) );
 
-		}else if(join_type == OUTER_JOIN){
+	}else if(join_type == OUTER_JOIN){
 
-		//WARNING TODO felipe percy noboa alexander see outer_join
-		//err = gdf_outer_join_generic(left_columns[0], right_columns[0], left_result, right_result);
+	//WARNING TODO felipe percy noboa alexander see outer_join
+	//err = gdf_outer_join_generic(left_columns[0], right_columns[0], left_result, right_result);
 
 //			err = gdf_outer_join( left_columns,operator_count,join_cols, right_columns,operator_count,join_cols,operator_count,0, nullptr,left_result, right_result, &ctxt);
-		    err = gdf_full_join(left_columns,operator_count,join_cols, right_columns,operator_count,join_cols,operator_count,0, nullptr,left_result, right_result, &ctxt);
-		}
-
-		delete[] left_columns;
-		delete[] right_columns;
-
-	if(err == GDF_SUCCESS){
-		cudaStream_t stream;
-		cudaStreamCreate(&stream);
-		//ya no gdf_join_result_type_to_gdf_column(output,left_indices,right_indices,stream);
-		cudaStreamDestroy(stream);
+		CUDF_CALL( gdf_full_join(left_columns,operator_count,join_cols, right_columns,operator_count,join_cols,operator_count,0, nullptr,left_result, right_result, &ctxt) );
+	}else{
+		throw std::runtime_error("In evaluate_join function: unsupported join operator, " + join_type);
 	}
 
-	return err;
+	delete[] left_columns;
+	delete[] right_columns;
 
+	cudaStream_t stream;
+	cudaStreamCreate(&stream);
+	//ya no gdf_join_result_type_to_gdf_column(output,left_indices,right_indices,stream);
+	cudaStreamDestroy(stream);
 }
-

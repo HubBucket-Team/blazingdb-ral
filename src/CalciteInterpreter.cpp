@@ -717,9 +717,6 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 				index_col.get_gdf_column(),
 				&ctxt));
 
-		if (err != GDF_SUCCESS) {
-			return err;
-		}
 
 		//find the widest possible column
 		int widest_column = 0;
@@ -994,7 +991,7 @@ void process_sort(blazing_frame & input, std::string query_part){
 			(int8_t*)(asc_desc_col.get_gdf_column()->data),
 			num_sort_columns,
 			index_col.get_gdf_column(),
-			&context);
+			&context));
 
 	Library::Logging::Logger().logInfo("-> Sort sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
 

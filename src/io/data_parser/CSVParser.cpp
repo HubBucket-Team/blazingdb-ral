@@ -7,9 +7,14 @@
 
 #include "CSVParser.h"
 #include "cudf/io_types.h"
-#include "cudf/io_functions_cpp.h"
-#include "../Utils.cuh"
+#include <arrow/status.h>
+#include <arrow/io/interfaces.h>
+#include <arrow/io/file.h>
 #include <iostream>
+#include "../Utils.cuh"
+
+#define checkError(error, txt)  if ( error != GDF_SUCCESS) { std::cerr << "ERROR:  " << error <<  "  in "  << txt << std::endl;  return error; }
+
 namespace ral {
 namespace io {
 
@@ -59,6 +64,82 @@ std::string convert_dtype_to_string(const gdf_dtype & dtype) {
 
 	return "str";
 }
+
+/**
+ * reads contents of an arrow::io::RandomAccessFile in a char * buffer up to the number of bytes specified in bytes_to_read
+ * for non local filesystems where latency and availability can be an issue it will ret`ry until it has exhausted its the read attemps and empty reads that are allowed
+ */
+gdf_error read_file_into_buffer(std::shared_ptr<arrow::io::RandomAccessFile> file, int64_t bytes_to_read, uint8_t* buffer, int total_read_attempts_allowed, int empty_reads_allowed){
+
+	if (bytes_to_read > 0){
+
+		int64_t total_read;
+		arrow::Status status = file->Read(bytes_to_read,&total_read, buffer);
+
+		if (!status.ok()){
+			return GDF_FILE_ERROR;
+		}
+
+		if (total_read < bytes_to_read){
+			//the following two variables shoudl be explained
+			//Certain file systems can timeout like hdfs or nfs,
+			//so we shoudl introduce the capacity to retry
+			int total_read_attempts = 0;
+			int empty_reads = 0;
+
+			while (total_read < bytes_to_read && total_read_attempts < total_read_attempts_allowed && empty_reads < empty_reads_allowed){
+				int64_t bytes_read;
+				status = file->Read(bytes_to_read-total_read,&bytes_read, buffer + total_read);
+				if (!status.ok()){
+					return GDF_FILE_ERROR;
+				}
+				if (bytes_read == 0){
+					empty_reads++;
+				}
+				total_read += bytes_read;
+			}
+			if (total_read < bytes_to_read){
+				return GDF_FILE_ERROR;
+			} else {
+				return GDF_SUCCESS;
+			}
+		} else {
+			return GDF_SUCCESS;
+		}
+	} else {
+		return GDF_SUCCESS;
+	}
+}
+
+
+/**
+ * @brief read in a CSV file
+ *
+ * Read in a CSV file, extract all fields, and return a GDF (array of gdf_columns) using arrow interface
+ **/
+
+gdf_error read_csv_arrow(csv_read_arg *args, std::shared_ptr<arrow::io::RandomAccessFile> arrow_file_handle)
+{
+ 	void * 		map_data = NULL;
+	int64_t 	num_bytes;
+	arrow_file_handle->GetSize(&num_bytes);
+	map_data = (void *) malloc(num_bytes);
+	gdf_error error = read_file_into_buffer(arrow_file_handle, num_bytes, (uint8_t*) map_data,100,10);
+	checkError(error, "reading from file into system memory");
+
+	args->input_data_form = gdf_csv_input_form::HOST_BUFFER;
+	args->filepath_or_buffer = (const char *)map_data;
+	args->buffer_size = num_bytes;
+	
+	error = read_csv(args);
+	free(map_data);
+
+	//done reading data from map
+	arrow_file_handle->Close();
+
+	return error;
+}
+
 
 csv_parser::csv_parser(const std::string & delimiter,
 		const std::string & line_terminator,
@@ -153,9 +234,9 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file, std::v
 }
 
 void csv_parser::parse(const char *fname, std::vector<gdf_column_cpp> & columns) {
-	args.file_path		= fname;
+	args.filepath_or_buffer		= fname;
 	csv_read_arg raw_args{};
-    raw_args.file_path		= fname;
+    raw_args.filepath_or_buffer		= fname;
     raw_args.num_cols		= args.num_cols;
     raw_args.names			= args.names;
     raw_args.dtype			= args.dtype;

@@ -38,7 +38,7 @@
 #include "cuio/parquet/file_reader.h"
 #include "cuio/parquet/util/bit_util.cuh"
 
-#include <rmm.h>
+#include <rmm/rmm.h>
 
 #include <cuio/parquet/api.h>
 

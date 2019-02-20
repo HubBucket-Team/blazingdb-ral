@@ -178,7 +178,7 @@
      ASSERT_TRUE(column_reader->HasNext());
 
      row_group_size = reader->RowGroup(1)->metadata()->num_rows();
-     const std::size_t total_read2 = column_reader->ToGdfColumn(column, row_group_size);
+     const std::size_t total_read2 = column_reader->ToGdfColumn(column, row_group_size, total_read);
  
      column.size = static_cast<gdf_size_type>(rowsPerGroup * groups);
  

@@ -4,7 +4,7 @@ BlazingDB Relational Algebra Interpreter
 # Requirements
 - g++-5.4
 - CMake 3.11+
-- Make
+- MakeSDSADADADADSd
 asddsaddsa
 And also make sure to install these system reqasdasdduirements:
 ```bash

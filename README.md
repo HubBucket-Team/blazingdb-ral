@@ -184,9 +184,3 @@ make -j8
 HOLA
 holaa
 
-HOLA
-holaa
-
-HOLA
-holaa
-

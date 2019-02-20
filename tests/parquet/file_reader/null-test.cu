@@ -167,14 +167,18 @@
      cudaMalloc(&column.data, rowsPerGroup * groups * sizeof(value_type));
      cudaMalloc(&column.valid, valid_size);
  
-     const std::size_t total_read = column_reader->ToGdfColumn(column);
+    size_t row_group_size = reader->RowGroup(0)->metadata()->num_rows();
+
+     const std::size_t total_read = column_reader->ToGdfColumn(column, row_group_size);
  
      column_reader =
        std::static_pointer_cast<gdf::parquet::ColumnReader<TypeParam>>(
          reader->RowGroup(1)->Column(0));
  
      ASSERT_TRUE(column_reader->HasNext());
-     const std::size_t total_read2 = column_reader->ToGdfColumn(column, 50);
+
+     row_group_size = reader->RowGroup(1)->metadata()->num_rows();
+     const std::size_t total_read2 = column_reader->ToGdfColumn(column, row_group_size);
  
      column.size = static_cast<gdf_size_type>(rowsPerGroup * groups);
  

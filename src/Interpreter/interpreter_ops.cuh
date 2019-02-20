@@ -9,6 +9,7 @@
 #include "gdf_wrapper/gdf_wrapper.cuh"
 #include <chrono>
 #include <cuda_runtime.h>
+#include "../Utils.cuh"
 #include "helper_cuda.h"
 
 #include "CalciteExpressionParsing.h"
@@ -850,16 +851,18 @@ public:
 		return space;
 	}
 
-	void update_columns_null_count(std::vector<gdf_column *> output_columns){
-		gdf_size_type * outputs = new gdf_size_type[output_columns.size()];
-		cudaMemcpyAsync(outputs,this->null_counts_outputs,sizeof(gdf_size_type) * output_columns.size(),cudaMemcpyDeviceToHost,this->stream);
-		cudaStreamSynchronize(this->stream);
-		for(int i = 0; i < output_columns.size(); i++){
-			//std::cout<<"outputs["<<i<<"] = "<<outputs[i]<<std::endl;
-			output_columns[i]->null_count = outputs[i];
-		}
-		delete outputs;
-	}
+	// DO NOT USE THIS. This is currently not working due to strange race condition
+	// void update_columns_null_count(std::vector<gdf_column *> output_columns){
+	// 	gdf_size_type * outputs = new gdf_size_type[output_columns.size()];
+	// 	CheckCudaErrors(cudaMemcpyAsync(outputs,this->null_counts_outputs,sizeof(gdf_size_type) * output_columns.size(),cudaMemcpyDeviceToHost,this->stream));
+	//	CheckCudaErrors(cudaStreamSynchronize(this->stream));
+	// 	for(int i = 0; i < output_columns.size(); i++){
+	// 		//std::cout<<"outputs["<<i<<"] = "<<outputs[i]<<std::endl;
+	// 		output_columns[i]->null_count = outputs[i];
+	// 	}
+	// 	delete outputs;
+	// }
+
 	//does not perform allocations
 	InterpreterFunctor(void  ** column_data, //these are device side pointers to the device pointer found in gdf_column.data
 			temp_gdf_valid_type ** valid_ptrs, //device
@@ -922,7 +925,6 @@ public:
 			char * temp_space,
 			int BufferSize, int ThreadBlockSize
 			//char * temp_space
-
 	){
 
 		//TODO: you should be able to make this faster by placing alll the memory in one
@@ -958,14 +960,14 @@ public:
 		cur_temp_space += sizeof(int64_t) * num_operations;
 		scalars_right = (int64_t *) cur_temp_space;
 		cur_temp_space += sizeof(int64_t) * num_operations;
-		null_counts_inputs = (gdf_size_type *) cur_temp_space;
-		cur_temp_space += sizeof(gdf_size_type) * num_columns;
-		null_counts_outputs = (gdf_size_type *) cur_temp_space;
-		cur_temp_space += sizeof(gdf_size_type) * num_final_outputs;
 		valid_ptrs = (temp_gdf_valid_type **) cur_temp_space;
 		cur_temp_space += sizeof(temp_gdf_valid_type *) * num_columns;
 		valid_ptrs_out = (temp_gdf_valid_type **) cur_temp_space;
 		cur_temp_space += sizeof(temp_gdf_valid_type *) * num_final_outputs;
+		null_counts_inputs = (gdf_size_type *) cur_temp_space;
+		cur_temp_space += sizeof(gdf_size_type) * num_columns;
+		null_counts_outputs = (gdf_size_type *) cur_temp_space;
+		cur_temp_space += sizeof(gdf_size_type) * num_final_outputs;
 		input_column_types = (gdf_dtype *) cur_temp_space;
 		cur_temp_space += sizeof(gdf_dtype) * num_columns;
 		input_types_left = (gdf_dtype *) cur_temp_space;
@@ -1003,12 +1005,12 @@ public:
 			host_null_counts[i] = columns[i]->null_count;
 		}
 
-		cudaError_t error = cudaMemcpyAsync(this->column_data,&host_data_ptrs[0],sizeof(void *) * num_columns,cudaMemcpyHostToDevice,stream);
-		//	cudaError_t error = cudaMemcpy(this->column_data,&host_data_ptrs[0],sizeof(void *) * num_columns,cudaMemcpyHostToDevice);
+		CheckCudaErrors(cudaMemcpyAsync(this->column_data,&host_data_ptrs[0],sizeof(void *) * num_columns,cudaMemcpyHostToDevice,stream));
+		//	CheckCudaErrors(cudaMemcpy(this->column_data,&host_data_ptrs[0],sizeof(void *) * num_columns,cudaMemcpyHostToDevice));
 		//	std::cout<<"about to copy host valid"<<error<<std::endl;
-		//	error = cudaMemcpy(this->valid_ptrs,&host_valid_ptrs[0],sizeof(void *) * num_columns,cudaMemcpyHostToDevice);
-		error = cudaMemcpyAsync(this->valid_ptrs,&host_valid_ptrs[0],sizeof(void *) * num_columns,cudaMemcpyHostToDevice,stream);
-		error = cudaMemcpyAsync(this->null_counts_inputs,&host_null_counts[0],sizeof(gdf_size_type *) * num_columns,cudaMemcpyHostToDevice,stream);
+		//	CheckCudaErrors(cudaMemcpy(this->valid_ptrs,&host_valid_ptrs[0],sizeof(void *) * num_columns,cudaMemcpyHostToDevice));
+		CheckCudaErrors(cudaMemcpyAsync(this->valid_ptrs,&host_valid_ptrs[0],sizeof(void *) * num_columns,cudaMemcpyHostToDevice,stream));
+		CheckCudaErrors(cudaMemcpyAsync(this->null_counts_inputs,&host_null_counts[0],sizeof(gdf_size_type *) * num_columns,cudaMemcpyHostToDevice,stream));
 		//	std::cout<<"copied data and valid"<<error<<std::endl;
 
 
@@ -1019,13 +1021,13 @@ public:
 			host_data_ptrs[i] = output_columns[i]->data;
 			host_valid_ptrs[i] = (temp_gdf_valid_type *) output_columns[i]->valid;
 		}
-		//	error = cudaMemcpy(this->output_data,&host_data_ptrs[0],sizeof(void *) * num_final_outputs,cudaMemcpyHostToDevice);
+		//	CheckCudaErrors(cudaMemcpy(this->output_data,&host_data_ptrs[0],sizeof(void *) * num_final_outputs,cudaMemcpyHostToDevice));
 
-		error = cudaMemcpyAsync(this->output_data,&host_data_ptrs[0],sizeof(void *) * num_final_outputs,cudaMemcpyHostToDevice,stream);
+		CheckCudaErrors(cudaMemcpyAsync(this->output_data,&host_data_ptrs[0],sizeof(void *) * num_final_outputs,cudaMemcpyHostToDevice,stream));
 
 		//	std::cout<<"about to copy host valid"<<error<<std::endl;
-		//		error = cudaMemcpy(this->valid_ptrs_out,&host_valid_ptrs[0],sizeof(void *) * num_final_outputs,cudaMemcpyHostToDevice);
-		error = cudaMemcpyAsync(this->valid_ptrs_out,&host_valid_ptrs[0],sizeof(void *) * num_final_outputs,cudaMemcpyHostToDevice,stream);
+		//		CheckCudaErrors(cudaMemcpy(this->valid_ptrs_out,&host_valid_ptrs[0],sizeof(void *) * num_final_outputs,cudaMemcpyHostToDevice));
+		CheckCudaErrors(cudaMemcpyAsync(this->valid_ptrs_out,&host_valid_ptrs[0],sizeof(void *) * num_final_outputs,cudaMemcpyHostToDevice,stream));
 
 
 		//copy over inputs
@@ -1141,89 +1143,79 @@ public:
 		}
 
 
-		try{
+		CheckCudaErrors(cudaMemcpyAsync (left_input_positions,
+				&left_input_positions_vec[0],
+				left_input_positions_vec.size() * sizeof(short),cudaMemcpyHostToDevice,stream));
+
+		CheckCudaErrors(cudaMemcpyAsync (right_input_positions,
+				&right_input_positions_vec[0],
+				right_input_positions_vec.size() * sizeof(short),cudaMemcpyHostToDevice,stream));
+
+		CheckCudaErrors(cudaMemcpyAsync (output_positions,
+				&output_positions_vec[0],
+				output_positions_vec.size() * sizeof(short),cudaMemcpyHostToDevice,stream));
+
+		CheckCudaErrors(cudaMemcpyAsync (final_output_positions,
+				&final_output_positions_vec[0],
+				final_output_positions_vec.size() * sizeof(short),cudaMemcpyHostToDevice,stream));
+		/*
+		thrust::copy(left_input_positions_vec.begin(),left_input_positions_vec.end(),thrust::device_pointer_cast(left_input_positions));
+		thrust::copy(right_input_positions_vec.begin(),right_input_positions_vec.end(),thrust::device_pointer_cast(right_input_positions));
+		thrust::copy(output_positions_vec.begin(),output_positions_vec.end(),thrust::device_pointer_cast(output_positions));
+		thrust::copy(final_output_positions_vec.begin(),final_output_positions_vec.end(),thrust::device_pointer_cast(final_output_positions));
+
+			*/
+
+		CheckCudaErrors(cudaMemcpyAsync (binary_operations,
+				&operators[0],
+				operators.size() * sizeof(gdf_binary_operator),cudaMemcpyHostToDevice,stream));
+
+		CheckCudaErrors(cudaMemcpyAsync (unary_operations,
+				&unary_operators[0],
+				unary_operators.size() * sizeof(gdf_unary_operator),cudaMemcpyHostToDevice,stream));
+
+		//	thrust::copy(operators.begin(),operators.end(),thrust::device_pointer_cast(binary_operations));
+
+		CheckCudaErrors(cudaMemcpyAsync (input_column_types,
+				&input_column_types_vec[0],
+				input_column_types_vec.size() * sizeof(gdf_dtype),cudaMemcpyHostToDevice,stream));
 
 
-			cudaMemcpyAsync (left_input_positions,
-					&left_input_positions_vec[0],
-					left_input_positions_vec.size() * sizeof(short),cudaMemcpyHostToDevice,stream);
-
-			cudaMemcpyAsync (right_input_positions,
-					&right_input_positions_vec[0],
-					right_input_positions_vec.size() * sizeof(short),cudaMemcpyHostToDevice,stream);
-
-			cudaMemcpyAsync (output_positions,
-					&output_positions_vec[0],
-					output_positions_vec.size() * sizeof(short),cudaMemcpyHostToDevice,stream);
-
-			cudaMemcpyAsync (final_output_positions,
-					&final_output_positions_vec[0],
-					final_output_positions_vec.size() * sizeof(short),cudaMemcpyHostToDevice,stream);
-			/*
-			thrust::copy(left_input_positions_vec.begin(),left_input_positions_vec.end(),thrust::device_pointer_cast(left_input_positions));
-			thrust::copy(right_input_positions_vec.begin(),right_input_positions_vec.end(),thrust::device_pointer_cast(right_input_positions));
-			thrust::copy(output_positions_vec.begin(),output_positions_vec.end(),thrust::device_pointer_cast(output_positions));
-			thrust::copy(final_output_positions_vec.begin(),final_output_positions_vec.end(),thrust::device_pointer_cast(final_output_positions));
-
-			 */
-
-			cudaMemcpyAsync (binary_operations,
-					&operators[0],
-					operators.size() * sizeof(gdf_binary_operator),cudaMemcpyHostToDevice,stream);
-
-			cudaMemcpyAsync (unary_operations,
-					&unary_operators[0],
-					unary_operators.size() * sizeof(gdf_unary_operator),cudaMemcpyHostToDevice,stream);
-
-			//	thrust::copy(operators.begin(),operators.end(),thrust::device_pointer_cast(binary_operations));
-
-			cudaMemcpyAsync (input_column_types,
-					&input_column_types_vec[0],
-					input_column_types_vec.size() * sizeof(gdf_dtype),cudaMemcpyHostToDevice,stream);
+		//	thrust::copy(input_column_types_vec.begin(), input_column_types_vec.end(), thrust::device_pointer_cast(input_column_types));
 
 
-			//	thrust::copy(input_column_types_vec.begin(), input_column_types_vec.end(), thrust::device_pointer_cast(input_column_types));
+		CheckCudaErrors(cudaMemcpyAsync (input_types_left,
+				&left_input_types_vec[0],
+				left_input_types_vec.size() * sizeof(gdf_dtype),cudaMemcpyHostToDevice,stream));
 
+		CheckCudaErrors(cudaMemcpyAsync (input_types_right,
+				&right_input_types_vec[0],
+				right_input_types_vec.size() * sizeof(gdf_dtype),cudaMemcpyHostToDevice,stream));
 
-			cudaMemcpyAsync (input_types_left,
-					&left_input_types_vec[0],
-					left_input_types_vec.size() * sizeof(gdf_dtype),cudaMemcpyHostToDevice,stream);
+		CheckCudaErrors(cudaMemcpyAsync (output_types,
+				&output_types_vec[0],
+				output_types_vec.size() * sizeof(gdf_dtype),cudaMemcpyHostToDevice,stream));
 
-			cudaMemcpyAsync (input_types_right,
-					&right_input_types_vec[0],
-					right_input_types_vec.size() * sizeof(gdf_dtype),cudaMemcpyHostToDevice,stream);
+		CheckCudaErrors(cudaMemcpyAsync (final_output_types,
+				&output_final_types_vec[0],
+				output_final_types_vec.size() * sizeof(gdf_dtype),cudaMemcpyHostToDevice,stream));
 
-			cudaMemcpyAsync (output_types,
-					&output_types_vec[0],
-					output_types_vec.size() * sizeof(gdf_dtype),cudaMemcpyHostToDevice,stream);
+		CheckCudaErrors(cudaMemcpyAsync (scalars_left,
+				&left_scalars_host[0],
+				left_scalars_host.size() * sizeof(int64_t),cudaMemcpyHostToDevice,stream));
 
-			cudaMemcpyAsync (final_output_types,
-					&output_final_types_vec[0],
-					output_final_types_vec.size() * sizeof(gdf_dtype),cudaMemcpyHostToDevice,stream);
+		CheckCudaErrors(cudaMemcpyAsync (scalars_right,
+				&right_scalars_host[0],
+				right_scalars_host.size() * sizeof(int64_t),cudaMemcpyHostToDevice,stream));
+		/*
+		thrust::copy(left_input_types_vec.begin(),left_input_types_vec.end(), thrust::device_pointer_cast(input_types_left));
+		thrust::copy(right_input_types_vec.begin(),right_input_types_vec.end(), thrust::device_pointer_cast(input_types_right));
+		thrust::copy(output_types_vec.begin(),output_types_vec.end(), thrust::device_pointer_cast(output_types));
+		thrust::copy(output_final_types_vec.begin(),output_final_types_vec.end(), thrust::device_pointer_cast(final_output_types));
+			*/
 
-			cudaMemcpyAsync (scalars_left,
-					&left_scalars_host[0],
-					left_scalars_host.size() * sizeof(int64_t),cudaMemcpyHostToDevice,stream);
-
-			cudaMemcpyAsync (scalars_right,
-					&right_scalars_host[0],
-					right_scalars_host.size() * sizeof(int64_t),cudaMemcpyHostToDevice,stream);
-			/*
-			thrust::copy(left_input_types_vec.begin(),left_input_types_vec.end(), thrust::device_pointer_cast(input_types_left));
-			thrust::copy(right_input_types_vec.begin(),right_input_types_vec.end(), thrust::device_pointer_cast(input_types_right));
-			thrust::copy(output_types_vec.begin(),output_types_vec.end(), thrust::device_pointer_cast(output_types));
-			thrust::copy(output_final_types_vec.begin(),output_final_types_vec.end(), thrust::device_pointer_cast(final_output_types));
-			 */
-
-			//			std::cout<<"copied data!"<<std::endl;
-			cudaStreamSynchronize(stream);
-
-		}catch( ...){
-			std::cout<<"could not copy data!"<<std::endl;
-		}
-
-
-
+		//			std::cout<<"copied data!"<<std::endl;
+		CheckCudaErrors(cudaStreamSynchronize(stream));
 	}
 
 	__device__ short get_num_outputs(){
@@ -1259,7 +1251,7 @@ public:
 
 	}
 
-	__device__ __forceinline__ void valid_operator(const IndexT &row_index, int32_t total_buffer[],gdf_size_type num_valid_elements, gdf_size_type temp_null_counts[]) {
+	__device__ __forceinline__ void valid_operator(const IndexT &row_index, int32_t total_buffer[],gdf_size_type num_valid_elements){ //, gdf_size_type temp_null_counts[]) {
 		//TODO: this should happen in configuration and be stored in a bool to reduce the number of instructions
 		//executed inthe kernel
 //		extern __shared__  int32_t  total_buffer[];
@@ -1296,7 +1288,7 @@ public:
 
 					write_valid_data<int32_t>(out_index,this->final_output_positions[out_index],total_buffer,row_index);
 
-					if(row_index + (blockDim.x * gridDim.x) >= num_valid_elements){
+/*					if(row_index + (blockDim.x * gridDim.x) >= num_valid_elements){
 						//can't use popc because it will count bits that aren't relevant
 						int last_value = get_data_from_buffer<int32_t>(total_buffer,this->final_output_positions[out_index]);
 						//right shift out all the bits that are not relevant
@@ -1310,12 +1302,12 @@ public:
 						temp_null_counts[out_index] += (sizeof(int32_t) * 8) - __popc(last_value) - num_bits_to_shift; //num_bits_to_shift are bits we set to 0 , we want to pretend like they are 1's
 					//	printf("temp_null_counts %ull\n",(unsigned long long)temp_null_counts[out_index]);
 					//	printf("before total_null counts %ull\n",this->null_counts_outputs[out_index]);
-						atomicAdd((unsigned long long *) this->null_counts_outputs + out_index,(unsigned long long)temp_null_counts[out_index]);
+						atomicAdd( this->null_counts_outputs + out_index,temp_null_counts[out_index]);
 					//	printf("after total_null counts %ull\n",this->null_counts_outputs[out_index]);
 					}else{
 						temp_null_counts[out_index] += (sizeof(int32_t) * 8) - __popc(get_data_from_buffer<int32_t>(total_buffer,this->final_output_positions[out_index]));
 					}
-
+*/
 				}
 
 			}
@@ -1392,20 +1384,20 @@ __global__ void transformKernel(interpreted_operator op, gdf_size_type size)
 	gdf_size_type rows_per_element = sizeof(temp_gdf_valid_type) * 8;
 	gdf_size_type num_valid_elements =  (size +(rows_per_element - 1)) / rows_per_element;
 
-	gdf_size_type * null_counts = new gdf_size_type[op.get_num_outputs()];
+	/*gdf_size_type * null_counts = new gdf_size_type[op.get_num_outputs()];
 	for(int out_index = 0; out_index < op.get_num_outputs(); out_index++ ){
 		null_counts[out_index] = 0;
 
 	}
-	op.zero_null_counts();
+	op.zero_null_counts(); */
 	for (gdf_size_type row_index = blockIdx.x * blockDim.x + threadIdx.x;
 			row_index < num_valid_elements;
 			row_index += blockDim.x * gridDim.x)
 	{
-		op.valid_operator(row_index,(int32_t *) total_buffer,num_valid_elements,null_counts);
+		op.valid_operator(row_index,(int32_t *) total_buffer,num_valid_elements); //,null_counts);
 	}
 
-	delete null_counts;
+	// delete null_counts;
 
 	return;
 }

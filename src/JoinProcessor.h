@@ -11,7 +11,7 @@
 #include "gdf_wrapper/gdf_wrapper.cuh"
 #include "DataFrame.h"
 
-gdf_error evaluate_join(std::string condition,
+void evaluate_join(std::string condition,
 		std::string join_type,
 		blazing_frame data_frame,
 		gdf_column * left_indices,

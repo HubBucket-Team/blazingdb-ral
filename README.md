@@ -182,5 +182,9 @@ make -j8
 
 # test
 HOLA
-holaa
+HOLA
+
+HOLA
+HOLA
+
 

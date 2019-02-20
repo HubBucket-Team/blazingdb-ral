@@ -40,6 +40,7 @@ struct EvaluateQueryTest : public ::testing::Test {
 };
 
 // AUTO GENERATED UNIT TESTS
+// MODIFIED BY HAND TO FIX IT 
 TEST_F(EvaluateQueryTest, TEST_00) {
   auto input = InputTestItem{
       .query =
@@ -74,21 +75,28 @@ TEST_F(EvaluateQueryTest, TEST_00) {
               .Build(),
       .resultTable =
           LiteralTableBuilder{"ResultSet",
-                              {{"GDF_FLOAT64",
-                                Literals<GDF_FLOAT64>{
-                                    6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
-                                    17, 18, 19, 20, 21, 22, 23, 24, -1, -1, -1,
-                                    -1, -1, -1, 0,  1,  2,  3,  4,  5}},
+                              {{"n1key",
+                                Literals<GDF_INT32>{
+                                    Literals<GDF_INT32>::vector{6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
+                                    17, 18, 19, 20, 21, 22, 23, 24, 0,  1,  2,  3,  4,  5, -1, -1, -1,
+                                    -1, -1, -1 },
+                                    Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                                    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0 }}},
+                               {"n2key",
+                                Literals<GDF_INT32>{
+                                    Literals<GDF_INT32>::vector{0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10,
+                                    11, 12, 13, 14, 15, 16, 17, 18, -1, -1, -1, -1, -1, -1, 19, 20, 21,
+                                    22, 23, 24},
+                                    Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                                    1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1 }}},
                                {"GDF_FLOAT64",
-                                Literals<GDF_FLOAT64>{
-                                    0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10,
-                                    11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-                                    22, 23, 24, -1, -1, -1, -1, -1, -1}},
-                               {"GDF_FLOAT64",
-                                Literals<GDF_FLOAT64>{
-                                    6,  8,  10, 12, 14, 16, 18, 20, 22, 24, 26,
+                                Literals<GDF_INT32>{
+                                    Literals<GDF_INT32>::vector{ 6,  8,  10, 12, 14, 16, 18, 20, 22, 24, 26,
                                     28, 30, 32, 34, 36, 38, 40, 42, -1, -1, -1,
-                                    -1, -1, -1, -1, -1, -1, -1, -1, -1}}}}
+                                    -1, -1, -1, -1, -1, -1, -1, -1, -1},
+                                    Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                                    1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }}}
+                                }}
               .Build()};
   auto logical_plan = input.logicalPlan;
   auto input_tables = input.tableGroup.ToBlazingFrame();
@@ -136,14 +144,21 @@ TEST_F(EvaluateQueryTest, TEST_01) {
                  Literals<GDF_INT64>{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}}}}
               .Build(),
-      .resultTable =
-          LiteralTableBuilder{
-              "ResultSet",
-              {{"GDF_INT64", Literals<GDF_INT64>{6, 7, 8, 9, 0, 1, 2, 3, 4, 5}},
-               {"GDF_FLOAT64",
-                Literals<GDF_FLOAT64>{0, 1, 2, 3, -1, -1, -1, -1, -1, -1}},
-               {"GDF_FLOAT64",
-                Literals<GDF_FLOAT64>{6, 8, 10, 12, -1, -1, -1, -1, -1, -1}}}}
+        .resultTable =
+          LiteralTableBuilder{"ResultSet",
+                              {{"n1key",
+                                Literals<GDF_INT32>{
+                                    Literals<GDF_INT32>::vector{6, 7, 8, 9, 0, 1, 2, 3, 4, 5 },
+                                    Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }}},
+                               {"n2key",
+                                Literals<GDF_INT32>{
+                                    Literals<GDF_INT32>::vector{0, 1, 2, 3, -1, -1, -1, -1, -1, -1},
+                                    Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 0, 0, 0, 0, 0, 0 }}},
+                               {"GDF_FLOAT64",
+                                Literals<GDF_INT32>{
+                                    Literals<GDF_INT32>::vector{6, 8, 10, 12, -1, -1, -1, -1, -1, -1},
+                                    Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 0, 0, 0, 0, 0, 0 }}}
+                                }}
               .Build()};
   auto logical_plan = input.logicalPlan;
   auto input_tables = input.tableGroup.ToBlazingFrame();

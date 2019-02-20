@@ -4,7 +4,7 @@ BlazingDB Relational Algebra Interpreter
 # Requirements
 - g++-5.4
 - CMake 3.11+
-- MakeSDSADADADADSd
+- MakeSDSADADADADSdgdfsgdgsdgfsgsgdsgdsg
 asddsaddsa
 And also make sure to install these system reqasdasdduirements:
 ```bash
@@ -15,7 +15,7 @@ apt-get install -y build-essential ssh wget curl git
 apt-get -y install libtool automake autoconf
 
 # Install Boost regex dependency
-apt-get install -y libicu-dev
+apt-get install -y libicu-devdsgfsdfg
 
 # Install AWS C++ SDK dependencies
 apt-get install -y --no-install-recommends libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev

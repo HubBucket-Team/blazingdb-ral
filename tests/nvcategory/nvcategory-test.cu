@@ -190,7 +190,7 @@ TEST_F(NVCategoryTest, processing_filter_wo_strings) {
 
 	{   //select x,y from hr.emps where y='BBB'
 		std::string query = "LogicalProject(x=[$0])\n\
-		EnumerableTableScan(table=[[hr, emps]])";
+	EnumerableTableScan(table=[[hr, emps]])";
 
 		std::cout<<"about to evalute"<<std::endl;
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,

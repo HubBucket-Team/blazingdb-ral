@@ -29,6 +29,8 @@ bool is_other_binary_operator_token(std::string token);
 
 bool is_literal(std::string operand);
 
+bool is_string(const std::string &operand);
+
 bool is_digits(const std::string &str);
 
 bool is_operator_token(std::string operand);

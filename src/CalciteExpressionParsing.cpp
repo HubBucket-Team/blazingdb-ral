@@ -624,6 +624,10 @@ bool is_other_binary_operator_token(std::string token){
 	return (gdf_other_binary_operator_map.find(token) != gdf_other_binary_operator_map.end());
 }
 
+bool is_string(const std::string &operand) {
+	return operand[0] == '\'' && operand[operand.size()-1] == '\'';
+}
+
 bool is_literal(std::string operand){
 	return operand[0] != '$';
 }
@@ -646,7 +650,7 @@ std::string get_last_token(std::string expression, int * position){
 }
 
 bool is_operator_token(std::string operand) {
-	return (operand[0] != '$' && !is_number(operand) && !is_date(operand));
+	return (operand[0] != '$' && !is_number(operand) && !is_date(operand) && !is_string(operand));
 }
 
 std::size_t

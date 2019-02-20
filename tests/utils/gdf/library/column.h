@@ -118,7 +118,7 @@ gdf_column_cpp Column::Create(const std::string &name,
                               const std::size_t  size) {
   gdf_column_cpp column_cpp;
   column_cpp.create_gdf_column(dtype, length, const_cast<void *>(data), const_cast<gdf_valid_type *>(valid), size);
-  column_cpp.delete_set_name(name);
+  column_cpp.set_name(name);
   return column_cpp;
 }
 

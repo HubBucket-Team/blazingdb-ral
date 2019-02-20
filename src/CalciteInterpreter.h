@@ -50,10 +50,10 @@ gdf_error evaluate_query(
 
 std::string get_named_expression(std::string query_part, std::string expression_name);
 
-gdf_error execute_project_plan(blazing_frame & input, std::string query_part);
+void execute_project_plan(blazing_frame & input, std::string query_part);
 
 project_plan_params parse_project_plan(blazing_frame& input, std::string query_part);
 
-gdf_error process_project(blazing_frame & input, std::string query_part);
+void process_project(blazing_frame & input, std::string query_part);
 
 #endif /* CALCITEINTERPRETER_H_ */

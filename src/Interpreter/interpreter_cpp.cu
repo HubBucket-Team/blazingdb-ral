@@ -3,7 +3,7 @@
 #include "Config/Config.h"
 #include "gdf_wrapper/gdf_wrapper.cuh"
 #include "cuDF/Allocator.h"
-
+#include "../Utils.cuh"
 
 //TODO: a better way to handle all this thread block size is
 //to get the amount of shared memory from the device and figure it out that way
@@ -84,146 +84,138 @@ int calculated_shared_memory(int num_threads_per_block){
 //TODO: we dont know if this is fast or not we coudl store this in a pre computed map
 void calculate_grid(int * min_grid_size, int * block_size, column_index_type max_output)
 {
-
-	cudaError_t error;
-
 	if(max_output == 1){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<1,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<1,8>, 0 ));
 	}else if(max_output == 2){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<2,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<2,8>, 0 ));
 	}else if(max_output == 3){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<3,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<3,8>, 0 ));
 	}else if(max_output == 4){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<4,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<4,8>, 0 ));
 	}else if(max_output == 5){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<5,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<5,8>, 0 ));
 	}else if(max_output == 6){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<6,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<6,8>, 0 ));
 	}else if(max_output == 7){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<7,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<7,8>, 0 ));
 	}else if(max_output == 8){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<8,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<8,8>, 0 ));
 	}else if(max_output == 9){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<9,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<9,8>, 0 ));
 	}else if(max_output == 10){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<10,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<10,8>, 0 ));
 	}else if(max_output == 11){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<11,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<11,8>, 0 ));
 	}else if(max_output == 12){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<12,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<12,8>, 0 ));
 	}else if(max_output == 13){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<13,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<13,8>, 0 ));
 	}else if(max_output == 14){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<14,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<14,8>, 0 ));
 	}else if(max_output == 15){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<15,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<15,8>, 0 ));
 	}else if(max_output == 16){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<16,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<16,8>, 0 ));
 	}else if(max_output == 17){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<17,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<17,8>, 0 ));
 	}else if(max_output == 18){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<18,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<18,8>, 0 ));
 	}else if(max_output == 19){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<19,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<19,8>, 0 ));
 	}else if(max_output == 20){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<20,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<20,8>, 0 ));
 	}else if(max_output == 21){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<21,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<21,8>, 0 ));
 	}else if(max_output == 22){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<22,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<22,8>, 0 ));
 	}else if(max_output == 23){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<23,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<23,8>, 0 ));
 	}else if(max_output == 24){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<24,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<24,8>, 0 ));
 	}else if(max_output == 25){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<25,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<25,8>, 0 ));
 	}else if(max_output == 26){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<26,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<26,8>, 0 ));
 	}else if(max_output == 27){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<27,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<27,8>, 0 ));
 	}else if(max_output == 28){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<28,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<28,8>, 0 ));
 	}else if(max_output == 29){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<29,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<29,8>, 0 ));
 	}else if(max_output == 30){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<30,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<30,8>, 0 ));
 	}else if(max_output == 31){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<31,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<31,8>, 0 ));
 	}else if(max_output == 32){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<32,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<32,8>, 0 ));
 	}else if(max_output == 33){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<33,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<33,8>, 0 ));
 	}else if(max_output == 34){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<34,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<34,8>, 0 ));
 	}else if(max_output == 35){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<35,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<35,8>, 0 ));
 	}else if(max_output == 36){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<36,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<36,8>, 0 ));
 	}else if(max_output == 37){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<37,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<37,8>, 0 ));
 	}else if(max_output == 38){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<38,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<38,8>, 0 ));
 	}else if(max_output == 39){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<39,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<39,8>, 0 ));
 	}else if(max_output == 40){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<40,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<40,8>, 0 ));
 	}else if(max_output == 41){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<41,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<41,8>, 0 ));
 	}else if(max_output == 42){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<42,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<42,8>, 0 ));
 	}else if(max_output == 43){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<43,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<43,8>, 0 ));
 	}else if(max_output == 44){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<44,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<44,8>, 0 ));
 	}else if(max_output == 45){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<45,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<45,8>, 0 ));
 	}else if(max_output == 46){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<46,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<46,8>, 0 ));
 	}else if(max_output == 47){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<47,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<47,8>, 0 ));
 	}else if(max_output == 48){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<48,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<48,8>, 0 ));
 	}else if(max_output == 49){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<49,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<49,8>, 0 ));
 	}else if(max_output == 50){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<50,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<50,8>, 0 ));
 	}else if(max_output == 51){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<51,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<51,8>, 0 ));
 	}else if(max_output == 52){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<52,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<52,8>, 0 ));
 	}else if(max_output == 53){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<53,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<53,8>, 0 ));
 	}else if(max_output == 54){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<54,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<54,8>, 0 ));
 	}else if(max_output == 55){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<55,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<55,8>, 0 ));
 	}else if(max_output == 56){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<56,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<56,8>, 0 ));
 	}else if(max_output == 57){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<57,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<57,8>, 0 ));
 	}else if(max_output == 58){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<58,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<58,8>, 0 ));
 	}else if(max_output == 59){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<59,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<59,8>, 0 ));
 	}else if(max_output == 60){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<60,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<60,8>, 0 ));
 	}else if(max_output == 61){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<61,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<61,8>, 0 ));
 	}else if(max_output == 62){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<62,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<62,8>, 0 ));
 	}else if(max_output == 63){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<63,8>, 0 );
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<63,8>, 0 ));
 	}else if(max_output == 64){
-		error = cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<64,8>, 0 );
-	}
-	if(error != CUDA_SUCCESS){
-		std::cout<<error<<" error running calc occupancy"<<std::endl;
-	}else{
-	//	std::cout<<"Grid ==> "<<*min_grid_size<<" Block==> "<<*block_size<<std::endl;
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSizeVariableSMem ( min_grid_size, block_size, transformKernel<interpreter_functor_8>, calculated_shared_memory<64,8>, 0 ));
 	}
 }
 
-gdf_error perform_operation(	std::vector<gdf_column *> output_columns,
+void perform_operation(	std::vector<gdf_column *> output_columns,
 		std::vector<gdf_column *> input_columns,
 		std::vector<column_index_type> & left_inputs,
 		std::vector<column_index_type> & right_inputs,
@@ -252,7 +244,7 @@ gdf_error perform_operation(	std::vector<gdf_column *> output_columns,
 	gdf_size_type num_rows = input_columns[0]->size;
 
 	cudaStream_t stream;
-	cudaStreamCreate(&stream);
+	CheckCudaErrors(cudaStreamCreate(&stream));
 
 
 	size_t shared_memory_per_thread = (max_output+1) * sizeof(int64_t);
@@ -282,12 +274,11 @@ gdf_error perform_operation(	std::vector<gdf_column *> output_columns,
 					//	,1,
 					shared_memory_per_thread * block_size,
 					stream>>>(op, num_rows);
+	CheckCudaErrors(cudaGetLastError());
 
-	op.update_columns_null_count(output_columns);
+	// op.update_columns_null_count(output_columns);
 
 	cuDF::Allocator::deallocate(temp_space,stream);
-	cudaStreamSynchronize(stream);
-	cudaStreamDestroy(stream);
-
-	return GDF_SUCCESS;
+	CheckCudaErrors(cudaStreamSynchronize(stream));
+	CheckCudaErrors(cudaStreamDestroy(stream));
 }

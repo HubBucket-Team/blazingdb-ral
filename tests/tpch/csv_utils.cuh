@@ -31,7 +31,7 @@ gdf_column_cpp ToGdfColumnCpp(const std::string &name,
                               const std::size_t  size) {
   gdf_column_cpp column_cpp;
   column_cpp.create_gdf_column(dtype, length, const_cast<void *>(data), size);
-  column_cpp.delete_set_name(name);
+  column_cpp.set_name(name);
   return column_cpp;
 }
 
@@ -117,7 +117,7 @@ BlazingFrame ToBlazingFrame(std::vector<std::string> filePaths, std::vector<std:
 
     if (checkFile(file_path.c_str())) {
     	csv_read_arg args{};
-      args.file_path		= file_path.c_str();
+      args.filepath_or_buffer		= file_path.c_str();
       args.num_cols		=  columnNames[index].size();
       args.names			= columnNamesPointers.data();
       args.dtype			= columnDTypes[index].data();

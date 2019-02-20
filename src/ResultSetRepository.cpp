@@ -21,7 +21,7 @@ result_set_repository::~result_set_repository() {
 void result_set_repository::add_token(query_token_t token, connection_id_t connection){
 	std::lock_guard<std::mutex> guard(this->repo_mutex);
 	blazing_frame temp;
-	this->result_sets[token] = std::make_tuple(false, temp, 0.0);
+	this->result_sets[token] = std::make_tuple(false, temp, 0.0, "");
 
 	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
 		std::vector<query_token_t> empty_tokens;
@@ -59,7 +59,7 @@ query_token_t result_set_repository::register_query(connection_id_t connection){
 
 }*/
 
-void result_set_repository::update_token(query_token_t token, blazing_frame frame, double duration){
+void result_set_repository::update_token(query_token_t token, blazing_frame frame, double duration, std::string errorMsg){
 	if(this->result_sets.find(token) == this->result_sets.end()){
 		throw std::runtime_error{"Token does not exist"};
 	}
@@ -81,7 +81,7 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 
 	{
 		std::lock_guard<std::mutex> guard(this->repo_mutex);
-		this->result_sets[token] = std::make_tuple(true, frame, duration);
+		this->result_sets[token] = std::make_tuple(true, frame, duration, errorMsg);
 	}
 	cv.notify_all();
 	/*if(this->requested_responses.find(token) != this->requested_responses.end()){
@@ -151,7 +151,7 @@ bool result_set_repository::free_result(connection_id_t connection, query_token_
 	return false;
 }
 
-std::tuple<blazing_frame, double> result_set_repository::get_result(connection_id_t connection, query_token_t token){
+result_set_type result_set_repository::get_result(connection_id_t connection, query_token_t token){
 	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
 		throw std::runtime_error{"Connection does not exist"};
 	}
@@ -174,7 +174,7 @@ std::tuple<blazing_frame, double> result_set_repository::get_result(connection_i
 			GDFRefCounter::getInstance()->deregister_column(output_frame.get_column(i).get_gdf_column());
 		}
 
-		return std::make_tuple(output_frame, std::get<2>(this->result_sets[token]));
+		return std::make_tuple(output_frame, std::get<2>(this->result_sets[token]), std::get<3>(this->result_sets[token]));
 	}
 }
 

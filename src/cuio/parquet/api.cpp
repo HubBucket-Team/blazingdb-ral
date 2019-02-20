@@ -33,7 +33,7 @@
 #include "util/bit_util.cuh"
 #include "api.h"
 
-#include <rmm.h>
+#include <rmm/rmm.h>
 
 BEGIN_NAMESPACE_GDF_PARQUET
 

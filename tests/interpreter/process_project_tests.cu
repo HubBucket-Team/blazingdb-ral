@@ -93,12 +93,11 @@ TEST_F(EvaluateQueryTest, TEST_01)
     std::vector<std::string> plan = StringUtil::split(logical_plan, "\n");
 
     auto params = parse_project_plan(bz_frame, plan[0]);
-    gdf_error err = GDF_SUCCESS;
-
+    
     //perform operations
     if (params.num_expressions_out > 0)
     {
-        err = perform_operation(params.output_columns,
+        perform_operation(params.output_columns,
                                 params.input_columns,
                                 params.left_inputs,
                                 params.right_inputs,
@@ -123,18 +122,16 @@ TEST_F(EvaluateQueryTest, TEST_01)
         output_columns_cpp.push_back(gdf_col);
     }
 
-    EXPECT_TRUE(err == GDF_SUCCESS);
     auto output_table = GdfColumnCppsTableBuilder{"output_table", output_columns_cpp}.Build();
     output_table.print(std::cout);
 
-    err = process_project(bz_frame, plan[0]);
+    process_project(bz_frame, plan[0]);
     std::cout<< "reference_solution\n";
     auto table_ref = bz_frame.get_columns()[0];
     for (auto& c: table_ref) {
         print_gdf_column(c.get_gdf_column());
     }
 
-    EXPECT_TRUE(err == GDF_SUCCESS);
     auto reference_table =
         GdfColumnCppsTableBuilder{"output_table", bz_frame.get_columns()[0]}.Build();
     CHECK_RESULT(output_table, reference_table);

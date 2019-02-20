@@ -37,7 +37,7 @@
 #include "cuio/parquet/column_reader.h"
 #include "cuio/parquet/file_reader.h"
 
-#include <rmm.h>
+#include <rmm/rmm.h>
 
 
  #ifndef PARQUET_FILE_PATH

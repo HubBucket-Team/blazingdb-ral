@@ -107,6 +107,7 @@ target_link_libraries(testing-libgdf
     ${BLAZINGDB_PROTOCOL_STATIC_LIB}
 
     ${LIBGDF_STATIC_LIB}
+    NVCategory
     NVStrings
     rmm
 

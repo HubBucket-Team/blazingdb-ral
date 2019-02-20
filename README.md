@@ -6,7 +6,7 @@ BlazingDB Relational Algebra Interpreter
 - CMake 3.11+
 - Make
 asddsaddsa
-And also make sure to install these system requirements:
+And also make sure to install these system reqasdasdduirements:
 ```bash
 # Install common dev tools
 apt-get install -y build-essential ssh wget curl git

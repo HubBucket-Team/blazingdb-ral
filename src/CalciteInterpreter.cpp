@@ -196,7 +196,7 @@ project_plan_params parse_project_plan(blazing_frame& input, std::string query_p
 
 
 	// LogicalProject(x=[$0], y=[$1], z=[$2], e=[$3], join_x=[$4], y0=[$5], EXPR$6=[+($0, $5)])
-	const std::string combined_expression = query_part.substr(
+	std::string combined_expression = query_part.substr(
 			query_part.find("(") + 1,
 			(query_part.rfind(")") - query_part.find("(")) - 1
 	);
@@ -410,7 +410,7 @@ void process_project(blazing_frame & input, std::string query_part){
 	size_t size = input.get_column(0).size();
 
 	// LogicalProject(x=[$0], y=[$1], z=[$2], e=[$3], join_x=[$4], y0=[$5], EXPR$6=[+($0, $5)])
-	const std::string combined_expression = query_part.substr(
+	std::string combined_expression = query_part.substr(
 			query_part.find("(") + 1,
 			(query_part.rfind(")") - query_part.find("(")) - 1
 	);

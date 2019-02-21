@@ -248,6 +248,7 @@ gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type,
 		return GDF_invalid;
 }
 
+//todo: get_output_type: add support to coalesce and date operations!
 gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type, gdf_binary_operator operation){
 
 	//we are only considering binary ops between numbers for now
@@ -318,7 +319,10 @@ gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type,
 			//return GDF_UINT64;
 			return GDF_INT64;
 		}
-	}else{
+	}
+	else if (operation == GDF_COALESCE){
+		return input_left_type;
+	} else {
 		return GDF_invalid;
 	}
 }
@@ -879,7 +883,12 @@ int find_closing_char(const std::string & expression, int start) {
 }
 
 // takes a comma delimited list of expressions and splits it into separate expressions
-std::vector<std::string> get_expressions_from_expression_list(const std::string & combined_expression, bool trim){
+std::vector<std::string> get_expressions_from_expression_list(std::string & combined_expression, bool trim){
+	
+	//todo: 
+	//combined_expression
+	static const std::regex re{R""(CASE\(IS NOT NULL\((\W\(.+?\)|.+)\), \1, (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
+	combined_expression = std::regex_replace(combined_expression, re, "COALESCE($1, $2)");
 
 	std::vector<std::string> expressions;
 

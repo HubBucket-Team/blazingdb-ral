@@ -33,7 +33,7 @@ struct EvaluateQueryTest : public ::testing::Test
     EvaluateQueryTest() : input{InputTestItem{
                               .query = "select id + -1 from main.emps",
                               .logicalPlan =
-                                  "LogicalProject(EXPR$0=[+($0, -1)])\n  "
+                                  "LogicalProject(EXPR$0=[CASE(IS NOT NULL($0), $0, -1)])\n  "
                                   "EnumerableTableScan(table=[[main, emps]])",
                               .tableGroup =
                                   LiteralTableGroupBuilder{

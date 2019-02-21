@@ -608,7 +608,8 @@ static std::map<std::string, gdf_binary_operator> gdf_binary_operator_map = {
 	{"POWER", GDF_POW},
 	{"MOD", GDF_MOD},
 	{"AND", GDF_MUL},
-	{"OR", GDF_ADD}
+	{"OR", GDF_ADD},
+	{"COALESCE", GDF_COALESCE}
 };
 
 gdf_binary_operator get_binary_operation(std::string operator_string){
@@ -618,13 +619,13 @@ gdf_binary_operator get_binary_operation(std::string operator_string){
 	throw std::runtime_error("In get_binary_operation function: unsupported operator, " + operator_string);
 }
 
-static std::map<std::string, gdf_other_binary_operator> gdf_other_binary_operator_map = {
-	{"COALESCE", GDF_COALESCE}
-};
+// static std::map<std::string, gdf_other_binary_operator> gdf_other_binary_operator_map = {
+// 	{"COALESCE", GDF_COALESCE}
+// };
 
 gdf_other_binary_operator get_other_binary_operation(std::string operator_string){
-	if(gdf_other_binary_operator_map.find(operator_string) != gdf_other_binary_operator_map.end())
-		return gdf_other_binary_operator_map[operator_string];
+	// if(gdf_other_binary_operator_map.find(operator_string) != gdf_other_binary_operator_map.end())
+	// 	return gdf_other_binary_operator_map[operator_string];
 
 	throw std::runtime_error("In get_other_binary_operation function: unsupported operator, " + operator_string);
 }
@@ -637,8 +638,10 @@ bool is_unary_operator_token(std::string token){
 	return (gdf_unary_operator_map.find(token) != gdf_unary_operator_map.end());
 }
 
+//todo, remove after,  it is not used anymore.
 bool is_other_binary_operator_token(std::string token){
-	return (gdf_other_binary_operator_map.find(token) != gdf_other_binary_operator_map.end());
+	return false;
+	// return (gdf_other_binary_operator_map.find(token) != gdf_other_binary_operator_map.end());
 }
 
 bool is_literal(std::string operand){

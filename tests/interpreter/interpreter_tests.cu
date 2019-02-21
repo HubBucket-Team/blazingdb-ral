@@ -244,6 +244,90 @@ TEST_F(EvaluateQueryTest, TEST_FLOATS)
 
 
 // select $0 + 1 from customer
+TEST_F(EvaluateQueryTest, TEST_COALESCE_ADD)
+{
+
+   auto input_table = gdf::library::LiteralTableBuilder{"customer",
+    {
+      gdf::library::LiteralColumnBuilder{
+        "x", Literals<GDF_INT32>{Literals<GDF_INT32>::vector{1, 2, 3, 4, 5}, Literals<GDF_INT32>::bool_vector{0, 1, 1, 1, 0}},
+      },
+      gdf::library::LiteralColumnBuilder{
+        "y",
+        Literals<GDF_INT32>{ 1, 1, 1, 1, 1 },
+      }, 
+       gdf::library::LiteralColumnBuilder{
+        "z",
+        Literals<GDF_INT32>{ 0, 2, 4, 6, 8 },
+      }, 
+    } }.Build();
+
+    Table output_table = TableBuilder{
+        "emps",
+        {
+            {"o1", [](Index i) -> DType<GDF_INT32> { return 0; }},
+        }}.Build(5);
+
+    input_table.print(std::cout); 
+
+    std::vector<gdf_column_cpp> input_columns_cpp = input_table.ToGdfColumnCpps();
+    std::vector<gdf_column_cpp> output_columns_cpp = output_table.ToGdfColumnCpps();
+
+    std::vector<gdf_column *> output_columns(1);
+    output_columns[0] = output_columns_cpp[0].get_gdf_column();
+    //output_columns[1] = output_columns_cpp[1].get_gdf_column();
+
+    std::vector<gdf_column *> input_columns(3);
+    input_columns[0] = input_columns_cpp[0].get_gdf_column();
+    input_columns[1] = input_columns_cpp[1].get_gdf_column();
+    input_columns[2] = input_columns_cpp[2].get_gdf_column();
+
+    // select $0 + 1 from customer
+    std::vector<column_index_type> left_inputs =  {0};
+    std::vector<column_index_type> right_inputs = {-2};
+    std::vector<column_index_type> outputs =      {3};
+
+    std::vector<column_index_type> final_output_positions = {3};
+
+    std::vector<gdf_binary_operator> operators = std::initializer_list<gdf_binary_operator>{GDF_COALESCE};
+    std::vector<gdf_unary_operator> unary_operators = std::initializer_list<gdf_unary_operator>{GDF_INVALID_UNARY};
+
+    using I32 = gdf::library::GdfEnumType<GDF_INT32>;
+
+    gdf::library::Scalar<I32> junk_obj;
+    junk_obj.setValue(0).setValid(true);
+    gdf::library::Scalar<I32> vscalar_obj;
+    vscalar_obj.setValue(-1).setValid(true);
+
+    gdf_scalar junk = *junk_obj.scalar();
+    gdf_scalar scalar_val = *vscalar_obj.scalar();
+
+    std::vector<gdf_scalar> left_scalars = {junk};
+    std::vector<gdf_scalar> right_scalars = {scalar_val};
+
+    std::vector<column_index_type> new_input_indices = {0, -1, -1};
+
+    perform_operation(output_columns, input_columns, left_inputs, right_inputs, outputs, final_output_positions, operators, unary_operators, left_scalars, right_scalars, new_input_indices);
+    
+    auto ral_solution_table = GdfColumnCppsTableBuilder{ "output", output_columns_cpp }.Build();
+    using VTableBuilder = gdf::library::TableRowBuilder<int>;
+    using DataTuple = VTableBuilder::DataTuple;
+    auto reference_table = VTableBuilder{
+        "output",
+        { "a"},
+        {
+            DataTuple{-1}, 
+            DataTuple{2}, 
+            DataTuple{3}, 
+            DataTuple{4}, 
+            DataTuple{-1},  
+        }
+    }.Build();
+    ral_solution_table.print(std::cout);
+    EXPECT_EQ(ral_solution_table, reference_table);
+}
+
+// select $0 + 1 from customer
 TEST_F(EvaluateQueryTest, TEST_SCALAR_ADD)
 {
 

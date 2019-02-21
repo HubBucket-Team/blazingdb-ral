@@ -67,3 +67,5 @@ resources/tpch-generator/__pycache__/
 
 #Qt Creator files
 CMakeLists.txt.user
+
+build_local/

@@ -194,6 +194,17 @@ bool is_comparison_operation(gdf_binary_operator operation){
 	);
 }
 
+bool is_trig_operation(gdf_unary_operator operation){
+	return (operation == GDF_SIN ||
+			operation == GDF_COS ||
+			operation == GDF_ASIN||
+			operation == GDF_ACOS ||
+			operation == GDF_TAN ||
+			operation == GDF_COTAN ||
+			operation == GDF_ATAN
+	);
+}
+
 gdf_dtype get_signed_type_from_unsigned(gdf_dtype type){
 	return type;
 	//TODO felipe percy noboa see upgrade to uints
@@ -213,6 +224,12 @@ gdf_dtype get_signed_type_from_unsigned(gdf_dtype type){
 gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_unary_operator operation){
 	if(is_date_type(input_left_type)){
 		return GDF_INT16;
+	} else if (is_trig_operation(operation) || operation == GDF_LOG || operation == GDF_LN){
+		if (input_left_type == GDF_FLOAT32 || input_left_type == GDF_FLOAT64){
+			return input_left_type;	
+		} else {
+			return GDF_FLOAT64;
+		}
 	}else{
 		return input_left_type;
 	}

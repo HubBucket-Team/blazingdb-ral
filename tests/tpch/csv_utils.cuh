@@ -125,6 +125,10 @@ BlazingFrame ToBlazingFrame(std::vector<std::string> filePaths, std::vector<std:
       args.lineterminator = '\n';
       args.decimal = '.';
 
+	args.skip_blank_lines = true;
+	args.header = -1;
+	args.nrows = -1;
+
       error = read_csv(&args);
       assert(error == GDF_SUCCESS);
 

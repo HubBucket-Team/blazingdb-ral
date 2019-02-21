@@ -739,6 +739,8 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 			temp_output.update_null_count();
 			input.set_column(i,temp_output.clone(input.get_column(i).name()));
 		}
+
+		return; // since this is group by without aggregations, we dont need to do the rest
 	}
 
 

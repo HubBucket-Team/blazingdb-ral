@@ -7,8 +7,6 @@
 
 #include "../utils/gdf/library/table_group.h"
 
-LINEA_INDEBIDA
-
 template <class T>
 class DTypesTest : public ::testing::Test {
 protected:

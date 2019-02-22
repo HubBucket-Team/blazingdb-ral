@@ -248,6 +248,7 @@ gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type,
 		return GDF_invalid;
 }
 
+//todo: get_output_type: add support to coalesce and date operations!
 gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type, gdf_binary_operator operation){
 
 	//we are only considering binary ops between numbers for now
@@ -318,7 +319,10 @@ gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type,
 			//return GDF_UINT64;
 			return GDF_INT64;
 		}
-	}else{
+	}
+	else if (operation == GDF_COALESCE){
+		return input_left_type;
+	} else {
 		return GDF_invalid;
 	}
 }
@@ -608,7 +612,8 @@ static std::map<std::string, gdf_binary_operator> gdf_binary_operator_map = {
 	{"POWER", GDF_POW},
 	{"MOD", GDF_MOD},
 	{"AND", GDF_MUL},
-	{"OR", GDF_ADD}
+	{"OR", GDF_ADD},
+	{"COALESCE", GDF_COALESCE}
 };
 
 gdf_binary_operator get_binary_operation(std::string operator_string){
@@ -618,13 +623,13 @@ gdf_binary_operator get_binary_operation(std::string operator_string){
 	throw std::runtime_error("In get_binary_operation function: unsupported operator, " + operator_string);
 }
 
-static std::map<std::string, gdf_other_binary_operator> gdf_other_binary_operator_map = {
-	{"COALESCE", GDF_COALESCE}
-};
+// static std::map<std::string, gdf_other_binary_operator> gdf_other_binary_operator_map = {
+// 	{"COALESCE", GDF_COALESCE}
+// };
 
 gdf_other_binary_operator get_other_binary_operation(std::string operator_string){
-	if(gdf_other_binary_operator_map.find(operator_string) != gdf_other_binary_operator_map.end())
-		return gdf_other_binary_operator_map[operator_string];
+	// if(gdf_other_binary_operator_map.find(operator_string) != gdf_other_binary_operator_map.end())
+	// 	return gdf_other_binary_operator_map[operator_string];
 
 	throw std::runtime_error("In get_other_binary_operation function: unsupported operator, " + operator_string);
 }
@@ -637,8 +642,10 @@ bool is_unary_operator_token(std::string token){
 	return (gdf_unary_operator_map.find(token) != gdf_unary_operator_map.end());
 }
 
+//todo, remove after,  it is not used anymore.
 bool is_other_binary_operator_token(std::string token){
-	return (gdf_other_binary_operator_map.find(token) != gdf_other_binary_operator_map.end());
+	return false;
+	// return (gdf_other_binary_operator_map.find(token) != gdf_other_binary_operator_map.end());
 }
 
 bool is_literal(std::string operand){
@@ -876,7 +883,12 @@ int find_closing_char(const std::string & expression, int start) {
 }
 
 // takes a comma delimited list of expressions and splits it into separate expressions
-std::vector<std::string> get_expressions_from_expression_list(const std::string & combined_expression, bool trim){
+std::vector<std::string> get_expressions_from_expression_list(std::string & combined_expression, bool trim){
+	
+	//todo: 
+	//combined_expression
+	static const std::regex re{R""(CASE\(IS NOT NULL\((\W\(.+?\)|.+)\), \1, (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
+	combined_expression = std::regex_replace(combined_expression, re, "COALESCE($1, $2)");
 
 	std::vector<std::string> expressions;
 

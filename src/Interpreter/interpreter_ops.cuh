@@ -16,6 +16,15 @@
 
 typedef int32_t temp_gdf_valid_type; //until its an int32 in cudf
 
+__host__ __device__ __forceinline__ 
+bool gdf_is_valid_32(const temp_gdf_valid_type *valid, gdf_index_type pos) {
+	if ( valid )
+		return (valid[pos / 32] >> (pos % 32)) & 1;
+	else
+		return true;
+}
+
+
 /*
 template<typename T>
 __device__ __forceinline__ T t(int thread_id,
@@ -218,7 +227,7 @@ class InterpreterFunctor {
 private:
 	void  **column_data; //these are device side pointers to the device pointer found in gdf_column.data
 	void ** output_data;
-	temp_gdf_valid_type ** valid_ptrs; //device
+	temp_gdf_valid_type ** valid_ptrs; //device,  
 	temp_gdf_valid_type ** valid_ptrs_out;
 	size_t num_columns;
 	gdf_dtype * input_column_types;
@@ -464,35 +473,35 @@ private:
 	 */
 	template<typename BufferType>
 	__device__
-	__forceinline__ void process_operator(size_t op_index,  BufferType * buffer){
+	__forceinline__ void process_operator(size_t op_index,  BufferType * buffer, const IndexT &row_index){
 		gdf_dtype type = this->input_types_left[op_index];
 		if(isFloat(type)){
-			process_operator_1<double>(op_index,buffer);
+			process_operator_1<double>(op_index,buffer, row_index);
 		}else {
-			process_operator_1<int64_t>(op_index,buffer);
+			process_operator_1<int64_t>(op_index,buffer, row_index);
 		}
 	}
 
 
 	template<typename LeftType, typename BufferType>
 	__device__
-	__forceinline__ void process_operator_1(size_t op_index,  BufferType * buffer){
+	__forceinline__ void process_operator_1(size_t op_index,  BufferType * buffer, const IndexT &row_index){
 		gdf_dtype type = this->input_types_right[op_index];
 		if(isFloat(type)){
-			process_operator_2<LeftType,double>(op_index,buffer);
+			process_operator_2<LeftType,double>(op_index,buffer, row_index);
 		}else {
-			process_operator_2<LeftType,int64_t>(op_index,buffer);
+			process_operator_2<LeftType,int64_t>(op_index,buffer, row_index);
 		}
 	}
 
 	template<typename LeftType, typename RightType, typename BufferType>
 	__device__
-	__forceinline__ void process_operator_2(size_t op_index,  BufferType * buffer){
+	__forceinline__ void process_operator_2(size_t op_index,  BufferType * buffer, const IndexT &row_index){
 		gdf_dtype type = this->output_types[op_index];
 		if(isFloat(type)){
-			process_operator_3<LeftType,RightType,double>(op_index,buffer);
+			process_operator_3<LeftType,RightType,double>(op_index,buffer, row_index);
 		}else {
-			process_operator_3<LeftType,RightType,int64_t>(op_index,buffer);
+			process_operator_3<LeftType,RightType,int64_t>(op_index,buffer, row_index);
 		}
 	}
 
@@ -525,12 +534,19 @@ private:
 				right_valid = get_data_from_buffer<int32_t>(buffer,right_position);
 
 			}
-
-			store_data_in_buffer<int32_t>(
-					left_valid
-					& right_valid,
-					buffer,
-					output_position);
+			if (this->binary_operations[op_index] == GDF_COALESCE) {
+				store_data_in_buffer<int32_t>(
+						left_valid
+						| right_valid,
+						buffer,
+						output_position);
+			} else {
+				store_data_in_buffer<int32_t>(
+						left_valid
+						& right_valid,
+						buffer,
+						output_position);
+			} 
 		}else{
 			int32_t left_valid;
 			if(left_position == -2){
@@ -551,7 +567,7 @@ private:
 
 	template<typename LeftType, typename RightType, typename OutputTypeOperator, typename BufferType>
 	__device__
-	__forceinline__ void process_operator_3(size_t op_index,  BufferType * buffer){
+	__forceinline__ void process_operator_3(size_t op_index,  BufferType * buffer, const IndexT &row_index){
 
 		column_index_type right_position = this->right_input_positions[op_index];
 		column_index_type left_position = this->left_input_positions[op_index];
@@ -607,7 +623,23 @@ private:
 						/ right_value,
 						buffer,
 						output_position);
-			}/*else if(oper == GDF_TRUE_DIV){
+			} else if (oper == GDF_COALESCE) {
+				temp_gdf_valid_type *valid = this->valid_ptrs [ this->left_input_positions [ op_index ] ];
+
+				if ( gdf_is_valid_32(valid, row_index) ) {
+						store_data_in_buffer<OutputTypeOperator>(
+							left_value,
+							buffer,
+							output_position);
+				} else {
+						store_data_in_buffer<OutputTypeOperator>(
+							right_value,
+							buffer,
+							output_position);
+				}
+			} 
+
+			/*else if(oper == GDF_TRUE_DIV){
 				//TODO: snap this requires understanding of the bitmask
 			}*/else if(oper == GDF_MOD){
 				//mod only makes sense with integer inputs
@@ -1238,7 +1270,7 @@ public:
 
 
 		for(short op_index = 0; op_index < this->num_operations; op_index++ ){
-			process_operator(op_index, total_buffer );
+			process_operator(op_index, total_buffer, row_index );
 		}
 
 		//		#pragma unroll

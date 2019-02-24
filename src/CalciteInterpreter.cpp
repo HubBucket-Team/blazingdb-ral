@@ -315,6 +315,7 @@ project_plan_params parse_project_plan(blazing_frame& input, std::string query_p
 			output_columns.push_back(output.get_gdf_column());
 
 			add_expression_to_plan(	input,
+					input_columns,
 					expression,
 					cur_expression_out,
 					num_expressions_out,

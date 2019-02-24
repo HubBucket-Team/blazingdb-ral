@@ -168,6 +168,8 @@ size_t get_width_dtype(gdf_dtype type){
 		return 0;
 	}else if(type == GDF_STRING){
 		return 0;
+	}else if(type == GDF_STRING_CATEGORY){
+		return 0;
 	}
 }
 
@@ -512,7 +514,7 @@ gdf_dtype get_output_type_expression(blazing_frame * input, gdf_dtype * max_temp
 			}
 
 		}else{
-			if(is_literal(token)){
+			if(is_literal(token) || is_string(token)){
 				operands.push(GDF_invalid);
 			}else{
 				operands.push(input->get_column(get_index(token)).dtype() );

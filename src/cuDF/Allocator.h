@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <exception>
 #include <cuda_runtime_api.h>
 
 namespace cuDF {
@@ -13,51 +14,40 @@ void reallocate(void** pointer, std::size_t size, cudaStream_t stream = 0);
 void deallocate(void* pointer, cudaStream_t stream = 0);
 
 
-class Exception {
+class CudfAllocatorError : public std::exception {
 public:
-    virtual ~Exception()
-    { }
-
-    virtual const char* what() const noexcept = 0;
-};
-
-class Message : public Exception {
-public:
-    Message(std::string&& message);
-
-public:
+    CudfAllocatorError(std::string&& message);
     const char* what() const noexcept override;
-
 private:
     const std::string message;
 };
 
-class CudaError : public Message {
+class CudaError : public CudfAllocatorError {
 public:
     CudaError();
 };
 
-class InvalidArgument : public Message {
+class InvalidArgument : public CudfAllocatorError {
 public:
     InvalidArgument();
 };
 
-class NotInitialized : public Message {
+class NotInitialized : public CudfAllocatorError {
 public:
     NotInitialized();
 };
 
-class OutOfMemory : public Message {
+class OutOfMemory : public CudfAllocatorError {
 public:
     OutOfMemory();
 };
 
-class InputOutput : public Message {
+class InputOutput : public CudfAllocatorError {
 public:
     InputOutput();
 };
 
-class Unknown : public Message {
+class Unknown : public CudfAllocatorError {
 public:
     Unknown();
 };

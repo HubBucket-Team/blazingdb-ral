@@ -76,9 +76,12 @@ TEST_F(EvaluateQueryTest, TEST_00) {
       .resultTable =
           LiteralTableBuilder{
               "ResultSet",
-              {{"GDF_INT64", Literals<GDF_INT64>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}},
-               {"GDF_FLOAT64",
-                Literals<GDF_FLOAT64>{0, 1, 2, 3, 4, -1, -1, -1, -1, -1}}}}
+              {{"GDF_INT32", Literals<GDF_INT32>{
+                                    Literals<GDF_INT32>::vector{0, 1, 2, 3, 4, 5, 6, 7, 8, 9 },
+                                    Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }}},
+               {"GDF_INT32", Literals<GDF_INT32>{
+                                    Literals<GDF_INT32>::vector{0, 1, 2, 3, 4, -1, -1, -1, -1, -1 },
+                                    Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 1, 0, 0, 0, 0, 0 }}}}}
               .Build()};
   auto logical_plan = input.logicalPlan;
   auto input_tables = input.tableGroup.ToBlazingFrame();
@@ -128,11 +131,15 @@ TEST_F(EvaluateQueryTest, TEST_01) {
       .resultTable =
           LiteralTableBuilder{
               "ResultSet",
-              {{"GDF_INT64", Literals<GDF_INT64>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}},
-               {"GDF_FLOAT64",
-                Literals<GDF_FLOAT64>{0, 1, 2, 3, 4, -1, -1, -1, -1, -1}},
-               {"GDF_FLOAT64",
-                Literals<GDF_FLOAT64>{0, 2, 4, 6, 8, -1, -1, -1, -1, -1}}}}
+              {{"GDF_INT32", Literals<GDF_INT32>{
+                                    Literals<GDF_INT32>::vector{0, 1, 2, 3, 4, 5, 6, 7, 8, 9 },
+                                    Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }}},
+               {"GDF_INT32", Literals<GDF_INT32>{
+                                    Literals<GDF_INT32>::vector{0, 1, 2, 3, 4, -1, -1, -1, -1, -1 },
+                                    Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 1, 0, 0, 0, 0, 0 }}},
+               {"GDF_INT32", Literals<GDF_INT32>{
+                                    Literals<GDF_INT32>::vector{0, 2, 4, 6, 8, -1, -1, -1, -1, -1 },
+                                    Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 1, 0, 0, 0, 0, 0 }}}}}
               .Build()};
   auto logical_plan = input.logicalPlan;
   auto input_tables = input.tableGroup.ToBlazingFrame();

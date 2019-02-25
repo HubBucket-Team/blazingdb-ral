@@ -12,7 +12,6 @@
 #include "io/data_provider/UriDataProvider.h"
 #include "io/data_parser/DataParser.h"
 #include "io/data_provider/DataProvider.h"
-#include "io/DataLoader.h"
 
 #include <DataFrame.h>
 #include <fstream>
@@ -38,6 +37,7 @@ protected:
 				out_col.size() * sizeof(T),
 				cudaMemcpyDeviceToHost);
 
+		ASSERT_TRUE(out_col.size() > 0);
 		for (std::size_t i = 0; i < out_col.size(); i++) {
 			ASSERT_TRUE(host_output[i] == device_output[i]);
 		}
@@ -148,13 +148,8 @@ void load_files(FileParserType&& parser, const std::vector<Uri>& uris, std::vect
 
       std::shared_ptr<arrow::io::RandomAccessFile> file = provider->get_next();
       if(file != nullptr){
-        gdf_error error = parser.parse(file, columns);
-        if(error != GDF_SUCCESS){
-          //TODO: probably want to pass this up as an error
-          std::cout<<"Could not parse "<<user_readable_file_handle<<std::endl;
-        }else{
-          all_parts.push_back(columns);
-        }
+        parser.parse(file, columns);
+        all_parts.push_back(columns);
       }else{
         std::cout<<"Was unable to open "<<user_readable_file_handle<<std::endl;
       }

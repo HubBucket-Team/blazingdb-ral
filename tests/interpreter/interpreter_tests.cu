@@ -129,9 +129,8 @@ TEST_F(EvaluateQueryTest, TEST_00)
 
     std::vector<column_index_type> new_input_indices = {0, 1, 2};
 
-    auto error = perform_operation(output_columns, input_columns, left_inputs, right_inputs, outputs, final_output_positions, operators, unary_operators, left_scalars, right_scalars, new_input_indices);
-    ASSERT_EQ(error, GDF_SUCCESS);
-
+    perform_operation(output_columns, input_columns, left_inputs, right_inputs, outputs, final_output_positions, operators, unary_operators, left_scalars, right_scalars, new_input_indices);
+    
     auto ral_solution_table = GdfColumnCppsTableBuilder{ "output", output_columns_cpp }.Build();
     using VTableBuilder = gdf::library::TableRowBuilder<int32_t, int32_t>;
     using DataTuple = VTableBuilder::DataTuple;
@@ -223,9 +222,8 @@ TEST_F(EvaluateQueryTest, TEST_FLOATS)
 
     std::vector<column_index_type> new_input_indices = {0, 1, 2};
 
-    auto error = perform_operation(output_columns, input_columns, left_inputs, right_inputs, outputs, final_output_positions, operators, unary_operators, left_scalars, right_scalars, new_input_indices);
-    ASSERT_EQ(error, GDF_SUCCESS);
-
+    perform_operation(output_columns, input_columns, left_inputs, right_inputs, outputs, final_output_positions, operators, unary_operators, left_scalars, right_scalars, new_input_indices);
+    
     auto ral_solution_table = GdfColumnCppsTableBuilder{ "output", output_columns_cpp }.Build();
     using VTableBuilder = gdf::library::TableRowBuilder<float, float>;
     using DataTuple = VTableBuilder::DataTuple;
@@ -310,9 +308,8 @@ TEST_F(EvaluateQueryTest, TEST_SCALAR_ADD)
 
     std::vector<column_index_type> new_input_indices = {0, -1, -1};
 
-    auto error = perform_operation(output_columns, input_columns, left_inputs, right_inputs, outputs, final_output_positions, operators, unary_operators, left_scalars, right_scalars, new_input_indices);
-    ASSERT_EQ(error, GDF_SUCCESS);
-
+    perform_operation(output_columns, input_columns, left_inputs, right_inputs, outputs, final_output_positions, operators, unary_operators, left_scalars, right_scalars, new_input_indices);
+    
     auto ral_solution_table = GdfColumnCppsTableBuilder{ "output", output_columns_cpp }.Build();
     using VTableBuilder = gdf::library::TableRowBuilder<int>;
     using DataTuple = VTableBuilder::DataTuple;
@@ -398,9 +395,8 @@ TEST_F(EvaluateQueryTest, TEST_01_Unary_Operators)
 
     std::vector<column_index_type> new_input_indices = {0, 1, 2};
 
-    auto error = perform_operation(output_columns, input_columns, left_inputs, right_inputs, outputs, final_output_positions, operators, unary_operators, left_scalars, right_scalars, new_input_indices);
-    ASSERT_EQ(error, GDF_SUCCESS);
-
+    perform_operation(output_columns, input_columns, left_inputs, right_inputs, outputs, final_output_positions, operators, unary_operators, left_scalars, right_scalars, new_input_indices);
+    
     auto ral_solution_table = GdfColumnCppsTableBuilder{ "output", output_columns_cpp }.Build();
     using VTableBuilder = gdf::library::TableRowBuilder<float, float>;
     using DataTuple = VTableBuilder::DataTuple;
@@ -490,9 +486,8 @@ TEST_F(EvaluateQueryTest, TEST_02)
 
     std::vector<column_index_type> new_input_indices = {0, 1, 2};
 
-    auto error = perform_operation(output_columns, input_columns, left_inputs, right_inputs, outputs, final_output_positions, operators, unary_operators, left_scalars, right_scalars, new_input_indices);
-    ASSERT_EQ(error, GDF_SUCCESS);
-
+    perform_operation(output_columns, input_columns, left_inputs, right_inputs, outputs, final_output_positions, operators, unary_operators, left_scalars, right_scalars, new_input_indices);
+    
     auto ral_solution_table = GdfColumnCppsTableBuilder{ "output", output_columns_cpp }.Build();
     using VTableBuilder = gdf::library::TableRowBuilder<float, float>;
     using DataTuple = VTableBuilder::DataTuple;
@@ -578,9 +573,8 @@ TEST_F(EvaluateQueryTest, TEST_02)
 
     std::vector<column_index_type> new_input_indices = {0, 1, 2};
 
-    auto error = perform_operation(output_columns, input_columns, left_inputs, right_inputs, outputs, final_output_positions, operators, unary_operators, left_scalars, right_scalars, new_input_indices);
-    ASSERT_EQ(error, GDF_SUCCESS);
-
+    perform_operation(output_columns, input_columns, left_inputs, right_inputs, outputs, final_output_positions, operators, unary_operators, left_scalars, right_scalars, new_input_indices);
+    
     auto ral_solution_table = GdfColumnCppsTableBuilder{ "output", output_columns_cpp }.Build();
     using VTableBuilder = gdf::library::TableRowBuilder<int32_t, int32_t>;
     using DataTuple = VTableBuilder::DataTuple;

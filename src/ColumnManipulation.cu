@@ -15,7 +15,7 @@
 #include <thrust/iterator/iterator_adaptor.h>
 #include <thrust/iterator/transform_iterator.h>
 
-
+#include "Utils.cuh"
 
 template <typename InputType>
 struct negative_to_zero : public thrust::unary_function< InputType, InputType>
@@ -75,26 +75,19 @@ __global__ void gather_bits(
 	}
 }
 
-gdf_error materialize_valid_ptrs(gdf_column * input, gdf_column * output, gdf_column * row_indices){
-
+void materialize_valid_ptrs(gdf_column * input, gdf_column * output, gdf_column * row_indices){
 	int grid_size, block_size;
 
-	cudaError_t cuda_error = cudaOccupancyMaxPotentialBlockSize(&grid_size,&block_size,gather_bits<unsigned int, int>);
-	if(cuda_error != cudaSuccess){
-		std::cout<<"Could not get grid and block size!!"<<std::endl;
-	}
+	CheckCudaErrors(cudaOccupancyMaxPotentialBlockSize(&grid_size,&block_size,gather_bits<unsigned int, int>));
 
 	gather_bits<<<grid_size, block_size>>>((int *) row_indices->data,(int *) input->valid,(int *) output->valid, row_indices->size);
-	cuda_error = cudaGetLastError();
-	if(cuda_error != cudaSuccess){
-		return GDF_CUDA_ERROR;
-	}
-	return GDF_SUCCESS;
+
+	CheckCudaErrors(cudaGetLastError());
 }
 
 //input and output shoudl be the same time
 template <typename ElementIterator, typename IndexIterator>
-gdf_error materialize_templated_2(gdf_column * input, gdf_column * output, gdf_column * row_indices){
+void materialize_templated_2(gdf_column * input, gdf_column * output, gdf_column * row_indices){
 	materialize_valid_ptrs(input,output,row_indices);
 
 	thrust::detail::normal_iterator<thrust::device_ptr<ElementIterator> > element_iter =
@@ -113,12 +106,10 @@ gdf_error materialize_templated_2(gdf_column * input, gdf_column * output, gdf_c
 	thrust::detail::normal_iterator<thrust::device_ptr<ElementIterator> > output_iter =
 			thrust::detail::make_normal_iterator(thrust::device_pointer_cast((ElementIterator *) output->data));;
 	thrust::copy(iter,iter + row_indices->size,output_iter);
-
-	return GDF_SUCCESS;
 }
 
 template <typename ElementIterator>
-gdf_error materialize_templated_1(gdf_column * input, gdf_column * output, gdf_column * row_indices){
+void materialize_templated_1(gdf_column * input, gdf_column * output, gdf_column * row_indices){
 	int column_width;
 	get_column_byte_width(row_indices, &column_width);
 	if(column_width == 1){
@@ -130,11 +121,12 @@ gdf_error materialize_templated_1(gdf_column * input, gdf_column * output, gdf_c
 	}else if(column_width == 8){
 		return materialize_templated_2<ElementIterator,int64_t>(input,output,row_indices);
 	}
-	return GDF_UNSUPPORTED_DTYPE;
+
+	throw std::runtime_error("In materialize_templated_1 function: unsupported type");
 }
 
 
-gdf_error materialize_column(gdf_column * input, gdf_column * output, gdf_column * row_indices){
+void materialize_column(gdf_column * input, gdf_column * output, gdf_column * row_indices){
 	int column_width;
 	get_column_byte_width(input, &column_width);
 	if(column_width == 1){
@@ -146,6 +138,6 @@ gdf_error materialize_column(gdf_column * input, gdf_column * output, gdf_column
 	}else if(column_width == 8){
 		return materialize_templated_1<int64_t>(input,output,row_indices);
 	}
-	return GDF_UNSUPPORTED_DTYPE;
+	
+	throw std::runtime_error("In materialize_column function: unsupported type");
 }
-

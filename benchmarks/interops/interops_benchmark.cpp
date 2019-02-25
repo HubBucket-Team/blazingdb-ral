@@ -80,7 +80,6 @@ BENCHMARK_TEMPLATE_DEFINE_F(InterOpsBench, SimpleBench, 4)
 
   blazing_frame bz_frame, bz_out;
 
-  gdf_error err = GDF_SUCCESS;
   for (auto _ : state) {
     state.PauseTiming();
     bz_frame.clear();
@@ -93,7 +92,7 @@ BENCHMARK_TEMPLATE_DEFINE_F(InterOpsBench, SimpleBench, 4)
       break;
     }
 
-    err = perform_operation(
+    perform_operation(
         params.output_columns, params.input_columns, params.left_inputs,
         params.right_inputs, params.outputs, params.final_output_positions,
         params.operators, params.unary_operators, params.left_scalars,

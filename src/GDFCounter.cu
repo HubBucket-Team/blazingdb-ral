@@ -60,13 +60,13 @@ void GDFRefCounter::free(gdf_column* col_ptr)
             if (map_key->valid != nullptr) {
                 cuDF::Allocator::deallocate(map_key->valid);
             }
+        }
+        catch (const std::exception& e) {
             delete map_key;
+            throw;
         }
-        catch (const cuDF::Allocator::Exception& exception) {
-            std::cerr << exception.what() << std::endl;
-            cudaDeviceReset();
-            exit(EXIT_FAILURE);
-        }
+
+        delete map_key;
     }
 }
 
@@ -87,13 +87,13 @@ void GDFRefCounter::decrement(gdf_column* col_ptr)
                     if (map_key->valid != nullptr) {
                         cuDF::Allocator::deallocate(map_key->valid);
                     }
+                }
+                catch (const std::exception& e) {
                     delete map_key;
+                    throw;
                 }
-                catch (const cuDF::Allocator::Exception& exception) {
-                    std::cerr << exception.what() << std::endl;
-                    cudaDeviceReset();
-                    exit(EXIT_FAILURE);
-                }
+
+                delete map_key;
             }
         }
     }

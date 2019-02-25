@@ -418,8 +418,32 @@ void add_expression_to_plan(	blazing_frame & inputs,
 						right_inputs.push_back(right.is_valid ? SCALAR_INDEX : SCALAR_NULL_INDEX);
 						left_inputs.push_back(left_index);
 					}
-					else{
-						/* ToDo */
+					else{ //insertar nuevo value, reemplazar columna left
+
+						const char* str = right_operand.c_str();
+						const char** strs = &str;
+						NVStrings* temp_string = NVStrings::create_from_array(strs, 1);
+						NVCategory* new_category = left_column->dtype_info.category->add_strings(*temp_string);
+						left_column->dtype_info.category = new_category;
+
+						size_t size_to_copy = sizeof(int32_t) * left_column->size;
+
+						cudaMemcpyAsync(left_column->data,
+							left_column->dtype_info.category->values_cptr(),
+							size_to_copy,
+							cudaMemcpyDeviceToDevice);
+						
+						int found = left_column->dtype_info.category->get_value(right_operand.c_str());
+
+						gdf_data data;
+						data.si32 = found;
+						gdf_scalar right = {data, GDF_INT32, true};
+
+						right_scalars.push_back(right);
+						left_scalars.push_back(dummy_scalar);
+
+						right_inputs.push_back(right.is_valid ? SCALAR_INDEX : SCALAR_NULL_INDEX);
+						left_inputs.push_back(left_index);
 					}
 				}else{
 					size_t left_index = get_index(left_operand);

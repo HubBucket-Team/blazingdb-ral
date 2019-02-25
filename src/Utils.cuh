@@ -12,6 +12,9 @@
 #include <thrust/device_ptr.h>
 #include <thrust/sequence.h>
 
+#include <NVCategory.h>
+#include <NVStrings.h>
+
 #include <rmm/rmm.h>
 
 #ifndef DEVICE_RESET
@@ -154,6 +157,16 @@ static void print_gdf_column(gdf_column const * the_column)
         using col_type = double;
         col_type * col_data = static_cast<col_type*>(the_column->data);
         print_typed_column<col_type>(col_data, the_column->valid, num_rows);
+        break;
+      }
+    case GDF_STRING_CATEGORY:
+      {
+        char ** data = new char *[200];
+        the_column->dtype_info.category->to_strings()->to_host(data, 0, the_column->size);
+        for(int i = 0; i < the_column->size; i++){
+          std::cout<<data[i]<<"\t";
+        }
+        std::cout<<std::endl;
         break;
       }
     default:

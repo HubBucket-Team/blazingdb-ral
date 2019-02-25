@@ -1143,6 +1143,10 @@ void process_filter(blazing_frame & input, std::string query_part){
 		);
 
 		materialize_temp.update_null_count();
+
+		if( input.get_column(i).get_gdf_column()->dtype == GDF_STRING_CATEGORY )
+			CUDF_CALL( copy_category_from_input_and_compact_into_output(input.get_column(i).get_gdf_column(), materialize_temp.get_gdf_column()) );
+
 		input.set_column(i,materialize_temp.clone(input.get_column(i).name()));
 	}
 	Library::Logging::Logger().logInfo("-> Filter sub block 7 took " + std::to_string(timer.getDuration()) + " ms");

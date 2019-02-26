@@ -48,6 +48,7 @@ include(ConfigureParquet)
 include(ConfigureLibGDF)
 include(ConfigureBlazingDBProtocol)
 include(ConfigureBlazingDBIO)
+include(ConfigureGoogleBenchmark)
 
 find_package(Threads)
 
@@ -69,16 +70,18 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/src/cuDF)
 get_directory_property(cudf_adapter_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/cuDF DEFINITION source_files)
 
 ## ParquetReader source files
-add_subdirectory(${CMAKE_SOURCE_DIR}/src/parquet)
-get_directory_property(parquet_reader_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/parquet DEFINITION source_files)
+add_subdirectory(${CMAKE_SOURCE_DIR}/src/cuio/parquet)
+get_directory_property(parquet_reader_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/cuio/parquet DEFINITION source_files)
 
 ## Target source files
 set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/config/BlazingConfig.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
+              ${CMAKE_SOURCE_DIR}/src/FreeMemory.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_parser/ParquetParser.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_parser/CSVParser.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/Config/Config.cpp
               ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
+              ${CMAKE_SOURCE_DIR}/src/Interpreter/interpreter_cpp.cu
               ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
               ${CMAKE_SOURCE_DIR}/src/ColumnManipulation.cu
               ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
@@ -86,7 +89,7 @@ set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/config/BlazingConfig.cpp
               ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp
               ${CMAKE_SOURCE_DIR}/src/QueryState.cpp
               ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
-              ${CMAKE_SOURCE_DIR}/src/FreeMemory.cpp
+
 
               ${CMAKE_SOURCE_DIR}/src/Utils.cu
               ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
@@ -140,6 +143,13 @@ if(BUILD_TESTING)
     else()
         message(AUTHOR_WARNING "Google C++ Testing Framework (Google Test) not found: automated tests are disabled.")
     endif()
+endif()
+
+#Benchmarks
+if(GBENCHMARK_FOUND)
+    add_subdirectory(benchmarks)
+else()
+    message(AUTHOR_WARNING "Google C++ Benchmarking Framework (Google Benchmark) not found")
 endif()
 
 # Print the project summary

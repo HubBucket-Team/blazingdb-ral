@@ -12,6 +12,21 @@
 #include <blazingdb/io/Config/BlazingContext.h>
 #include "arrow/status.h"
 
+#include <cuda.h>
+#include <cuda_runtime_api.h>
+int BlazingConfig::get_number_of_sms(){
+	if(number_of_sms == -1){
+		cudaDeviceProp prop;
+				cudaGetDeviceProperties(&prop, 0);
+				number_of_sms = prop.multiProcessorCount;
+	}
+	return number_of_sms;
+
+
+
+}
+
+
 static bool isFalse(const std::string &value) {
 	bool result = false;
 

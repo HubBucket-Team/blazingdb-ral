@@ -13,6 +13,7 @@ set(source_files
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/jit/util/type.cpp
     #todo remove when the PR https://github.com/rapidsai/cudf/pull/643 is accepted 
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation/replace/replace.cu
+    ${CMAKE_SOURCE_DIR}/src/Config/Config.cpp
 )
 
 set(integration_test_SRCS
@@ -26,6 +27,7 @@ set(integration_test_SRCS
     ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp
     ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
     ${CMAKE_SOURCE_DIR}/src/ResultSetRepository.cpp
+        ${CMAKE_SOURCE_DIR}/src/Interpreter/interpreter_cpp.cu
     ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
     ${source_files}
     ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp

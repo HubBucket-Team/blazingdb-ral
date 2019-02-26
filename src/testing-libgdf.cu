@@ -141,26 +141,29 @@ query_token_t loadParquetAndInsertToResultRepository(std::string path, connectio
   }
 
 	std::thread t = std::thread([=]{
-    CodeTimer blazing_timer;
-
 		std::vector<Uri> uris(1);
 		uris[0] = Uri(path);
 
 		auto provider = std::make_unique<ral::io::uri_data_provider>(uris);
 		auto parser = std::make_unique<ral::io::parquet_parser>();
-		provider->has_next();
+    
+    try
+    {
+      CodeTimer blazing_timer;
 
-		size_t num_cols = 0; // how many columns this file has?
-		std::vector<bool> include_column(num_cols, true);
+      std::vector<gdf_column_cpp> columns;
+      parser->parse(provider->get_next(), columns);
 
-		std::vector<gdf_column_cpp> columns;
-		parser->parse(provider->get_next(), columns);
+      blazing_frame output_frame;
+      output_frame.add_table(columns);
 
-    blazing_frame output_frame;
-  	output_frame.add_table(columns);
+      double duration = blazing_timer.getDuration();
 
-		double duration = blazing_timer.getDuration();
-		result_set_repository::get_instance().update_token(token, output_frame, duration);
+      result_set_repository::get_instance().update_token(token, output_frame, duration);
+    } catch(const std::exception& e) {
+      std::cerr << e.what() << '\n';
+      result_set_repository::get_instance().update_token(token, blazing_frame{}, 0.0, e.what());
+    }
 	});
 	t.detach();
 	return token;
@@ -175,9 +178,9 @@ static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
     // @todo, what about other parameters
     resultToken = loadParquetAndInsertToResultRepository(message.fileSchema()->path, accessToken);
 
-  } catch (std::exception& error) {
-     std::cout << error.what() << std::endl;
-     ResponseErrorMessage errorMessage{ std::string{error.what()} };
+  } catch (const std::exception& e) {
+     std::cerr << e.what() << std::endl;
+     ResponseErrorMessage errorMessage{ std::string{e.what()} };
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   interpreter::NodeConnectionDTO nodeInfo {
@@ -202,28 +205,34 @@ query_token_t loadCsvAndInsertToResultRepository(std::string path, std::vector<s
     throw std::runtime_error{error};
   }
 	std::thread t = std::thread([=]{
-		CodeTimer blazing_timer;
-
 		std::vector<Uri> uris(1);
 		uris[0] = Uri(path);
 
 		auto provider = std::make_unique<ral::io::uri_data_provider>(uris);
 		auto parser = std::make_unique<ral::io::csv_parser>(delimiter, line_terminator, skip_rows, names, dtypes);
-		provider->has_next();
 
-		size_t num_cols = names.size();
-		std::vector<bool> include_column(num_cols, true);
+    try
+    {
+      CodeTimer blazing_timer;
+      
+      size_t num_cols = names.size();
+      std::vector<bool> include_column(num_cols, true);
 
-		std::vector<gdf_column_cpp> columns;
-		parser->parse(provider->get_next(), columns, include_column);
+      std::vector<gdf_column_cpp> columns;
+      parser->parse(provider->get_next(), columns, include_column);
 
-    blazing_frame output_frame;
-  	output_frame.add_table(columns);
+      blazing_frame output_frame;
+      output_frame.add_table(columns);
 
-		double duration = blazing_timer.getDuration();
-		result_set_repository::get_instance().update_token(token, output_frame, duration);
-	 });
-	 t.detach();
+      double duration = blazing_timer.getDuration();
+      
+      result_set_repository::get_instance().update_token(token, output_frame, duration);
+    } catch (const std::exception& e){
+      std::cerr << e.what() << '\n';
+      result_set_repository::get_instance().update_token(token, blazing_frame{}, 0.0, e.what());
+    }
+	});
+	t.detach();
 	return token;
 }
 
@@ -238,9 +247,9 @@ static result_pair loadCsvSchema(uint64_t accessToken, Buffer&& buffer) {
   uint64_t resultToken = 0L;
   try {
     resultToken = loadCsvAndInsertToResultRepository(schema->path, schema->names, types, schema->delimiter, schema->line_terminator, schema->skip_rows, accessToken);
-  } catch (std::exception& error) {
-     std::cout << error.what() << std::endl;
-     ResponseErrorMessage errorMessage{ std::string{error.what()} };
+  } catch (const std::exception& e) {
+     std::cerr << e.what() << std::endl;
+     ResponseErrorMessage errorMessage{ std::string{e.what()} };
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   interpreter::NodeConnectionDTO nodeInfo {
@@ -259,16 +268,14 @@ static result_pair closeConnectionService(uint64_t accessToken, Buffer&& request
   std::cout << "accessToken: " << accessToken << std::endl;
 
   try {
-  result_set_repository::get_instance().remove_all_connection_tokens(accessToken);
-
-  // NOTE: use next 3 lines to check with "/usr/local/cuda/bin/cuda-memcheck  --leak-check full  ./testing-libgdf"   
-  // GDFRefCounter::getInstance()->show_summary();
-  // cudaDeviceReset();
-  // exit(0);
-
-  } catch (std::runtime_error &error) {
-     std::cout << error.what() << std::endl;
-     ResponseErrorMessage errorMessage{ std::string{error.what()} };
+    result_set_repository::get_instance().remove_all_connection_tokens(accessToken);
+    // NOTE: use next 3 lines to check with "/usr/local/cuda/bin/cuda-memcheck  --leak-check full  ./testing-libgdf"   
+    // GDFRefCounter::getInstance()->show_summary();
+    // cudaDeviceReset();
+    // exit(0);
+  } catch (const std::exception& e) {
+     std::cerr << e.what() << std::endl;
+     ResponseErrorMessage errorMessage{ std::string{e.what()} };
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
 
@@ -284,44 +291,51 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
 
   try {
     // get result from repository using accessToken and resultToken
-    std::tuple<blazing_frame, double> result = result_set_repository::get_instance().get_result(accessToken, request.getResultToken());
+    result_set_type result = result_set_repository::get_instance().get_result(accessToken, request.getResultToken());
 
     //TODO ojo el result siempre es una sola tabla por eso indice 0
-    const int rows = std::get<0>(result).get_columns()[0][0].size();
-
-    interpreter::BlazingMetadataDTO  metadata = {
-      .status = "OK",
-      .message = "metadata message",
-      .time = std::get<1>(result),
-      .rows = rows
-    };
+    std::string status = "Error";
+    std::string errorMsg = std::get<2>(result);
     std::vector<std::string> fieldNames;
     std::vector<uint64_t> columnTokens;
     std::vector<::gdf_dto::gdf_column> values;
+    int rows = 0;
 
-    //TODO WARNING why 0 why multitables?
-    for(int i = 0; i < std::get<0>(result).get_columns()[0].size(); ++i) {
-      fieldNames.push_back(std::get<0>(result).get_columns()[0][i].name());
-      columnTokens.push_back(std::get<0>(result).get_columns()[0][i].get_column_token());
+    if (errorMsg.empty()) {
+      status = "OK";
+      rows =  std::get<0>(result).get_columns()[0][0].size();
 
-      std::cout << "col_name: " << std::get<0>(result).get_columns()[0][i].name() << std::endl;
+      //TODO WARNING why 0 why multitables?
+      for(int i = 0; i < std::get<0>(result).get_columns()[0].size(); ++i) {
+        fieldNames.push_back(std::get<0>(result).get_columns()[0][i].name());
+        columnTokens.push_back(std::get<0>(result).get_columns()[0][i].get_column_token());
 
-      auto data = libgdf::BuildCudaIpcMemHandler(std::get<0>(result).get_columns()[0][i].get_gdf_column()->data);
-      auto valid = libgdf::BuildCudaIpcMemHandler(std::get<0>(result).get_columns()[0][i].get_gdf_column()->valid);
+        std::cout << "col_name: " << std::get<0>(result).get_columns()[0][i].name() << std::endl;
 
-      auto col = ::gdf_dto::gdf_column {
-            .data = data,
-            .valid = valid,
-            .size = std::get<0>(result).get_columns()[0][i].size(),
-            .dtype = (gdf_dto::gdf_dtype)std::get<0>(result).get_columns()[0][i].dtype(),
-            .null_count = std::get<0>(result).get_columns()[0][i].null_count(),
-            .dtype_info = gdf_dto::gdf_dtype_extra_info {
-              .time_unit = (gdf_dto::gdf_time_unit)0,
-            }
-        };
+        auto data = libgdf::BuildCudaIpcMemHandler(std::get<0>(result).get_columns()[0][i].get_gdf_column()->data);
+        auto valid = libgdf::BuildCudaIpcMemHandler(std::get<0>(result).get_columns()[0][i].get_gdf_column()->valid);
 
-      values.push_back(col);
-    }
+        auto col = ::gdf_dto::gdf_column {
+              .data = data,
+              .valid = valid,
+              .size = std::get<0>(result).get_columns()[0][i].size(),
+              .dtype = (gdf_dto::gdf_dtype)std::get<0>(result).get_columns()[0][i].dtype(),
+              .null_count = std::get<0>(result).get_columns()[0][i].null_count(),
+              .dtype_info = gdf_dto::gdf_dtype_extra_info {
+                .time_unit = (gdf_dto::gdf_time_unit)0,
+              }
+          };
+
+        values.push_back(col);
+      }
+    }   
+
+    interpreter::BlazingMetadataDTO  metadata = {
+      .status = status,
+      .message = errorMsg,
+      .time = std::get<1>(result),
+      .rows = rows
+    };
 
   //  // todo: remove hardcode by creating the resulset vector
   //  gdf_column_cpp column = result.get_columns()[0][0];
@@ -348,9 +362,9 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
     interpreter::GetResultResponseMessage responsePayload(metadata, fieldNames, columnTokens, values);
     return std::make_pair(Status_Success, responsePayload.getBufferData());
 
-  } catch (std::runtime_error &error) {
-     std::cout << error.what() << std::endl;
-     ResponseErrorMessage errorMessage{ std::string{error.what()} };
+  } catch (const std::exception& e) {
+     std::cerr << e.what() << std::endl;
+     ResponseErrorMessage errorMessage{ std::string{e.what()} };
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   } catch (...) {
     ResponseErrorMessage errorMessage{ std::string{"Unknown error"} };
@@ -373,70 +387,47 @@ static result_pair freeResultService(uint64_t accessToken, Buffer&& requestPaylo
 
 }
 
-
-
 template<class FileParserType>
 void load_files(FileParserType&& parser, const std::vector<Uri>& uris, std::vector<gdf_column_cpp>& out_columns) {
 	auto provider = std::make_unique<ral::io::uri_data_provider>(uris);
 	std::vector<std::vector<gdf_column_cpp>> all_parts;
-    while (provider->has_next()) {
-      std::vector<gdf_column_cpp> columns;
-      std::string user_readable_file_handle = provider->get_current_user_readable_file_handle();
 
-      std::shared_ptr<arrow::io::RandomAccessFile> file = provider->get_next();
-      if(file != nullptr){
-        gdf_error error = parser.parse(file, columns);
-        if(error != GDF_SUCCESS){
-          //TODO: probably want to pass this up as an error
-          std::cout<<"Could not parse "<<user_readable_file_handle<<std::endl;
-        }else{
-          all_parts.push_back(columns);
-        }
-      }else{
-        std::cout<<"Was unable to open "<<user_readable_file_handle<<std::endl;
+  while (provider->has_next()) {
+    std::vector<gdf_column_cpp> columns;
+    std::string user_readable_file_handle = provider->get_current_user_readable_file_handle();
+    parser.parse(provider->get_next(), columns);
+    all_parts.push_back(columns);
+  }
+
+  size_t num_files = all_parts.size();
+  size_t num_columns = all_parts[0].size();
+
+  if(num_files == 0 || num_columns == 0){ 	//we got no data
+    return;
+  }
+  if (all_parts.size() == 1) {
+      out_columns = all_parts[0];
+  }
+  else if (all_parts.size() > 1) {
+    std::vector<gdf_column_cpp>& part_left = all_parts[0];
+    for(size_t index_col = 0; index_col < part_left.size(); index_col++) { //iterate each one of the columns
+
+      std::vector<gdf_column*> columns;
+      size_t col_total_size = 0;
+
+      for(size_t index_part = 0; index_part < all_parts.size(); index_part++) { //iterate each one of the parts
+        std::vector<gdf_column_cpp> &part = all_parts[index_part];
+        auto &gdf_col = part[index_col];
+        columns.push_back(gdf_col.get_gdf_column());
+        col_total_size+= gdf_col.size();
       }
+      gdf_column_cpp output_col;
+      auto & lhs = all_parts[0][index_col];
+      output_col.create_gdf_column(lhs.dtype(), col_total_size, nullptr, get_width_dtype(lhs.dtype()), lhs.name());
+      CUDF_CALL(gdf_column_concat(output_col.get_gdf_column(), columns.data(), columns.size()));
+      out_columns.push_back(output_col);
     }
-    //checking if any errors occurred
-    std::vector<std::string> provider_errors = provider->get_errors();
-    if(provider_errors.size() != 0){
-      for(size_t error_index = 0; error_index < provider_errors.size(); error_index++){
-        std::cout<<provider_errors[error_index]<<std::endl;
-      }
-    }
-
-    size_t num_files = all_parts.size();
-    size_t num_columns = all_parts[0].size();
-
-    if(num_files == 0 || num_columns == 0){ 	//we got no data
-      return ;
-    }
-    if (all_parts.size() == 1) {
-        out_columns = all_parts[0];
-    }
-    else if (all_parts.size() > 1) {
-      std::vector<gdf_column_cpp>& part_left = all_parts[0];
-      for(size_t index_col = 0; index_col < part_left.size(); index_col++) { //iterate each one of the columns
-
-        std::vector<gdf_column*> columns;
-        size_t col_total_size = 0;
-
-        for(size_t index_part = 0; index_part < all_parts.size(); index_part++) { //iterate each one of the parts
-          std::vector<gdf_column_cpp> &part = all_parts[index_part];
-          auto &gdf_col = part[index_col];
-          columns.push_back(gdf_col.get_gdf_column());
-          col_total_size+= gdf_col.size();
-        }
-        gdf_column_cpp output_col;
-        auto & lhs = all_parts[0][index_col];
-        output_col.create_gdf_column(lhs.dtype(), col_total_size, nullptr, get_width_dtype(lhs.dtype()), lhs.name());
-        gdf_error err = gdf_column_concat(output_col.get_gdf_column(), columns.data(), columns.size());
-        if (err == GDF_SUCCESS) {
-          out_columns.push_back(output_col);
-        } else {
-          std::cerr << "ERROR: gdf_column_concat\n";
-        }
-      }
-    }
+  }
 }
 
 static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& requestPayloadBuffer) {
@@ -451,63 +442,44 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 	std::cout << "FirstColumn File: "
 			<< requestPayload.tableGroup.tables[0].files[0]
 			<< std::endl;
-  std::vector<std::vector<gdf_column_cpp>> input_tables;
-  std::vector<std::string> table_names;
-  std::vector<std::vector<std::string>> all_column_names;
-
-  for(size_t i = 0; i < requestPayload.tableGroup.tables.size(); i++) {
-    auto table_info = requestPayload.tableGroup.tables[i];
-    std::cout << "\n SchemaType: " << table_info.schemaType << std::endl;
-    std::vector<gdf_column_cpp> table_cpp;
-    if (table_info.schemaType ==  blazingdb::protocol::io::FileSchemaType_PARQUET) {
-      std::vector<Uri> uris;
-      for (auto file_path : table_info.files) {
-        uris.push_back(Uri{file_path});
-      }
-      ral::io::parquet_parser parser;
-      load_files(std::move(parser), uris, table_cpp);
-    } else {
-      std::vector<Uri> uris = { Uri{table_info.files[0]} }; //@todo, concat many files in one single table
-      auto csv_params = table_info.csv;
-      std::vector<gdf_dtype> types;
-      for(auto val : csv_params.dtypes) {
-        types.push_back( (gdf_dtype) val );
-      }
-      ral::io::csv_parser parser(csv_params.delimiter, csv_params.line_terminator, csv_params.skip_rows, csv_params.names, types);
-      load_files(std::move(parser), uris, table_cpp);
-    }
-    input_tables.push_back(table_cpp);
-    table_names.push_back(table_info.name);
-    all_column_names.push_back(table_info.columnNames);
-  }
-
-  // ResponseErrorMessage errorMessage{ std::string{"not yet implemented executeFileSystemPlanService"} };
-  // return std::make_pair(Status_Error, errorMessage.getBufferData());
-
+  
   uint64_t resultToken = 0L;
   try {
-    resultToken = result_set_repository::get_instance().register_query(accessToken);
+    // Read files
+    std::vector<std::vector<gdf_column_cpp>> input_tables;
+    std::vector<std::string> table_names;
+    std::vector<std::vector<std::string>> all_column_names;
+    for(size_t i = 0; i < requestPayload.tableGroup.tables.size(); i++) {
+      auto table_info = requestPayload.tableGroup.tables[i];
+      std::cout << "\n SchemaType: " << table_info.schemaType << std::endl;
+      std::vector<gdf_column_cpp> table_cpp;
+      if (table_info.schemaType ==  blazingdb::protocol::io::FileSchemaType_PARQUET) {
+        std::vector<Uri> uris;
+        for (auto file_path : table_info.files) {
+          uris.push_back(Uri{file_path});
+        }
+        ral::io::parquet_parser parser;
+        load_files(std::move(parser), uris, table_cpp);
+      } else {
+        std::vector<Uri> uris = { Uri{table_info.files[0]} }; //@todo, concat many files in one single table
+        auto csv_params = table_info.csv;
+        std::vector<gdf_dtype> types;
+        for(auto val : csv_params.dtypes) {
+          types.push_back( (gdf_dtype) val );
+        }
+        ral::io::csv_parser parser(csv_params.delimiter, csv_params.line_terminator, csv_params.skip_rows, csv_params.names, types);
+        load_files(std::move(parser), uris, table_cpp);
+      }
+      input_tables.push_back(table_cpp);
+      table_names.push_back(table_info.name);
+      all_column_names.push_back(table_info.columnNames);
+    }
 
-    // void data_loader<DataProvider, FileParser>::load_data(std::vector<gdf_column_cpp> & columns, std::vector<bool> include_column){
-
-    std::thread t = std::thread([=]{
-        CodeTimer blazing_timer;
-
-        blazing_frame output_frame;
-
-        std::vector<gdf_column_cpp> columns;
-        gdf_error error = evaluate_query(input_tables, table_names, all_column_names, requestPayload.statement, columns);
-
-        output_frame.add_table(columns);
-
-        double duration = blazing_timer.getDuration();
-        result_set_repository::get_instance().update_token(resultToken, output_frame, duration);
-    });
-    t.detach();
-
-  } catch (std::exception& error) {
-     std::cout << error.what() << std::endl;
-     ResponseErrorMessage errorMessage{ std::string{error.what()} };
+    // Execute query
+    resultToken = evaluate_query(input_tables, table_names, all_column_names, requestPayload.statement, accessToken, {} );
+  } catch (const std::exception& e) {
+     std::cerr << e.what() << std::endl;
+     ResponseErrorMessage errorMessage{ std::string{e.what()} };
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
 
@@ -541,10 +513,10 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
     std::tuple<std::vector<std::vector<gdf_column_cpp>>, std::vector<std::string>, std::vector<std::vector<std::string>>> request = libgdf::toBlazingDataframe(accessToken, requestPayload.getTableGroup(),handles);
 
     resultToken = evaluate_query(std::get<0>(request), std::get<1>(request), std::get<2>(request),
-                                        requestPayload.getLogicalPlan(), accessToken,handles);
-  } catch (std::exception& error) {
-     std::cout << error.what() << std::endl;
-     ResponseErrorMessage errorMessage{ std::string{error.what()} };
+                                        requestPayload.getLogicalPlan(), accessToken, handles);
+  } catch (const std::exception& e) {
+     std::cerr << e.what() << std::endl;
+     ResponseErrorMessage errorMessage{ std::string{e.what()} };
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
   interpreter::NodeConnectionDTO nodeInfo {
@@ -576,25 +548,13 @@ auto  interpreterServices(const blazingdb::protocol::Buffer &requestPayloadBuffe
 }
 
 
-main(int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
-    /*std::string iphost;
-    std::string port;
 
-    switch (argc) {
-    case 2:
-        iphost = argv[1];
-        port   = "8892";
-        break;
-    case 3:
-        iphost = argv[1];
-        port   = argv[2];
-        break;
-        //default:
-        //std::cout << "usage: " << argv[0] << " <IP|HOSTNAME> <PORT>" << std::endl;
-        //return 1;
-    }*/
-
+  #ifndef VERBOSE
+  std::cout.rdbuf(nullptr); // substitute internal std::cout buffer with
+  #endif // VERBOSE 
+  
     std::cout << "RAL Engine starting" << std::endl;
 
     std::string identifier {"1"};

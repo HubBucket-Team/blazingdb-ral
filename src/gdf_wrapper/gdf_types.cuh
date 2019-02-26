@@ -29,6 +29,8 @@ typedef enum {
     GDF_GREATER,
     GDF_LESS_EQUAL,
     GDF_GREATER_EQUAL,
+   	GDF_INVALID_BINARY,
+    GDF_COALESCE // a new one!
     //GDF_COMBINE,
     //GDF_COMBINE_FIRST,
     //GDF_ROUND,
@@ -55,12 +57,13 @@ typedef enum{
 	GDF_DAY,
 	GDF_HOUR,
 	GDF_MINUTE,
-	GDF_SECOND
+	GDF_SECOND,
+	GDF_INVALID_UNARY
 
 } gdf_unary_operator;
 
 typedef enum{
-    GDF_COALESCE
+    // GDF_COALESCE
 } gdf_other_binary_operator;
 
 

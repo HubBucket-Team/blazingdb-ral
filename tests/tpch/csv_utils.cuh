@@ -31,7 +31,7 @@ gdf_column_cpp ToGdfColumnCpp(const std::string &name,
                               const std::size_t  size) {
   gdf_column_cpp column_cpp;
   column_cpp.create_gdf_column(dtype, length, const_cast<void *>(data), size);
-  column_cpp.delete_set_name(name);
+  column_cpp.set_name(name);
   return column_cpp;
 }
 
@@ -113,19 +113,21 @@ BlazingFrame ToBlazingFrame(std::vector<std::string> filePaths, std::vector<std:
     std::transform(columnNames[index].begin(), columnNames[index].end(), std::back_inserter(columnNamesPointers),
                    [](std::string &s)  { return s.c_str(); });
 
-    const char* names[]	= { "c_custkey", "c_name", "c_address", "c_nationkey",
-                       "c_phone", "c_acctbal", "c_mktsegment", "c_comment"};
-	  const char* types[]	= {"int32", "int64", "int64", "int32", "int64", "float32",
-                       "int64", "int64"};
+
 
     if (checkFile(file_path.c_str())) {
     	csv_read_arg args{};
-      args.file_path		= file_path.c_str();
-      args.num_cols		= std::extent<decltype(names)>::value;
+      args.filepath_or_buffer		= file_path.c_str();
+      args.num_cols		=  columnNames[index].size();
       args.names			= columnNamesPointers.data();
       args.dtype			= columnDTypes[index].data();
       args.delimiter		= '|';
       args.lineterminator = '\n';
+      args.decimal = '.';
+
+	args.skip_blank_lines = true;
+	args.header = -1;
+	args.nrows = -1;
 
       error = read_csv(&args);
       assert(error == GDF_SUCCESS);

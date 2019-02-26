@@ -36,6 +36,9 @@ public:
     }
     return list_of_names;
   }
+  size_t size() const {
+    return tables_.size();
+  }
 
   const Table &operator[](const std::size_t i) const { return tables_[i]; }
 

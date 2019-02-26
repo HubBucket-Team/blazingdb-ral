@@ -7,7 +7,11 @@
 
 #include "CalciteExpressionParsing.h"
 #include "DataFrame.h"
+#include <map>
 
+bool is_null(std::string token){
+	return token == "null";
+}
 
 bool is_type_signed(gdf_dtype type){
 	return (GDF_INT8 == type ||
@@ -190,6 +194,17 @@ bool is_comparison_operation(gdf_binary_operator operation){
 	);
 }
 
+bool is_trig_operation(gdf_unary_operator operation){
+	return (operation == GDF_SIN ||
+			operation == GDF_COS ||
+			operation == GDF_ASIN||
+			operation == GDF_ACOS ||
+			operation == GDF_TAN ||
+			operation == GDF_COTAN ||
+			operation == GDF_ATAN
+	);
+}
+
 gdf_dtype get_signed_type_from_unsigned(gdf_dtype type){
 	return type;
 	//TODO felipe percy noboa see upgrade to uints
@@ -209,6 +224,12 @@ gdf_dtype get_signed_type_from_unsigned(gdf_dtype type){
 gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_unary_operator operation){
 	if(is_date_type(input_left_type)){
 		return GDF_INT16;
+	} else if (is_trig_operation(operation) || operation == GDF_LOG || operation == GDF_LN){
+		if (input_left_type == GDF_FLOAT32 || input_left_type == GDF_FLOAT64){
+			return input_left_type;	
+		} else {
+			return GDF_FLOAT64;
+		}
 	}else{
 		return input_left_type;
 	}
@@ -227,6 +248,7 @@ gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type,
 		return GDF_invalid;
 }
 
+//todo: get_output_type: add support to coalesce and date operations!
 gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type, gdf_binary_operator operation){
 
 	//we are only considering binary ops between numbers for now
@@ -297,7 +319,10 @@ gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type,
 			//return GDF_UINT64;
 			return GDF_INT64;
 		}
-	}else{
+	}
+	else if (operation == GDF_COALESCE){
+		return input_left_type;
+	} else {
 		return GDF_invalid;
 	}
 }
@@ -352,6 +377,21 @@ int64_t get_timestamp_from_string(std::string scalar_string){
 	}
 }
 
+// TODO: Remove this dirty workaround to get the type for the scalar
+gdf_dtype get_type_from_string(std::string scalar_string){
+	static const std::regex reInt{R""(^[-+]?[0-9]+$)""};
+	static const std::regex reFloat{R""(^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$)""};
+
+	if (std::regex_match(scalar_string, reInt)) {
+		return GDF_INT64;
+	}
+	else if (std::regex_match(scalar_string, reFloat)) {
+		return GDF_FLOAT64;
+	}
+	
+	return GDF_DATE64;
+}
+
 gdf_scalar get_scalar_from_string(std::string scalar_string, gdf_dtype type){
 	/*
 	 * void*    invd;
@@ -369,6 +409,10 @@ int32_t  dt32;  // GDF_DATE32
 int64_t  dt64;  // GDF_DATE64
 int64_t  tmst;  // GDF_TIMESTAMP
 };*/
+	if(scalar_string == "null"){
+		gdf_data data;
+		return {data, GDF_INT8, false};
+	}
 	if(type == GDF_INT8){
 		gdf_data data;
 		data.si08 = stoi(scalar_string);
@@ -431,7 +475,7 @@ int64_t  tmst;  // GDF_TIMESTAMP
 }
 
 //must pass in temp type as invalid if you are not setting it to something to begin with
-gdf_error get_output_type_expression(blazing_frame * input, gdf_dtype * output_type, gdf_dtype * max_temp_type, std::string expression){
+gdf_dtype get_output_type_expression(blazing_frame * input, gdf_dtype * max_temp_type, std::string expression){
 	std::string clean_expression = clean_calcite_expression(expression);
 	int position = clean_expression.size();
 	if(*max_temp_type == GDF_invalid){
@@ -441,24 +485,23 @@ gdf_error get_output_type_expression(blazing_frame * input, gdf_dtype * output_t
 	std::stack<gdf_dtype> operands;
 	while(position > 0){
 		std::string token = get_last_token(clean_expression,&position);
-		//std::cout<<"Token is ==> "<<token<<"\n";
 
 		if(is_operator_token(token)){
 			if(is_binary_operator_token(token) || is_other_binary_operator_token(token)){
+
+				if(operands.size()<2)
+					throw std::runtime_error("In function get_output_type_expression, the operator cannot be processed on less than one or zero elements");
+
 				gdf_dtype left_operand = operands.top();
 				operands.pop();
 				gdf_dtype right_operand = operands.top();
 				operands.pop();
 
 				if(left_operand == GDF_invalid){
-
-
 					if(right_operand == GDF_invalid){
-						return GDF_INVALID_API_CALL;
+						throw std::runtime_error("In get_output_type_expression function: invalid operands");
 					}else{
-
 						left_operand = right_operand;
-
 					}
 				}else{
 					if(right_operand == GDF_invalid){
@@ -466,12 +509,10 @@ gdf_error get_output_type_expression(blazing_frame * input, gdf_dtype * output_t
 					}
 				}
 				if (is_binary_operator_token(token)){
-					gdf_binary_operator operation;
-					gdf_error err = get_operation(token,&operation);
+					gdf_binary_operator operation = get_binary_operation(token);
 					operands.push(get_output_type(left_operand,right_operand,operation));
 				} else {
-					gdf_other_binary_operator operation;
-					gdf_error err = get_operation(token,&operation);
+					gdf_other_binary_operator operation = get_other_binary_operation(token);
 					operands.push(get_output_type(left_operand,right_operand,operation));
 				}
 				if(position > 0 && get_width_dtype(operands.top()) > get_width_dtype(*max_temp_type)){
@@ -481,15 +522,14 @@ gdf_error get_output_type_expression(blazing_frame * input, gdf_dtype * output_t
 				gdf_dtype left_operand = operands.top();
 				operands.pop();
 
-				gdf_unary_operator operation;
-				gdf_error err = get_operation(token,&operation);
+				gdf_unary_operator operation = get_unary_operation(token);
 
 				operands.push(get_output_type(left_operand,operation));
 				if(position > 0 && get_width_dtype(operands.top()) > get_width_dtype(*max_temp_type)){
 					*max_temp_type = operands.top();
 				}
 			} else {
-				return GDF_INVALID_API_CALL;
+				throw std::runtime_error("In get_output_type_expression function: unsupported operator token, " + token);
 			}
 
 		}else{
@@ -498,15 +538,12 @@ gdf_error get_output_type_expression(blazing_frame * input, gdf_dtype * output_t
 			}else{
 				operands.push(input->get_column(get_index(token)).dtype() );
 			}
-
 		}
 	}
-	*output_type = operands.top();
-	return GDF_SUCCESS;
+	return operands.top();
 }
 
-
-gdf_error get_aggregation_operation(std::string operator_string, gdf_agg_op * operation){
+gdf_agg_op get_aggregation_operation(std::string operator_string){
 
 	operator_string = operator_string.substr(
 			operator_string.find("=[") + 2,
@@ -516,132 +553,99 @@ gdf_error get_aggregation_operation(std::string operator_string, gdf_agg_op * op
 	//remove expression
 	operator_string = operator_string.substr(0,operator_string.find("("));
 	if(operator_string == "SUM"){
-		*operation = GDF_SUM;
+		return GDF_SUM;
 	}else if(operator_string == "AVG"){
-		*operation = GDF_AVG;
+		return GDF_AVG;
 	}else if(operator_string == "MIN"){
-		*operation = GDF_MIN;
+		return GDF_MIN;
 	}else if(operator_string == "MAX"){
-		*operation = GDF_MAX;
+		return GDF_MAX;
 	}else if(operator_string == "COUNT"){
-		*operation = GDF_COUNT;
+		return GDF_COUNT;
 	}else if(operator_string == "COUNT_DISTINCT"){
-		*operation = GDF_COUNT_DISTINCT;
-	}else{
-		return GDF_INVALID_API_CALL;
+		return GDF_COUNT_DISTINCT;
 	}
-	return GDF_SUCCESS;
+	
+	throw std::runtime_error("In get_aggregation_operation function: aggregation type not supported, " + operator_string);
 }
 
-gdf_error get_operation(
-		std::string operator_string,
-		gdf_unary_operator * operation
-){
-	if(operator_string == "NOT"){
-		*operation = GDF_NOT;
-	}else if(operator_string == "SIN"){
-		*operation = GDF_SIN;
-	}else if(operator_string == "ASIN"){
-		*operation = GDF_ASIN;
-	}else if(operator_string == "COS"){
-		*operation = GDF_COS;
-	}else if(operator_string == "ACOS"){
-		*operation = GDF_ACOS;
-	}else if(operator_string == "TAN"){
-		*operation = GDF_TAN;
-	}else if(operator_string == "ATAN"){
-		*operation = GDF_ATAN;
-	}else if(operator_string == "BL_FLOUR"){
-		*operation = GDF_FLOOR;
-	}else if(operator_string == "CEIL"){
-		*operation = GDF_CEIL;
-	}else if(operator_string == "ABS"){
-		*operation = GDF_ABS;
-	}else if(operator_string == "LOG10"){
-		*operation = GDF_LOG;
-	}else if(operator_string == "LN"){
-		*operation = GDF_LN;
-	}else if(operator_string == "BL_YEAR"){
-		*operation = GDF_YEAR;
-	}else if(operator_string == "BL_MONTH"){
-		*operation = GDF_MONTH;
-	}else if(operator_string == "BL_DAY"){
-		*operation = GDF_DAY;
-	}else if(operator_string == "BL_HOUR"){
-		*operation = GDF_HOUR;
-	}else if(operator_string == "BL_MINUTE"){
-		*operation = GDF_MINUTE;
-	}else if(operator_string == "BL_SECOND"){
-		*operation = GDF_SECOND;
-	}else {
-		return GDF_UNSUPPORTED_DTYPE;
-	}
-	return GDF_SUCCESS;
+static std::map<std::string, gdf_unary_operator> gdf_unary_operator_map = {
+	{"NOT", GDF_NOT},
+	{"SIN", GDF_SIN},
+	{"ASIN", GDF_ASIN},
+	{"COS", GDF_COS},
+	{"ACOS", GDF_ACOS},
+	{"TAN", GDF_TAN},
+	{"ATAN", GDF_ATAN},
+	{"BL_FLOUR", GDF_FLOOR},
+	{"CEIL", GDF_CEIL},
+	{"ABS", GDF_ABS},
+	{"LOG10", GDF_LOG},
+	{"LN", GDF_LN},
+	{"BL_YEAR", GDF_YEAR},
+	{"BL_MONTH", GDF_MONTH},
+	{"BL_DAY", GDF_DAY},
+	{"BL_HOUR", GDF_HOUR},
+	{"BL_MINUTE", GDF_MINUTE},
+	{"BL_SECOND", GDF_SECOND}
+};
+
+
+gdf_unary_operator get_unary_operation(std::string operator_string){
+	if(gdf_unary_operator_map.find(operator_string) != gdf_unary_operator_map.end())
+		return gdf_unary_operator_map[operator_string];
+
+	throw std::runtime_error("In get_unary_operation function: unsupported operator, " + operator_string);
 }
 
-gdf_error get_operation(
-		std::string operator_string,
-		gdf_binary_operator * operation
-){
-	if(operator_string == "="){
-		*operation = GDF_EQUAL;
-	}else if(operator_string == "<>"){
-		*operation = GDF_NOT_EQUAL;
-	}else if(operator_string == ">"){
-		*operation = GDF_GREATER;
-	}else if(operator_string == ">="){
-		*operation = GDF_GREATER_EQUAL;
-	}else if(operator_string == "<"){
-		*operation = GDF_LESS;
-	}else if(operator_string == "<="){
-		*operation = GDF_LESS_EQUAL;
-	}else if(operator_string == "+"){
-		*operation = GDF_ADD;
-	}else if(operator_string == "-"){
-		*operation = GDF_SUB;
-	}else if(operator_string == "*"){
-		*operation = GDF_MUL;
-	}else if(operator_string == "/"){
-		*operation = GDF_DIV;
-	}else if(operator_string == "POWER"){
-		*operation = GDF_POW;
-	}else if(operator_string == "MOD"){
-		*operation = GDF_MOD;
-	}else if(operator_string == "AND"){
-		*operation = GDF_MUL;
-	}else if(operator_string == "OR"){
-		*operation = GDF_ADD;
-	}else{
-		return GDF_INVALID_API_CALL;
-	}
-	return GDF_SUCCESS;
+static std::map<std::string, gdf_binary_operator> gdf_binary_operator_map = {
+	{"=", GDF_EQUAL},
+	{"<>", GDF_NOT_EQUAL},
+	{">", GDF_GREATER},
+	{">=", GDF_GREATER_EQUAL},
+	{"<", GDF_LESS},
+	{"<=", GDF_LESS_EQUAL},
+	{"+", GDF_ADD},
+	{"-", GDF_SUB},
+	{"*", GDF_MUL},
+	{"/", GDF_DIV},
+	{"POWER", GDF_POW},
+	{"MOD", GDF_MOD},
+	{"AND", GDF_MUL},
+	{"OR", GDF_ADD},
+	{"COALESCE", GDF_COALESCE}
+};
+
+gdf_binary_operator get_binary_operation(std::string operator_string){
+	if(gdf_binary_operator_map.find(operator_string) != gdf_binary_operator_map.end())
+		return gdf_binary_operator_map[operator_string];
+	
+	throw std::runtime_error("In get_binary_operation function: unsupported operator, " + operator_string);
 }
 
-gdf_error get_operation(
-		std::string operator_string,
-		gdf_other_binary_operator * operation
-){
-	if(operator_string == "COALESCE"){
-		*operation = GDF_COALESCE;
-	}else{
-		return GDF_INVALID_API_CALL;
-	}
-	return GDF_SUCCESS;
+// static std::map<std::string, gdf_other_binary_operator> gdf_other_binary_operator_map = {
+// 	{"COALESCE", GDF_COALESCE}
+// };
+
+gdf_other_binary_operator get_other_binary_operation(std::string operator_string){
+	// if(gdf_other_binary_operator_map.find(operator_string) != gdf_other_binary_operator_map.end())
+	// 	return gdf_other_binary_operator_map[operator_string];
+
+	throw std::runtime_error("In get_other_binary_operation function: unsupported operator, " + operator_string);
 }
 
 bool is_binary_operator_token(std::string token){
-	gdf_binary_operator op;
-	return get_operation(token,&op) == GDF_SUCCESS;
+	return (gdf_binary_operator_map.find(token) != gdf_binary_operator_map.end());
 }
 
 bool is_unary_operator_token(std::string token){
-	gdf_unary_operator op;
-	return get_operation(token,&op) == GDF_SUCCESS;
+	return (gdf_unary_operator_map.find(token) != gdf_unary_operator_map.end());
 }
 
+//todo, remove after,  it is not used anymore.
 bool is_other_binary_operator_token(std::string token){
-	gdf_other_binary_operator op;
-	return get_operation(token,&op) == GDF_SUCCESS;
+	return false;
+	// return (gdf_other_binary_operator_map.find(token) != gdf_other_binary_operator_map.end());
 }
 
 bool is_literal(std::string operand){
@@ -879,7 +883,12 @@ int find_closing_char(const std::string & expression, int start) {
 }
 
 // takes a comma delimited list of expressions and splits it into separate expressions
-std::vector<std::string> get_expressions_from_expression_list(const std::string & combined_expression, bool trim){
+std::vector<std::string> get_expressions_from_expression_list(std::string & combined_expression, bool trim){
+	
+	//todo: 
+	//combined_expression
+	static const std::regex re{R""(CASE\(IS NOT NULL\((\W\(.+?\)|.+)\), \1, (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
+	combined_expression = std::regex_replace(combined_expression, re, "COALESCE($1, $2)");
 
 	std::vector<std::string> expressions;
 

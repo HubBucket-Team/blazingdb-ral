@@ -18,6 +18,7 @@ function(configure_test TEST_NAME Tests_SRCS)
 
         ${BLAZINGDB_IO_STATIC_LIB}
         ${BLAZINGDB_PROTOCOL_STATIC_LIB}
+        ${BLAZINGDB_COMMUNICATION_STATIC_LIB}
 
         ${LIBGDF_STATIC_LIB}
         NVStrings

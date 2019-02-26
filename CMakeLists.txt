@@ -47,6 +47,7 @@ include(ConfigureArrow)
 include(ConfigureParquet)
 include(ConfigureLibGDF)
 include(ConfigureBlazingDBProtocol)
+include(ConfigureBlazingDBCommunication)
 include(ConfigureBlazingDBIO)
 include(ConfigureGoogleBenchmark)
 
@@ -106,6 +107,7 @@ target_link_libraries(testing-libgdf
     Threads::Threads
     ${ZEROMQ_STATIC_LIB}
     ${BLAZINGDB_PROTOCOL_STATIC_LIB}
+    ${BLAZINGDB_COMMUNICATION_STATIC_LIB}
 
     ${LIBGDF_STATIC_LIB}
     NVStrings

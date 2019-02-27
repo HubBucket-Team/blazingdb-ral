@@ -50,6 +50,7 @@ include(ConfigureBlazingDBProtocol)
 include(ConfigureBlazingDBCommunication)
 include(ConfigureBlazingDBIO)
 include(ConfigureGoogleBenchmark)
+include(ConfigureRapidJSON)
 
 find_package(Threads)
 
@@ -60,7 +61,8 @@ include_directories(
     ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/thirdparty/jitify
-    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper)
+    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper
+    ${RAPIDJSON_INCLUDE_DIRS})
 
 ## Binary Operations
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation)
@@ -134,6 +136,9 @@ target_link_libraries(testing-libgdf
     Boost::filesystem
     Boost::system
     Boost::regex
+
+    # Library needed for blazing communication repository (debug)
+    gcov
 )
 
 # Tests

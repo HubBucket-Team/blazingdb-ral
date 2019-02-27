@@ -5,10 +5,39 @@ namespace ral {
 namespace communication {
 namespace messages {
 
-    std::shared_ptr<SampleToNodeMasterMessage> MessageFactory::CreateSampleToNodeMaster(const Node& node,
-                                                                                        const std::vector<gdf_column_cpp>& samples) {
+    std::shared_ptr<SampleToNodeMasterMessage> Factory::createSampleToNodeMaster(const Node& node,
+                                                                                 std::vector<gdf_column_cpp>&& samples) {
+        return std::make_shared<SampleToNodeMasterMessage>(node, std::move(samples));
+    }
+
+    std::shared_ptr<SampleToNodeMasterMessage> Factory::createSampleToNodeMaster(const Node& node,
+                                                                                 const std::vector<gdf_column_cpp>& samples) {
         return std::make_shared<SampleToNodeMasterMessage>(node, samples);
     };
+
+    std::shared_ptr<DataScatterMessage> Factory::createDataScatterMessage(std::vector<gdf_column_cpp>&& columns) {
+        return std::make_shared<DataScatterMessage>(std::move(columns));
+    }
+
+    std::shared_ptr<DataScatterMessage> Factory::createDataScatterMessage(const std::vector<gdf_column_cpp>& columns) {
+        return std::make_shared<DataScatterMessage>(columns);
+    }
+
+    DataPivot Factory::createDataPivot(const Node& node, std::string&& min_range, std::string&& max_range) {
+        return DataPivot(node, std::move(min_range), std::move(max_range));
+    }
+
+    DataPivot Factory::createDataPivot(const Node& node, const std::string& min_range, const std::string& max_range) {
+        return DataPivot(node, min_range, max_range);
+    }
+
+    std::shared_ptr<PartitionPivotsMessage> Factory::createPartitionPivotsMessage(std::vector<DataPivot>&& pivots) {
+        return std::make_shared<PartitionPivotsMessage>(std::move(pivots));
+    }
+
+    std::shared_ptr<PartitionPivotsMessage> Factory::createPartitionPivotsMessage(const std::vector<DataPivot>& pivots) {
+        return std::make_shared<PartitionPivotsMessage>(pivots);
+    }
 
 } // namespace messages
 } // namespace communication

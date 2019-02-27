@@ -125,15 +125,15 @@ inline gdf_error soa_col_info(gdf_column** cols, size_t ncols, void** d_cols, gd
 
 
 
-int gdf_cuda_last_error() {
+inline int gdf_cuda_last_error() {
     return cudaGetLastError();
 }
 
-const char * gdf_cuda_error_string(int cuda_error) {
+inline const char * gdf_cuda_error_string(int cuda_error) {
     return cudaGetErrorString((cudaError_t)cuda_error);
 }
 
-const char * gdf_cuda_error_name(int cuda_error) {
+inline const char * gdf_cuda_error_name(int cuda_error) {
     return cudaGetErrorName((cudaError_t)cuda_error);
 }
 

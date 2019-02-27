@@ -77,12 +77,15 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/src/cuio/parquet)
 get_directory_property(parquet_reader_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/cuio/parquet DEFINITION source_files)
 
 ## Target source files
-set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/config/BlazingConfig.cpp
+set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/communication/adapter/GpuFunctionsAdapter.cpp
+              ${CMAKE_SOURCE_DIR}/src/communication/factory/MessageFactory.cpp
+              ${CMAKE_SOURCE_DIR}/src/config/BlazingConfig.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
               ${CMAKE_SOURCE_DIR}/src/FreeMemory.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_parser/ParquetParser.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_parser/CSVParser.cpp
-              ${CMAKE_CURRENT_SOURCE_DIR}/src/Config/Config.cpp
+              ${CMAKE_SOURCE_DIR}/src/Traits/RuntimeTraits.cpp
+              ${CMAKE_SOURCE_DIR}/src/Config/Config.cpp
               ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
               ${CMAKE_SOURCE_DIR}/src/Interpreter/interpreter_cpp.cu
               ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp

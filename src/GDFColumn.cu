@@ -129,7 +129,7 @@ void gdf_column_cpp::operator=(const gdf_column_cpp& col)
 
 }
 
-gdf_column* gdf_column_cpp::get_gdf_column()
+gdf_column* gdf_column_cpp::get_gdf_column() const
 {
     return column;
 }

@@ -50,4 +50,20 @@ inline bool is_dtype_integer(gdf_dtype type) {
 } // Traits
 } // Ral
 
+namespace ral {
+namespace traits {
+
+    std::size_t get_dtype_size(gdf_dtype dtype);
+
+    std::size_t get_dtype_size(gdf_column* column);
+
+    std::size_t get_data_size(gdf_column* column);
+
+    std::size_t get_data_size(std::size_t size, gdf_dtype dtype);
+
+    std::size_t get_valid_size(std::size_t data_size);
+
+} // namespace traits
+} // namespace ral
+
 #endif

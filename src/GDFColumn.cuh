@@ -61,7 +61,7 @@ class gdf_column_cpp
 
 	gdf_column_cpp clone(std::string name = "");
 
-	gdf_column* get_gdf_column();
+	gdf_column* get_gdf_column() const;
 
 	void create_gdf_column(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value, const std::string &column_name = "");
 

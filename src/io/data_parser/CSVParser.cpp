@@ -199,6 +199,9 @@ csv_parser::csv_parser(const std::string & delimiter,
 	args.num_cols		= num_columns; 
 	args.delimiter 		= delimiter[0];
 	args.lineterminator = line_terminator[0];
+	args.skip_blank_lines = true;
+    args.header = -1;
+    args.nrows = -1;
 }
 
 
@@ -218,6 +221,9 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file, std::v
     raw_args.dtype			= args.dtype;
     raw_args.delimiter		= args.delimiter;
     raw_args.lineterminator = args.lineterminator;
+	raw_args.skip_blank_lines = args.skip_blank_lines;
+    raw_args.header = args.header;
+    raw_args.nrows = args.nrows;
     
 	CUDF_CALL(read_csv_arrow(&raw_args,file));
 
@@ -242,6 +248,9 @@ void csv_parser::parse(const char *fname, std::vector<gdf_column_cpp> & columns)
     raw_args.dtype			= args.dtype;
     raw_args.delimiter		= args.delimiter;
     raw_args.lineterminator = args.lineterminator;
+	raw_args.skip_blank_lines = args.skip_blank_lines;
+    raw_args.header = args.header;
+    raw_args.nrows = args.nrows;
     
 	CUDF_CALL(read_csv(&raw_args));
 
@@ -267,6 +276,9 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
     raw_args.dtype			= args.dtype;
     raw_args.delimiter		= args.delimiter;
     raw_args.lineterminator = args.lineterminator;
+	raw_args.skip_blank_lines = args.skip_blank_lines;
+    raw_args.header = args.header;
+    raw_args.nrows = args.nrows;
     
 	CUDF_CALL(read_csv_arrow(&raw_args,file));
 

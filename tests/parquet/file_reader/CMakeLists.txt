@@ -17,7 +17,6 @@
 #=============================================================================
 
 set(file_reader_SRCS
-    ${parquet_reader_source_files}
     utils.cu
     api-test.cu
     null-test.cu)

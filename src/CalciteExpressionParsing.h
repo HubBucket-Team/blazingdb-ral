@@ -68,7 +68,7 @@ int find_closing_char(const std::string & expression, int start);
 
 // takes a comma delimited list of expressions and splits it into separate expressions
 // if the flag trim is true, leading and trailing spaces are removed
-std::vector<std::string> get_expressions_from_expression_list(const std::string & combined_expressions, bool trim = true);
+std::vector<std::string> get_expressions_from_expression_list(std::string & combined_expressions, bool trim = true);
 
 bool is_null(std::string token);
 

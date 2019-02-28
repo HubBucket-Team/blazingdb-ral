@@ -74,7 +74,6 @@ TEST(ComponentMessageTest, SampleToNodeMasterMessage) {
     test_columns.emplace_back(createRalColumn(8, GDF_INT16));
     test_columns.emplace_back(createRalColumn(16, GDF_INT64));
 
-
     {
         // Create message
         auto message = MessageFactory::createSampleToNodeMaster(test_node, test_columns);
@@ -86,7 +85,6 @@ TEST(ComponentMessageTest, SampleToNodeMasterMessage) {
         using ral::communication::network::Client;
         Client::send(server_node, message);
     }
-
 
     std::shared_ptr<Messages::SampleToNodeMasterMessage> message;
     {

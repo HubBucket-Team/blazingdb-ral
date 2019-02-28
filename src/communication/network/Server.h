@@ -39,6 +39,9 @@ namespace network {
         Server& operator=(const Server&) = delete;
 
     private:
+        void setEndPoints();
+
+    private:
         std::thread thread;
         std::shared_ptr<CommServer> comm_server;
     };

@@ -3,6 +3,7 @@
 #include "blazingdb/communication/messages/SampleToNodeMasterMessage.h"
 #include "blazingdb/communication/messages/DataScatterMessage.h"
 #include "blazingdb/communication/messages/PartitionPivotsMessage.h"
+#include "blazingdb/communication/messages/NodeDataMessage.h"
 #include "communication/adapter/GpuFunctionsAdapter.h"
 
 namespace ral {
@@ -23,6 +24,8 @@ namespace messages {
 
     using DataPivot = Messages::DataPivot;
     using PartitionPivotsMessage = Messages::PartitionPivotsMessage;
+
+    using NodeDataMessage = Messages::NodeDataMessage;
 
 } // namespace messages
 } // namespace communication

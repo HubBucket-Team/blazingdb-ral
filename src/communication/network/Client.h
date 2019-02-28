@@ -28,6 +28,10 @@ namespace network {
     public:
         static std::unique_ptr<Status> send(const Node& node,
                                             std::shared_ptr<Message>& message);
+
+        static std::unique_ptr<Status> sendNodeData(const std::string& orchestratorIp,
+                                                    int16_t orchestratorPort,
+                                                    std::shared_ptr<Message>& message);
     };
 
 } // namespace network

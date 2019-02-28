@@ -58,6 +58,10 @@ using namespace blazingdb::protocol;
 #include "CodeTimer.h"
 #include "config/BlazingConfig.h"
 
+#include "communication/CommunicationData.h"
+#include "communication/factory/MessageFactory.h"
+#include "communication/network/Client.h"
+
 const Path FS_NAMESPACES_FILE("/tmp/file_system.bin");
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);
@@ -551,9 +555,9 @@ auto  interpreterServices(const blazingdb::protocol::Buffer &requestPayloadBuffe
 int main(int argc, const char *argv[])
 {
 
-  #ifndef VERBOSE
-  std::cout.rdbuf(nullptr); // substitute internal std::cout buffer with
-  #endif // VERBOSE 
+  // #ifndef VERBOSE
+  // std::cout.rdbuf(nullptr); // substitute internal std::cout buffer with
+  // #endif // VERBOSE 
   
     std::cout << "RAL Engine starting" << std::endl;
 
@@ -561,7 +565,29 @@ int main(int argc, const char *argv[])
     if (argc == 2) {
         identifier = std::string(argv[1]);
     }
+    if (argc > 1 && argc != 6) {
+      std::cout << "Usage: " << argv[0]
+                << " <RAL_ID>"
+                   " <ORCHESTRATOR_[IP|HOSTNAME]> <ORCHESTRATOR_PORT>"
+                   " <RAL_[IP|HOSTNAME]> <RAL_PORT>\n";
+      return 1;
+    }
 
+    if (argc == 6) {
+      identifier = std::string(argv[1]);
+      auto& communicationData = ral::communication::CommunicationData::getInstance();
+      communicationData.initialize(argv[2], std::atoi(argv[3]), argv[4], std::atoi(argv[5]));
+      try {
+        auto nodeDataMesssage = ral::communication::messages::Factory::createNodeDataMessage(communicationData.getSelfNode());
+        ral::communication::network::Client::sendNodeData(communicationData.getOrchestratorIp(),
+                                                          communicationData.getOrchestratorPort(),
+                                                          nodeDataMesssage);
+      } catch (std::exception &e) {
+        std::cerr << e.what() << "\n";
+        return 1;
+      }
+    }
+    
     auto& config = ral::config::BlazingConfig::getInstance();
 
     config.setLogName("RAL." + identifier + ".log")

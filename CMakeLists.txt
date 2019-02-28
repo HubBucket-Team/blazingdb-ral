@@ -79,6 +79,8 @@ get_directory_property(parquet_reader_source_files DIRECTORY ${CMAKE_SOURCE_DIR}
 ## Target source files
 set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/communication/adapter/GpuFunctionsAdapter.cpp
               ${CMAKE_SOURCE_DIR}/src/communication/factory/MessageFactory.cpp
+              ${CMAKE_SOURCE_DIR}/src/communication/network/Client.cpp
+              ${CMAKE_SOURCE_DIR}/src/communication/network/Server.cpp
               ${CMAKE_SOURCE_DIR}/src/config/BlazingConfig.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
               ${CMAKE_SOURCE_DIR}/src/FreeMemory.cpp

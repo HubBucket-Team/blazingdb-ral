@@ -1144,8 +1144,18 @@ void process_filter(blazing_frame & input, std::string query_part){
 
 		materialize_temp.update_null_count();
 
-		if( input.get_column(i).get_gdf_column()->dtype == GDF_STRING_CATEGORY )
+		if( input.get_column(i).get_gdf_column()->dtype == GDF_STRING_CATEGORY ){
+			materialize_temp.get_gdf_column()->dtype_info.category = input.get_column(i).get_gdf_column()->dtype_info.category;
+		}
+
+		if( input.get_column(i).get_gdf_column()->dtype == GDF_STRING_CATEGORY ){
 			CUDF_CALL( copy_category_from_input_and_compact_into_output(input.get_column(i).get_gdf_column(), materialize_temp.get_gdf_column()) );
+
+			cudaMemcpy(materialize_temp.get_gdf_column()->data,
+				materialize_temp.get_gdf_column()->dtype_info.category->values_cptr(),
+				sizeof(int32_t) * materialize_temp.get_gdf_column()->size,
+				cudaMemcpyDeviceToDevice);
+		}
 
 		input.set_column(i,materialize_temp.clone(input.get_column(i).name()));
 	}

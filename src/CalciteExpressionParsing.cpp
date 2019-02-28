@@ -169,7 +169,7 @@ size_t get_width_dtype(gdf_dtype type){
 	}else if(type == GDF_STRING){
 		return 0;
 	}else if(type == GDF_STRING_CATEGORY){
-		return 0;
+		return 4;
 	}
 }
 

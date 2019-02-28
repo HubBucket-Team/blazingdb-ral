@@ -449,6 +449,25 @@ void add_expression_to_plan(	blazing_frame & inputs,
 					size_t left_index = get_index(left_operand);
 					size_t right_index = get_index(right_operand);
 
+					gdf_column* left_column = input_columns[left_index];
+					gdf_column* right_column = input_columns[right_index];
+
+					if(left_column->dtype == GDF_STRING_CATEGORY && right_column->dtype == GDF_STRING_CATEGORY) {
+						gdf_column * process_columns[2];
+						process_columns[0] = left_column;
+						process_columns[1] = right_column;
+
+						gdf_column * output_columns[2];
+						output_columns[0] = left_column;
+						output_columns[1] = right_column;
+
+						//CUDF_CALL( combine_column_categories(process_columns, output_columns, 2) );
+						CUDF_CALL( sync_column_categories(process_columns, output_columns, 2) );
+
+						input_columns[left_index] = output_columns[0];
+						input_columns[right_index] = output_columns[1];
+					}
+
 					left_inputs.push_back(left_index);
 					right_inputs.push_back(right_index);
 

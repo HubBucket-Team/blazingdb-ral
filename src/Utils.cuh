@@ -161,12 +161,21 @@ static void print_gdf_column(gdf_column const * the_column)
       }
     case GDF_STRING_CATEGORY:
       {
+        std::cout<<"Data on column:\n";
+        using col_type = int32_t;
+        col_type * col_data = static_cast<col_type*>(the_column->data);
+        print_typed_column<col_type>(col_data, the_column->valid, num_rows);
+
+        std::cout<<"Data on category:\n";
+        size_t keys_size = the_column->dtype_info.category->keys_size();
         char ** data = new char *[200];
-        the_column->dtype_info.category->to_strings()->to_host(data, 0, the_column->size);
-        for(int i = 0; i < the_column->size; i++){
-          std::cout<<data[i]<<"\t";
+        the_column->dtype_info.category->get_keys()->to_host(data, 0, keys_size);
+
+        for(int i = 0; i < keys_size; i++){
+          std::cout<<"("<<data[i]<<"|"<<i<<")\t";
         }
         std::cout<<std::endl;
+
         break;
       }
     default:
@@ -175,7 +184,6 @@ static void print_gdf_column(gdf_column const * the_column)
       }
   }
 }
-
 
 template <typename HostDataType>
 void print_column(gdf_column * column){

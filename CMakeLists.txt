@@ -59,6 +59,7 @@ include_directories(
     ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/thirdparty/jitify
+    ${CMAKE_SOURCE_DIR}/thirdparty/nvstrings/include
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper)
 
 ## Binary Operations

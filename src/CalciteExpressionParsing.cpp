@@ -128,7 +128,10 @@ gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregat
 		//TODO felipe percy noboa see upgrade to uints
 
 		return GDF_INT64;
-	}else{
+	}else if (aggregation == GDF_FIRST) {
+		return input_type;
+	}	
+	else{
 		return GDF_invalid;
 	}
 
@@ -564,6 +567,8 @@ gdf_agg_op get_aggregation_operation(std::string operator_string){
 		return GDF_COUNT;
 	}else if(operator_string == "COUNT_DISTINCT"){
 		return GDF_COUNT_DISTINCT;
+	}else if(operator_string == "FIRST"){
+		return GDF_FIRST;
 	}
 	
 	throw std::runtime_error("In get_aggregation_operation function: aggregation type not supported, " + operator_string);
@@ -696,8 +701,10 @@ std::string aggregator_to_string(gdf_agg_op aggregation){
 		return "avg";
 	}else if(aggregation == GDF_COUNT_DISTINCT){
 		return "count_distinct";
+	}else if (aggregation == GDF_FIRST) {
+		return "first";
 	}else{
-		return "";
+		return "";//FIXME: is really necessary?
 	}
 }
 

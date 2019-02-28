@@ -34,6 +34,8 @@ namespace messages {
 
         static std::shared_ptr<Message> createPartitionPivotsMessage(const std::vector<DataPivot>& pivots);
 
+        static std::shared_ptr<Message> createNodeDataMessage(const Node& selfNode);
+
         template <typename Type>
         static std::shared_ptr<Type> make(const std::string& json_data, const std::string& binary_data) {
             return Type::make(json_data, binary_data);

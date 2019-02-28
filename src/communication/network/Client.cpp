@@ -10,7 +10,16 @@ namespace network {
         using blazingdb::communication::network::Client;
 
         auto client = Client::Make();
-        return client->send(node, message);
+        return client->Send(node, "" ,*message);
+    }
+
+    std::unique_ptr<Client::Status> Client::sendNodeData(const std::string& orchestratorIp,
+                                                        int16_t orchestratorPort,
+                                                        std::shared_ptr<Message>& message) {
+        using blazingdb::communication::network::Client;
+
+        auto client = Client::Make();
+        return client->SendNodeData(orchestratorIp, orchestratorPort, *message);
     }
 
 } // namespace network

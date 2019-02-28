@@ -39,6 +39,10 @@ namespace messages {
         return std::make_shared<PartitionPivotsMessage>(pivots);
     }
 
+    std::shared_ptr<Message> Factory::createNodeDataMessage(const Node& selfNode) {
+        return std::make_shared<NodeDataMessage>(selfNode);
+    }
+
 } // namespace messages
 } // namespace communication
 } // namespace ral

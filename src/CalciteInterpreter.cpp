@@ -814,6 +814,22 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 		ctxt.flag_method = GDF_HASH;
 		ctxt.flag_sort_result = 1;
 		switch(aggregation_types[i]){
+		/*case GDF_FIRST: {
+			// calcite 
+			@rommel, // select count( a ) from T group by T 
+			@rommel, // select first( a ) from T group by T
+			// TODO  gdf_group_by_first exponer en new cudf 		
+			if(group_columns.size() == 0){
+                // output dtype is GDF_UINT64
+                // defined in 'get_aggregation_output_type' function.
+                uint64_t result = aggregation_input.get_gdf_column()->size - aggregation_input.get_gdf_column()->null_count;                
+				CheckCudaErrors(cudaMemcpy(output_column.get_gdf_column()->data, &result, sizeof(uint64_t), cudaMemcpyHostToDevice));			
+			}else{
+				CUDF_CALL( gdf_group_by_first(group_columns.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out.data(),output_column.get_gdf_column(),&ctxt));
+			}
+			break;
+		}*/
 		case GDF_SUM:
 			if (group_columns.size() == 0) {
 				if (aggregation_input.get_gdf_column()->size != 0) {
@@ -898,7 +914,6 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 			}
 			break;
 		case GDF_COUNT:
-		case GDF_COUNT_DISTINCT:
 			if(group_columns.size() == 0){
 
                 // output dtype is GDF_UINT64
@@ -907,6 +922,21 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 				CheckCudaErrors(cudaMemcpy(output_column.get_gdf_column()->data, &result, sizeof(uint64_t), cudaMemcpyHostToDevice));			
 			}else{
 			CUDF_CALL( gdf_group_by_count(group_columns.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out.data(),output_column.get_gdf_column(),&ctxt));
+			}
+			break;
+		case GDF_COUNT_DISTINCT:
+			if(group_columns.size() == 0){
+
+                // output dtype is GDF_UINT64
+                // defined in 'get_aggregation_output_type' function.
+                uint64_t result = aggregation_input.get_gdf_column()->size - aggregation_input.get_gdf_column()->null_count;                
+				CheckCudaErrors(cudaMemcpy(output_column.get_gdf_column()->data, &result, sizeof(uint64_t), cudaMemcpyHostToDevice));			
+			}else{
+				//TODO: integrar con el nuevo cudf @rommel, verificar el enlace con calcite!
+					// select count( distinct a ) from t  group by T
+				// TODO: change gdf_group_by_count por gdf_group_by_count_distinct, when new cudf is ready!! 
+				CUDF_CALL( gdf_group_by_count(group_columns.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
 						nullptr,group_by_columns_ptr_out.data(),output_column.get_gdf_column(),&ctxt));
 			}
 			break;

@@ -549,7 +549,7 @@ gdf_agg_op get_aggregation_operation(std::string operator_string){
 			operator_string.find("=[") + 2,
 			(operator_string.find("]") - (operator_string.find("=[") + 2))
 	);
-	operator_string = StringUtil::replace(operator_string,"COUNT(DISTINCT","COUNT_DISTINCT");
+
 	//remove expression
 	operator_string = operator_string.substr(0,operator_string.find("("));
 	if(operator_string == "SUM"){
@@ -888,7 +888,10 @@ std::vector<std::string> get_expressions_from_expression_list(std::string & comb
 	//todo: 
 	//combined_expression
 	static const std::regex re{R""(CASE\(IS NOT NULL\((\W\(.+?\)|.+)\), \1, (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
+	static const std::regex count_re{R""(COUNT\(DISTINCT (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
+
 	combined_expression = std::regex_replace(combined_expression, re, "COALESCE($1, $2)");
+	combined_expression = std::regex_replace(combined_expression, count_re, "COUNT_DISTINCT($1)");
 
 	std::vector<std::string> expressions;
 

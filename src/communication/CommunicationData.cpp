@@ -11,12 +11,13 @@ CommunicationData& CommunicationData::getInstance() {
   return communicationData;
 }
 
-void CommunicationData::initialize(const std::string& orchIp, int16_t orchPort,
+void CommunicationData::initialize(int unixSocketId, const std::string& orchIp,
+                                   int16_t orchPort,
                                    const std::string& selfRalIp,
                                    int16_t selfRalPort) {
   orchestratorIp = orchIp;
   orchestratorPort = orchPort;
-  selfNode = Node::make(selfRalIp, selfRalPort);
+  selfNode = Node::make(unixSocketId, selfRalIp, selfRalPort);
 }
 
 const Node& CommunicationData::getSelfNode() { return *selfNode; }

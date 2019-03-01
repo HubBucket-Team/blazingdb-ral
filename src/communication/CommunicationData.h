@@ -4,7 +4,6 @@
 #include <memory>
 #include <string>
 #include <blazingdb/communication/Node.h>
-#include <blazingdb/communication/Context.h>
 
 namespace ral {
 namespace communication {
@@ -18,7 +17,7 @@ class CommunicationData
 public:
   static CommunicationData& getInstance();
   
-  void initialize(const std::string& orchIp, int16_t orchPort, const std::string& selfRalIp, int16_t selfRalPort);
+  void initialize(int unixSocketId, const std::string& orchIp, int16_t orchPort, const std::string& selfRalIp, int16_t selfRalPort);
   const Node& getSelfNode();
   std::string getOrchestratorIp();
   int16_t getOrchestratorPort();

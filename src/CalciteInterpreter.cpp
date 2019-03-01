@@ -553,11 +553,20 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 		{
 			//materialize with left_indices
 			materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),left_indices.get_gdf_column());
+
+			if( input.get_column(column_index).get_gdf_column()->dtype == GDF_STRING_CATEGORY ){
+				output.get_gdf_column()->dtype_info.category = input.get_column(column_index).get_gdf_column()->dtype_info.category;
+			}
+
 			// std::cout<<"left table output"<<std::endl;
 			// print_gdf_column(output.get_gdf_column());
 		}else{
 			//materialize with right indices
 			materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),right_indices.get_gdf_column());
+
+			if( input.get_column(column_index).get_gdf_column()->dtype == GDF_STRING_CATEGORY ){
+				output.get_gdf_column()->dtype_info.category = input.get_column(column_index).get_gdf_column()->dtype_info.category;
+			}
 			// std::cout<<"right table output"<<std::endl;
 			// print_gdf_column(output.get_gdf_column());
 		}
@@ -1024,6 +1033,11 @@ void process_sort(blazing_frame & input, std::string query_part){
 		);
 
 		temp_output.update_null_count();
+
+		if( input.get_column(i).get_gdf_column()->dtype == GDF_STRING_CATEGORY ){
+			temp_output.get_gdf_column()->dtype_info.category = input.get_column(i).get_gdf_column()->dtype_info.category;
+		}
+
 		input.set_column(i,temp_output.clone(input.get_column(i).name()));
 
 		/*gdf_column_cpp empty;

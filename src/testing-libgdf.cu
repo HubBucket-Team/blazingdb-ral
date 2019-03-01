@@ -576,7 +576,7 @@ int main(int argc, const char *argv[])
     if (argc == 6) {
       identifier = std::string(argv[1]);
       auto& communicationData = ral::communication::CommunicationData::getInstance();
-      communicationData.initialize(argv[2], std::atoi(argv[3]), argv[4], std::atoi(argv[5]));
+      communicationData.initialize(std::atoi(argv[1]), argv[2], std::atoi(argv[3]), argv[4], std::atoi(argv[5]));
       try {
         auto nodeDataMesssage = ral::communication::messages::Factory::createNodeDataMessage(communicationData.getSelfNode());
         ral::communication::network::Client::sendNodeData(communicationData.getOrchestratorIp(),

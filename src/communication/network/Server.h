@@ -13,6 +13,11 @@ namespace network {
 
     class Server {
     public:
+        using TokenValue = typename CommServer::TokenValue;
+
+        using Message = blazingdb::communication::messages::Message;
+
+    public:
         static void start();
 
         static Server& getInstance();
@@ -24,10 +29,10 @@ namespace network {
         ~Server();
 
     public:
-        template <typename Message>
-        std::shared_ptr<Message> getMessage() {
-            return comm_server->GetMessage<Message>();
-        }
+        void registerContext(const TokenValue& context_token);
+
+    public:
+        std::shared_ptr<Message> getMessage(const TokenValue& token_value);
 
     private:
         Server(Server&&) = delete;

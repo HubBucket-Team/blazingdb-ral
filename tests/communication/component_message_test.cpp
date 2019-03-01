@@ -65,6 +65,10 @@ TEST(ComponentMessageTest, SampleToNodeMasterMessage) {
     using ral::communication::network::Server;
     Server::start();
 
+    // Create context token and register the token in the server
+    Server::TokenValue context_token = 10;
+    Server::getInstance().registerContext(context_token);
+
     // Create Data - node
     using Address = blazingdb::communication::Address;
     blazingdb::communication::Node test_node(Address::Make("1.2.3.4", 5678));
@@ -86,21 +90,22 @@ TEST(ComponentMessageTest, SampleToNodeMasterMessage) {
         Client::send(server_node, message);
     }
 
-    std::shared_ptr<Messages::SampleToNodeMasterMessage> message;
+    std::shared_ptr<blazingdb::communication::messages::Message> message;
     {
+        // Messages::SampleToNodeMasterMessage
         // Receive message from the client
-        message = Server::getInstance().getMessage<Messages::SampleToNodeMasterMessage>();
+        message = Server::getInstance().getMessage(context_token);
     }
 
-    // Tests - node in message
+    // Tests
     {
-        const auto& message_node = message->getNode();
+        // Tests - node in message
+        auto sample_message = std::dynamic_pointer_cast<Messages::SampleToNodeMasterMessage>(message);
+        const auto& message_node = sample_message->getNode();
         ASSERT_EQ(test_node, message_node);
-    }
 
-    // Tests - gdf_column_cpp in message
-    {
-        const auto& message_columns = message->getSamples();
+        // Tests - gdf_column_cpp in message
+        const auto& message_columns = sample_message->getSamples();
 
         ASSERT_EQ(message_columns.size(), test_columns.size());
 

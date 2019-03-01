@@ -1,9 +1,8 @@
 #pragma once
 
 #include <string>
+#include "GDFColumn.cuh"
 #include "gdf_wrapper/gdf_types.cuh"
-
-class gdf_column_cpp;
 
 namespace ral {
 namespace communication {

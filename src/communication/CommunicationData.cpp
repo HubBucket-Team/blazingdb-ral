@@ -16,7 +16,7 @@ void CommunicationData::initialize(const std::string& orchIp, int16_t orchPort,
                                    int16_t selfRalPort) {
   orchestratorIp = orchIp;
   orchestratorPort = orchPort;
-  selfNode = Node::make(selfRalIp, selfRalPort);
+  //selfNode = Node::make(selfRalIp, selfRalPort);
 }
 
 const Node& CommunicationData::getSelfNode() { return *selfNode; }

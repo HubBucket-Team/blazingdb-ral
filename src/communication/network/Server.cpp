@@ -30,12 +30,37 @@ namespace network {
         thread.join();
     }
 
+    void Server::registerContext(const Server::TokenValue& context_token) {
+        comm_server->registerContext(context_token);
+    }
+
+    std::shared_ptr<Server::Message> Server::getMessage(const TokenValue& token_value) {
+        return comm_server->getMessage(token_value);
+    }
+
     void Server::setEndPoints() {
         namespace messages = ral::communication::messages;
 
-        comm_server->registerEndPoint(CommServer::Methods::Post, messages::SampleToNodeMasterMessage::getMessageID());
-        comm_server->registerEndPoint(CommServer::Methods::Post, messages::PartitionPivotsMessage::getMessageID());
-        comm_server->registerEndPoint(CommServer::Methods::Post, messages::DataScatterMessage::getMessageID());
+        // message SampleToNodeMasterMessage
+        {
+            const std::string endpoint = messages::SampleToNodeMasterMessage::getMessageID();
+            comm_server->registerEndPoint(endpoint, CommServer::Methods::Post);
+            comm_server->registerDeserializer(endpoint, ral::communication::messages::SampleToNodeMasterMessage::Make);
+        }
+
+        // message PartitionPivotsMessage
+        {
+            const std::string endpoint = messages::PartitionPivotsMessage::getMessageID();
+            comm_server->registerEndPoint(endpoint, CommServer::Methods::Post);
+            comm_server->registerDeserializer(endpoint, messages::PartitionPivotsMessage::Make);
+        }
+
+        // message PartitionPivotsMessage
+        {
+            const std::string endpoint = messages::DataScatterMessage::getMessageID();
+            comm_server->registerEndPoint(endpoint, CommServer::Methods::Post);
+            comm_server->registerDeserializer(endpoint, messages::DataScatterMessage::Make);
+        }
     }
 
 } // namespace network

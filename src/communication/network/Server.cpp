@@ -5,7 +5,10 @@ namespace ral {
 namespace communication {
 namespace network {
 
-    void Server::start() {
+    unsigned short Server::port_ = 8000;
+
+    void Server::start(unsigned short port) {
+        port_ = port;
         getInstance();
     }
 
@@ -20,7 +23,7 @@ namespace network {
         setEndPoints();
 
         thread = std::thread([this]() {
-            comm_server->Run();
+            comm_server->Run(port_);
         });
         std::this_thread::yield();
     }
@@ -30,12 +33,12 @@ namespace network {
         thread.join();
     }
 
-    void Server::registerContext(const Server::TokenValue& context_token) {
+    void Server::registerContext(const ContextToken& context_token) {
         comm_server->registerContext(context_token);
     }
 
-    std::shared_ptr<Server::Message> Server::getMessage(const TokenValue& token_value) {
-        return comm_server->getMessage(token_value);
+    std::shared_ptr<Server::Message> Server::getMessage(const ContextToken& token_value) {
+        return comm_server->getMessage(token_value.getIntToken());
     }
 
     void Server::setEndPoints() {

@@ -65,9 +65,12 @@ TEST(ComponentMessageTest, SampleToNodeMasterMessage) {
     using ral::communication::network::Server;
     Server::start();
 
-    // Create context token and register the token in the server
-    Server::TokenValue context_token = 10;
-    Server::getInstance().registerContext(context_token);
+    // create context token
+    using ContextToken = blazingdb::communication::ContextToken;
+    std::unique_ptr<ContextToken> context_token = ContextToken::Make(3589);
+
+    // Register the context token in the server
+    Server::getInstance().registerContext(*context_token);
 
     // Create Data - node
     using Address = blazingdb::communication::Address;
@@ -80,7 +83,7 @@ TEST(ComponentMessageTest, SampleToNodeMasterMessage) {
 
     {
         // Create message
-        auto message = MessageFactory::createSampleToNodeMaster(test_node, test_columns);
+        auto message = MessageFactory::createSampleToNodeMaster(*context_token, test_node, test_columns);
 
         // Server address
         blazingdb::communication::Node server_node(Address::Make("localhost", 8000));
@@ -94,7 +97,7 @@ TEST(ComponentMessageTest, SampleToNodeMasterMessage) {
     {
         // Messages::SampleToNodeMasterMessage
         // Receive message from the client
-        message = Server::getInstance().getMessage(context_token);
+        message = Server::getInstance().getMessage(*context_token);
     }
 
     // Tests

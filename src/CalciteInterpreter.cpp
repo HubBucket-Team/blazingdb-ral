@@ -685,13 +685,13 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 
 	// Group by without aggregation 
 	if (aggregation_types.size() == 0) {
-		size_t num_group_columns = group_columns.size();
+		gdf_size_type num_group_columns = group_columns.size();
 		std::vector<gdf_column*> cols(num_group_columns);
 		for(int i = 0; i < num_group_columns; i++){
 			cols[i] = input.get_column(i).get_gdf_column();
 		}
 
-		size_t nrows = input.get_column(0).size();
+		gdf_size_type nrows = input.get_column(0).size();
 		std::vector<gdf_column_cpp> output_columns_group(num_group_columns);
 		std::vector<gdf_column*> group_by_columns_ptr_out(num_group_columns);
 		for(int i = 0; i < num_group_columns; i++){
@@ -704,18 +704,23 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 
 		gdf_column_cpp index_col;
 		index_col.create_gdf_column(GDF_INT32,nrows,nullptr,get_width_dtype(GDF_INT32), "");
+		gdf_index_type * index_col_data_ptr = (gdf_index_type *)index_col.get_gdf_column()->data;
+		gdf_size_type index_col_size;
 
 		gdf_context ctxt;
-		ctxt.flag_nulls_sort_behavior = 0; //  Nulls are are treated as largest
-		ctxt.flag_groupby_include_nulls = 1; // Nulls are treated as values in group by keys where NULL == NULL (SQL style)
+		ctxt.flag_nulls_sort_behavior = GDF_NULL_AS_LARGEST; //  Nulls are are treated as largest
+		ctxt.flag_groupby_include_nulls = true; // Nulls are treated as values in group by keys where NULL == NULL (SQL style)
 
-		CUDF_CALL( gdf_group_by_wo_aggregations(num_group_columns,
+		CUDF_CALL( gdf_group_by_without_aggregations(num_group_columns,
 				cols.data(),
 				num_group_columns,
 				group_columns.data(),
 				group_by_columns_ptr_out.data(),
-				index_col.get_gdf_column(),
+				index_col_data_ptr,
+				&index_col_size,
 				&ctxt));
+
+		index_col.get_gdf_column()->size = index_col_size;
 
 
 		//find the widest possible column
@@ -1010,7 +1015,7 @@ void process_sort(blazing_frame & input, std::string query_part){
 	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
 
 	gdf_context context;
-	context.flag_nulls_sort_behavior = 0; // Nulls are are treated as largest
+	context.flag_nulls_sort_behavior = GDF_NULL_AS_LARGEST; // Nulls are are treated as largest
 
 	CUDF_CALL( gdf_order_by(cols.data(),
 			(int8_t*)(asc_desc_col.get_gdf_column()->data),

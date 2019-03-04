@@ -472,10 +472,10 @@ TEST_F(NVCategoryTest, processing_filter_join) {
 
 TEST_F(NVCategoryTest, processing_orderby) {
 
-	{   //select x,y from hr.emps order by x
+	{   //select x,y from hr.emps order by x desc
 
 		bool print = true;
-		size_t length = 5;
+		size_t length = 2;
 
 		const char ** left_string_data = generate_string_data(num_values, length, print);
 
@@ -508,6 +508,63 @@ TEST_F(NVCategoryTest, processing_orderby) {
 		}
 
 		std::sort(reference_result.begin(), reference_result.end());
+
+		std::vector<std::string> string_reference_result;
+		std::vector<int32_t> int_reference_result;
+
+		std::transform(reference_result.begin(), reference_result.end(), std::back_inserter(string_reference_result),
+						(const std::string& (*)(const std::pair<std::string, int32_t>&))std::get<0>);
+
+		std::transform(reference_result.begin(), reference_result.end(), std::back_inserter(int_reference_result),
+						(const int32_t& (*)(const std::pair<std::string, int32_t>&))std::get<1>);
+
+		std::cout<<"Output:\n";
+		print_gdf_column(outputs[0].get_gdf_column());
+		print_gdf_column(outputs[1].get_gdf_column());
+
+		Check(outputs[0], string_reference_result);
+		Check(outputs[1], int_reference_result.data(), int_reference_result.size());
+	}
+}
+
+TEST_F(NVCategoryTest, processing_orderby_desc) {
+
+	{   //select x,y from hr.emps order by x
+
+		bool print = true;
+		size_t length = 2;
+
+		const char ** left_string_data = generate_string_data(num_values, length, print);
+
+		gdf_column * left_string_column = create_nv_category_column_strings(left_string_data, num_values);
+
+		int32_t* left_host_data = generate_int_data(num_values, 10, print);
+		
+		std::cout<<"Input:\n";
+		print_gdf_column(left_string_column);
+
+		inputs.resize(2);
+		inputs[0].create_gdf_column(left_string_column);
+		inputs[1].create_gdf_column(GDF_INT32, num_values, (void *) left_host_data, sizeof(int32_t));
+
+		input_tables.push_back(inputs);
+		input_tables.push_back(inputs2);
+
+		std::string query = "LogicalSort(sort0=[$0], dir0=[DESC])\n\
+	LogicalProject(x=[$0], y=[$1])\n\
+		EnumerableTableScan(table=[[hr, emps]])";
+
+		gdf_error err = evaluate_query(input_tables, table_names, column_names,
+				query, outputs);
+		EXPECT_TRUE(err == GDF_SUCCESS);
+
+		std::vector<std::pair<std::string, int32_t>> reference_result;
+		
+		for(size_t I=0; I<num_values; I++){
+			reference_result.push_back(std::make_pair(std::string(left_string_data[I]), left_host_data[I]));
+		}
+
+		std::sort(reference_result.rbegin(), reference_result.rend());
 
 		std::vector<std::string> string_reference_result;
 		std::vector<int32_t> int_reference_result;

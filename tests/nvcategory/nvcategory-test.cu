@@ -34,15 +34,12 @@ public:
 
 namespace {
 std::string const default_chars = 
-	//"abcdefghijklmnaoqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-	//"abcdefghijklmnaoqrstuvwxyz";
-	"hijklmnaoq";
+	"abcdefghijklmnaoqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
 }
 
 struct NVCategoryTest : public ::testing::Test {
 	
 	std::string random_string(size_t len = 15, std::string const &allowed_chars = default_chars) {
-		std::mt19937_64 gen { std::random_device()() };
 		std::uniform_int_distribution<size_t> dist { 0, allowed_chars.length()-1 };
 	
 		std::string ret;
@@ -215,6 +212,7 @@ struct NVCategoryTest : public ::testing::Test {
 				num_rows,
 				GDF_STRING_CATEGORY);
 		column->dtype_info.category = category;
+		column->col_name = nullptr;
 		return column;
 	}
 
@@ -237,27 +235,7 @@ struct NVCategoryTest : public ::testing::Test {
 	}
 
 	void SetUp(){
-
-		/*input1 = new char[num_values];
-		input2 = new char[num_values];
-
-		for(int i = 0; i < num_values; i++){
-			if(i % 2 == 0){
-				input1[i] = 1;
-			}else{
-				input1[i] = i;
-			}
-			input2[i] = i;
-		}
-
-		gdf_column * column = create_nv_category_column(num_values,false);
-
-		inputs.resize(2);
-		inputs[0].create_gdf_column(GDF_INT8, num_values, (void *) input1, 1);
-		inputs[1].create_gdf_column(column);
-
-		input_tables.push_back(inputs); //columns for emps
-		input_tables.push_back(inputs); //columns for sales*/
+		gen.seed(seed);
 	}
 
 	void TearDown(){
@@ -285,27 +263,23 @@ struct NVCategoryTest : public ::testing::Test {
 		}
 	}
 
-	void Check(gdf_column_cpp out_col, std::vector<std::string> reference_result){
+	void Check(gdf_column_cpp out_col, std::vector<std::string> reference_result, bool ordered = false){
 
 		const size_t num_values = out_col.size();
-		//NVStrings * temp_strings = out_col.get_gdf_column()->dtype_info.category->to_strings();
 		NVStrings * temp_strings = out_col.get_gdf_column()->dtype_info.category->gather_strings( (int*) out_col.get_gdf_column()->data, num_values, true );
 
 		char** host_strings = new char*[num_values];
 		temp_strings->to_host(host_strings, 0, num_values);
 
-		std::cout<<"Converted:\n";
-		for(size_t I=0;I<num_values;I++){
-			std::cout<<std::string(host_strings[I])<<std::endl;
-		}
-		std::cout<<"\n";
+		std::vector<std::string> strings_vector(host_strings, host_strings + num_values);
+
+		if(ordered)
+			std::sort(strings_vector.begin(), strings_vector.end());
 
 		EXPECT_EQ(out_col.size(), reference_result.size()) << "Mismatch columns size";
 		
 		for(int i = 0; i < reference_result.size(); i++){
-
-			std::cout<<reference_result[i] << "=?" << std::string(host_strings[i])<<std::endl;
-			EXPECT_TRUE(reference_result[i] == std::string(host_strings[i]));
+			EXPECT_TRUE(reference_result[i] == strings_vector[i]);
 		}
 
 		NVStrings::destroy(temp_strings);
@@ -320,18 +294,21 @@ struct NVCategoryTest : public ::testing::Test {
 	char * input1;
 	char * input2;
 
-	size_t num_values = 8;
+	size_t num_values = 64;
 
 	std::vector<std::vector<gdf_column_cpp> > input_tables;
 	std::vector<std::string> table_names={"hr.emps", "hr.sales"};
 	std::vector<std::vector<std::string>> column_names={{"x", "y"},{"a", "b"}};
 
 	std::vector<gdf_column_cpp> outputs;
+
+	std::mt19937_64 gen;
+	const int seed = 121;
 };
 
 TEST_F(NVCategoryTest, processing_filter_comparison_right_string) {
 
-	{   //select x from hr.emps where y<'Z'
+	{   //select x from hr.emps where y<'m'
 
 		bool print = true;
 		size_t length = 1;
@@ -352,28 +329,26 @@ TEST_F(NVCategoryTest, processing_filter_comparison_right_string) {
 	LogicalFilter(condition=[<($1, 'm')])\n\
 		EnumerableTableScan(table=[[hr, emps]])";
 
-		std::cout<<"about to evalute"<<std::endl;
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 				query, outputs);
 		EXPECT_TRUE(err == GDF_SUCCESS);
-		std::cout<<"evaluated"<<std::endl;
 
 		std::vector<int32_t> reference_result;
 		for(size_t I=0; I<num_values; I++){
 			if(std::string(string_data[I]) < "m"){
 				reference_result.push_back(host_data[I]);
-				std::cout<<host_data[I]<<" ";
 			}
 		}
-		std::cout<<std::endl;
 
+		std::cout<<"Output:\n";
 		print_gdf_column(outputs[0].get_gdf_column());
+
 		Check(outputs[0], reference_result.data(), reference_result.size());
 	}
 }
 
 //Still crashing
-TEST_F(NVCategoryTest, DISABLED_processing_filter_comparison_both_strings) {
+TEST_F(NVCategoryTest, processing_filter_comparison_both_strings) {
 
 	{   //select * from hr.emps where x=y
 
@@ -398,14 +373,12 @@ TEST_F(NVCategoryTest, DISABLED_processing_filter_comparison_both_strings) {
 		input_tables.push_back(inputs);
 
 		std::string query = "LogicalProject(x=[$0], y=[$1])\n\
-	LogicalFilter(condition=[=($1, $0)])\n\
+	LogicalFilter(condition=[=($0, $1)])\n\
 		EnumerableTableScan(table=[[hr, emps]])";
 
-		std::cout<<"about to evalute"<<std::endl;
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 				query, outputs);
 		EXPECT_TRUE(err == GDF_SUCCESS);
-		std::cout<<"evaluated"<<std::endl;
 
 		std::vector<std::string> left_reference_result;
 		std::vector<std::string> right_reference_result;
@@ -432,7 +405,7 @@ TEST_F(NVCategoryTest, processing_filter_join) {
 	{   //select * from hr.emps where x=y
 
 		bool print = true;
-		size_t length = 2;
+		size_t length = 1;
 
 		const char ** left_string_data = generate_string_data(num_values, length, print);
 		const char ** right_string_data = generate_string_data(num_values, length, print);
@@ -463,31 +436,37 @@ TEST_F(NVCategoryTest, processing_filter_join) {
 		EnumerableTableScan(table=[[hr, emps]])\n\
 		EnumerableTableScan(table=[[hr, sales]])";
 
-		std::cout<<"about to evalute"<<std::endl;
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 				query, outputs);
 		EXPECT_TRUE(err == GDF_SUCCESS);
-		std::cout<<"evaluated"<<std::endl;
 
-		std::vector<std::string> left_reference_result;
-		std::vector<std::string> right_reference_result;
+		std::vector<std::pair<std::string, std::string>> reference_result;
+		
 		for(size_t I=0; I<num_values; I++){
 			for(size_t J=0; J<num_values; J++){
 				if(std::string(left_string_data[I]) == std::string(right_string_data[J])){
-					left_reference_result.push_back(left_string_data[I]);
-					right_reference_result.push_back(right_string_data[J]);
-					std::cout<<std::string(left_string_data[I])<<"- : -"<<std::string(right_string_data[J])<<"\n";
+					reference_result.push_back(std::make_pair(std::string(left_string_data[I]), right_string_data[J]));
 				}
 			}
 		}
-		std::cout<<std::endl;
+
+		std::sort(reference_result.begin(), reference_result.end());
+
+		std::vector<std::string> left_string_reference_result;
+		std::vector<std::string> right_string_reference_result;
+
+		std::transform(reference_result.begin(), reference_result.end(), std::back_inserter(left_string_reference_result),
+						(const std::string& (*)(const std::pair<std::string, std::string>&))std::get<0>);
+
+		std::transform(reference_result.begin(), reference_result.end(), std::back_inserter(right_string_reference_result),
+						(const std::string& (*)(const std::pair<std::string, std::string>&))std::get<1>);
 
 		std::cout<<"Output:\n";
 		print_gdf_column(outputs[0].get_gdf_column());
 		print_gdf_column(outputs[1].get_gdf_column());
 
-		Check(outputs[0], left_reference_result);
-		Check(outputs[1], right_reference_result);
+		Check(outputs[0], left_string_reference_result, true);
+		Check(outputs[1], right_string_reference_result, true);
 	}
 }
 
@@ -496,7 +475,7 @@ TEST_F(NVCategoryTest, processing_orderby) {
 	{   //select x,y from hr.emps order by x
 
 		bool print = true;
-		size_t length = 3;
+		size_t length = 5;
 
 		const char ** left_string_data = generate_string_data(num_values, length, print);
 
@@ -518,11 +497,9 @@ TEST_F(NVCategoryTest, processing_orderby) {
 	LogicalProject(x=[$0], y=[$1])\n\
 		EnumerableTableScan(table=[[hr, emps]])";
 
-		std::cout<<"about to evalute"<<std::endl;
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 				query, outputs);
 		EXPECT_TRUE(err == GDF_SUCCESS);
-		std::cout<<"evaluated"<<std::endl;
 
 		std::vector<std::pair<std::string, int32_t>> reference_result;
 		
@@ -531,13 +508,6 @@ TEST_F(NVCategoryTest, processing_orderby) {
 		}
 
 		std::sort(reference_result.begin(), reference_result.end());
-
-		std::cout<<"Resultado referencia:\n";
-		for(auto item:reference_result){
-			std::cout<<item.first<<" "<<item.second<<std::endl;
-		}
-
-		std::cout<<std::endl;
 
 		std::vector<std::string> string_reference_result;
 		std::vector<int32_t> int_reference_result;

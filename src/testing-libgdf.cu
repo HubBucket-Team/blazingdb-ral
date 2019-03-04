@@ -61,6 +61,7 @@ using namespace blazingdb::protocol;
 #include "communication/CommunicationData.h"
 #include "communication/factory/MessageFactory.h"
 #include "communication/network/Client.h"
+#include <blazingdb/communication/Context.h>
 
 const Path FS_NAMESPACES_FILE("/tmp/file_system.bin");
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
@@ -439,13 +440,15 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 
   // ExecutePlan
   std::cout << "accessToken: " << accessToken << std::endl;
-  std::cout << "query: " << requestPayload.statement << std::endl;
-  std::cout << "tableGroup: " << requestPayload.tableGroup.name << std::endl;
- 	std::cout << "tables: " << requestPayload.tableGroup.tables.size() << std::endl;
-  std::cout << "tableSize: " << requestPayload.tableGroup.tables.size() << std::endl;
+  std::cout << "query: " << requestPayload.statement() << std::endl;
+  std::cout << "tableGroup: " << requestPayload.tableGroup().name << std::endl;
+ 	std::cout << "tables: " << requestPayload.tableGroup().tables.size() << std::endl;
+  std::cout << "tableSize: " << requestPayload.tableGroup().tables.size() << std::endl;
 	std::cout << "FirstColumn File: "
-			<< requestPayload.tableGroup.tables[0].files[0]
-			<< std::endl;
+            << requestPayload.tableGroup().tables[0].files[0]
+            << std::endl;
+  std::cout << "contextToken: " << requestPayload.communicationContext().token() << std::endl;
+  std::cout << "contextTotalNodes: " << requestPayload.communicationContext().nodes().size() << std::endl;
   
   uint64_t resultToken = 0L;
   try {
@@ -453,8 +456,8 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
     std::vector<std::vector<gdf_column_cpp>> input_tables;
     std::vector<std::string> table_names;
     std::vector<std::vector<std::string>> all_column_names;
-    for(size_t i = 0; i < requestPayload.tableGroup.tables.size(); i++) {
-      auto table_info = requestPayload.tableGroup.tables[i];
+    for(size_t i = 0; i < requestPayload.tableGroup().tables.size(); i++) {
+      auto table_info = requestPayload.tableGroup().tables[i];
       std::cout << "\n SchemaType: " << table_info.schemaType << std::endl;
       std::vector<gdf_column_cpp> table_cpp;
       if (table_info.schemaType ==  blazingdb::protocol::io::FileSchemaType_PARQUET) {
@@ -479,8 +482,18 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
       all_column_names.push_back(table_info.columnNames);
     }
 
+    using blazingdb::communication::Context;
+    using blazingdb::communication::Node;
+    using blazingdb::communication::Buffer;
+    std::vector<std::shared_ptr<Node>> contextNodes;
+    for(auto& rawNode: requestPayload.communicationContext().nodes()){
+      auto rawBuffer = rawNode.buffer();
+      contextNodes.push_back(Node::Make(Buffer(reinterpret_cast<char*>(rawBuffer.data()), rawBuffer.size())));
+    }
+    Context queryContext{contextNodes, contextNodes[0], ""};
+    
     // Execute query
-    resultToken = evaluate_query(input_tables, table_names, all_column_names, requestPayload.statement, accessToken, {} );
+    resultToken = evaluate_query(input_tables, table_names, all_column_names, requestPayload.statement(), accessToken, {}, queryContext);
   } catch (const std::exception& e) {
      std::cerr << e.what() << std::endl;
      ResponseErrorMessage errorMessage{ std::string{e.what()} };
@@ -516,8 +529,14 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
   try {
     std::tuple<std::vector<std::vector<gdf_column_cpp>>, std::vector<std::string>, std::vector<std::vector<std::string>>> request = libgdf::toBlazingDataframe(accessToken, requestPayload.getTableGroup(),handles);
 
+
+    using blazingdb::communication::Context;
+    using blazingdb::communication::Node;
+    Context queryContext{std::vector<std::shared_ptr<Node>>{}, nullptr, ""};
+
+
     resultToken = evaluate_query(std::get<0>(request), std::get<1>(request), std::get<2>(request),
-                                        requestPayload.getLogicalPlan(), accessToken, handles);
+                                        requestPayload.getLogicalPlan(), accessToken, handles, queryContext);
   } catch (const std::exception& e) {
      std::cerr << e.what() << std::endl;
      ResponseErrorMessage errorMessage{ std::string{e.what()} };

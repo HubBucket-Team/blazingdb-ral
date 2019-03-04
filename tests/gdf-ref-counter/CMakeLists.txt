@@ -1,6 +1,4 @@
-add_custom_target(gdf-ref-counter-tests)
-
-set(SRCS ${cudf_adapter_source_files} ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
+set(SRCS 
     gdf-ref-counter-contains-one-test.cu
     gdf-ref-counter-contains-test.cu
     gdf-ref-counter-counting-test.cu

@@ -955,7 +955,7 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 	input.consolidate_tables();
 }
 
-void process_sort(blazing_frame & input, std::string query_part){
+void process_sort(blazing_frame & input, std::string query_part, const Context* queryContext){
 	static CodeTimer timer;
 	timer.reset();
 	std::cout<<"about to process sort"<<std::endl;
@@ -1177,7 +1177,9 @@ blazing_frame evaluate_split_query(
 		std::vector<std::vector<gdf_column_cpp> > input_tables,
 		std::vector<std::string> table_names,
 		std::vector<std::vector<std::string>> column_names,
-		std::vector<std::string> query, int call_depth = 0){
+		std::vector<std::string> query, 
+		const Context* queryContext,
+		int call_depth = 0){
 	assert(input_tables.size() == table_names.size());
 	
 	static CodeTimer blazing_timer;
@@ -1225,6 +1227,7 @@ blazing_frame evaluate_split_query(
 				std::vector<std::string>(
 						query.begin() + 1,
 						query.begin() + other_depth_one_start),
+						queryContext,
 						call_depth + 1
 		);
 
@@ -1236,6 +1239,7 @@ blazing_frame evaluate_split_query(
 				std::vector<std::string>(
 						query.begin() + other_depth_one_start,
 						query.end()),
+						queryContext,
 						call_depth + 1
 		);
 
@@ -1268,7 +1272,8 @@ blazing_frame evaluate_split_query(
 				std::vector<std::string>(
 						query.begin() + 1,
 						query.end()),
-						call_depth + 1
+				queryContext,
+				call_depth + 1
 		);
 		//process self
 		if(is_project(query[0])){
@@ -1283,7 +1288,7 @@ blazing_frame evaluate_split_query(
 			return child_frame;
 		}else if(is_sort(query[0])){
 			blazing_timer.reset();
-			process_sort(child_frame,query[0]);
+			process_sort(child_frame,query[0], queryContext);
 			Library::Logging::Logger().logInfo("process_sort took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
 			return child_frame;
 		}else if(is_filter(query[0])){
@@ -1304,7 +1309,8 @@ query_token_t evaluate_query(
 		std::vector<std::vector<std::string>> column_names,
 		std::string logicalPlan,
 		connection_id_t connection,
-		std::vector<void *> handles){
+		std::vector<void *> handles,
+		const Context& queryContext){
 	//register the query so we can receive result requests for it
 	query_token_t token = result_set_repository::get_instance().register_query(connection);
 
@@ -1317,7 +1323,7 @@ query_token_t evaluate_query(
 		try
 		{
 			CodeTimer blazing_timer;
-			blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
+			blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted, &queryContext);
 			double duration = blazing_timer.getDuration();
 
 			//REMOVE any columns that were ipcd to put into the result set
@@ -1370,7 +1376,7 @@ gdf_error evaluate_query(
 	if (splitted[splitted.size() - 1].length() == 0) {
 		splitted.erase(splitted.end() -1);
 	}
-	blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
+	blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted, nullptr);
 
 	for(size_t i=0;i<output_frame.get_width();i++){
 

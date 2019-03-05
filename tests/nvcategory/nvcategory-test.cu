@@ -240,7 +240,7 @@ struct NVCategoryTest : public ::testing::Test {
 
 	void TearDown(){
 
-		for(int i = 0; i < outputs.size(); i++){
+		for(size_t i = 0; i < outputs.size(); i++){
 			print_column<int8_t>(outputs[i].get_gdf_column());
 
 			// Releasing allocated memory, here we are responsible for that
@@ -258,7 +258,7 @@ struct NVCategoryTest : public ::testing::Test {
 		device_output = new int32_t[num_output_values];
 		cudaMemcpy(device_output, out_col.data(), num_output_values * sizeof(int32_t), cudaMemcpyDeviceToHost);
 
-		for(int i = 0; i < num_output_values; i++){
+		for(size_t i = 0; i < num_output_values; i++){
 			EXPECT_TRUE(host_output[i] == device_output[i]);
 		}
 	}
@@ -273,12 +273,14 @@ struct NVCategoryTest : public ::testing::Test {
 
 		std::vector<std::string> strings_vector(host_strings, host_strings + num_values);
 
-		if(ordered)
+		if(ordered){
 			std::sort(strings_vector.begin(), strings_vector.end());
+			std::sort(reference_result.begin(), reference_result.end());
+		}
 
 		EXPECT_EQ(out_col.size(), reference_result.size()) << "Mismatch columns size";
 		
-		for(int i = 0; i < reference_result.size(); i++){
+		for(size_t i = 0; i < reference_result.size(); i++){
 			EXPECT_TRUE(reference_result[i] == strings_vector[i]);
 		}
 
@@ -347,7 +349,88 @@ TEST_F(NVCategoryTest, processing_filter_comparison_right_string) {
 	}
 }
 
-//Still crashing
+TEST_F(NVCategoryTest, processing_filter_comparison_right_string_exists) {
+
+	{   //select x from hr.emps where y<'e'
+
+		bool print = true;
+		size_t num_rows = 10;
+
+		int32_t* host_data = generate_int_data(num_rows, 10, print);
+		const char * string_data[] = {"a", "b", "c", "d", "e", "g", "h", "i", "j", "k"};
+
+		gdf_column * string_column = create_nv_category_column_strings(string_data, num_rows);
+
+		inputs.resize(2);
+		inputs[0].create_gdf_column(GDF_INT32, num_rows, (void *) host_data, sizeof(int32_t));
+		inputs[1].create_gdf_column(string_column);
+
+		input_tables.push_back(inputs);
+		input_tables.push_back(inputs);
+
+		std::string query = "LogicalProject(x=[$0])\n\
+	LogicalFilter(condition=[<($1, 'e')])\n\
+		EnumerableTableScan(table=[[hr, emps]])";
+
+		gdf_error err = evaluate_query(input_tables, table_names, column_names,
+				query, outputs);
+		EXPECT_TRUE(err == GDF_SUCCESS);
+
+		std::vector<int32_t> reference_result;
+		for(size_t I=0; I<num_rows; I++){
+			if(std::string(string_data[I]) < "e"){
+				reference_result.push_back(host_data[I]);
+			}
+		}
+
+		std::cout<<"Output:\n";
+		print_gdf_column(outputs[0].get_gdf_column());
+
+		Check(outputs[0], reference_result.data(), reference_result.size());
+	}
+}
+
+TEST_F(NVCategoryTest, processing_filter_comparison_right_string_noexists) {
+
+	{   //select x from hr.emps where y<'f'
+
+		bool print = true;
+		size_t num_rows = 10;
+
+		int32_t* host_data = generate_int_data(num_rows, 10, print);
+		const char * string_data[] = {"a", "b", "c", "d", "e", "g", "h", "i", "j", "k"};
+
+		gdf_column * string_column = create_nv_category_column_strings(string_data, num_rows);
+
+		inputs.resize(2);
+		inputs[0].create_gdf_column(GDF_INT32, num_rows, (void *) host_data, sizeof(int32_t));
+		inputs[1].create_gdf_column(string_column);
+
+		input_tables.push_back(inputs);
+		input_tables.push_back(inputs);
+
+		std::string query = "LogicalProject(x=[$0])\n\
+	LogicalFilter(condition=[<($1, 'f')])\n\
+		EnumerableTableScan(table=[[hr, emps]])";
+
+		gdf_error err = evaluate_query(input_tables, table_names, column_names,
+				query, outputs);
+		EXPECT_TRUE(err == GDF_SUCCESS);
+
+		std::vector<int32_t> reference_result;
+		for(size_t I=0; I<num_rows; I++){
+			if(std::string(string_data[I]) < "f"){
+				reference_result.push_back(host_data[I]);
+			}
+		}
+
+		std::cout<<"Output:\n";
+		print_gdf_column(outputs[0].get_gdf_column());
+
+		Check(outputs[0], reference_result.data(), reference_result.size());
+	}
+}
+
 TEST_F(NVCategoryTest, processing_filter_comparison_both_strings) {
 
 	{   //select * from hr.emps where x=y
@@ -465,8 +548,9 @@ TEST_F(NVCategoryTest, processing_filter_join) {
 		print_gdf_column(outputs[0].get_gdf_column());
 		print_gdf_column(outputs[1].get_gdf_column());
 
-		Check(outputs[0], left_string_reference_result, true);
-		Check(outputs[1], right_string_reference_result, true);
+		bool ordered = true;
+		Check(outputs[0], left_string_reference_result, ordered);
+		Check(outputs[1], right_string_reference_result, ordered);
 	}
 }
 
@@ -581,6 +665,54 @@ TEST_F(NVCategoryTest, processing_orderby_desc) {
 
 		Check(outputs[0], string_reference_result);
 		Check(outputs[1], int_reference_result.data(), int_reference_result.size());
+	}
+}
+
+TEST_F(NVCategoryTest, processing_filter_union_all) {
+
+	{   //select y from hr.emps where x<30 union all select y from hr.emps where x>50
+
+		bool print = true;
+		size_t num_rows = 16;
+		int max_value = 100;
+		size_t length = 1;
+
+		int32_t* host_data = generate_int_data(num_rows, max_value, print);
+		const char ** string_data = generate_string_data(num_rows, length, print);
+
+		gdf_column * string_column = create_nv_category_column_strings(string_data, num_rows);
+
+		inputs.resize(2);
+		inputs[0].create_gdf_column(GDF_INT32, num_rows, (void *) host_data, sizeof(int32_t));
+		inputs[1].create_gdf_column(string_column);
+
+		input_tables.push_back(inputs);
+		input_tables.push_back(inputs);
+
+		std::string query = "LogicalUnion(all=[true])\n\
+  LogicalProject(y=[$1])\n\
+    LogicalFilter(condition=[<($0, 30)])\n\
+      EnumerableTableScan(table=[[hr, emps]])\n\
+  LogicalProject(y=[$1])\n\
+    LogicalFilter(condition=[>($0, 50)])\n\
+      EnumerableTableScan(table=[[hr, emps]])";
+
+		gdf_error err = evaluate_query(input_tables, table_names, column_names,
+				query, outputs);
+		EXPECT_TRUE(err == GDF_SUCCESS);
+
+		std::vector<std::string> reference_result;
+		for(size_t I=0; I<num_rows; I++){
+			if(host_data[I] < 30 || host_data[I] > 50){
+				reference_result.push_back(std::string(string_data[I]));
+			}
+		}
+
+		std::cout<<"Output:\n";
+		print_gdf_column(outputs[0].get_gdf_column());
+
+		bool ordered = true;
+		Check(outputs[0], reference_result, ordered);
 	}
 }
 

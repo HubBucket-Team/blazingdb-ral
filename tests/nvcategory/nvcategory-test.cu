@@ -249,14 +249,17 @@ struct NVCategoryTest : public ::testing::Test {
 		}
 	}
 
-	void Check(gdf_column_cpp out_col, int32_t* host_output, size_t num_output_values){
+	template<typename T>
+	void Check(gdf_column_cpp out_col, T* host_output, size_t num_output_values){
+
+		EXPECT_EQ(out_col.size(), num_output_values) << "Mismatch columns size";
 
 		if(num_output_values == 0)
 			num_output_values = out_col.size();
 
-		int32_t * device_output;
-		device_output = new int32_t[num_output_values];
-		cudaMemcpy(device_output, out_col.data(), num_output_values * sizeof(int32_t), cudaMemcpyDeviceToHost);
+		T * device_output;
+		device_output = new T[num_output_values];
+		cudaMemcpy(device_output, out_col.data(), num_output_values * sizeof(T), cudaMemcpyDeviceToHost);
 
 		for(size_t i = 0; i < num_output_values; i++){
 			EXPECT_TRUE(host_output[i] == device_output[i]);
@@ -713,6 +716,68 @@ TEST_F(NVCategoryTest, processing_filter_union_all) {
 
 		bool ordered = true;
 		Check(outputs[0], reference_result, ordered);
+	}
+}
+
+TEST_F(NVCategoryTest, processing_filter_count_group_by) {
+
+	{   //select y from hr.emps where x<30 union all select y from hr.emps where x>50
+
+		//select count(y), y from hr.emps group by y
+		bool print = true;
+		size_t num_rows = 32;
+		int max_value = 100;
+		size_t length = 1;
+
+		int32_t* host_data = generate_int_data(num_rows, max_value, print);
+		const char ** string_data = generate_string_data(num_rows, length, print);
+
+		gdf_column * string_column = create_nv_category_column_strings(string_data, num_rows);
+
+		inputs.resize(2);
+		inputs[0].create_gdf_column(GDF_INT32, num_rows, (void *) host_data, sizeof(int32_t));
+		inputs[1].create_gdf_column(string_column);
+
+		input_tables.push_back(inputs);
+		input_tables.push_back(inputs);
+
+	  std::string query = "LogicalProject(EXPR$0=[$1], y=[$0])\n\
+  LogicalAggregate(group=[{0}], EXPR$0=[COUNT()])\n\
+    LogicalProject(y=[$1])\n\
+      EnumerableTableScan(table=[[hr, emps]])";
+	  
+		gdf_error err = evaluate_query(input_tables, table_names, column_names,
+				query, outputs);
+		EXPECT_TRUE(err == GDF_SUCCESS);
+
+		std::vector<std::pair<int64_t, std::string>> reference_result;
+		std::map<std::string, int64_t> reference_map;
+
+		for(size_t I=0; I<num_rows; I++){
+			auto it = reference_map.find(std::string(string_data[I]));
+			if (it != reference_map.end()){
+				reference_map[std::string(string_data[I])]++;
+			}
+			else{
+				reference_map[std::string(string_data[I])]=1;
+			}
+		}
+
+		std::vector<std::string> string_reference_result;
+		std::vector<int64_t> int_reference_result;
+
+		std::transform(reference_map.begin(), reference_map.end(), std::back_inserter(string_reference_result),
+						[](const std::pair<std::string, int64_t>& mapItem) { return mapItem.first; });
+	   
+		std::transform(reference_map.begin(), reference_map.end(), std::back_inserter(int_reference_result),
+						[](const std::pair<std::string, int64_t>& mapItem) { return mapItem.second; });
+
+		std::cout<<"Output:\n";
+		print_gdf_column(outputs[0].get_gdf_column());
+		print_gdf_column(outputs[1].get_gdf_column());
+
+		Check(outputs[0], int_reference_result.data(), int_reference_result.size());
+		Check(outputs[1], string_reference_result);
 	}
 }
 

@@ -1162,7 +1162,26 @@ void process_filter(blazing_frame & input, std::string query_part){
 
 		if( input.get_column(i).get_gdf_column()->dtype == GDF_STRING_CATEGORY ){
 			materialize_temp.get_gdf_column()->dtype_info.category = input.get_column(i).get_gdf_column()->dtype_info.category;
-			CUDF_CALL( copy_category_from_input_and_compact_into_output(input.get_column(i).get_gdf_column(), materialize_temp.get_gdf_column()) );
+
+			gdf_column* output_column = materialize_temp.get_gdf_column();
+			const bool DEVICE_ALLOCATED = true;
+
+			if(output_column->size > 0){
+				NVStrings * temp_strings = input.get_column(i).get_gdf_column()->dtype_info.category->gather_strings(
+					(nv_category_index_type *) output_column->data,
+					output_column->size,
+					DEVICE_ALLOCATED );
+
+				output_column->dtype_info.category = NVCategory::create_from_strings(*temp_strings);
+
+				CheckCudaErrors( cudaMemcpy(
+					output_column->data,
+					output_column->dtype_info.category->values_cptr(),
+					sizeof(nv_category_index_type) * output_column->size,
+					cudaMemcpyDeviceToDevice) );
+
+				NVStrings::destroy(temp_strings);
+			}
 		}
 
 		input.set_column(i,materialize_temp.clone(input.get_column(i).name()));

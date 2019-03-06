@@ -454,13 +454,8 @@ void add_expression_to_plan(	blazing_frame & inputs,
 						gdf_column* right_column = input_columns[right_index];
 
 						if(left_column->dtype == GDF_STRING_CATEGORY && right_column->dtype == GDF_STRING_CATEGORY) {
-							gdf_column * process_columns[2];
-							process_columns[0] = left_column;
-							process_columns[1] = right_column;
-
-							gdf_column * output_columns[2];
-							output_columns[0] = left_column;
-							output_columns[1] = right_column;
+							gdf_column * process_columns[2] = {left_column, right_column};
+							gdf_column * output_columns[2] = {left_column, right_column};
 
 							//CUDF_CALL( combine_column_categories(process_columns, output_columns, 2) );
 							CUDF_CALL( sync_column_categories(process_columns, output_columns, 2) );

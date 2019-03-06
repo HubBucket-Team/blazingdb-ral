@@ -10,6 +10,21 @@ namespace distribution {
 auto generateSamples(std::vector<std::vector<gdf_column_cpp>>& input_tables, std::vector<std::size_t>& quantities)
     -> std::vector<std::vector<gdf_column_cpp>>;
 
+
+namespace sampling {
+
+double
+percentage(std::size_t tableSize);
+
+std::vector<gdf_column_cpp>
+generateSample(std::vector<gdf_column_cpp> &table, double percentage);
+
+std::vector<std::vector<gdf_column_cpp>>
+generateSamples(std::vector<std::vector<gdf_column_cpp>> &tables,
+                const std::vector<double> &               percentages);
+
+}  // namespace sampling
+
 } // namespace distribution
 } // namespace ral
 

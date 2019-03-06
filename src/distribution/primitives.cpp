@@ -2,6 +2,8 @@
 #include "cuDF/generator/sample_generator.h"
 
 #include <cmath>
+#include <cassert>
+#include <algorithm>
 
 namespace ral {
 namespace distribution {
@@ -34,8 +36,8 @@ auto generateSamples(std::vector<std::vector<gdf_column_cpp>>& input_tables,
 namespace sampling {
 
 double
-percentage(std::size_t tableSize) {
-    return std::exp(-tableSize);
+percentage(gdf_size_type tableSize) {
+    return 100.0 * std::exp(-tableSize);
 }
 
 std::vector<gdf_column_cpp>
@@ -75,6 +77,36 @@ generateSamples(std::vector<std::vector<gdf_column_cpp>> &tables,
 
     // done
     return samples;
+}
+
+void
+prepareSamplesForGeneratePivots(
+  std::vector<std::vector<gdf_column_cpp>> &samples,
+  const std::vector<gdf_size_type> &        tableSizes) {
+    assert(samples.size() == tableSizes.size());
+
+    std::vector<double> representativities;
+    representativities.reserve(samples.size());
+
+    for (std::size_t i = 0; i < samples.size(); i++) {
+        representativities.push_back(double(samples[i][0].size())
+                                     / double(tableSizes[i]));
+    }
+
+    const gdf_size_type minimumRepresentativity =
+      *std::min_element(representativities.cbegin(), representativities.cend());
+
+    const double thresholdForSubsampling = 0.01;
+
+    for (std::size_t i = 0; i < samples.size(); i++) {
+        const double representativenessRatio =
+          double(minimumRepresentativity) / representativities[i];
+
+        if (representativenessRatio > thresholdForSubsampling) {
+            samples[i] =
+              generateSample(samples[i], representativenessRatio * 100.0);
+        }
+    }
 }
 
 }  // namespace sampling

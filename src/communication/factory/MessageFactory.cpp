@@ -7,26 +7,30 @@ namespace messages {
 
     std::shared_ptr<Message> Factory::createSampleToNodeMaster(const ContextToken& context_token,
                                                                const Node& node,
+                                                               std::uint64_t total_data_size,
                                                                std::vector<gdf_column_cpp>&& samples) {
-        return std::make_shared<SampleToNodeMasterMessage>(context_token, node, std::move(samples));
+        return std::make_shared<SampleToNodeMasterMessage>(context_token, node, total_data_size, std::move(samples));
     }
 
     std::shared_ptr<Message> Factory::createSampleToNodeMaster(const ContextToken& context_token,
                                                                const Node& node,
+                                                               std::uint64_t total_data_size,
                                                                const std::vector<gdf_column_cpp>& samples) {
-        return std::make_shared<SampleToNodeMasterMessage>(context_token, node, samples);
+        return std::make_shared<SampleToNodeMasterMessage>(context_token, node, total_data_size, samples);
     };
 
     std::shared_ptr<Message> Factory::createSampleToNodeMaster(std::unique_ptr<ContextToken>&& context_token,
                                                                const Node& node,
+                                                               std::uint64_t total_data_size,
                                                                std::vector<gdf_column_cpp>&& samples) {
-        return std::make_shared<SampleToNodeMasterMessage>(std::move(context_token), node, std::move(samples));
+        return std::make_shared<SampleToNodeMasterMessage>(std::move(context_token), node, total_data_size, std::move(samples));
     }
 
     std::shared_ptr<Message> Factory::createSampleToNodeMaster(std::unique_ptr<ContextToken>&& context_token,
                                                                const Node& node,
+                                                               std::uint64_t total_data_size,
                                                                const std::vector<gdf_column_cpp>& samples) {
-        return std::make_shared<SampleToNodeMasterMessage>(std::move(context_token), node, samples);
+        return std::make_shared<SampleToNodeMasterMessage>(std::move(context_token), node, total_data_size, samples);
     };
 
     std::shared_ptr<Message> Factory::createDataScatterMessage(const ContextToken& context_token,

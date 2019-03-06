@@ -18,18 +18,22 @@ namespace messages {
     struct Factory {
         static std::shared_ptr<Message> createSampleToNodeMaster(const ContextToken& context_token,
                                                                  const Node& node,
+                                                                 std::uint64_t total_data_size,
                                                                  std::vector<gdf_column_cpp>&& samples);
 
         static std::shared_ptr<Message> createSampleToNodeMaster(const ContextToken& context_token,
                                                                  const Node& node,
+                                                                 std::uint64_t total_data_size,
                                                                  const std::vector<gdf_column_cpp>& samples);
 
         static std::shared_ptr<Message> createSampleToNodeMaster(std::unique_ptr<ContextToken>&& context_token,
                                                                  const Node& node,
+                                                                 std::uint64_t total_data_size,
                                                                  std::vector<gdf_column_cpp>&& samples);
 
         static std::shared_ptr<Message> createSampleToNodeMaster(std::unique_ptr<ContextToken>&& context_token,
                                                                  const Node& node,
+                                                                 std::uint64_t total_data_size,
                                                                  const std::vector<gdf_column_cpp>& samples);
 
 

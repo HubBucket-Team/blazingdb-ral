@@ -15,11 +15,11 @@ gdf_error generate_sample(std::vector<gdf_column_cpp>& data_frame,
         return GDF_SUCCESS;
     }
 
-    cudf::generator::RandomVectorGenerator<unsigned int> generator(0L, data_frame.size());
+    cudf::generator::RandomVectorGenerator<std::size_t> generator(0L, data_frame.size());
     auto array = generator(num_samples);
 
     sampled_data.clear();
-    for (std::size_t k = 0; k < num_samples; ++k) {
+    for (std::size_t k = 0; k < (std::size_t)num_samples; ++k) {
         sampled_data.emplace_back(data_frame[array[k]].clone());
     }
 

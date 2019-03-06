@@ -72,6 +72,8 @@ endif()
 set(NVSTRINGS_LIBDIR ${NVSTRINGS_INSTALL_DIR}/lib/)
 link_directories(${NVSTRINGS_LIBDIR})
 
+set(NVSTRINGS_INCLUDEDIR ${NVSTRINGS_INSTALL_DIR}/include/)
+
 find_package(LibGDF REQUIRED)
 set_package_properties(LibGDF PROPERTIES TYPE REQUIRED
     PURPOSE "libgdf is a C library for implementing common functionality for a GPU Data Frame."

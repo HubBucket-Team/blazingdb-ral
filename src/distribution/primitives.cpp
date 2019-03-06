@@ -1,18 +1,5 @@
 #include "distribution/primitives.h"
-
-
-namespace cudf {
-namespace generator {
-
-gdf_error generate_sample(std::vector<gdf_column_cpp>& data_frame,
-        std::vector<gdf_column_cpp>& sampled_data,
-        gdf_size_type num_samples) {
-    return GDF_SUCCESS;
-}
-
-} // namespace generator
-} // namespace cudf
-
+#include "cuDF/generator/sample_generator.h"
 
 namespace ral {
 namespace distribution {
@@ -24,6 +11,7 @@ auto generateSamples(std::vector<std::vector<gdf_column_cpp>>& input_tables,
     if (input_tables.size() != quantities.size()) {
         throw std::runtime_error("[ERROR] " + std::string{__FUNCTION__} + " -- size mismatch.");
     }
+
     // output data
     std::vector<std::vector<gdf_column_cpp>> result;
 

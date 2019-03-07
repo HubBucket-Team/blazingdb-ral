@@ -1,15 +1,15 @@
 #include "distribution/primitives.h"
 #include "cuDF/generator/sample_generator.h"
-
+#include "communication/network/Server.h"
+#include "communication/network/Client.h"
+#include "communication/messages/ComponentMessages.h"
+#include "communication/factory/MessageFactory.h"
+#include "communication/CommunicationData.h"
+#include "distribution/Exception.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <src/communication/network/Client.h>
-#include "communication/CommunicationData.h"
-#include "communication/factory/MessageFactory.h"
-#include "communication/messages/ComponentMessages.h"
-#include "communication/network/Server.h"
-#include "distribution/Exception.h"
+#include <memory>
 
 namespace ral {
 namespace distribution {
@@ -159,6 +159,72 @@ std::vector<NodeColumns2> collectPartition(const Context& context) {
                                   std::move(column_message->getColumns()));
     }
     return node_columns;
+}
+
+std::vector<NodeSamples> collectSamples(const Context& context) {
+  using ral::communication::network::Server;
+  using ral::communication::messages::SampleToNodeMasterMessage;
+
+  std::vector<NodeSamples> nodeSamples;
+  auto& contextToken = context.getContextToken();
+  auto size = context.getWorkerNodes().size();
+  for (int k = 0; k < size; ++k) {
+    auto message = Server::getInstance().getMessage(contextToken);
+
+    if (message->getMessageTokenValue() != SampleToNodeMasterMessage::getMessageID()) {
+      throw std::runtime_error("[ERROR] " + std::string{__FUNCTION__} + " -- message type mismatch");
+    }
+
+    auto concreteMessage = std::static_pointer_cast<SampleToNodeMasterMessage>(message);
+    nodeSamples.emplace_back(concreteMessage->getSenderNode(), concreteMessage->getSamples(), concreteMessage->getTotalRowSize());
+  }
+
+  return nodeSamples;
+}
+
+void distributePartitionPlan(const Context& context, std::vector<gdf_column_cpp>& pivots){
+  using ral::communication::network::Client;
+  using ral::communication::CommunicationData;
+  using ral::communication::messages::Factory;
+
+  auto message = Factory::createColumnDataMessage(context.getContextToken(),
+                                                  CommunicationData::getInstance().getSelfNode(),
+                                                  std::move(pivots));
+  auto workers = context.getWorkerNodes();
+  for(auto& workerNode : workers)
+  {
+    Client::send(*workerNode, message);
+  }
+}
+
+std::vector<gdf_column_cpp> getPartitionPlan(const Context& context){
+  using ral::communication::network::Server;
+  using ral::communication::messages::ColumnDataMessage;
+
+  auto message = Server::getInstance().getMessage(context.getContextToken());
+
+  if (message->getMessageTokenValue() != ColumnDataMessage::getMessageID()) {
+    throw std::runtime_error("[ERROR] " + std::string{__FUNCTION__} + " -- message type mismatch");
+  }
+
+  auto concreteMessage = std::static_pointer_cast<ColumnDataMessage>(message);
+
+  return std::move(concreteMessage->getColumns());
+}
+
+void distributePartitions(const Context& context, std::vector<NodeColumns>& partitions){
+  using ral::communication::network::Client;
+  using ral::communication::messages::Factory;
+
+  for(auto& nodeColumn : partitions)
+  {
+    auto message = Factory::createDataScatterMessage(context.getContextToken(), nodeColumn.columns); 
+    Client::send(nodeColumn.node, message);
+  }
+}
+
+blazing_frame sortedMerger(std::vector<NodeColumns>& columns){
+  // TODO: use cudf sorter_merger
 }
 
 }  // namespace distribution

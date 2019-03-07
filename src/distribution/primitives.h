@@ -2,9 +2,12 @@
 #define BLAZINGDB_RAL_DISTRIBUTION_PRIMITIVES_H
 
 #include <vector>
+#include <blazingdb/communication/Context.h>
 #include "GDFColumn.cuh"
-#include "distribution/NodeColumns2.h"
-#include "blazingdb/communication/Context.h"
+#include "NodeSamples.h"
+#include "NodeColumns.h"
+#include "DataFrame.h"
+#include "NodeColumns2.h"
 
 namespace ral {
 namespace distribution {
@@ -48,6 +51,16 @@ using Context = blazingdb::communication::Context;
 void sendSamplesToMaster(const Context& context, std::vector<gdf_column_cpp>&& samples, std::size_t total_row_size);
 
 std::vector<NodeColumns2> collectPartition(const Context& context);
+
+std::vector<NodeSamples> collectSamples(const Context& context);
+
+void distributePartitionPlan(const Context& context, std::vector<gdf_column_cpp>& pivots);
+
+std::vector<gdf_column_cpp> getPartitionPlan(const Context& context);
+
+void distributePartitions(const Context& context, std::vector<NodeColumns>& partitions);
+
+blazing_frame sortedMerger(std::vector<NodeColumns>& columns);
 
 }  // namespace distribution
 }  // namespace ral

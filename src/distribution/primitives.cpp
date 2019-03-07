@@ -4,6 +4,11 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <src/communication/network/Client.h>
+#include "communication/CommunicationData.h"
+#include "communication/factory/MessageFactory.h"
+#include "communication/messages/ComponentMessages.h"
+#include "communication/network/Server.h"
 
 namespace ral {
 namespace distribution {
@@ -97,5 +102,61 @@ prepareSamplesForGeneratePivots(
 }
 
 }  // namespace sampling
+}  // namespace distribution
+}  // namespace ral
+
+
+namespace ral {
+namespace distribution {
+
+void sendSamplesToMaster(const Context& context, std::vector<gdf_column_cpp>&& samples, std::size_t total_row_size) {
+    // Get master node
+    const Node& master_node = context.getMasterNode();
+
+    // Get self node
+    using CommunicationData = ral::communication::CommunicationData;
+    const Node& self_node = CommunicationData::getInstance().getSelfNode();
+
+    // Get context token
+    const auto& context_token = context.getContextToken();
+
+    // Create message
+    using MessageFactory = ral::communication::messages::Factory;
+    using SampleToNodeMasterMessage = ral::communication::messages::SampleToNodeMasterMessage;
+    auto message = MessageFactory::createSampleToNodeMaster(context_token, self_node, total_row_size, std::move(samples));
+
+    // Send message to master
+    using Client = ral::communication::network::Client;
+    Client::send(master_node, message);
+}
+
+std::vector<NodeColumns2> collectPartition(const Context& context) {
+    // Alias
+    using ColumnDataMessage = ral::communication::messages::ColumnDataMessage;
+
+    // Get the numbers of rals in the query
+    auto number_rals = context.getAllNodes().size() - 1;
+
+    // Create return value
+    std::vector<NodeColumns2> node_columns;
+
+    // Get message from the server
+    const auto& context_token = context.getContextToken();
+    auto& server = ral::communication::network::Server::getInstance();
+    while (0 < number_rals) {
+        auto message = server.getMessage(context_token);
+        number_rals--;
+
+        if (message->getMessageTokenValue() != ColumnDataMessage::getMessageID()) {
+            throw std::runtime_error("[ERROR] " + std::string{__FUNCTION__} + " -- message type mismatch");
+        }
+
+        auto column_message = std::static_pointer_cast<ColumnDataMessage>(message);
+        node_columns.emplace_back(message->getSenderNode(),
+                                  std::move(column_message->getColumns()));
+    }
+    return node_columns;
+}
+
 }  // namespace distribution
 }  // namespace ral

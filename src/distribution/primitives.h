@@ -1,8 +1,10 @@
 #ifndef BLAZINGDB_RAL_DISTRIBUTION_PRIMITIVES_H
 #define BLAZINGDB_RAL_DISTRIBUTION_PRIMITIVES_H
 
-#include "GDFColumn.cuh"
 #include <vector>
+#include "GDFColumn.cuh"
+#include "distribution/NodeColumns2.h"
+#include "blazingdb/communication/Context.h"
 
 namespace ral {
 namespace distribution {
@@ -33,6 +35,20 @@ prepareSamplesForGeneratePivots(
   const std::vector<gdf_size_type> &        tableSizes);
 
 }  // namespace sampling
+}  // namespace distribution
+}  // namespace ral
+
+namespace ral {
+namespace distribution {
+
+namespace {
+using Context = blazingdb::communication::Context;
+} // namespace
+
+void sendSamplesToMaster(const Context& context, std::vector<gdf_column_cpp>&& samples, std::size_t total_row_size);
+
+std::vector<NodeColumns2> collectPartition(const Context& context);
+
 }  // namespace distribution
 }  // namespace ral
 

@@ -8,22 +8,24 @@ namespace ral {
 namespace distribution {
 namespace sampling {
 
+constexpr double thresholdForSubsampling = 0.01;
+
+double
+sampleRatio(gdf_size_type tableSize);
+
+std::vector<gdf_column_cpp>
+generateSample(std::vector<gdf_column_cpp> &table, double ratio);
+
+std::vector<std::vector<gdf_column_cpp>>
+generateSamples(std::vector<std::vector<gdf_column_cpp>> &tables,
+                const std::vector<double> &               ratios);
+
 std::vector<gdf_column_cpp>
 generateSample(std::vector<gdf_column_cpp> &table, std::size_t quantity);
 
 std::vector<std::vector<gdf_column_cpp>>
 generateSamples(std::vector<std::vector<gdf_column_cpp>> &input_tables,
                 std::vector<std::size_t> &                quantities);
-
-double
-sampleRatio(gdf_size_type tableSize);
-
-std::vector<gdf_column_cpp>
-generateSample(std::vector<gdf_column_cpp> &table, double percentage);
-
-std::vector<std::vector<gdf_column_cpp>>
-generateSamples(std::vector<std::vector<gdf_column_cpp>> &tables,
-                const std::vector<double> &               percentages);
 
 void
 prepareSamplesForGeneratePivots(

@@ -5,33 +5,60 @@ namespace ral {
 namespace communication {
 namespace messages {
 
-    std::shared_ptr<Message> Factory::createSampleToNodeMaster(const ContextToken& context_token,
-                                                               const Node& node,
-                                                               std::uint64_t total_data_size,
-                                                               std::vector<gdf_column_cpp>&& samples) {
-        return std::make_shared<SampleToNodeMasterMessage>(context_token, node, total_data_size, std::move(samples));
-    }
+namespace {
+using MessageToken = blazingdb::communication::messages::MessageToken;
+} // namespace
 
-    std::shared_ptr<Message> Factory::createSampleToNodeMaster(const ContextToken& context_token,
-                                                               const Node& node,
-                                                               std::uint64_t total_data_size,
-                                                               const std::vector<gdf_column_cpp>& samples) {
-        return std::make_shared<SampleToNodeMasterMessage>(context_token, node, total_data_size, samples);
-    };
+std::shared_ptr<Message> Factory::createSampleToNodeMaster(const ContextToken& context_token,
+                                                           const Node& node,
+                                                           std::uint64_t total_row_size,
+                                                           std::vector<gdf_column_cpp>&& samples) {
+    std::unique_ptr<MessageToken> message_token_pointer = MessageToken::Make(SampleToNodeMasterMessage::getMessageID());
+    std::unique_ptr<ContextToken> context_token_pointer = ContextToken::Make(context_token.getIntToken());
+    return std::make_shared<SampleToNodeMasterMessage>(std::move(message_token_pointer),
+                                                       std::move(context_token_pointer),
+                                                       node,
+                                                       total_row_size,
+                                                       std::move(samples));
+}
 
-    std::shared_ptr<Message> Factory::createSampleToNodeMaster(std::unique_ptr<ContextToken>&& context_token,
-                                                               const Node& node,
-                                                               std::uint64_t total_data_size,
-                                                               std::vector<gdf_column_cpp>&& samples) {
-        return std::make_shared<SampleToNodeMasterMessage>(std::move(context_token), node, total_data_size, std::move(samples));
-    }
+std::shared_ptr<Message> Factory::createSampleToNodeMaster(const ContextToken& context_token,
+                                                           const Node& node,
+                                                           std::uint64_t total_row_size,
+                                                           const std::vector<gdf_column_cpp>& samples) {
+    std::unique_ptr<MessageToken> message_token_pointer = MessageToken::Make(SampleToNodeMasterMessage::getMessageID());
+    std::unique_ptr<ContextToken> context_token_pointer = ContextToken::Make(context_token.getIntToken());
+    return std::make_shared<SampleToNodeMasterMessage>(std::move(message_token_pointer),
+                                                       std::move(context_token_pointer),
+                                                       node,
+                                                       total_row_size,
+                                                       samples);
+};
 
-    std::shared_ptr<Message> Factory::createSampleToNodeMaster(std::unique_ptr<ContextToken>&& context_token,
-                                                               const Node& node,
-                                                               std::uint64_t total_data_size,
-                                                               const std::vector<gdf_column_cpp>& samples) {
-        return std::make_shared<SampleToNodeMasterMessage>(std::move(context_token), node, total_data_size, samples);
-    };
+std::shared_ptr<Message> Factory::createSampleToNodeMaster(std::unique_ptr<ContextToken>&& context_token,
+                                                           const Node& node,
+                                                           std::uint64_t total_row_size,
+                                                           std::vector<gdf_column_cpp>&& samples) {
+    std::unique_ptr<MessageToken> message_token = MessageToken::Make(SampleToNodeMasterMessage::getMessageID());
+    return std::make_shared<SampleToNodeMasterMessage>(std::move(message_token),
+                                                       std::move(context_token),
+                                                       node,
+                                                       total_row_size,
+                                                       std::move(samples));
+}
+
+std::shared_ptr<Message> Factory::createSampleToNodeMaster(std::unique_ptr<ContextToken>&& context_token,
+                                                           const Node& node,
+                                                           std::uint64_t total_row_size,
+                                                           const std::vector<gdf_column_cpp>& samples) {
+    std::unique_ptr<MessageToken> message_token = MessageToken::Make(SampleToNodeMasterMessage::getMessageID());
+    return std::make_shared<SampleToNodeMasterMessage>(std::move(message_token),
+                                                       std::move(context_token),
+                                                       node,
+                                                       total_row_size,
+                                                       samples);
+};
+
 
     std::shared_ptr<Message> Factory::createDataScatterMessage(const ContextToken& context_token,
                                                                std::vector<gdf_column_cpp>&& columns) {

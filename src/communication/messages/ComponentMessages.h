@@ -1,5 +1,6 @@
 #pragma once
 
+#include "blazingdb/communication/messages/ColumnDataMessage.h"
 #include "blazingdb/communication/messages/SampleToNodeMasterMessage.h"
 #include "blazingdb/communication/messages/DataScatterMessage.h"
 #include "blazingdb/communication/messages/PartitionPivotsMessage.h"
@@ -17,6 +18,10 @@ namespace messages {
     using SampleToNodeMasterMessage = Messages::SampleToNodeMasterMessage<gdf_column_cpp,
                                                                           gdf_column,
                                                                           ral::communication::adapter::GpuFunctionsAdapter>;
+
+    using ColumnDataMessage = Messages::ColumnDataMessage<gdf_column_cpp,
+                                                          gdf_column,
+                                                          ral::communication::adapter::GpuFunctionsAdapter>;
 
     using DataScatterMessage = Messages::DataScatterMessage<gdf_column_cpp,
                                                             gdf_column,

@@ -51,6 +51,13 @@ namespace network {
             comm_server->registerDeserializer(endpoint, ral::communication::messages::SampleToNodeMasterMessage::Make);
         }
 
+        // message ColumnDataMessage
+        {
+            const std::string endpoint = messages::ColumnDataMessage::getMessageID();
+            comm_server->registerEndPoint(endpoint, CommServer::Methods::Post);
+            comm_server->registerDeserializer(endpoint, messages::ColumnDataMessage::Make);
+        }
+
         // message PartitionPivotsMessage
         {
             const std::string endpoint = messages::PartitionPivotsMessage::getMessageID();

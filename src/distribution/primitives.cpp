@@ -9,6 +9,7 @@
 #include "communication/factory/MessageFactory.h"
 #include "communication/messages/ComponentMessages.h"
 #include "communication/network/Server.h"
+#include "distribution/Exception.h"
 
 namespace ral {
 namespace distribution {
@@ -148,7 +149,9 @@ std::vector<NodeColumns2> collectPartition(const Context& context) {
         number_rals--;
 
         if (message->getMessageTokenValue() != ColumnDataMessage::getMessageID()) {
-            throw std::runtime_error("[ERROR] " + std::string{__FUNCTION__} + " -- message type mismatch");
+            throw createMessageMismatchException(__FUNCTION__,
+                                                 ColumnDataMessage::getMessageID(),
+                                                 message->getMessageTokenValue());
         }
 
         auto column_message = std::static_pointer_cast<ColumnDataMessage>(message);

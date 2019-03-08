@@ -150,13 +150,17 @@ void create_null_value_gdf_column(int64_t output_value,
 void perform_avg(gdf_column* column_output, gdf_column* column_input) {
     gdf_column_cpp column_avg;
     uint64_t avg_sum = 0;
-    uint64_t avg_count = column_input->size;
+    uint64_t avg_count = column_input->size - column_input->null_count;
     {
         auto dtype = column_input->dtype;
         auto dtype_size = get_width_dtype(dtype);
         column_avg.create_gdf_column(dtype, 1, nullptr, dtype_size);
-        CUDF_CALL( gdf_sum(column_input, column_avg.get_gdf_column()->data, dtype_size) );
-        CheckCudaErrors(cudaMemcpy(&avg_sum, column_avg.get_gdf_column()->data, dtype_size, cudaMemcpyDeviceToHost));
+
+		unsigned int reduction_temp_size = gdf_reduce_optimal_output_size();
+		gdf_column_cpp temp;
+		temp.create_gdf_column(dtype,reduction_temp_size,nullptr,dtype_size, "");
+		CUDF_CALL( gdf_sum(column_input, temp.get_gdf_column()->data, reduction_temp_size) );
+		CheckCudaErrors(cudaMemcpy(&avg_sum, temp.get_gdf_column()->data, dtype_size, cudaMemcpyDeviceToHost));
     }
     {
         auto dtype = column_output->dtype;
@@ -817,7 +821,11 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 		case GDF_SUM:
 			if (group_columns.size() == 0) {
 				if (aggregation_input.get_gdf_column()->size != 0) {
-					CUDF_CALL( gdf_sum(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type)) );
+					unsigned int reduction_temp_size = gdf_reduce_optimal_output_size();
+					gdf_column_cpp temp;
+					temp.create_gdf_column(output_type,reduction_temp_size,nullptr,get_width_dtype(output_type), "");
+					CUDF_CALL( gdf_sum(aggregation_input.get_gdf_column(), temp.get_gdf_column()->data, reduction_temp_size) );
+					CheckCudaErrors(cudaMemcpy(output_column.get_gdf_column()->data, temp.get_gdf_column()->data, 1 * get_width_dtype(output_type), cudaMemcpyDeviceToDevice));
 				}
 				else {
 					create_null_value_gdf_column(0,
@@ -845,7 +853,11 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 		case GDF_MIN:
 			if(group_columns.size() == 0){
                 if (aggregation_input.get_gdf_column()->size != 0) {
-                    CUDF_CALL( gdf_min(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type)) );
+                    unsigned int reduction_temp_size = gdf_reduce_optimal_output_size();
+					gdf_column_cpp temp;
+					temp.create_gdf_column(output_type,reduction_temp_size,nullptr,get_width_dtype(output_type), "");
+					CUDF_CALL( gdf_min(aggregation_input.get_gdf_column(), temp.get_gdf_column()->data, reduction_temp_size) );
+					CheckCudaErrors(cudaMemcpy(output_column.get_gdf_column()->data, temp.get_gdf_column()->data, 1 * get_width_dtype(output_type), cudaMemcpyDeviceToDevice));
                 }
                 else {
                     create_null_value_gdf_column(0,
@@ -863,7 +875,11 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 		case GDF_MAX:
 			if(group_columns.size() == 0){
                 if (aggregation_input.get_gdf_column()->size != 0) {
-                    CUDF_CALL( gdf_max(aggregation_input.get_gdf_column(), output_column.get_gdf_column()->data, get_width_dtype(output_type)) );
+                    unsigned int reduction_temp_size = gdf_reduce_optimal_output_size();
+					gdf_column_cpp temp;
+					temp.create_gdf_column(output_type,reduction_temp_size,nullptr,get_width_dtype(output_type), "");
+					CUDF_CALL( gdf_max(aggregation_input.get_gdf_column(), temp.get_gdf_column()->data, reduction_temp_size) );
+					CheckCudaErrors(cudaMemcpy(output_column.get_gdf_column()->data, temp.get_gdf_column()->data, 1 * get_width_dtype(output_type), cudaMemcpyDeviceToDevice));
                 }
                 else {
                      create_null_value_gdf_column(0,

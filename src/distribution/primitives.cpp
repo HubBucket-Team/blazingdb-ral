@@ -10,7 +10,7 @@ namespace distribution {
 namespace sampling {
 
 double
-sampleRatio(gdf_size_type tableSize) {
+calculateSampleRatio(gdf_size_type tableSize) {
     return std::ceil(1.0 - std::pow(tableSize/1.0E11, 8E-4));
 }
 

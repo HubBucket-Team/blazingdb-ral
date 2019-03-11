@@ -85,6 +85,8 @@ set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/communication/adapter/GpuFunctionsAdapter.
               ${CMAKE_SOURCE_DIR}/src/config/BlazingConfig.cpp
               ${CMAKE_SOURCE_DIR}/src/distribution/Exception.cpp
               ${CMAKE_SOURCE_DIR}/src/distribution/NodeColumns2.cpp
+              ${CMAKE_SOURCE_DIR}/src/distribution/internal.cpp
+              ${CMAKE_SOURCE_DIR}/src/distribution/partitions.cpp
               ${CMAKE_SOURCE_DIR}/src/distribution/primitives.cpp
               ${CMAKE_SOURCE_DIR}/src/exception/RalException.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp

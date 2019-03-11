@@ -8,7 +8,7 @@
 #include "CalciteExpressionParsing.h"
 #include "DataFrame.h"
 #include <map>
-
+#include <cudf.h>
 bool is_null(std::string token){
 	return token == "null";
 }

@@ -167,9 +167,9 @@ static void print_gdf_column(gdf_column const * the_column)
         print_typed_column<col_type>(col_data, the_column->valid, num_rows);
 
         std::cout<<"Data on category:\n";
-        size_t keys_size = the_column->dtype_info.category->keys_size();
+        size_t keys_size = static_cast<NVCategory *>(the_column->dtype_info.category)->keys_size();
         char ** data = new char *[200];
-        the_column->dtype_info.category->get_keys()->to_host(data, 0, keys_size);
+        static_cast<NVCategory *>(the_column->dtype_info.category)->get_keys()->to_host(data, 0, keys_size);
 
         for(int i = 0; i < keys_size; i++){
           std::cout<<"("<<data[i]<<"|"<<i<<")\t";

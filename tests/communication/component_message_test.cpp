@@ -82,11 +82,11 @@ TEST(ComponentMessageTest, SampleToNodeMasterMessage) {
     test_columns.emplace_back(createRalColumn(16, GDF_INT64));
 
     // Total data size
-    const std::uint64_t total_data_size = 7659;
+    const std::uint64_t total_row_size = 7659;
 
     {
         // Create message
-        auto message = MessageFactory::createSampleToNodeMaster(*context_token, test_node, total_data_size, test_columns);
+        auto message = MessageFactory::createSampleToNodeMaster(*context_token, test_node, total_row_size, test_columns);
 
         // Server address
         blazingdb::communication::Node server_node(Address::Make("localhost", 8000));
@@ -109,11 +109,10 @@ TEST(ComponentMessageTest, SampleToNodeMasterMessage) {
         auto sample_message = std::dynamic_pointer_cast<Messages::SampleToNodeMasterMessage>(message);
 
         // Tests - node in message
-        const auto& message_node = sample_message->getNode();
-        ASSERT_EQ(test_node, message_node);
+        ASSERT_EQ(sample_message->getSenderNode(), test_node);
 
         // Test - total size data
-        ASSERT_EQ(sample_message->getTotalDataSize(), total_data_size);
+        ASSERT_EQ(sample_message->getTotalRowSize(), total_row_size);
 
         // Tests - gdf_column_cpp in message
         const auto& message_columns = sample_message->getSamples();

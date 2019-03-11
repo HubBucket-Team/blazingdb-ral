@@ -83,9 +83,10 @@ set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/communication/adapter/GpuFunctionsAdapter.
               ${CMAKE_SOURCE_DIR}/src/communication/network/Server.cpp
               ${CMAKE_SOURCE_DIR}/src/communication/CommunicationData.cpp
               ${CMAKE_SOURCE_DIR}/src/config/BlazingConfig.cpp
-              ${CMAKE_SOURCE_DIR}/src/distribution/internal.cpp
-              ${CMAKE_SOURCE_DIR}/src/distribution/partitions.cpp
+              ${CMAKE_SOURCE_DIR}/src/distribution/Exception.cpp
+              ${CMAKE_SOURCE_DIR}/src/distribution/NodeColumns2.cpp
               ${CMAKE_SOURCE_DIR}/src/distribution/primitives.cpp
+              ${CMAKE_SOURCE_DIR}/src/exception/RalException.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
               ${CMAKE_SOURCE_DIR}/src/FreeMemory.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_parser/ParquetParser.cpp
@@ -101,8 +102,6 @@ set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/communication/adapter/GpuFunctionsAdapter.
               ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp
               ${CMAKE_SOURCE_DIR}/src/QueryState.cpp
               ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
-
-
               ${CMAKE_SOURCE_DIR}/src/Utils.cu
               ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
               ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu

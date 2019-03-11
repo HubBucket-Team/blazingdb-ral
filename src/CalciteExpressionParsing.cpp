@@ -890,6 +890,14 @@ std::vector<std::string> get_expressions_from_expression_list(std::string & comb
 	static const std::regex re{R""(CASE\(IS NOT NULL\((\W\(.+?\)|.+)\), \1, (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
 	combined_expression = std::regex_replace(combined_expression, re, "COALESCE($1, $2)");
 
+	StringUtil::findAndReplaceAll(combined_expression," NOT NULL","");
+	StringUtil::findAndReplaceAll(combined_expression,"):DOUBLE","");
+	StringUtil::findAndReplaceAll(combined_expression,"CAST(","");
+	StringUtil::findAndReplaceAll(combined_expression,"EXTRACT(FLAG(YEAR), ","BL_YEAR(");
+	StringUtil::findAndReplaceAll(combined_expression,"EXTRACT(FLAG(MONTH), ","BL_MONTH(");
+	StringUtil::findAndReplaceAll(combined_expression,"EXTRACT(FLAG(DAY), ","BL_DAY(");
+	StringUtil::findAndReplaceAll(combined_expression,"FLOOR(","BL_FLOUR(");
+	
 	std::vector<std::string> expressions;
 
 	int curInd = 0;

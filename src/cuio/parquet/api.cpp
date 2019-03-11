@@ -66,7 +66,7 @@ const std::
       {::parquet::LogicalType::LIST, GDF_invalid},
       {::parquet::LogicalType::ENUM, GDF_invalid},
       {::parquet::LogicalType::DECIMAL, GDF_invalid},
-      {::parquet::LogicalType::DATE, GDF_INT32}, //@todo, use GDF_DATE32 when: libgdf.GDF_DATE32: np.int32, # DIRTY HACK ??
+      {::parquet::LogicalType::DATE, GDF_DATE32}, 
       {::parquet::LogicalType::TIME_MILLIS, GDF_invalid},
       {::parquet::LogicalType::TIME_MICROS, GDF_invalid},
       {::parquet::LogicalType::TIMESTAMP_MILLIS, GDF_TIMESTAMP},
@@ -76,7 +76,7 @@ const std::
       {::parquet::LogicalType::UINT_32, GDF_invalid},
       {::parquet::LogicalType::UINT_64, GDF_invalid},
       {::parquet::LogicalType::INT_8, GDF_INT8},
-      {::parquet::LogicalType::INT_16, GDF_INT16},
+      {::parquet::LogicalType::INT_16, GDF_INT16},//todo: what's that?
       {::parquet::LogicalType::INT_32, GDF_INT32},
       {::parquet::LogicalType::INT_64, GDF_INT64},
       {::parquet::LogicalType::JSON, GDF_invalid},
@@ -452,7 +452,11 @@ _ColumnDescriptorsFrom(const std::unique_ptr<FileReader> &file_reader,
     column_descriptors.reserve(indices.size());
 
     for (const std::size_t i : indices) {
+      if (row_group_reader->Column(i)) {
         column_descriptors.emplace_back(row_group_reader->Column(i)->descr());
+      } else {
+        column_descriptors.emplace_back(nullptr);
+      }
     }
 
     return column_descriptors;
@@ -709,14 +713,14 @@ read_parquet_by_ids(std::shared_ptr<::arrow::io::RandomAccessFile> file,
 }
 
 
-gdf_error read_schema(std::shared_ptr<::arrow::io::RandomAccessFile> file, size_t &num_row_groups, size_t &num_cols, std::vector< ::parquet::Type::type> &parquet_dtypes, std::vector< std::string> &column_names ) {
+gdf_error read_schema(std::shared_ptr<::arrow::io::RandomAccessFile> file, size_t &num_row_groups, size_t &num_cols, std::vector< gdf_dtype > &dtypes, std::vector< std::string> &column_names, std::vector<bool> &include_columns) {
 	gdf_error error;
 	auto parquet_reader = FileReader::OpenFile(file);
 	auto file_metadata = parquet_reader->metadata();
 
 	auto schema = file_metadata->schema();
 
-    num_row_groups = file_metadata->num_row_groups();
+  num_row_groups = file_metadata->num_row_groups();
 	std::vector<unsigned long long> numRowsPerGroup(num_row_groups);
 
 	for (int j = 0; j < num_row_groups; j++) {
@@ -724,19 +728,33 @@ gdf_error read_schema(std::shared_ptr<::arrow::io::RandomAccessFile> file, size_
 		auto rowGroupMetadata = groupReader->metadata();
 		numRowsPerGroup[j] = rowGroupMetadata->num_rows();
 	}
+  num_cols = file_metadata->num_columns();
+  std::vector<std::size_t> column_indices;
+  for(size_t index = 0; index < num_cols; index++)
+    column_indices.push_back(index);
+
+  const std::vector<const ::parquet::ColumnDescriptor *> column_descriptors =
+      _ColumnDescriptorsFrom(parquet_reader, column_indices);
+
 
 	for (int rowGroupIndex = 0; rowGroupIndex < num_row_groups; rowGroupIndex++) {
 		auto groupReader = parquet_reader->RowGroup(rowGroupIndex);
 		auto rowGroupMetadata = groupReader->metadata();
 
-        num_cols = file_metadata->num_columns();
 		for (int columnIndex = 0; columnIndex < file_metadata->num_columns(); columnIndex++) {
 			auto column = schema->Column(columnIndex);
 			auto columnMetaData = rowGroupMetadata->ColumnChunk(columnIndex);
-			auto type = column->physical_type();
-            parquet_dtypes.push_back(type);
-            column_names.push_back(column->name()); //@todo, not found a column name
-
+			auto physical_type = column->physical_type();
+      auto logical_type = column->logical_type();
+      
+      column_names.push_back(column->name());  
+      if (column_descriptors[columnIndex]) {
+        dtypes.push_back( _DTypeFrom(column_descriptors[columnIndex]) );
+        include_columns.push_back(true);
+      } else {
+        dtypes.push_back( GDF_invalid );
+        include_columns.push_back(false);
+      }
 		}
 	}
 

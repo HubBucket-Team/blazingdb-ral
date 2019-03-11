@@ -6,6 +6,10 @@
 
 namespace internal {
 
+auto hashing_gdf_dtype = [](const gdf_dtype dtype) -> std::uint64_t {
+    return (std::uint64_t)dtype;
+};
+
 gdf_column_cpp
 slice(const gdf_column_cpp &col,
       const gdf_size_type   start,
@@ -13,7 +17,7 @@ slice(const gdf_column_cpp &col,
     cudaError_t cudaStatus;
     gdf_column *gdf_col = col.get_gdf_column();
 
-    const std::unordered_map<gdf_dtype, gdf_size_type> DTypeSizeOf{
+    const std::unordered_map<gdf_dtype, gdf_size_type, decltype(hashing_gdf_dtype)> DTypeSizeOf({
       {GDF_invalid, -1},
       {GDF_INT8, 1},
       {GDF_INT16, 2},
@@ -24,9 +28,9 @@ slice(const gdf_column_cpp &col,
       {GDF_DATE32, 4},
       {GDF_DATE64, 8},
       {GDF_TIMESTAMP, 8},
-    };
+    }, 10, hashing_gdf_dtype);
 
-    const gdf_size_type dtypeSize = DTypeSizeOf[gdf_col->dtype];
+    const gdf_size_type dtypeSize = DTypeSizeOf.at(gdf_col->dtype);
     const gdf_size_type dataSize  = length * dtypeSize;
 
     void *data = nullptr;

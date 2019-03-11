@@ -1,5 +1,5 @@
-#ifndef NODESAMPLES_H_
-#define NODESAMPLES_H_
+#ifndef BLAZINGDB_RAL_DISTRIBUTION_NODESAMPLES_H
+#define BLAZINGDB_RAL_DISTRIBUTION_NODESAMPLES_H
 
 #include <blazingdb/communication/Node.h>
 #include <GDFColumn.cuh>
@@ -7,19 +7,35 @@
 namespace ral {
 namespace distribution {
 
-struct NodeSamples {
-  NodeSamples(blazingdb::communication::Node rNode,
-              std::vector<gdf_column_cpp> rColumns, int rowSize)
-      : node{std::move(rNode)},
-        columns{std::move(rColumns)},
-        row_size{rowSize} {}
+namespace {
+using Node = blazingdb::communication::Node;
+} // namespace
 
-  blazingdb::communication::Node node;
-  int row_size;
-  std::vector<gdf_column_cpp> columns;
+class NodeSamples {
+public:
+    NodeSamples(std::size_t total_row_size, Node&& node, std::vector<gdf_column_cpp>&& columns);
+
+    NodeSamples(std::size_t total_row_size, const Node& node, std::vector<gdf_column_cpp>&& columns);
+
+public:
+    const std::size_t getTotalRowSize() const;
+
+    const Node& getSenderNode() const;
+
+    /**
+     * This function can only be called once due to it moves the internal container of columns to the client.
+     *
+     * @return  move a vector of gdf_column_cpp.
+     */
+    std::vector<gdf_column_cpp> getColumns();
+
+private:
+    const std::size_t total_row_size_;
+    const Node sender_node_;
+    std::vector<gdf_column_cpp> columns_;
 };
 
 }  // namespace distribution
 }  // namespace ral
 
-#endif /* NODECOLUMNS_H_ */
+#endif // BLAZINGDB_RAL_DISTRIBUTION_NODESAMPLES_H

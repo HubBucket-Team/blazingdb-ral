@@ -1,23 +1,47 @@
-#ifndef NODECOLUMNS_H_
-#define NODECOLUMNS_H_
+#ifndef BLAZINGDB_RAL_DISTRIBUTION_NODECOLUMNS_H
+#define BLAZINGDB_RAL_DISTRIBUTION_NODECOLUMNS_H
 
-#include <blazingdb/communication/Node.h>
-#include <GDFColumn.cuh>
-#include <utility>
+#include <vector>
+#include "GDFColumn.cuh"
+#include "blazingdb/communication/Node.h"
 
 namespace ral {
 namespace distribution {
 
-struct NodeColumns {
-  NodeColumns(blazingdb::communication::Node rNode,
-              std::vector<gdf_column_cpp> rColumns)
-      : node{std::move(rNode)}, columns{std::move(rColumns)} {}
+namespace {
+using Node = blazingdb::communication::Node;
+} // namespace
 
-  blazingdb::communication::Node node;
-  std::vector<gdf_column_cpp> columns;
+class NodeColumns {
+public:
+    NodeColumns(const Node& node, std::vector<gdf_column_cpp>&& columns);
+
+public:
+    NodeColumns(NodeColumns&& node_columns);
+
+    NodeColumns& operator=(NodeColumns&& node_columns) = delete;
+
+public:
+    NodeColumns(const NodeColumns&) = delete;
+
+    NodeColumns& operator=(const NodeColumns&) = delete;
+
+public:
+    const Node& getNode() const;
+
+    /**
+     * This function can only be called once due to it moves the internal container of columns to the client.
+     *
+     * @return  move a vector of gdf_column_cpp.
+     */
+    std::vector<gdf_column_cpp> getColumns();
+
+private:
+    const Node node_;
+    std::vector<gdf_column_cpp> columns_;
 };
 
-}  // namespace distribution
-}  // namespace ral
+} // namespace distribution
+} // namespace ral
 
-#endif /* NODECOLUMNS_H_ */
+#endif //BLAZINGDB_RAL_DISTRIBUTION_NODECOLUMNS_H

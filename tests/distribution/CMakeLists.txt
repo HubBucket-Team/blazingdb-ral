@@ -17,7 +17,8 @@ set(test_sources
     ${CMAKE_SOURCE_DIR}/src/cuDF/generator/sample_generator.cu
     ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp
     ${CMAKE_SOURCE_DIR}/src/distribution/Exception.cpp
-    ${CMAKE_SOURCE_DIR}/src/distribution/NodeColumns2.cpp
+    ${CMAKE_SOURCE_DIR}/src/distribution/NodeColumns.cpp
+    ${CMAKE_SOURCE_DIR}/src/distribution/NodeSamples.cpp
     ${CMAKE_SOURCE_DIR}/src/distribution/primitives.cpp
     ${CMAKE_SOURCE_DIR}/src/exception/RalException.cpp
     ${CMAKE_SOURCE_DIR}/src/Traits/RuntimeTraits.cpp

@@ -131,7 +131,7 @@ void sendSamplesToMaster(const Context& context, std::vector<gdf_column_cpp>&& s
     Client::send(master_node, message);
 }
 
-std::vector<NodeColumns2> collectPartition(const Context& context) {
+std::vector<NodeColumns> collectPartition(const Context& context) {
     // Alias
     using ColumnDataMessage = ral::communication::messages::ColumnDataMessage;
 
@@ -139,7 +139,7 @@ std::vector<NodeColumns2> collectPartition(const Context& context) {
     auto number_rals = context.getAllNodes().size() - 1;
 
     // Create return value
-    std::vector<NodeColumns2> node_columns;
+    std::vector<NodeColumns> node_columns;
 
     // Get message from the server
     const auto& context_token = context.getContextToken();
@@ -176,7 +176,9 @@ std::vector<NodeSamples> collectSamples(const Context& context) {
     }
 
     auto concreteMessage = std::static_pointer_cast<SampleToNodeMasterMessage>(message);
-    nodeSamples.emplace_back(concreteMessage->getSenderNode(), concreteMessage->getSamples(), concreteMessage->getTotalRowSize());
+    nodeSamples.emplace_back(concreteMessage->getTotalRowSize(),
+                             concreteMessage->getSenderNode(),
+                             concreteMessage->getSamples());
   }
 
   return nodeSamples;
@@ -215,11 +217,15 @@ std::vector<gdf_column_cpp> getPartitionPlan(const Context& context){
 void distributePartitions(const Context& context, std::vector<NodeColumns>& partitions){
   using ral::communication::network::Client;
   using ral::communication::messages::Factory;
+  using ral::communication::CommunicationData;
 
+  const auto& self_node = CommunicationData::getInstance().getSelfNode();
   for(auto& nodeColumn : partitions)
   {
-    auto message = Factory::createDataScatterMessage(context.getContextToken(), nodeColumn.columns); 
-    Client::send(nodeColumn.node, message);
+    auto message = Factory::createColumnDataMessage(context.getContextToken(),
+                                                    self_node,
+                                                    std::move(nodeColumn.getColumns()));
+    Client::send(nodeColumn.getNode(), message);
   }
 }
 

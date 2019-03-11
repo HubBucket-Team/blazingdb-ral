@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include "blazingdb/communication/network/Status.h"
+#include "distribution/NodeColumns.h"
 #include "distribution/primitives.h"
 #include "communication/CommunicationData.h"
 #include "communication/factory/MessageFactory.h"
@@ -176,6 +177,56 @@ TEST_F(DistributionPrimitivesTest, distributePartitionPlanTest) {
 
     // Execute test
     ral::distribution::distributePartitionPlan(*context_, test_columns);
+}
+
+
+TEST_F(DistributionPrimitivesTest, getPartitionPlanTest) {
+    // Create data - gdf_column_cpp
+    std::vector<gdf_column_cpp> test_columns;
+
+    // Get data for validation
+    const auto& context_token = context_->getContextToken();
+
+    // Create data - message
+    using MessageFactory = ral::communication::messages::Factory;
+    auto message = MessageFactory::createColumnDataMessage(context_token, *self_node_, test_columns);
+
+    // Verify test
+    EXPECT_CALL(ServerMock::getInstance(), getMessage(ContextTokenEqual(ByRef(context_token))))
+                .Times(1)
+                .WillOnce(::testing::Return(message));
+
+    // Execute Test
+    ral::distribution::getPartitionPlan(*context_);
+}
+
+
+TEST_F(DistributionPrimitivesTest, distributePartitionsTest) {
+    // Create data - gdf_column_cpp
+    std::vector<gdf_column_cpp> test_columns;
+
+    // Create data - NodeColumns
+    using ral::distribution::NodeColumns;
+    std::vector<NodeColumns> node_columns;
+    for (const auto node : context_->getWorkerNodes()) {
+        node_columns.emplace_back(*node, std::vector<gdf_column_cpp>());
+    }
+
+    // Get data for validation
+    using ral::communication::messages::ColumnDataMessage;
+    const auto& message_token = ColumnDataMessage::getMessageID();
+    const auto  context_token = context_->getContextToken().getIntToken();
+
+    // Verify test
+    for (auto& node : context_->getWorkerNodes()) {
+        EXPECT_CALL(ClientMock::getInstance(),
+                    send(NodeEqual(*node),
+                         MessageEqual(*self_node_, message_token, context_token)))
+                    .Times(1);
+    }
+
+    // Execute test
+    ral::distribution::distributePartitions(*context_, node_columns);
 }
 
 } // namespace

@@ -535,6 +535,11 @@ static result_pair freeMemoryCallback(uint64_t accessToken, Buffer&& requesBuffe
     return std::make_pair(Status_Success, response.getBufferData());
 }
 
+static result_pair heartBeatCallback(uint64_t accessToken, Buffer&& requesBuffer)   {
+  ZeroMessage response{};
+  return std::make_pair(Status_Success, response.getBufferData());
+}
+
 static  std::map<int8_t, FunctionType> services;
 
 
@@ -584,6 +589,8 @@ int main(int argc, const char *argv[])
 
   services.insert(std::make_pair(interpreter::MessageType_LoadCsvSchema, &loadCsvSchema));
   services.insert(std::make_pair(interpreter::MessageType_LoadParquetSchema, &loadParquetSchema));
+
+  services.insert(std::make_pair(interpreter::MessageType_HeartBeat, &heartBeatCallback));
 
   services.insert(std::make_pair(9, &freeMemoryCallback));
 

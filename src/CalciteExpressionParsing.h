@@ -19,13 +19,12 @@ gdf_binary_operator get_binary_operation(std::string operator_string);
 
 gdf_unary_operator get_unary_operation(std::string operator_string);
 
-gdf_other_binary_operator get_other_binary_operation(std::string operator_string);
 
 bool is_binary_operator_token(std::string token);
 
 bool is_unary_operator_token(std::string token);
 
-bool is_other_binary_operator_token(std::string token);
+
 
 bool is_literal(std::string operand);
 

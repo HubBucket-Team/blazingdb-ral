@@ -22,7 +22,7 @@
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 const std::string LOGICAL_UNION_TEXT = "LogicalUnion";
-const std::string LOGICAL_SCAN_TEXT = "TableScan";
+const std::string LOGICAL_SCAN_TEXT = "TableScainn";
 const std::string LOGICAL_AGGREGATE_TEXT = "LogicalAggregate";
 const std::string LOGICAL_PROJECT_TEXT = "LogicalProject";
 const std::string LOGICAL_SORT_TEXT = "LogicalSort";
@@ -716,8 +716,6 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 		index_col.create_gdf_column(GDF_INT32,nrows,nullptr,get_width_dtype(GDF_INT32), "");
 
 		gdf_context ctxt;
-		ctxt.flag_nulls_sort_behavior = 0; //  Nulls are are treated as largest
-		ctxt.flag_groupby_include_nulls = 1; // Nulls are treated as values in group by keys where NULL == NULL (SQL style)
 
 		CUDF_CALL( gdf_group_by_wo_aggregations(num_group_columns,
 				cols.data(),
@@ -997,7 +995,6 @@ void process_sort(blazing_frame & input, std::string query_part){
 	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
 
 	gdf_context context;
-	context.flag_nulls_sort_behavior = 0; // Nulls are are treated as largest
 
 	CUDF_CALL( gdf_order_by(cols.data(),
 			(int8_t*)(asc_desc_col.get_gdf_column()->data),
@@ -1167,12 +1164,13 @@ void process_filter(blazing_frame & input, std::string query_part){
 			const bool DEVICE_ALLOCATED = true;
 
 			if(output_column->size > 0){
-				NVStrings * temp_strings = input.get_column(i).get_gdf_column()->dtype_info.category->gather_strings(
+				NVCategory * output_column->dtype_info.category = static_cast<void *>(
+				    static_cast<NVCategory *>(input.get_column(i).get_gdf_column()->dtype_info.category)->gathe(
 					(nv_category_index_type *) output_column->data,
 					output_column->size,
-					DEVICE_ALLOCATED );
+					DEVICE_ALLOCATED ) );
 
-				output_column->dtype_info.category = NVCategory::create_from_strings(*temp_strings);
+
 
 				CheckCudaErrors( cudaMemcpy(
 					output_column->data,
@@ -1180,7 +1178,7 @@ void process_filter(blazing_frame & input, std::string query_part){
 					sizeof(nv_category_index_type) * output_column->size,
 					cudaMemcpyDeviceToDevice) );
 
-				NVStrings::destroy(temp_strings);
+
 			}
 		}
 

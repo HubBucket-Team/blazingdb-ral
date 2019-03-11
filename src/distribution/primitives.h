@@ -11,12 +11,13 @@
 
 namespace ral {
 namespace distribution {
+
 namespace sampling {
 
 constexpr double thresholdForSubsampling = 0.01;
 
 double
-sampleRatio(gdf_size_type tableSize);
+calculateSampleRatio(gdf_size_type tableSize);
 
 std::vector<gdf_column_cpp>
 generateSample(std::vector<gdf_column_cpp> &table, double ratio);
@@ -38,6 +39,15 @@ prepareSamplesForGeneratePivots(
   const std::vector<gdf_size_type> &        tableSizes);
 
 }  // namespace sampling
+
+namespace partitions {
+
+std::vector<std::vector<gdf_column_cpp>>
+partitionData(const std::vector<gdf_column_cpp> &table,
+              const std::vector<gdf_size_type>   pivots);
+
+}  // namespace partition
+
 }  // namespace distribution
 }  // namespace ral
 

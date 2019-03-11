@@ -235,19 +235,6 @@ gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_unary_operator operatio
 	}
 }
 
-gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type, gdf_other_binary_operator operation){
-	
-	// the only gdf_other_binary_operator we have right now is COALESCE where we will except both sides to be the same type
-	if (input_left_type == GDF_invalid)
-		return input_right_type;
-	else if (input_right_type == GDF_invalid)
-		return input_left_type;
-	else if (input_left_type == input_right_type)
-		return input_right_type;
-	else 
-		return GDF_invalid;
-}
-
 //todo: get_output_type: add support to coalesce and date operations!
 gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type, gdf_binary_operator operation){
 
@@ -508,13 +495,9 @@ gdf_dtype get_output_type_expression(blazing_frame * input, gdf_dtype * max_temp
 						right_operand = left_operand;
 					}
 				}
-				if (is_binary_operator_token(token)){
-					gdf_binary_operator operation = get_binary_operation(token);
-					operands.push(get_output_type(left_operand,right_operand,operation));
-				} else {
-					gdf_other_binary_operator operation = get_other_binary_operation(token);
-					operands.push(get_output_type(left_operand,right_operand,operation));
-				}
+				gdf_binary_operator operation = get_binary_operation(token);
+				operands.push(get_output_type(left_operand,right_operand,operation));
+				
 				if(position > 0 && get_width_dtype(operands.top()) > get_width_dtype(*max_temp_type)){
 					*max_temp_type = operands.top();
 				}
@@ -623,16 +606,6 @@ gdf_binary_operator get_binary_operation(std::string operator_string){
 	throw std::runtime_error("In get_binary_operation function: unsupported operator, " + operator_string);
 }
 
-// static std::map<std::string, gdf_other_binary_operator> gdf_other_binary_operator_map = {
-// 	{"COALESCE", GDF_COALESCE}
-// };
-
-gdf_other_binary_operator get_other_binary_operation(std::string operator_string){
-	// if(gdf_other_binary_operator_map.find(operator_string) != gdf_other_binary_operator_map.end())
-	// 	return gdf_other_binary_operator_map[operator_string];
-
-	throw std::runtime_error("In get_other_binary_operation function: unsupported operator, " + operator_string);
-}
 
 bool is_binary_operator_token(std::string token){
 	return (gdf_binary_operator_map.find(token) != gdf_binary_operator_map.end());

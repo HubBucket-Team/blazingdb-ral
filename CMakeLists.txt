@@ -61,10 +61,6 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/thirdparty/jitify
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper)
 
-## Binary Operations
-add_subdirectory(${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation)
-get_directory_property(binary_operation_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation DEFINITION source_files)
-
 ## cuDF adapter source files
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/cuDF)
 get_directory_property(cudf_adapter_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/cuDF DEFINITION source_files)

@@ -128,7 +128,10 @@ gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregat
 		//TODO felipe percy noboa see upgrade to uints
 
 		return GDF_INT64;
-	}else{
+	}else if (aggregation == GDF_FIRST) {
+		return input_type;
+	}	
+	else{
 		return GDF_invalid;
 	}
 
@@ -532,7 +535,7 @@ gdf_agg_op get_aggregation_operation(std::string operator_string){
 			operator_string.find("=[") + 2,
 			(operator_string.find("]") - (operator_string.find("=[") + 2))
 	);
-	operator_string = StringUtil::replace(operator_string,"COUNT(DISTINCT","COUNT_DISTINCT");
+
 	//remove expression
 	operator_string = operator_string.substr(0,operator_string.find("("));
 	if(operator_string == "SUM"){
@@ -547,6 +550,8 @@ gdf_agg_op get_aggregation_operation(std::string operator_string){
 		return GDF_COUNT;
 	}else if(operator_string == "COUNT_DISTINCT"){
 		return GDF_COUNT_DISTINCT;
+	}else if(operator_string == "FIRST"){
+		return GDF_FIRST;
 	}
 	
 	throw std::runtime_error("In get_aggregation_operation function: aggregation type not supported, " + operator_string);
@@ -669,8 +674,10 @@ std::string aggregator_to_string(gdf_agg_op aggregation){
 		return "avg";
 	}else if(aggregation == GDF_COUNT_DISTINCT){
 		return "count_distinct";
+	}else if (aggregation == GDF_FIRST) {
+		return "first";
 	}else{
-		return "";
+		return "";//FIXME: is really necessary?
 	}
 }
 
@@ -861,7 +868,10 @@ std::vector<std::string> get_expressions_from_expression_list(std::string & comb
 	//todo: 
 	//combined_expression
 	static const std::regex re{R""(CASE\(IS NOT NULL\((\W\(.+?\)|.+)\), \1, (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
+	static const std::regex count_re{R""(COUNT\(DISTINCT (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
+
 	combined_expression = std::regex_replace(combined_expression, re, "COALESCE($1, $2)");
+	combined_expression = std::regex_replace(combined_expression, count_re, "COUNT_DISTINCT($1)");
 
 	StringUtil::findAndReplaceAll(combined_expression," NOT NULL","");
 	StringUtil::findAndReplaceAll(combined_expression,"):DOUBLE","");

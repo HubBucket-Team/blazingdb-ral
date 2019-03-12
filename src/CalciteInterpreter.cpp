@@ -156,7 +156,7 @@ void perform_avg(gdf_column* column_output, gdf_column* column_input) {
         auto dtype_size = get_width_dtype(dtype);
         column_avg.create_gdf_column(dtype, 1, nullptr, dtype_size);
 
-		unsigned int reduction_temp_size = gdf_reduce_optimal_output_size();
+		unsigned int reduction_temp_size = gdf_reduction_get_intermediate_output_size();
 		gdf_column_cpp temp;
 		temp.create_gdf_column(dtype,reduction_temp_size,nullptr,dtype_size, "");
 		CUDF_CALL( gdf_sum(column_input, temp.get_gdf_column()->data, reduction_temp_size) );
@@ -689,7 +689,7 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 
 	// Group by without aggregation 
 	if (aggregation_types.size() == 0) {
-		size_t num_group_columns = group_columns.size();
+		gdf_size_type num_group_columns = group_columns.size();
 		std::vector<gdf_column*> cols(num_group_columns);
 		for(int i = 0; i < num_group_columns; i++){
 			cols[i] = input.get_column(i).get_gdf_column();
@@ -708,18 +708,22 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 
 		gdf_column_cpp index_col;
 		index_col.create_gdf_column(GDF_INT32,nrows,nullptr,get_width_dtype(GDF_INT32), "");
+		gdf_size_type index_col_num_rows;
 
 		gdf_context ctxt;
-		ctxt.flag_nulls_sort_behavior = 0; //  Nulls are are treated as largest
+		ctxt.flag_null_sort_behavior = GDF_NULL_AS_LARGEST; //  Nulls are are treated as largest
 		ctxt.flag_groupby_include_nulls = 1; // Nulls are treated as values in group by keys where NULL == NULL (SQL style)
 
-		CUDF_CALL( gdf_group_by_wo_aggregations(num_group_columns,
+		CUDF_CALL( gdf_group_by_without_aggregations(num_group_columns,
 				cols.data(),
 				num_group_columns,
 				group_columns.data(),
 				group_by_columns_ptr_out.data(),
-				index_col.get_gdf_column(),
+				(gdf_size_type*)index_col.get_gdf_column()->data,
+				&index_col_num_rows,
 				&ctxt));
+
+		index_col.get_gdf_column()->size = index_col_num_rows;
 
 
 		//find the widest possible column
@@ -821,7 +825,7 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 		case GDF_SUM:
 			if (group_columns.size() == 0) {
 				if (aggregation_input.get_gdf_column()->size != 0) {
-					unsigned int reduction_temp_size = gdf_reduce_optimal_output_size();
+					unsigned int reduction_temp_size = gdf_reduction_get_intermediate_output_size();
 					gdf_column_cpp temp;
 					temp.create_gdf_column(output_type,reduction_temp_size,nullptr,get_width_dtype(output_type), "");
 					CUDF_CALL( gdf_sum(aggregation_input.get_gdf_column(), temp.get_gdf_column()->data, reduction_temp_size) );
@@ -853,7 +857,7 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 		case GDF_MIN:
 			if(group_columns.size() == 0){
                 if (aggregation_input.get_gdf_column()->size != 0) {
-                    unsigned int reduction_temp_size = gdf_reduce_optimal_output_size();
+                    unsigned int reduction_temp_size = gdf_reduction_get_intermediate_output_size();
 					gdf_column_cpp temp;
 					temp.create_gdf_column(output_type,reduction_temp_size,nullptr,get_width_dtype(output_type), "");
 					CUDF_CALL( gdf_min(aggregation_input.get_gdf_column(), temp.get_gdf_column()->data, reduction_temp_size) );
@@ -875,7 +879,7 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 		case GDF_MAX:
 			if(group_columns.size() == 0){
                 if (aggregation_input.get_gdf_column()->size != 0) {
-                    unsigned int reduction_temp_size = gdf_reduce_optimal_output_size();
+                    unsigned int reduction_temp_size = gdf_reduction_get_intermediate_output_size();
 					gdf_column_cpp temp;
 					temp.create_gdf_column(output_type,reduction_temp_size,nullptr,get_width_dtype(output_type), "");
 					CUDF_CALL( gdf_max(aggregation_input.get_gdf_column(), temp.get_gdf_column()->data, reduction_temp_size) );
@@ -1003,7 +1007,7 @@ void process_sort(blazing_frame & input, std::string query_part){
 	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
 
 	gdf_context context;
-	context.flag_nulls_sort_behavior = 0; // Nulls are are treated as largest
+	context.flag_null_sort_behavior = GDF_NULL_AS_LARGEST; // Nulls are are treated as largest
 
 	CUDF_CALL( gdf_order_by(cols.data(),
 			(int8_t*)(asc_desc_col.get_gdf_column()->data),
@@ -1140,11 +1144,7 @@ void process_filter(blazing_frame & input, std::string query_part){
 	temp_idx.create_gdf_column(GDF_INT32, input.get_column(0).size(), nullptr, get_width_dtype(GDF_INT32));
 	
 	timer.reset();
-	CUDF_CALL( gdf_apply_stencil(
-				index_col.get_gdf_column(),
-				stencil.get_gdf_column(),
-				temp_idx.get_gdf_column())
-			);
+	CUDF_CALL( gdf_apply_boolean_mask( index_col.get_gdf_column(), stencil.get_gdf_column(), temp_idx.get_gdf_column())	);
 	Library::Logging::Logger().logInfo("-> Filter sub block 6 took " + std::to_string(timer.getDuration()) + " ms");
 
 	timer.reset();

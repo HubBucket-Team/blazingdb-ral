@@ -75,21 +75,21 @@ namespace library {
             return mScalar.data.si64;
         }
 
-        operator uint8_t() const {
-            return mScalar.data.ui08;
-        }
+        // operator uint8_t() const {
+        //     return mScalar.data.ui08;
+        // }
 
-        operator uint16_t() const {
-            return mScalar.data.ui16;
-        }
+        // operator uint16_t() const {
+        //     return mScalar.data.ui16;
+        // }
 
-        operator uint32_t() const {
-            return mScalar.data.ui32;
-        }
+        // operator uint32_t() const {
+        //     return mScalar.data.ui32;
+        // }
 
-        operator uint64_t() const {
-            return mScalar.data.ui64;
-        }
+        // operator uint64_t() const {
+        //     return mScalar.data.ui64;
+        // }
 
         operator float() const {
             return mScalar.data.fp32;

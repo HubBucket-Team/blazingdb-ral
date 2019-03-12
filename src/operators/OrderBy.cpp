@@ -15,7 +15,7 @@ namespace ral {
 namespace operators {
 
 namespace {
-using Context = blazingdb::communication::Context;
+using blazingdb::communication::Context;
 } // namespace
 
 const std::string LOGICAL_SORT_TEXT = "LogicalSort";
@@ -104,6 +104,7 @@ void distributed_sort(const Context* queryContext, blazing_frame& input, std::ve
 	}
 
 	size_t rowSize = input.get_column(0).size();
+
 	std::vector<gdf_column_cpp> selfSamples = ral::distribution::sampling::generateSample(cols, 0.1);
 
 	std::thread sortThread{sort, std::ref(input), std::ref(rawCols), std::ref(sortOrderTypes), std::ref(sortedTable)};
@@ -165,7 +166,7 @@ void process_sort(blazing_frame & input, std::string query_part, const Context* 
 
 	Library::Logging::Logger().logInfo("-> Sort sub block 1 took " + std::to_string(timer.getDuration()) + " ms");
 
-	if (!queryContext || queryContext->getTotalNodes() == 1) {
+	if (!queryContext || queryContext->getTotalNodes() <= 1) {
 		single_node_sort(input, rawCols, sortOrderTypes);
 	}
 	else {

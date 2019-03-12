@@ -76,19 +76,16 @@ get_directory_property(cudf_adapter_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/s
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/cuio/parquet)
 get_directory_property(parquet_reader_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/cuio/parquet DEFINITION source_files)
 
+## communication primitives
+add_subdirectory(${CMAKE_SOURCE_DIR}/src/communication)
+get_directory_property(communication_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/communication DEFINITION source_files)
+
+## communication primitives
+add_subdirectory(${CMAKE_SOURCE_DIR}/src/distribution)
+get_directory_property(distribution_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/distribution DEFINITION source_files)
+
 ## Target source files
-set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/communication/adapter/GpuFunctionsAdapter.cpp
-              ${CMAKE_SOURCE_DIR}/src/communication/factory/MessageFactory.cpp
-              ${CMAKE_SOURCE_DIR}/src/communication/network/Client.cpp
-              ${CMAKE_SOURCE_DIR}/src/communication/network/Server.cpp
-              ${CMAKE_SOURCE_DIR}/src/communication/CommunicationData.cpp
-              ${CMAKE_SOURCE_DIR}/src/config/BlazingConfig.cpp
-              ${CMAKE_SOURCE_DIR}/src/distribution/Exception.cpp
-              ${CMAKE_SOURCE_DIR}/src/distribution/internal.cpp
-              ${CMAKE_SOURCE_DIR}/src/distribution/NodeColumns.cpp
-              ${CMAKE_SOURCE_DIR}/src/distribution/NodeSamples.cpp
-              ${CMAKE_SOURCE_DIR}/src/distribution/partitions.cpp
-              ${CMAKE_SOURCE_DIR}/src/distribution/primitives.cpp
+set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/config/BlazingConfig.cpp
               ${CMAKE_SOURCE_DIR}/src/exception/RalException.cpp
               ${CMAKE_SOURCE_DIR}/src/operators/OrderBy.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
@@ -112,7 +109,10 @@ set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/communication/adapter/GpuFunctionsAdapter.
               ${CMAKE_SOURCE_DIR}/src/testing-libgdf.cu
               ${cudf_adapter_source_files}
               ${binary_operation_source_files}
-              ${parquet_reader_source_files})
+              ${parquet_reader_source_files}
+              ${communication_source_files}
+              ${distribution_source_files}
+)
 
 add_executable(testing-libgdf ${SRC_FILES})
 

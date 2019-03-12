@@ -172,7 +172,9 @@ std::vector<NodeSamples> collectSamples(const Context& context) {
     auto message = Server::getInstance().getMessage(contextToken);
 
     if (message->getMessageTokenValue() != SampleToNodeMasterMessage::getMessageID()) {
-      throw std::runtime_error("[ERROR] " + std::string{__FUNCTION__} + " -- message type mismatch");
+      throw createMessageMismatchException(__FUNCTION__,
+                                           SampleToNodeMasterMessage::getMessageID(),
+                                           message->getMessageTokenValue());
     }
 
     auto concreteMessage = std::static_pointer_cast<SampleToNodeMasterMessage>(message);
@@ -206,7 +208,9 @@ std::vector<gdf_column_cpp> getPartitionPlan(const Context& context){
   auto message = Server::getInstance().getMessage(context.getContextToken());
 
   if (message->getMessageTokenValue() != ColumnDataMessage::getMessageID()) {
-    throw std::runtime_error("[ERROR] " + std::string{__FUNCTION__} + " -- message type mismatch");
+    throw createMessageMismatchException(__FUNCTION__,
+                                         ColumnDataMessage::getMessageID(),
+                                         message->getMessageTokenValue());
   }
 
   auto concreteMessage = std::static_pointer_cast<ColumnDataMessage>(message);

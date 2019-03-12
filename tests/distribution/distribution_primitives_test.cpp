@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include "blazingdb/communication/network/Status.h"
+#include "distribution/Exception.h"
 #include "distribution/NodeColumns.h"
 #include "distribution/primitives.h"
 #include "communication/CommunicationData.h"
@@ -136,6 +137,28 @@ TEST_F(DistributionPrimitivesTest, collectPartitionTest) {
 }
 
 
+TEST_F(DistributionPrimitivesTest, collectPartitionExceptionTest) {
+    // Create data - gdf_column_cpp
+    std::vector<gdf_column_cpp> test_columns;
+
+    // Get data for validation
+    const auto& context_token = context_->getContextToken();
+
+    // Create data - message
+    using MessageFactory = ral::communication::messages::Factory;
+    auto message = MessageFactory::createSampleToNodeMaster(context_token, *self_node_, 10, test_columns);
+
+    // Verify test
+    EXPECT_CALL(ServerMock::getInstance(), getMessage(ContextTokenEqual(ByRef(context_token))))
+                .Times(1)
+                .WillOnce(::testing::Return(message));
+
+    // Execute Test
+    using ral::distribution::MessageMismatchException;
+    ASSERT_THROW(ral::distribution::collectPartition(*context_), MessageMismatchException);
+}
+
+
 TEST_F(DistributionPrimitivesTest, collectSamplesTest) {
     // Create data - gdf_column_cpp
     std::vector<gdf_column_cpp> test_columns;
@@ -150,11 +173,33 @@ TEST_F(DistributionPrimitivesTest, collectSamplesTest) {
 
     // Verify test
     EXPECT_CALL(ServerMock::getInstance(), getMessage(_))
-            .Times(context_->getAllNodes().size() - 1)
-            .WillRepeatedly(::testing::Return(message));
+                .Times(context_->getAllNodes().size() - 1)
+                .WillRepeatedly(::testing::Return(message));
 
     // Execute Test
     ral::distribution::collectSamples(*context_);
+}
+
+
+TEST_F(DistributionPrimitivesTest, collectSamplesExceptionTest) {
+    // Create data - gdf_column_cpp
+    std::vector<gdf_column_cpp> test_columns;
+
+    // Get data for validation
+    const auto& context_token = context_->getContextToken();
+
+    // Create data - message
+    using MessageFactory = ral::communication::messages::Factory;
+    auto message = MessageFactory::createColumnDataMessage(context_token, *self_node_, test_columns);
+
+    // Verify test
+    EXPECT_CALL(ServerMock::getInstance(), getMessage(_))
+                .Times(1)
+                .WillOnce(::testing::Return(message));
+
+    // Execute Test
+    using ral::distribution::MessageMismatchException;
+    ASSERT_THROW(ral::distribution::collectSamples(*context_), MessageMismatchException);
 }
 
 
@@ -198,6 +243,28 @@ TEST_F(DistributionPrimitivesTest, getPartitionPlanTest) {
 
     // Execute Test
     ral::distribution::getPartitionPlan(*context_);
+}
+
+
+TEST_F(DistributionPrimitivesTest, getPartitionPlanExceptionTest) {
+    // Create data - gdf_column_cpp
+    std::vector<gdf_column_cpp> test_columns;
+
+    // Get data for validation
+    const auto& context_token = context_->getContextToken();
+
+    // Create data - message
+    using MessageFactory = ral::communication::messages::Factory;
+    auto message = MessageFactory::createSampleToNodeMaster(context_token, *self_node_, 1000, test_columns);
+
+    // Verify test
+    EXPECT_CALL(ServerMock::getInstance(), getMessage(ContextTokenEqual(ByRef(context_token))))
+                .Times(1)
+                .WillOnce(::testing::Return(message));
+
+    // Execute Test
+    using ral::distribution::MessageMismatchException;
+    ASSERT_THROW(ral::distribution::getPartitionPlan(*context_), MessageMismatchException);
 }
 
 

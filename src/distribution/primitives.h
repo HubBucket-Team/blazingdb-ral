@@ -63,13 +63,17 @@ std::vector<NodeColumns> collectPartition(const Context& context);
 
 std::vector<NodeSamples> collectSamples(const Context& context);
 
+std::vector<gdf_column_cpp> generatePartitionPlans(std::vector<NodeSamples>& samples);
+
 void distributePartitionPlan(const Context& context, std::vector<gdf_column_cpp>& pivots);
 
 std::vector<gdf_column_cpp> getPartitionPlan(const Context& context);
 
+std::vector<NodeColumns> partitionData(const Context& context, std::vector<gdf_column_cpp>& table, std::vector<gdf_column_cpp>& pivots);
+
 void distributePartitions(const Context& context, std::vector<NodeColumns>& partitions);
 
-blazing_frame sortedMerger(std::vector<NodeColumns>& columns);
+void sortedMerger(std::vector<NodeColumns>& columns, blazing_frame& output);
 
 }  // namespace distribution
 }  // namespace ral

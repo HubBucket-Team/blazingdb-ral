@@ -90,6 +90,7 @@ set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/communication/adapter/GpuFunctionsAdapter.
               ${CMAKE_SOURCE_DIR}/src/distribution/partitions.cpp
               ${CMAKE_SOURCE_DIR}/src/distribution/primitives.cpp
               ${CMAKE_SOURCE_DIR}/src/exception/RalException.cpp
+              ${CMAKE_SOURCE_DIR}/src/operators/OrderBy.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
               ${CMAKE_SOURCE_DIR}/src/FreeMemory.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_parser/ParquetParser.cpp

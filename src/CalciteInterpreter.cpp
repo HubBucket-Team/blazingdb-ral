@@ -19,16 +19,14 @@
 #include "Traits/RuntimeTraits.h"
 #include "cuDF/Allocator.h"
 #include "Interpreter/interpreter_cpp.h"
+#include "operators/OrderBy.h"
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 const std::string LOGICAL_UNION_TEXT = "LogicalUnion";
 const std::string LOGICAL_SCAN_TEXT = "TableScan";
 const std::string LOGICAL_AGGREGATE_TEXT = "LogicalAggregate";
 const std::string LOGICAL_PROJECT_TEXT = "LogicalProject";
-const std::string LOGICAL_SORT_TEXT = "LogicalSort";
 const std::string LOGICAL_FILTER_TEXT = "LogicalFilter";
-const std::string ASCENDING_ORDER_SORT_TEXT = "ASC";
-const std::string DESCENDING_ORDER_SORT_TEXT = "DESC";
 
 
 bool is_join(std::string query_part){
@@ -45,10 +43,6 @@ bool is_project(std::string query_part){
 
 bool is_aggregate(std::string query_part){
 	return (query_part.find(LOGICAL_AGGREGATE_TEXT) != std::string::npos);
-}
-
-bool is_sort(std::string query_part){
-	return (query_part.find(LOGICAL_SORT_TEXT) != std::string::npos);
 }
 
 bool is_scan(std::string query_part){
@@ -118,10 +112,6 @@ std::string extract_table_name(std::string query_part){
 			&temp);
 
 }*/
-
-std::string get_condition_expression(std::string query_part){
-	return get_named_expression(query_part,"condition");
-}
 
 bool contains_evaluation(std::string expression){
 	std::string cleaned_expression = clean_project_expression(expression);
@@ -376,7 +366,7 @@ project_plan_params parse_project_plan(blazing_frame& input, std::string query_p
 
 void execute_project_plan(blazing_frame & input, std::string query_part){
 	project_plan_params params = parse_project_plan(input, query_part);
-	
+
 	//perform operations
 	if(params.num_expressions_out > 0){
 		perform_operation( params.output_columns,
@@ -399,8 +389,8 @@ void execute_project_plan(blazing_frame & input, std::string query_part){
 	{
 		input.get_column(i).update_null_count();
 	}
-	
-	
+
+
 }
 
 void process_project(blazing_frame & input, std::string query_part){
@@ -442,7 +432,7 @@ void process_project(blazing_frame & input, std::string query_part){
 		}
 	}
 
-	
+
 	for(int i = 0; i < expressions.size(); i++){ //last not an expression
 		std::string expression = expressions[i].substr(
 				expressions[i].find("=[") + 2 ,
@@ -490,16 +480,6 @@ void process_project(blazing_frame & input, std::string query_part){
 
 }
 
-std::string get_named_expression(std::string query_part, std::string expression_name){
-	if(query_part.find(expression_name + "=[") == query_part.npos){
-		return ""; //expression not found
-	}
-	int start_position =( query_part.find(expression_name + "=["))+ 2 + expression_name.length();
-	int end_position = (query_part.find("]",start_position));
-	return query_part.substr(start_position,end_position - start_position);
-}
-
-
 blazing_frame process_join(blazing_frame input, std::string query_part){
 	static CodeTimer timer;
 	timer.reset();
@@ -512,7 +492,7 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 	left_indices.create_gdf_column(GDF_INT32,size,nullptr,sizeof(int), "");
 	right_indices.create_gdf_column(GDF_INT32,size,nullptr,sizeof(int), "");
 
-	std::string condition = get_condition_expression(query_part);
+	std::string condition = get_named_expression(query_part,"condition");
 	std::string join_type = get_named_expression(query_part,"joinType");
 
 	evaluate_join(
@@ -577,7 +557,7 @@ blazing_frame process_union(blazing_frame& left, blazing_frame& right, std::stri
 	bool isUnionAll = (get_named_expression(query_part, "all") == "true");
 	if (!isUnionAll) {
 		throw std::runtime_error{"In process_union function: UNION is not supported, use UNION ALL"};
-	}	
+	}
 
 	// Check same number of columns
 	if (left.get_size_column(0) != right.get_size_column(0)) {
@@ -649,7 +629,7 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 	 *
 	 * 			As you can see the project following aggregate expects the columns to be grouped by to appear BEFORE the expressions
 	 */
-	
+
 	//get groups
 	int pos = query_part.find("(") + 1;
 	assert(pos != std::string::npos);
@@ -683,7 +663,7 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 		}
 	}
 
-	// Group by without aggregation 
+	// Group by without aggregation
 	if (aggregation_types.size() == 0) {
 		size_t num_group_columns = group_columns.size();
 		std::vector<gdf_column*> cols(num_group_columns);
@@ -903,8 +883,8 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 
                 // output dtype is GDF_UINT64
                 // defined in 'get_aggregation_output_type' function.
-                uint64_t result = aggregation_input.get_gdf_column()->size - aggregation_input.get_gdf_column()->null_count;                
-				CheckCudaErrors(cudaMemcpy(output_column.get_gdf_column()->data, &result, sizeof(uint64_t), cudaMemcpyHostToDevice));			
+                uint64_t result = aggregation_input.get_gdf_column()->size - aggregation_input.get_gdf_column()->null_count;
+				CheckCudaErrors(cudaMemcpy(output_column.get_gdf_column()->data, &result, sizeof(uint64_t), cudaMemcpyHostToDevice));
 			}else{
 			CUDF_CALL( gdf_group_by_count(group_columns.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
 						nullptr,group_by_columns_ptr_out.data(),output_column.get_gdf_column(),&ctxt));
@@ -955,101 +935,6 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 	input.consolidate_tables();
 }
 
-void process_sort(blazing_frame & input, std::string query_part, const Context* queryContext){
-	static CodeTimer timer;
-	timer.reset();
-	std::cout<<"about to process sort"<<std::endl;
-
-	auto rangeStart = query_part.find("(");
-	auto rangeEnd = query_part.rfind(")") - rangeStart - 1;
-	std::string combined_expression = query_part.substr(rangeStart + 1, rangeEnd - 1);
-
-	//LogicalSort(sort0=[$4], sort1=[$7], dir0=[ASC], dir1=[ASC])
-	size_t num_sort_columns = count_string_occurrence(combined_expression,"sort");
-
-	std::vector<int8_t> sort_order_types(num_sort_columns);
-	std::vector<gdf_column*> cols(num_sort_columns);
-	for(int i = 0; i < num_sort_columns; i++){
-		int sort_column_index = get_index(get_named_expression(combined_expression, "sort" + std::to_string(i)));
-		cols[i] = input.get_column(sort_column_index).get_gdf_column();
-
-		sort_order_types[i] = (get_named_expression(combined_expression, "dir" + std::to_string(i)) == DESCENDING_ORDER_SORT_TEXT);
-	}
-
-	Library::Logging::Logger().logInfo("-> Sort sub block 1 took " + std::to_string(timer.getDuration()) + " ms");
-	timer.reset();
-
-	gdf_column_cpp asc_desc_col;
-	asc_desc_col.create_gdf_column(GDF_INT8,num_sort_columns,nullptr,1, "");
-	CheckCudaErrors(cudaMemcpy(asc_desc_col.get_gdf_column()->data, sort_order_types.data(), sort_order_types.size() * sizeof(int8_t), cudaMemcpyHostToDevice));
-
-	gdf_column_cpp index_col;
-	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
-
-	gdf_context context;
-	context.flag_nulls_sort_behavior = 0; // Nulls are are treated as largest
-
-	CUDF_CALL( gdf_order_by(cols.data(),
-			(int8_t*)(asc_desc_col.get_gdf_column()->data),
-			num_sort_columns,
-			index_col.get_gdf_column(),
-			&context));
-
-	Library::Logging::Logger().logInfo("-> Sort sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
-
-	timer.reset();
-	//find the widest possible column
-	int widest_column = 0;
-	for(int i = 0; i < input.get_width();i++){
-		int cur_width;
-		get_column_byte_width(input.get_column(i).get_gdf_column(), &cur_width);
-		if(cur_width > widest_column){
-			widest_column = cur_width;
-		}
-	}
-
-	gdf_column_cpp temp_output;
-	//TODO de donde saco el nombre de la columna aqui???
-	temp_output.create_gdf_column(input.get_column(0).dtype(),input.get_column(0).size(),nullptr,widest_column, "");
-	//now we need to materialize
-	//i dont think we can do that in place since we are writing and reading out of order
-	for(int i = 0; i < input.get_width();i++){
-		temp_output.set_dtype(input.get_column(i).dtype());
-
-		materialize_column(
-				input.get_column(i).get_gdf_column(),
-				temp_output.get_gdf_column(),
-				index_col.get_gdf_column()
-		);
-
-		temp_output.update_null_count();
-		input.set_column(i,temp_output.clone(input.get_column(i).name()));
-
-		/*gdf_column_cpp empty;
-
-		int width;
-		get_column_byte_width(input.get_column(i).get_gdf_column(), &width);
-
-		//TODO de donde saco el nombre de la columna aqui???
-		empty.create_gdf_column(input.get_column(i).dtype(),0,nullptr,width, "");
-
-		//copy output back to dat aframe
-
-		gdf_column_cpp new_output;
-		if(input.get_column(i).is_ipc()){
-			//TODO de donde saco el nombre de la columna aqui???
-			new_output.create_gdf_column(input.get_column(i).dtype(), input.get_column(i).size(),nullptr,get_width_dtype(input.get_column(i).dtype()), "");
-			input.set_column(i,new_output);
-		}else{
-			new_output = input.get_column(i);
-		}
-		err = gpu_concat(temp_output.get_gdf_column(), empty.get_gdf_column(), new_output.get_gdf_column());
-
-		//free_gdf_column(&empty);*/
-	}
-	Library::Logging::Logger().logInfo("-> Sort sub block 3 took " + std::to_string(timer.getDuration()) + " ms");
-}
-
 //TODO: this does not compact the allocations which would be nice if it could
 void process_filter(blazing_frame & input, std::string query_part){
 	static CodeTimer timer;
@@ -1072,12 +957,12 @@ void process_filter(blazing_frame & input, std::string query_part){
 
 	Library::Logging::Logger().logInfo("-> Filter sub block 1 took " + std::to_string(timer.getDuration()) + " ms");
 	timer.reset();
-	gdf_dtype output_type = get_output_type_expression(&input, &max_temp_type, get_condition_expression(query_part));
+	gdf_dtype output_type = get_output_type_expression(&input, &max_temp_type, get_named_expression(query_part,"condition"));
 
 	Library::Logging::Logger().logInfo("-> Filter sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
 
 	timer.reset();
-	std::string conditional_expression = get_condition_expression(query_part);
+	std::string conditional_expression = get_named_expression(query_part,"condition");
 	Library::Logging::Logger().logInfo("-> Filter sub block 3 took " + std::to_string(timer.getDuration()) + " ms");
 	// timer.reset();
 	evaluate_expression(input, conditional_expression, stencil);
@@ -1110,7 +995,7 @@ void process_filter(blazing_frame & input, std::string query_part){
 
 	// 	input.set_column(i,temp.clone());
 	// }
-	
+
 	timer.reset();
 	gdf_column_cpp index_col;
 	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
@@ -1122,7 +1007,7 @@ void process_filter(blazing_frame & input, std::string query_part){
 
 	gdf_column_cpp temp_idx;
 	temp_idx.create_gdf_column(GDF_INT32, input.get_column(0).size(), nullptr, get_width_dtype(GDF_INT32));
-	
+
 	timer.reset();
 	CUDF_CALL( gdf_apply_stencil(
 				index_col.get_gdf_column(),
@@ -1177,11 +1062,11 @@ blazing_frame evaluate_split_query(
 		std::vector<std::vector<gdf_column_cpp> > input_tables,
 		std::vector<std::string> table_names,
 		std::vector<std::vector<std::string>> column_names,
-		std::vector<std::string> query, 
+		std::vector<std::string> query,
 		const Context* queryContext,
 		int call_depth = 0){
 	assert(input_tables.size() == table_names.size());
-	
+
 	static CodeTimer blazing_timer;
 
 	if(query.size() == 1){
@@ -1283,12 +1168,12 @@ blazing_frame evaluate_split_query(
 			return child_frame;
 		}else if(is_aggregate(query[0])){
 			blazing_timer.reset();
-			process_aggregate(child_frame,query[0]);		
+			process_aggregate(child_frame,query[0]);
 			Library::Logging::Logger().logInfo("process_aggregate took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
 			return child_frame;
-		}else if(is_sort(query[0])){
+		}else if(ral::operators::is_sort(query[0])){
 			blazing_timer.reset();
-			process_sort(child_frame,query[0], queryContext);
+			ral::operators::process_sort(child_frame,query[0], queryContext);
 			Library::Logging::Logger().logInfo("process_sort took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
 			return child_frame;
 		}else if(is_filter(query[0])){
@@ -1331,7 +1216,7 @@ query_token_t evaluate_query(
 			for(size_t index = 0; index < output_frame.get_size_columns(); index++){
 				gdf_column_cpp output_column = output_frame.get_column(index);
 				output_frame.set_column(index, output_column.clone(output_column.name()));
-				
+
 				// WSM IS THIS CORRECT, THIS IS PRIOR TO MERGE NEED TO LOOK INTO THIS
 				/*if(output_column.is_ipc() || included_columns.find(output_column.get_gdf_column()) != included_columns.end()){
 				output_frame.set_column(index,
@@ -1339,10 +1224,10 @@ query_token_t evaluate_query(
 				}else{
 					output_column.delete_set_name(output_column.name());
 				}*/
-				
-				
+
+
 			}
-		
+
 
 
 			result_set_repository::get_instance().update_token(token, output_frame, duration);

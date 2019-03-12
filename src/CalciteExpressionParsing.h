@@ -77,4 +77,6 @@ bool is_date_type(gdf_dtype type);
 gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_dtype input_right_type, gdf_binary_operator operation);
 gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_unary_operator operation);
 
+std::string get_named_expression(std::string query_part, std::string expression_name);
+
 #endif /* CALCITEEXPRESSIONPARSING_H_ */

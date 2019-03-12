@@ -940,3 +940,12 @@ std::vector<std::string> get_expressions_from_expression_list(std::string & comb
 
 	return expressions;
 }
+
+std::string get_named_expression(std::string query_part, std::string expression_name){
+	if(query_part.find(expression_name + "=[") == query_part.npos){
+		return ""; //expression not found
+	}
+	int start_position =( query_part.find(expression_name + "=["))+ 2 + expression_name.length();
+	int end_position = (query_part.find("]",start_position));
+	return query_part.substr(start_position,end_position - start_position);
+}

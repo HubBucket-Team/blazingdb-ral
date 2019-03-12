@@ -178,10 +178,17 @@ std::vector<NodeSamples> collectSamples(const Context& context) {
     auto concreteMessage = std::static_pointer_cast<SampleToNodeMasterMessage>(message);
     nodeSamples.emplace_back(concreteMessage->getTotalRowSize(),
                              concreteMessage->getSenderNode(),
-                             concreteMessage->getSamples());
+                             std::move(concreteMessage->getSamples()));
   }
 
   return nodeSamples;
+}
+
+std::vector<gdf_column_cpp> generatePartitionPlans(std::vector<NodeSamples>& samples){
+
+  // TODO:
+
+  return std::vector<gdf_column_cpp>{};
 }
 
 void distributePartitionPlan(const Context& context, std::vector<gdf_column_cpp>& pivots){
@@ -214,6 +221,12 @@ std::vector<gdf_column_cpp> getPartitionPlan(const Context& context){
   return std::move(concreteMessage->getColumns());
 }
 
+std::vector<NodeColumns> partitionData(const Context& context, std::vector<gdf_column_cpp>& table, std::vector<gdf_column_cpp>& pivots){
+  // TODO
+
+  return std::vector<NodeColumns>{};
+}
+
 void distributePartitions(const Context& context, std::vector<NodeColumns>& partitions){
   using ral::communication::network::Client;
   using ral::communication::messages::Factory;
@@ -229,7 +242,7 @@ void distributePartitions(const Context& context, std::vector<NodeColumns>& part
   }
 }
 
-blazing_frame sortedMerger(std::vector<NodeColumns>& columns){
+void sortedMerger(std::vector<NodeColumns>& columns, blazing_frame& output) {
   // TODO: use cudf sorter_merger
 }
 

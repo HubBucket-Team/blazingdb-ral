@@ -86,7 +86,6 @@ add_subdirectory(count)
 add_subdirectory(groupbywoagg)
 add_subdirectory(interpreter)
 add_subdirectory(utils)
-# add_subdirectory(utils)
 
 
 message(STATUS "******** Tests are ready ********")

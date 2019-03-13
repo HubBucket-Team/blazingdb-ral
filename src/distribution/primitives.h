@@ -13,7 +13,7 @@ namespace distribution {
 
 namespace sampling {
 
-constexpr double thresholdForSubsampling = 0.01;
+constexpr double THRESHOLD_FOR_SUBSAMPLING = 0.01;
 
 double
 calculateSampleRatio(gdf_size_type tableSize);
@@ -33,20 +33,9 @@ generateSamples(std::vector<std::vector<gdf_column_cpp>> &input_tables,
                 std::vector<std::size_t> &                quantities);
 
 void
-prepareSamplesForGeneratePivots(
-  std::vector<std::vector<gdf_column_cpp>> &samples,
-  const std::vector<gdf_size_type> &        tableSizes);
+normalizeSamples(std::vector<NodeSamples>& samples);
 
 }  // namespace sampling
-
-namespace partitions {
-
-std::vector<std::vector<gdf_column_cpp>>
-partitionData(const std::vector<gdf_column_cpp> &table,
-              const std::vector<gdf_size_type>   pivots);
-
-}  // namespace partition
-
 }  // namespace distribution
 }  // namespace ral
 

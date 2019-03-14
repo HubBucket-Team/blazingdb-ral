@@ -859,22 +859,6 @@ int find_closing_char(const std::string & expression, int start) {
 // takes a comma delimited list of expressions and splits it into separate expressions
 std::vector<std::string> get_expressions_from_expression_list(std::string & combined_expression, bool trim){
 	
-	//todo: 
-	//combined_expression
-	static const std::regex re{R""(CASE\(IS NOT NULL\((\W\(.+?\)|.+)\), \1, (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
-	static const std::regex count_re{R""(COUNT\(DISTINCT (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
-
-	combined_expression = std::regex_replace(combined_expression, re, "COALESCE($1, $2)");
-	combined_expression = std::regex_replace(combined_expression, count_re, "COUNT_DISTINCT($1)");
-
-	StringUtil::findAndReplaceAll(combined_expression," NOT NULL","");
-	StringUtil::findAndReplaceAll(combined_expression,"):DOUBLE","");
-	StringUtil::findAndReplaceAll(combined_expression,"CAST(","");
-	StringUtil::findAndReplaceAll(combined_expression,"EXTRACT(FLAG(YEAR), ","BL_YEAR(");
-	StringUtil::findAndReplaceAll(combined_expression,"EXTRACT(FLAG(MONTH), ","BL_MONTH(");
-	StringUtil::findAndReplaceAll(combined_expression,"EXTRACT(FLAG(DAY), ","BL_DAY(");
-	StringUtil::findAndReplaceAll(combined_expression,"FLOOR(","BL_FLOUR(");
-	
 	std::vector<std::string> expressions;
 
 	int curInd = 0;
@@ -922,6 +906,25 @@ std::vector<std::string> get_expressions_from_expression_list(std::string & comb
 		else
 			expressions.push_back(exp);
 	}
+
+	static const std::regex re{R""(CASE\(IS NOT NULL\((\W\(.+?\)|.+)\), \1, (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
+	static const std::regex count_re{R""(COUNT\(DISTINCT (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
+
+	for (int i = 0; i < expressions.size(); i++){
+		expressions[i] = std::regex_replace(expressions[i], re, "COALESCE($1, $2)");
+		expressions[i] = std::regex_replace(expressions[i], count_re, "COUNT_DISTINCT($1)");
+
+		StringUtil::findAndReplaceAll(expressions[i]," NOT NULL","");
+		StringUtil::findAndReplaceAll(expressions[i],"):DOUBLE","");
+		StringUtil::findAndReplaceAll(expressions[i],"CAST(","");
+		StringUtil::findAndReplaceAll(expressions[i],"EXTRACT(FLAG(YEAR), ","BL_YEAR(");
+		StringUtil::findAndReplaceAll(expressions[i],"EXTRACT(FLAG(MONTH), ","BL_MONTH(");
+		StringUtil::findAndReplaceAll(expressions[i],"EXTRACT(FLAG(DAY), ","BL_DAY(");
+		StringUtil::findAndReplaceAll(expressions[i],"FLOOR(","BL_FLOUR(");
+	}
+
+	
+
 
 	return expressions;
 }

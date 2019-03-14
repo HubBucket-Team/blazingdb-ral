@@ -128,7 +128,8 @@ gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregat
 		//TODO felipe percy noboa see upgrade to uints
 
 		return GDF_INT64;
-	}else{
+	}	
+	else{
 		return GDF_invalid;
 	}
 
@@ -497,10 +498,8 @@ gdf_dtype get_output_type_expression(blazing_frame * input, gdf_dtype * max_temp
 						right_operand = left_operand;
 					}
 				}
-				if (is_binary_operator_token(token)){
-					gdf_binary_operator operation = get_binary_operation(token);
-					operands.push(get_output_type(left_operand,right_operand,operation));
-				}
+				gdf_binary_operator operation = get_binary_operation(token);
+				operands.push(get_output_type(left_operand,right_operand,operation));
 				if(position > 0 && get_width_dtype(operands.top()) > get_width_dtype(*max_temp_type)){
 					*max_temp_type = operands.top();
 				}
@@ -535,7 +534,7 @@ gdf_agg_op get_aggregation_operation(std::string operator_string){
 			operator_string.find("=[") + 2,
 			(operator_string.find("]") - (operator_string.find("=[") + 2))
 	);
-	operator_string = StringUtil::replace(operator_string,"COUNT(DISTINCT","COUNT_DISTINCT");
+
 	//remove expression
 	operator_string = operator_string.substr(0,operator_string.find("("));
 	if(operator_string == "SUM"){
@@ -609,9 +608,6 @@ gdf_binary_operator get_binary_operation(std::string operator_string){
 	throw std::runtime_error("In get_binary_operation function: unsupported operator, " + operator_string);
 }
 
-// static std::map<std::string, gdf_other_binary_operator> gdf_other_binary_operator_map = {
-// 	{"COALESCE", GDF_COALESCE}
-// };
 
 
 bool is_binary_operator_token(std::string token){
@@ -676,7 +672,7 @@ std::string aggregator_to_string(gdf_agg_op aggregation){
 	}else if(aggregation == GDF_COUNT_DISTINCT){
 		return "count_distinct";
 	}else{
-		return "";
+		return "";//FIXME: is really necessary?
 	}
 }
 
@@ -864,11 +860,6 @@ int find_closing_char(const std::string & expression, int start) {
 // takes a comma delimited list of expressions and splits it into separate expressions
 std::vector<std::string> get_expressions_from_expression_list(std::string & combined_expression, bool trim){
 	
-	//todo: 
-	//combined_expression
-	static const std::regex re{R""(CASE\(IS NOT NULL\((\W\(.+?\)|.+)\), \1, (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
-	combined_expression = std::regex_replace(combined_expression, re, "COALESCE($1, $2)");
-
 	std::vector<std::string> expressions;
 
 	int curInd = 0;
@@ -916,6 +907,25 @@ std::vector<std::string> get_expressions_from_expression_list(std::string & comb
 		else
 			expressions.push_back(exp);
 	}
+
+	static const std::regex re{R""(CASE\(IS NOT NULL\((\W\(.+?\)|.+)\), \1, (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
+	static const std::regex count_re{R""(COUNT\(DISTINCT (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
+
+	for (int i = 0; i < expressions.size(); i++){
+		expressions[i] = std::regex_replace(expressions[i], re, "COALESCE($1, $2)");
+		expressions[i] = std::regex_replace(expressions[i], count_re, "COUNT_DISTINCT($1)");
+
+		StringUtil::findAndReplaceAll(expressions[i]," NOT NULL","");
+		StringUtil::findAndReplaceAll(expressions[i],"):DOUBLE","");
+		StringUtil::findAndReplaceAll(expressions[i],"CAST(","");
+		StringUtil::findAndReplaceAll(expressions[i],"EXTRACT(FLAG(YEAR), ","BL_YEAR(");
+		StringUtil::findAndReplaceAll(expressions[i],"EXTRACT(FLAG(MONTH), ","BL_MONTH(");
+		StringUtil::findAndReplaceAll(expressions[i],"EXTRACT(FLAG(DAY), ","BL_DAY(");
+		StringUtil::findAndReplaceAll(expressions[i],"FLOOR(","BL_FLOUR(");
+	}
+
+	
+
 
 	return expressions;
 }

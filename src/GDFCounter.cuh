@@ -43,6 +43,8 @@ class GDFRefCounter
 
 		bool contains_column(gdf_column * ptrs);
 		static GDFRefCounter* getInstance();
+
+    std::size_t column_ref_value(gdf_column* column);
 };
 
 #endif /* GDFCOUNTER_H_ */

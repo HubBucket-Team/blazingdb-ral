@@ -4,7 +4,6 @@
 
 
 
-
 typedef enum{
 	GDF_FLOOR,
 	GDF_CEIL,

@@ -76,28 +76,22 @@ generateSamples(std::vector<std::vector<gdf_column_cpp>> &input_tables,
 }
 
 void
-prepareSamplesForGeneratePivots(
-  std::vector<std::vector<gdf_column_cpp>> &samples,
-  const std::vector<gdf_size_type> &        tableSizes) {
-    assert(samples.size() == tableSizes.size());
-
-    std::vector<double> representativities;
-    representativities.reserve(samples.size());
+normalizeSamples(std::vector<NodeSamples>& samples) {
+    std::vector<double> representativities{samples.size()};
 
     for (std::size_t i = 0; i < samples.size(); i++) {
-        representativities.push_back(double(samples[i][0].size())
-                                     / double(tableSizes[i]));
+        representativities[i] = (double)samples[i].getColumns()[0].size()
+                                / samples[i].getTotalRowSize();
     }
 
-    const gdf_size_type minimumRepresentativity =
+    const double minimumRepresentativity =
       *std::min_element(representativities.cbegin(), representativities.cend());
 
     for (std::size_t i = 0; i < samples.size(); i++) {
-        const double representativenessRatio =
-          double(minimumRepresentativity) / representativities[i];
+        double representativenessRatio = minimumRepresentativity / representativities[i];
 
-        if (representativenessRatio > thresholdForSubsampling) {
-            samples[i] = generateSample(samples[i], representativenessRatio);
+        if (representativenessRatio > THRESHOLD_FOR_SUBSAMPLING) {
+            samples[i].setColumns(generateSample(samples[i].getColumnsRef(), representativenessRatio));
         }
     }
 }

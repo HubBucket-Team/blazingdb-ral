@@ -7,6 +7,7 @@
 
 #include "ResultSetRepository.h"
 #include <random>
+#include <algorithm>
 #include "cuDF/Allocator.h"
 
 result_set_repository::result_set_repository() {
@@ -21,7 +22,7 @@ result_set_repository::~result_set_repository() {
 void result_set_repository::add_token(query_token_t token, connection_id_t connection){
 	std::lock_guard<std::mutex> guard(this->repo_mutex);
 	blazing_frame temp;
-	this->result_sets[token] = std::make_tuple(false, temp, 0.0, "");
+	this->result_sets[token] = {false, temp, 0.0, "", 0};
 
 	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
 		std::vector<query_token_t> empty_tokens;
@@ -81,7 +82,7 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 
 	{
 		std::lock_guard<std::mutex> guard(this->repo_mutex);
-		this->result_sets[token] = std::make_tuple(true, frame, duration, errorMsg);
+		this->result_sets[token] = {true, frame, duration, errorMsg, 0};
 	}
 	cv.notify_all();
 	/*if(this->requested_responses.find(token) != this->requested_responses.end()){
@@ -109,6 +110,21 @@ connection_id_t result_set_repository::init_session(){
 	return session;
 }
 
+void result_set_repository::free_result(connection_id_t connection, query_token_t token){
+	std::vector<query_token_t>& tokens = this->connection_result_sets[connection];
+	tokens.erase(std::remove(tokens.begin(), tokens.end(), token), tokens.end()); //remove
+
+	std::cout<<"freed result!"<<std::endl;
+
+	blazing_frame output_frame = this->result_sets[token].result_frame;
+
+	for(size_t i = 0; i < output_frame.get_width(); i++){
+		GDFRefCounter::getInstance()->free(output_frame.get_column(i).get_gdf_column());
+	}
+
+	this->result_sets.erase(token);
+}
+
 void result_set_repository::remove_all_connection_tokens(connection_id_t connection){
 	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
 		//TODO percy uncomment this later
@@ -118,40 +134,34 @@ void result_set_repository::remove_all_connection_tokens(connection_id_t connect
 
 	std::lock_guard<std::mutex> guard(this->repo_mutex);
 	for(query_token_t token : this->connection_result_sets[connection]){
-		this->result_sets.erase(token);
+		if(this->result_sets[token].ref_counter == 0){
+			this->free_result(connection, token);
+		}
 	}
 	this->connection_result_sets.erase(connection);
 }
 
-bool result_set_repository::free_result(connection_id_t connection, query_token_t token){
+bool result_set_repository::try_free_result(connection_id_t connection, query_token_t token){
 	std::lock_guard<std::mutex> guard(this->repo_mutex);
 
 	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
 		throw std::runtime_error{"Connection does not exist"};
 	}
 
-	for(size_t i = 0; i <  this->connection_result_sets[connection].size(); i++){
-		query_token_t token_test  = this->connection_result_sets[connection][i];
-		if(token == token_test){
-			std::vector<query_token_t> tokens= this->connection_result_sets[connection];
-			tokens.erase(tokens.begin() + i);
-			this->connection_result_sets[connection] = tokens;
-			std::cout<<"freed result!"<<std::endl;
-
-			blazing_frame output_frame = std::get<1>(this->result_sets[token]);
-
-			for(size_t i = 0; i < output_frame.get_width(); i++){
-				GDFRefCounter::getInstance()->free(output_frame.get_column(i).get_gdf_column());
-			}
-
-			this->result_sets.erase(token);
-			return true;
+	if(this->result_sets.find(token) != this->result_sets.end()){
+		if(this->result_sets[token].ref_counter == 1 ){ //this is the last one reference
+			this->free_result(connection, token);
 		}
-	}	
+		else{ //it is being referenced yet
+			std::cout<<"can't free result, still has at least one reference!"<<std::endl;
+			this->result_sets[token].ref_counter--;
+		}
+		return true;
+	}
 	return false;
 }
 
-result_set_type result_set_repository::get_result(connection_id_t connection, query_token_t token){
+result_set_t result_set_repository::get_result(connection_id_t connection, query_token_t token){
 	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
 		throw std::runtime_error{"Connection does not exist"};
 	}
@@ -160,21 +170,23 @@ result_set_type result_set_repository::get_result(connection_id_t connection, qu
 		throw std::runtime_error{"Result set does not exist"};
 	}
 	{
-		std::cout<<"Result is ready = "<<std::get<0>(this->result_sets[token])<<std::endl;
+		std::cout<<"Result is ready = "<<this->result_sets[token].is_ready<<std::endl;
 		//scope the lockguard here
 		std::unique_lock<std::mutex> lock(this->repo_mutex);
 		cv.wait(lock,[this,token](){
-			return std::get<0>(this->result_sets[token]);
+			return this->result_sets[token].is_ready;
 		});
-		std::cout<<"Result is after lock = "<<std::get<0>(this->result_sets[token])<<std::endl;
+		std::cout<<"Result is after lock = "<<this->result_sets[token].is_ready<<std::endl;
 
-		blazing_frame output_frame = std::get<1>(this->result_sets[token]);
+		this->result_sets[token].ref_counter++;
+
+		blazing_frame output_frame = this->result_sets[token].result_frame;
 
 		for(size_t i = 0; i < output_frame.get_width(); i++){
 			GDFRefCounter::getInstance()->deregister_column(output_frame.get_column(i).get_gdf_column());
 		}
 
-		return std::make_tuple(output_frame, std::get<2>(this->result_sets[token]), std::get<3>(this->result_sets[token]));
+		return this->result_sets[token];
 	}
 }
 
@@ -189,4 +201,3 @@ gdf_column_cpp result_set_repository::get_column(connection_id_t connection, col
 
 	return this->precalculated_columns[columnToken];
 }
-

@@ -29,6 +29,10 @@ public:
      */
     std::vector<gdf_column_cpp> getColumns();
 
+    std::vector<gdf_column_cpp>& getColumnsRef();
+
+    void setColumns(std::vector<gdf_column_cpp>&& columns);
+
 private:
     const std::size_t total_row_size_;
     const Node sender_node_;

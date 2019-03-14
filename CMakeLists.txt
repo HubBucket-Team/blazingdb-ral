@@ -64,10 +64,6 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper
     ${RAPIDJSON_INCLUDE_DIRS})
 
-## Binary Operations
-add_subdirectory(${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation)
-get_directory_property(binary_operation_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/gdf_wrapper/binary-operation DEFINITION source_files)
-
 ## cuDF adapter source files
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/cuDF)
 get_directory_property(cudf_adapter_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/cuDF DEFINITION source_files)
@@ -106,7 +102,6 @@ set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/config/BlazingConfig.cpp
               ${CMAKE_SOURCE_DIR}/src/Utils.cu
               ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
               ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
-              ${CMAKE_SOURCE_DIR}/src/testing-libgdf.cu
               ${cudf_adapter_source_files}
               ${binary_operation_source_files}
               ${parquet_reader_source_files}
@@ -114,9 +109,9 @@ set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/config/BlazingConfig.cpp
               ${distribution_source_files}
 )
 
-add_executable(testing-libgdf ${SRC_FILES})
+add_library(testing-libgdf_lib ${SRC_FILES})
 
-target_link_libraries(testing-libgdf
+target_link_libraries(testing-libgdf_lib
     ${BLAZINGDB_IO_STATIC_LIB}
     Threads::Threads
     ${ZEROMQ_STATIC_LIB}
@@ -152,6 +147,10 @@ target_link_libraries(testing-libgdf
     # Library needed for blazing communication repository (debug)
     gcov
 )
+
+set(SRC_FILES_APP ${CMAKE_SOURCE_DIR}/src/testing-libgdf.cu)
+add_executable(testing-libgdf ${SRC_FILES_APP})
+target_link_libraries(testing-libgdf testing-libgdf_lib)
 
 # Tests
 if(BUILD_TESTING)

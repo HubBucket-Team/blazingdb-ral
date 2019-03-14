@@ -40,55 +40,32 @@ parquet_parser::~parquet_parser() {
 void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file, std::vector<gdf_column_cpp> & columns) {
 	size_t num_row_groups;
 	size_t num_cols;
-	std::vector< ::parquet::Type::type> parquet_dtypes;
+	std::vector< gdf_dtype> dtypes;
 	std::vector< std::string> column_names;
 
-	// TODO: The return value of this function is just a placeholder,
-	// doesn't return a meaningful value 
-	gdf_error error = gdf::parquet::read_schema(file, num_row_groups, num_cols, parquet_dtypes, column_names);
-
- 	std::vector<bool> 	include_column;
-
-#define WHEN(TYPE)                                  \
-    case ::parquet::Type::TYPE:                     \
-        include_column.push_back(true);				\
-        break
-
-	for (size_t i = 0; i < parquet_dtypes.size(); i++) {
-		  switch (parquet_dtypes[i]) {
-			WHEN(BOOLEAN);
-            WHEN(INT32);
-            WHEN(INT64);
-            WHEN(FLOAT);
-            WHEN(DOUBLE);
-			default:
-		        include_column.push_back(false);
-				std::cerr << parquet_dtypes[i] << " - Column type not supported" << std::endl;
-		  }
-	}
-
-#undef WHEN
-
-	this->parse(file, columns, include_column);
+ 	std::vector<bool> 	include_columns;
+	gdf_error error = gdf::parquet::read_schema(file, num_row_groups, num_cols, dtypes, column_names, include_columns);
+	this->parse(file, columns, include_columns);
 }
 
 void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 			std::vector<gdf_column_cpp> & gdf_columns_out,
-			std::vector<bool> include_column){
+			std::vector<bool> include_columns){
 
 	gdf_error error;
 	size_t num_row_groups;
 	size_t num_cols;
-	std::vector< ::parquet::Type::type> parquet_dtypes;
+	std::vector<gdf_dtype> dtypes;
 	std::vector< std::string> column_names;
 
 	// TODO: The return value of this function is just a placeholder,
 	// doesn't return a meaningful value 
-	error = gdf::parquet::read_schema(file, num_row_groups, num_cols, parquet_dtypes, column_names);	
+	std::vector<bool> 	include_columns_test;
+	error = gdf::parquet::read_schema(file, num_row_groups, num_cols, dtypes, column_names, include_columns_test);
 
 	std::vector<std::size_t> column_indices;
-	for (size_t index =0; index < include_column.size(); index++) {
-		if (include_column[index]){
+	for (size_t index =0; index < include_columns.size(); index++) {
+		if (include_columns[index]){
 			column_indices.push_back(index);	
 		}
 	}
@@ -118,12 +95,13 @@ void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 void parquet_parser::parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> file, std::vector<gdf_column_cpp> & gdf_columns_out)  {
 	size_t num_row_groups;
 	size_t num_cols;
-	std::vector< ::parquet::Type::type> parquet_dtypes;
+	std::vector<gdf_dtype> dtypes;
 	std::vector< std::string> column_names;
 
 	// TODO: The return value of this function is just a placeholder,
 	// doesn't return a meaningful value 
-	gdf_error error = gdf::parquet::read_schema(file, num_row_groups, num_cols, parquet_dtypes, column_names);
+	std::vector<bool> 	include_columns;
+	gdf_error error = gdf::parquet::read_schema(file, num_row_groups, num_cols, dtypes, column_names, include_columns);
  
 	std::vector<std::size_t> row_group_ind(num_row_groups); // check, include all row groups
     std::iota(row_group_ind.begin(), row_group_ind.end(), 0);
@@ -131,21 +109,9 @@ void parquet_parser::parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> f
 	auto n_cols = column_names.size();
 	gdf_columns_out.resize(n_cols);
 
-	for (size_t i = 0; i < parquet_dtypes.size(); i++) {
-		switch (parquet_dtypes[i]) {
-		#define WHEN(dtype, TYPE)                          												        \
-				case ::parquet::Type::TYPE:                    											   	    \
-				gdf_columns_out[i].create_gdf_column(dtype, 0U, nullptr, 0U, column_names[i]);		  			\
-					break
-			WHEN(GDF_INT8, BOOLEAN);
-            WHEN(GDF_INT32, INT32);
-            WHEN(GDF_INT64, INT64);
-            WHEN(GDF_FLOAT32, FLOAT);
-            WHEN(GDF_FLOAT64, DOUBLE);
-			default:
-				std::cerr << parquet_dtypes[i] << " - Column type not supported" << std::endl;
-			#undef WHEN
-		}
+	for (size_t i = 0; i < dtypes.size(); i++) {
+		auto dtype = dtypes[i];
+		gdf_columns_out[i].create_gdf_column(dtype, 0U, nullptr, 0U, column_names[i]);
 	}
 }
 

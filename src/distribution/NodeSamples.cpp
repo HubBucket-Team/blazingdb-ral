@@ -31,5 +31,13 @@ std::vector<gdf_column_cpp> NodeSamples::getColumns() {
     return std::move(columns_);
 }
 
+std::vector<gdf_column_cpp>& NodeSamples::getColumnsRef() {
+    return columns_;
+}
+
+void NodeSamples::setColumns(std::vector<gdf_column_cpp>&& columns) {
+    columns_ = std::move(columns);
+}
+
 } // namespace distribution
 } // namespace ral

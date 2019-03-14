@@ -171,7 +171,7 @@ void gdf_column_cpp::allocate_set_valid(){
 gdf_valid_type * gdf_column_cpp::allocate_valid(){
 	size_t num_values = this->size();
     gdf_valid_type * valid_device;
-	this->allocated_size_valid = gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(num_values)); //so allocations are supposed to be 64byte aligned
+	this->allocated_size_valid = gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(num_values), gdf::util::kArrowAlignment); //so allocations are supposed to be 64byte aligned
 
     cuDF::Allocator::allocate((void**)&valid_device, allocated_size_valid);
 
@@ -306,14 +306,14 @@ gdf_column_cpp::~gdf_column_cpp()
 	}
 
 }
-bool gdf_column_cpp::is_ipc(){
+bool gdf_column_cpp::is_ipc() const {
 	return this->is_ipc_column;
 }
 void* gdf_column_cpp::data(){
     return column->data;
 }
 
-gdf_valid_type* gdf_column_cpp::valid(){
+gdf_valid_type* gdf_column_cpp::valid() const {
     return column->valid;
 }
 gdf_size_type gdf_column_cpp::size(){
@@ -340,7 +340,7 @@ std::size_t gdf_column_cpp::get_valid_size() const {
     return allocated_size_valid;
 }
 
-column_token_t gdf_column_cpp::get_column_token(){
+column_token_t gdf_column_cpp::get_column_token() const {
     return this->column_token;
 }
 

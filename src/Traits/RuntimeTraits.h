@@ -52,18 +52,21 @@ inline bool is_dtype_integer(gdf_dtype type) {
 
 namespace ral {
 namespace traits {
+    constexpr std::size_t BYTE_SIZE_IN_BITS = 8;
 
-    std::size_t get_dtype_size(gdf_column* column);
+    constexpr std::size_t VALID_SIZE_IN_BYTES = 64;
+
+    std::size_t get_dtype_size(const gdf_column* column);
 
     std::size_t get_dtype_size(gdf_dtype dtype);
 
 
-    std::size_t get_data_size(gdf_column* column);
+    std::size_t get_data_size(const gdf_column* column);
 
     std::size_t get_data_size(std::size_t quantity, gdf_dtype dtype);
 
 
-    std::size_t get_valid_size(gdf_column* column);
+    std::size_t get_valid_size(const gdf_column* column);
 
     std::size_t get_valid_size(std::size_t quantity);
 

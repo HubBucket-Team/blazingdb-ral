@@ -5,9 +5,9 @@
 namespace ral {
 namespace traits {
 
-    std::size_t get_dtype_size(gdf_column* column) {
+    std::size_t get_dtype_size(const gdf_column* column) {
         int width;
-        get_column_byte_width(column, &width);
+        get_column_byte_width(const_cast<gdf_column*>(column), &width);
         return (std::size_t) width;
     }
 
@@ -19,7 +19,7 @@ namespace traits {
         return (std::size_t) width;
     }
 
-    std::size_t get_data_size(gdf_column* column) {
+    std::size_t get_data_size(const gdf_column* column) {
         return (column->size * get_dtype_size(column->dtype));
     }
 
@@ -27,12 +27,12 @@ namespace traits {
         return (quantity * get_dtype_size(dtype));
     }
 
-    std::size_t get_valid_size(gdf_column* column) {
+    std::size_t get_valid_size(const gdf_column* column) {
         return (std::size_t) PaddedLength(arrow::BitUtil::BytesForBits(column->size));
     }
 
     std::size_t get_valid_size(std::size_t quantity) {
-        return (std::size_t) PaddedLength(arrow::BitUtil::BytesForBits(quantity));
+        return (std::size_t) PaddedLength(arrow::BitUtil::BytesForBits(quantity), kArrowAlignment);
     }
 
 } // namespace traits

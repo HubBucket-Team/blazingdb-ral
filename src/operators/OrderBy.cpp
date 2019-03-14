@@ -50,7 +50,7 @@ void sort(blazing_frame& input, std::vector<gdf_column*>& rawCols, std::vector<i
 	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
 
 	gdf_context context;
-	context.flag_nulls_sort_behavior = 0; // Nulls are are treated as largest
+	context.flag_null_sort_behavior = GDF_NULL_AS_LARGEST; // Nulls are are treated as largest
 
 	CUDF_CALL( gdf_order_by(rawCols.data(),
 			(int8_t*)(asc_desc_col.get_gdf_column()->data),

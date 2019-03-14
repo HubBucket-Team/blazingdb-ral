@@ -36,23 +36,28 @@ GdfRowGroupReader::GdfRowGroupReader(std::unique_ptr<::parquet::RowGroupReader::
 static std::shared_ptr<::parquet::ColumnReader> GdfColumnReaderMake(const ::parquet::ColumnDescriptor* descr,
                                                  std::unique_ptr<::parquet::PageReader> pager,
                                                              ::arrow::MemoryPool* pool) {
+    // some logical types are supported in cuio/parquet_reader
+    switch (descr->logical_type()) {
+        case ::parquet::LogicalType::DATE:
+            return std::static_pointer_cast<::parquet::ColumnReader>(std::make_shared<Int32Reader>(descr, std::move(pager), pool));
+        case ::parquet::LogicalType::TIMESTAMP_MILLIS:
+            return std::static_pointer_cast<::parquet::ColumnReader>(std::make_shared<Int64Reader>(descr, std::move(pager), pool));
+    }
+
     switch (descr->physical_type()) {
         case ::parquet::Type::BOOLEAN:
             return std::static_pointer_cast<::parquet::ColumnReader>(std::make_shared<BoolReader>(descr, std::move(pager), pool));
         case ::parquet::Type::INT32:
             return std::static_pointer_cast<::parquet::ColumnReader>(std::make_shared<Int32Reader>(descr, std::move(pager), pool));
-            break;
         case ::parquet::Type::INT64:
             return std::static_pointer_cast<::parquet::ColumnReader>(std::make_shared<Int64Reader>(descr, std::move(pager), pool));
         case ::parquet::Type::FLOAT:
             return std::static_pointer_cast<::parquet::ColumnReader>(std::make_shared<FloatReader>(descr, std::move(pager), pool));
         case ::parquet::Type::DOUBLE:
             return std::static_pointer_cast<::parquet::ColumnReader>(std::make_shared<DoubleReader>(descr, std::move(pager), pool));
-        default:
-            ::parquet::ParquetException::NYI("type reader not implemented");
     }
     // Unreachable code, but supress compiler warning
-    return std::shared_ptr<::parquet::ColumnReader>(nullptr);
+    return nullptr;
 }
 
 

@@ -6,7 +6,12 @@
 #pass the dependency libraries as optional arguments using ${ARGN}
 #NOTE the order of libraries matter, so try to link first with the most high level lib
 function(configure_test TEST_NAME Tests_SRCS)
-    include_directories(${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/tests/utils)
+    include_directories(
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/tests/utils
+        ${CMAKE_SOURCE_DIR}/thirdparty/jitify
+        ${CMAKE_SOURCE_DIR}/src/gdf_wrapper
+    )
 
     add_executable(${TEST_NAME} ${Tests_SRCS})
 
@@ -16,36 +21,7 @@ function(configure_test TEST_NAME Tests_SRCS)
         gmock
         GTest::GTest
 
-        ${BLAZINGDB_IO_STATIC_LIB}
-        ${BLAZINGDB_PROTOCOL_STATIC_LIB}
-        ${BLAZINGDB_COMMUNICATION_STATIC_LIB}
-
-        ${LIBGDF_STATIC_LIB}
-        NVStrings
-        rmm
-
-        cudart
-        cuda
-        ${CUDA_CUDA_LIBRARY}
-        ${CUDA_NVRTC_LIBRARY}
-        ${CUDA_NVTX_LIBRARY}
-
-        ${PARQUET_STATIC_LIB}
-        ${ARROW_STATIC_LIB}
-        ${THRIFT_STATIC_LIB}
-        ${SNAPPY_STATIC_LIB}
-        ${BROTLI_STATIC_LIB}
-        ${ZSTD_STATIC_LIB}
-        ${LZ4_STATIC_LIB}
-        ${FLATBUFFERS_STATIC_LIB}
-
-        aws-cpp-sdk-s3
-        aws-cpp-sdk-s3-encryption
-
-        Boost::filesystem
-        Boost::system
-        Boost::regex
-
+        testing-libgdf_lib
     )
 
     set_target_properties(${TEST_NAME} PROPERTIES
@@ -75,6 +51,7 @@ add_subdirectory(pjoins)
 add_subdirectory(evaluate_query)
 add_subdirectory(order-by)
 add_subdirectory(gdf-ref-counter)
+add_subdirectory(gdf_column_cpp)
 add_subdirectory(where)
 add_subdirectory(joins)
 add_subdirectory(tpch)

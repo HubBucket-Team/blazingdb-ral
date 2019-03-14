@@ -17,26 +17,21 @@
 #=============================================================================
  
 set(parquet_versus-test_SRCS
-    ${parquet_reader_source_files}
     versus.cu
 )
 
 set (parquet_bug_fix-test_SRCS
-    ${parquet_reader_source_files}
     fix_parquet_reader.cu
 )
-
 
 configure_test(parquet_bug_fix-test "${parquet_bug_fix-test_SRCS}")
 configure_test(parquet_versus-test "${parquet_versus-test_SRCS}")
 
- 
 set(parquet_file_PATH
     ${CMAKE_SOURCE_DIR}/tests/parquet/tpch/data/nation_0_0.parquet)
 
 target_compile_definitions(parquet_bug_fix-test
     PUBLIC -DPARQUET_FILE_PATH="${parquet_file_PATH}")
- 
 
 target_compile_definitions(parquet_versus-test
     PUBLIC -DPARQUET_FILE_PATH="${parquet_file_PATH}")

@@ -14,7 +14,9 @@
 #include "GDFColumn.cuh"
 #include "gdf_wrapper/gdf_wrapper.cuh"
 #include "cuDF/Allocator.h"
+#include "cuDF/column_slice/column_cpp_slice.h"
 #include "cuio/parquet/util/bit_util.cuh"
+#include "Traits/RuntimeTraits.h"
 
 #include "FreeMemory.h"
 
@@ -159,15 +161,7 @@ gdf_error gdf_column_cpp::compact(){
 
 void gdf_column_cpp::update_null_count()
 {
-    if (this->column->size == 0 || this->column->valid == nullptr) {
-        this->column->null_count = 0;
-    }
-    else {
-        int count;
-        gdf_error result = gdf_count_nonzero_mask(this->column->valid, this->column->size, &count);
-        assert(result == GDF_SUCCESS);
-        this->column->null_count = this->column->size - static_cast<gdf_size_type>(count);
-    }
+    update_null_count(column);
 }
 
 void gdf_column_cpp::allocate_set_valid(){
@@ -360,4 +354,69 @@ column_token_t gdf_column_cpp::get_column_token() const {
 
 void gdf_column_cpp::set_column_token(column_token_t column_token){
     this->column_token = column_token;
+}
+
+gdf_column_cpp gdf_column_cpp::slice(gdf_size_type data_position, gdf_size_type data_length) const {
+    // create
+    gdf_column_cpp result;
+    result.column = new gdf_column;
+
+    // allocate & copy
+    allocate_gpu_memory(&result, data_length, column->dtype);
+    copy_in_gpu_memory(&result, this, data_position, data_length, column->dtype);
+
+    // update cudf column
+    update_null_count(result.column);
+    result.column->dtype_info = column->dtype_info;
+
+    // update ral column
+    result.is_ipc_column = false;
+    result.column_name = column_name;
+    result.column_token = column_token;
+
+    // register column
+    GDFRefCounter::getInstance()->register_column(result.column);
+
+    // done
+    return result;
+}
+
+void gdf_column_cpp::allocate_gpu_memory(gdf_column_cpp* ral_column, gdf_size_type quantity, gdf_dtype dtype) const {
+    gdf_size_type data_size_in_bytes = ral::traits::get_data_size(quantity, dtype);
+    gdf_size_type valid_size_in_bytes = ral::traits::get_valid_size(quantity);
+
+    cuDF::Allocator::allocate((void**)&ral_column->column->data, data_size_in_bytes);
+    cuDF::Allocator::allocate((void**)&ral_column->column->valid, valid_size_in_bytes);
+
+    ral_column->allocated_size_data = data_size_in_bytes;
+    ral_column->allocated_size_valid = valid_size_in_bytes;
+    ral_column->column->size = quantity;
+}
+
+void gdf_column_cpp::copy_in_gpu_memory(gdf_column_cpp*       output_column,
+                                        const gdf_column_cpp* input_column,
+                                        gdf_size_type         position,
+                                        gdf_size_type         length,
+                                        gdf_dtype             dtype) const {
+    gdf_size_type data_size_in_bytes = ral::traits::get_data_size(length, dtype);
+    gdf_size_type offset_in_bytes = ral::traits::get_data_size(position, dtype);
+
+    thrust::device_ptr<std::uint8_t> input_data(reinterpret_cast<std::uint8_t*>(input_column->column->data));
+    thrust::device_ptr<std::uint8_t> output_data(reinterpret_cast<std::uint8_t*>(output_column->column->data));
+
+    thrust::copy_n(thrust::device, input_data + offset_in_bytes, data_size_in_bytes, output_data);
+
+    ral::cudf::column_cpp_valid_slice(output_column, input_column, position, length);
+}
+
+void gdf_column_cpp::update_null_count(gdf_column* column) const {
+    if (column->size == 0 || column->valid == nullptr) {
+        column->null_count = 0;
+    }
+    else {
+        int count;
+        gdf_error result = gdf_count_nonzero_mask(column->valid, column->size, &count);
+        assert(result == GDF_SUCCESS);
+        column->null_count = column->size - static_cast<gdf_size_type>(count);
+    }
 }

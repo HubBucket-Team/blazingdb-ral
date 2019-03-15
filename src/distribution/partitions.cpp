@@ -1,8 +1,5 @@
 #include "primitives.h"
-
 #include <algorithm>
-
-#include "internal.h"
 
 namespace ral {
 namespace distribution {
@@ -20,7 +17,7 @@ makeTableChunk(const std::vector<gdf_column_cpp> &table,
                    std::back_inserter(columnChunks),
                    [lower_index, upper_index](const gdf_column_cpp &column) {
                        gdf_size_type length = upper_index - lower_index;
-                       return internal::slice(column, lower_index, length);
+                       return column.slice(lower_index, length);
                    });
 
     return columnChunks;

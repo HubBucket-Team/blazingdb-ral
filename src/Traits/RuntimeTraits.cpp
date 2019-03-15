@@ -28,7 +28,7 @@ namespace traits {
     }
 
     std::size_t get_valid_size(const gdf_column* column) {
-        return (std::size_t) PaddedLength(arrow::BitUtil::BytesForBits(column->size));
+        return (std::size_t) PaddedLength(arrow::BitUtil::BytesForBits(column->size), kArrowAlignment);
     }
 
     std::size_t get_valid_size(std::size_t quantity) {

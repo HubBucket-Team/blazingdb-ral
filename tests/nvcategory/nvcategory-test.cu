@@ -269,7 +269,7 @@ struct NVCategoryTest : public ::testing::Test {
 	void Check(gdf_column_cpp out_col, std::vector<std::string> reference_result, bool ordered = false){
 
 		const size_t num_values = out_col.size();
-		NVStrings * temp_strings = out_col.get_gdf_column()->dtype_info.category->gather_strings( (int*) out_col.get_gdf_column()->data, num_values, true );
+		NVStrings * temp_strings = static_cast<NVCategory *>(out_col.get_gdf_column()->dtype_info.category)->gather_strings( (int*) out_col.get_gdf_column()->data, num_values, true );
 
 		char** host_strings = new char*[num_values];
 		temp_strings->to_host(host_strings, 0, num_values);

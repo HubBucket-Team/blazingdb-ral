@@ -155,7 +155,7 @@ void add_expression_to_plan(	blazing_frame & inputs,
 					size_t left_index = get_index(left_operand);
 					gdf_column* left_column = input_columns[left_index];
 
-					int found = left_column->dtype_info.category->get_value(right_operand.c_str());
+					int found = static_cast<NVCategory *>(left_column->dtype_info.category)->get_value(right_operand.c_str());
 
 					if(found != -1){
 						gdf_data data;
@@ -173,17 +173,17 @@ void add_expression_to_plan(	blazing_frame & inputs,
 						const char* str = right_operand.c_str();
 						const char** strs = &str;
 						NVStrings* temp_string = NVStrings::create_from_array(strs, 1);
-						NVCategory* new_category = left_column->dtype_info.category->add_strings(*temp_string);
+						NVCategory* new_category = static_cast<NVCategory *>(left_column->dtype_info.category)->add_strings(*temp_string);
 						left_column->dtype_info.category = new_category;
 
 						size_t size_to_copy = sizeof(int32_t) * left_column->size;
 
 						cudaMemcpyAsync(left_column->data,
-							left_column->dtype_info.category->values_cptr(),
+							static_cast<NVCategory *>(left_column->dtype_info.category)->values_cptr(),
 							size_to_copy,
 							cudaMemcpyDeviceToDevice);
 						
-						int found = left_column->dtype_info.category->get_value(right_operand.c_str());
+						int found = static_cast<NVCategory *>(left_column->dtype_info.category)->get_value(right_operand.c_str());
 
 						gdf_data data;
 						data.si32 = found;
@@ -245,8 +245,6 @@ void add_expression_to_plan(	blazing_frame & inputs,
 					right_scalars.push_back(dummy_scalar);
 				}
 
-			} else if (is_other_binary_operator_token(token)){
-				//well we can figure this out later
 			}else{
 				//uh oh
 			}

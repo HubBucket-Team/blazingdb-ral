@@ -1195,8 +1195,8 @@ void process_filter(blazing_frame & input, std::string query_part){
 			const bool DEVICE_ALLOCATED = true;
 
 			if(output_column->size > 0){
-				NVCategory * output_column->dtype_info.category = static_cast<void *>(
-				    static_cast<NVCategory *>(input.get_column(i).get_gdf_column()->dtype_info.category)->gathe(
+				output_column->dtype_info.category = static_cast<void *>(
+				    static_cast<NVCategory *>(input.get_column(i).get_gdf_column()->dtype_info.category)->gather(
 					(nv_category_index_type *) output_column->data,
 					output_column->size,
 					DEVICE_ALLOCATED ) );
@@ -1205,7 +1205,7 @@ void process_filter(blazing_frame & input, std::string query_part){
 
 				CheckCudaErrors( cudaMemcpy(
 					output_column->data,
-					output_column->dtype_info.category->values_cptr(),
+					static_cast<NVCategory *>(output_column->dtype_info.category)->values_cptr(),
 					sizeof(nv_category_index_type) * output_column->size,
 					cudaMemcpyDeviceToDevice) );
 

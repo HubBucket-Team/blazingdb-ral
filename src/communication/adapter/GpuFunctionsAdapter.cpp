@@ -18,15 +18,15 @@ namespace adapter {
     }
 
     std::size_t GpuFunctionsAdapter::getDataCapacity(gdf_column* column) {
-        return ral::traits::get_data_size(column);
+        return ral::traits::get_data_size_in_bytes(column);
     }
 
     std::size_t GpuFunctionsAdapter::getValidCapacity(gdf_column* column) {
-        return ral::traits::get_valid_size(column->size);
+        return ral::traits::get_bitmask_size_in_bytes(column->size);
     }
 
     std::size_t GpuFunctionsAdapter::getDTypeSize(gdf_dtype dtype) {
-        return ral::traits::get_dtype_size(dtype);
+        return ral::traits::get_dtype_size_in_bytes(dtype);
     }
 
 } // namespace adapter

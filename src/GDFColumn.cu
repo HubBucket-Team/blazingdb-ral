@@ -382,8 +382,8 @@ gdf_column_cpp gdf_column_cpp::slice(gdf_size_type data_position, gdf_size_type 
 }
 
 void gdf_column_cpp::allocate_gpu_memory(gdf_column_cpp* ral_column, gdf_size_type quantity, gdf_dtype dtype) const {
-    gdf_size_type data_size_in_bytes = ral::traits::get_data_size(quantity, dtype);
-    gdf_size_type valid_size_in_bytes = ral::traits::get_valid_size(quantity);
+    gdf_size_type data_size_in_bytes = ral::traits::get_data_size_in_bytes(quantity, dtype);
+    gdf_size_type valid_size_in_bytes = ral::traits::get_bitmask_size_in_bytes(quantity);
 
     cuDF::Allocator::allocate((void**)&ral_column->column->data, data_size_in_bytes);
     cuDF::Allocator::allocate((void**)&ral_column->column->valid, valid_size_in_bytes);
@@ -398,8 +398,8 @@ void gdf_column_cpp::copy_in_gpu_memory(gdf_column_cpp*       output_column,
                                         gdf_size_type         position,
                                         gdf_size_type         length,
                                         gdf_dtype             dtype) const {
-    gdf_size_type data_size_in_bytes = ral::traits::get_data_size(length, dtype);
-    gdf_size_type offset_in_bytes = ral::traits::get_data_size(position, dtype);
+    gdf_size_type data_size_in_bytes = ral::traits::get_data_size_in_bytes(length, dtype);
+    gdf_size_type offset_in_bytes = ral::traits::get_data_size_in_bytes(position, dtype);
 
     thrust::device_ptr<std::uint8_t> input_data(reinterpret_cast<std::uint8_t*>(input_column->column->data));
     thrust::device_ptr<std::uint8_t> output_data(reinterpret_cast<std::uint8_t*>(output_column->column->data));

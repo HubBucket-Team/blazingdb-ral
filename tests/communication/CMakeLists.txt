@@ -1,5 +1,5 @@
-set(component_message_test_SRCS
-    component_message_test.cpp
+set(communication_message_test_SRCS
+    communication_message_test.cpp
 )
 
-configure_test(component_message_test "${component_message_test_SRCS}")
+configure_test(communication_message_test "${communication_message_test_SRCS}")

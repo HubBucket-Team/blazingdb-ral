@@ -20,12 +20,12 @@ gdf_column_cpp create_gdf_column_cpp(std::size_t size, gdf_dtype dtype) {
     };
 
     // create data array
-    std::size_t data_size = ral::traits::get_data_size(size, dtype);
+    std::size_t data_size = ral::traits::get_data_size_in_bytes(size, dtype);
     std::vector<std::uint8_t> data;
     data.resize(data_size);
 
     // create valid array
-    std::size_t valid_size = ral::traits::get_valid_size(size);
+    std::size_t valid_size = ral::traits::get_bitmask_size_in_bytes(size);
     std::vector<std::uint8_t> valid;
     valid.resize(valid_size);
 
@@ -35,7 +35,7 @@ gdf_column_cpp create_gdf_column_cpp(std::size_t size, gdf_dtype dtype) {
 
     // create gdf_column_cpp
     gdf_column_cpp column;
-    auto width = ral::traits::get_dtype_size(dtype);
+    auto width = ral::traits::get_dtype_size_in_bytes(dtype);
     column.create_gdf_column(dtype, size, data.data(), valid.data(), width);
 
     // done
@@ -44,16 +44,16 @@ gdf_column_cpp create_gdf_column_cpp(std::size_t size, gdf_dtype dtype) {
 
 gdf_column_cpp create_null_gdf_column_cpp(std::size_t size, gdf_dtype dtype) {
     // create data array
-    std::size_t data_size = ral::traits::get_data_size(size, dtype);
+    std::size_t data_size = ral::traits::get_data_size_in_bytes(size, dtype);
     std::vector<std::uint8_t> data(data_size, 0);
 
     // create valid array
-    std::size_t valid_size = ral::traits::get_valid_size(size);
+    std::size_t valid_size = ral::traits::get_bitmask_size_in_bytes(size);
     std::vector<std::uint8_t> valid(valid_size, 0);
 
     // create gdf_column_cpp
     gdf_column_cpp column;
-    auto width = ral::traits::get_dtype_size(dtype);
+    auto width = ral::traits::get_dtype_size_in_bytes(dtype);
     column.create_gdf_column(dtype, size, data.data(), valid.data(), width);
 
     // done
@@ -63,7 +63,7 @@ gdf_column_cpp create_null_gdf_column_cpp(std::size_t size, gdf_dtype dtype) {
 std::vector<std::uint8_t> get_column_data(gdf_column* column) {
     std::vector<std::uint8_t> result;
 
-    std::size_t data_size = ral::traits::get_data_size(column);
+    std::size_t data_size = ral::traits::get_data_size_in_bytes(column);
     result.resize(data_size);
     cudaMemcpy(result.data(), column->data, data_size, cudaMemcpyDeviceToHost);
 
@@ -73,7 +73,7 @@ std::vector<std::uint8_t> get_column_data(gdf_column* column) {
 std::vector<std::uint8_t> get_column_valid(gdf_column* column) {
     std::vector<std::uint8_t> result;
 
-    std::size_t valid_size = ral::traits::get_valid_size(column);
+    std::size_t valid_size = ral::traits::get_bitmask_size_in_bytes(column);
     result.resize(valid_size);
     cudaMemcpy(result.data(), column->valid, valid_size, cudaMemcpyDeviceToHost);
 
@@ -98,7 +98,7 @@ bool operator==(const gdf_column& lhs, const gdf_column& rhs) {
         return false;
     }
 
-    auto data_size = ral::traits::get_data_size(&lhs);
+    auto data_size = ral::traits::get_data_size_in_bytes(&lhs);
     if (!thrust::equal(thrust::cuda::par,
                        reinterpret_cast<const std::uint8_t*>(lhs.data),
                        reinterpret_cast<const std::uint8_t*>(lhs.data) + data_size,
@@ -110,7 +110,7 @@ bool operator==(const gdf_column& lhs, const gdf_column& rhs) {
         return false;
     }
 
-    auto valid_size = ral::traits::get_valid_size(&rhs);
+    auto valid_size = ral::traits::get_bitmask_size_in_bytes(&rhs);
     if (!thrust::equal(thrust::cuda::par,
                        reinterpret_cast<const std::uint8_t*>(lhs.valid),
                        reinterpret_cast<const std::uint8_t*>(lhs.valid) + valid_size,

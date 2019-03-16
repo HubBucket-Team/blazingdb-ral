@@ -1,7 +1,9 @@
 #ifndef TRAITS_RUNTIME_TRAITS
 #define TRAITS_RUNTIME_TRAITS
 
-#include "gdf_wrapper/gdf_wrapper.cuh"
+#include <cstdint>
+#include <cstddef>
+#include <cudf/types.h>
 
 namespace Ral {
 namespace Traits {
@@ -52,24 +54,25 @@ inline bool is_dtype_integer(gdf_dtype type) {
 
 namespace ral {
 namespace traits {
+
     constexpr std::size_t BYTE_SIZE_IN_BITS = 8;
 
     constexpr std::size_t VALID_SIZE_IN_BYTES = 64;
 
 
-    std::size_t get_dtype_size(const gdf_column* column);
+    gdf_size_type get_dtype_size_in_bytes(const gdf_column* column);
 
-    std::size_t get_dtype_size(gdf_dtype dtype);
-
-
-    std::size_t get_data_size(const gdf_column* column);
-
-    std::size_t get_data_size(std::size_t quantity, gdf_dtype dtype);
+    gdf_size_type get_dtype_size_in_bytes(gdf_dtype dtype);
 
 
-    std::size_t get_valid_size(const gdf_column* column);
+    gdf_size_type get_data_size_in_bytes(const gdf_column* column);
 
-    std::size_t get_valid_size(std::size_t quantity);
+    gdf_size_type get_data_size_in_bytes(gdf_size_type quantity, gdf_dtype dtype);
+
+
+    gdf_size_type get_bitmask_size_in_bytes(const gdf_column* column);
+
+    gdf_size_type get_bitmask_size_in_bytes(gdf_size_type quantity);
 
 } // namespace traits
 } // namespace ral

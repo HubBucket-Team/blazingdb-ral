@@ -16,11 +16,11 @@ namespace {
             return (rng() % 26) + 65;
         };
 
-        std::size_t data_size = ral::traits::get_data_size(size, dtype);
+        std::size_t data_size = ral::traits::get_data_size_in_bytes(size, dtype);
         std::vector<std::uint8_t> data;
         data.resize(data_size);
 
-        std::size_t valid_size = ral::traits::get_valid_size(size);
+        std::size_t valid_size = ral::traits::get_bitmask_size_in_bytes(size);
         std::vector<std::uint8_t> valid;
         valid.resize(valid_size);
 
@@ -28,7 +28,7 @@ namespace {
         std::generate_n(valid.data(), valid_size, Generator);
 
         gdf_column_cpp column;
-        auto width = ral::traits::get_dtype_size(dtype);
+        auto width = ral::traits::get_dtype_size_in_bytes(dtype);
         column.create_gdf_column(dtype, size, data.data(), valid.data(), width);
 
         return column;
@@ -37,7 +37,7 @@ namespace {
     std::vector<std::uint8_t> get_data(gdf_column* column) {
         std::vector<std::uint8_t> result;
 
-        std::size_t data_size = ral::traits::get_data_size(column);
+        std::size_t data_size = ral::traits::get_data_size_in_bytes(column);
         result.resize(data_size);
         cudaMemcpy(result.data(), column->data, data_size, cudaMemcpyDeviceToHost);
 
@@ -47,7 +47,7 @@ namespace {
     std::vector<std::uint8_t> get_valid(gdf_column* column) {
         std::vector<std::uint8_t> result;
 
-        std::size_t valid_size = ral::traits::get_valid_size(column);
+        std::size_t valid_size = ral::traits::get_bitmask_size_in_bytes(column);
         result.resize(valid_size);
         cudaMemcpy(result.data(), column->valid, valid_size, cudaMemcpyDeviceToHost);
 

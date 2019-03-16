@@ -44,7 +44,7 @@ gdf_error column_cpp_valid_slice(gdf_column_cpp*       output_column,
                                  const gdf_size_type   start_bit,
                                  const gdf_size_type   bits_length) {
     // guards
-    gdf_size_type valid_src_size = ral::traits::get_valid_size(input_column->get_gdf_column());
+    gdf_size_type valid_src_size = ral::traits::get_bitmask_size_in_bytes(input_column->get_gdf_column());
 
     GDF_REQUIRE(((start_bit + bits_length) < (valid_src_size * (gdf_size_type)ral::traits::BYTE_SIZE_IN_BITS)), GDF_INVALID_API_CALL);
     if (bits_length == 0) {

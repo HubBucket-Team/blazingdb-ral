@@ -379,7 +379,15 @@ static result_pair freeResultService(uint64_t accessToken, Buffer&& requestPaylo
 
   interpreter::GetResultRequestMessage request(requestPayloadBuffer.data());
   std::cout << "resultToken: " << request.getResultToken() << std::endl;
-  if(result_set_repository::get_instance().try_free_result(accessToken, request.getResultToken())){
+  bool success = false;
+  try {
+    success = result_set_repository::get_instance().try_free_result(accessToken, request.getResultToken());
+  } catch (const std::runtime_error& e) {
+    std::cerr << e.what() << std::endl;
+     ResponseErrorMessage errorMessage{ std::string{e.what()} };
+     return std::make_pair(Status_Error, errorMessage.getBufferData());
+  }
+  if(success){
 	  ZeroMessage response{};
 	  return std::make_pair(Status_Success, response.getBufferData());
   }else{

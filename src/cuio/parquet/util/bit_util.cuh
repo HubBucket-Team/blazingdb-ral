@@ -31,7 +31,7 @@ static constexpr int32_t kTensorAlignment = 64;
 // Align on 8-byte boundaries in IPC
 static constexpr int32_t kArrowIpcAlignment = 8;
 
-// Align on 4-byte boundaries in CUDF static 
+// Align on 4-byte boundaries in CUDF static
 constexpr int32_t kCudfIpcAlignment = 4;
 
 //todo, enable arrow ipc utils, and remove this method
@@ -63,6 +63,11 @@ __host__ __device__ __forceinline__ void turn_bit_on(uint8_t* const bits, size_t
 __host__ __device__ __forceinline__ void turn_bit_off(uint8_t* const bits, size_t i)
 {
   bits[i / 8] &= flipped_bitmask(i % 8);
+}
+
+__host__ __device__ __forceinline__ bool is_valid(uint8_t* const bits, size_t i)
+{
+  return bits[i / 8] & byte_bitmask(i % 8);
 }
 
 __host__ __device__ __forceinline__ size_t last_byte_index(size_t column_size)

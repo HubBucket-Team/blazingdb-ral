@@ -43,11 +43,10 @@ void sort(blazing_frame& input, std::vector<gdf_column*>& rawCols, std::vector<i
 	timer.reset();
 
 	gdf_column_cpp asc_desc_col;
-	asc_desc_col.create_gdf_column(GDF_INT8, rawCols.size(), nullptr, 1, "");
-	CheckCudaErrors(cudaMemcpy(asc_desc_col.get_gdf_column()->data, sortOrderTypes.data(), sortOrderTypes.size() * sizeof(int8_t), cudaMemcpyHostToDevice));
+	asc_desc_col.create_gdf_column(GDF_INT8, sortOrderTypes.size(), sortOrderTypes.data(), get_width_dtype(GDF_INT8), "");
 
 	gdf_column_cpp index_col;
-	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
+	index_col.create_gdf_column(GDF_INT32, input.get_column(0).size(), nullptr, get_width_dtype(GDF_INT32), "");
 
 	gdf_context context;
 	context.flag_null_sort_behavior = GDF_NULL_AS_LARGEST; // Nulls are are treated as largest
@@ -114,7 +113,7 @@ void distributed_sort(const Context* queryContext, blazing_frame& input, std::ve
 		std::vector<ral::distribution::NodeSamples> samples = ral::distribution::collectSamples(*queryContext);
     samples.emplace_back(rowSize, CommunicationData::getInstance().getSelfNode(), std::move(selfSamples));
 
-		partitionPlan = ral::distribution::generatePartitionPlans(samples);
+		partitionPlan = ral::distribution::generatePartitionPlans(*queryContext, samples, sortOrderTypes);
 
     ral::distribution::distributePartitionPlan(*queryContext, partitionPlan);
 	}

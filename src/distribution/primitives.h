@@ -52,7 +52,7 @@ std::vector<NodeColumns> collectPartition(const Context& context);
 
 std::vector<NodeSamples> collectSamples(const Context& context);
 
-std::vector<gdf_column_cpp> generatePartitionPlans(std::vector<NodeSamples>& samples);
+std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::vector<NodeSamples>& samples, std::vector<int8_t>& sortOrderTypes);
 
 void distributePartitionPlan(const Context& context, std::vector<gdf_column_cpp>& pivots);
 

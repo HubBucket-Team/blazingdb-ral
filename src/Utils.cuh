@@ -65,16 +65,16 @@ static bool get_bit(const gdf_valid_type* const bits, size_t i)
 {
   return  bits == nullptr? true :  bits[i >> size_t(3)] & (1 << (i & size_t(7)));
 }
- 
+
 
 // Type for a unique_ptr to a gdf_column with a custom deleter
 // Custom deleter is defined at construction
-using gdf_col_pointer = typename std::unique_ptr<gdf_column, 
+using gdf_col_pointer = typename std::unique_ptr<gdf_column,
                                                  std::function<void(gdf_column*)>>;
 
 template <typename col_type>
-void print_typed_column(col_type * col_data, 
-                        gdf_valid_type * validity_mask, 
+void print_typed_column(col_type * col_data,
+                        gdf_valid_type * validity_mask,
                         const size_t num_rows)
 {
 
@@ -97,7 +97,7 @@ void print_typed_column(col_type * col_data,
       else
         std::cout << h_data[i] << " ";
     }
-  } 
+  }
   else {
     for(size_t i = 0; i < num_rows; ++i)
     {
@@ -166,7 +166,7 @@ static void print_gdf_column(gdf_column const * the_column)
 
 template <typename HostDataType>
 void print_column(gdf_column * column){
-	// @ todo : fix print column 
+	// @ todo : fix print column
 
 	return; // TODO alguien arregle esta funcion!!
 
@@ -205,5 +205,7 @@ void print_column(gdf_column * column){
 void free_gdf_column(gdf_column * column);
 
 void gdf_sequence(int32_t* data, size_t size, int32_t init_val);
+
+void gdf_sequence(int32_t* data, size_t size, int32_t init_val, int32_t step);
 
 #endif /* UTILS_CUH_ */

@@ -57,7 +57,7 @@ namespace traits {
 
     constexpr std::size_t BYTE_SIZE_IN_BITS = 8;
 
-    constexpr std::size_t VALID_SIZE_IN_BYTES = 64;
+    constexpr std::size_t BITMASK_SIZE_IN_BYTES = 64;
 
 
     gdf_size_type get_dtype_size_in_bytes(const gdf_column* column);

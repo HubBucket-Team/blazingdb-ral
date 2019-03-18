@@ -38,7 +38,7 @@ std::vector<std::uint8_t> slice_cpu_valids(const gdf_column_cpp& input_column, s
     const auto const_byte_size = ral::traits::BYTE_SIZE_IN_BITS;
     std::size_t result_byte_size = (bits_length / const_byte_size) + ((bits_length % const_byte_size) ? 1 : 0);
 
-    const auto align_size = ral::traits::VALID_SIZE_IN_BYTES;
+    const auto align_size = ral::traits::BITMASK_SIZE_IN_BYTES;
     std::size_t result_byte_size_padding = ((result_byte_size + (align_size - 1)) / align_size) * align_size;
 
     // extract data from bitset

@@ -219,11 +219,10 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
   }
 
   // Sort
-  std::vector<gdf_column*> rawCols;
-  rawCols.reserve(concatSamples.size());
+  std::vector<gdf_column*> rawCols{concatSamples.size()};
   for(size_t i = 0; i < concatSamples.size(); i++)
   {
-    rawCols.push_back(concatSamples[i].get_gdf_column());
+    rawCols[i] = concatSamples[i].get_gdf_column();
   }
 
   gdf_column_cpp ascDescCol;
@@ -242,7 +241,7 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
                           &gdfContext) );
 
   std::vector<gdf_column_cpp> sortedSamples{concatSamples.size()};
- 	for(int i = 0; i < sortedSamples.size(); i++) {
+ 	for(size_t i = 0; i < sortedSamples.size(); i++) {
     sortedSamples[i].create_gdf_column(concatSamples[i].dtype(),
 																			concatSamples[i].size(),
 																			nullptr,
@@ -263,19 +262,17 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
   }
 
   // Gather
-  std::vector<gdf_column*> rawSortedSamples;
-  rawSortedSamples.reserve(sortedSamples.size());
-  std::vector<gdf_column*> rawPivots;
-  rawPivots.reserve(sortedSamples.size());
+  std::vector<gdf_column*> rawSortedSamples{sortedSamples.size()};
+  std::vector<gdf_column*> rawPivots{sortedSamples.size()};
   std::vector<gdf_column_cpp> pivots{sortedSamples.size()};
- 	for(int i = 0; i < sortedSamples.size(); i++) {
+ 	for(size_t i = 0; i < sortedSamples.size(); i++) {
     pivots[i].create_gdf_column(sortedSamples[i].dtype(),
                                 context.getTotalNodes() - 1,
                                 nullptr,
                                 get_width_dtype(sortedSamples[i].dtype()),
                                 sortedSamples[i].name());
-    rawPivots.push_back(pivots[i].get_gdf_column());
-    rawSortedSamples.push_back(sortedSamples[i].get_gdf_column());
+    rawPivots[i] = pivots[i].get_gdf_column();
+    rawSortedSamples[i] = sortedSamples[i].get_gdf_column();
 	}
 
   cudf::table srcTable{rawSortedSamples.data(), rawSortedSamples.size()};
@@ -353,8 +350,53 @@ void distributePartitions(const Context& context, std::vector<NodeColumns>& part
   }
 }
 
-void sortedMerger(std::vector<NodeColumns>& columns, blazing_frame& output) {
-  // TODO: use cudf sorter_merger
+void sortedMerger(std::vector<NodeColumns>& columns, std::vector<int8_t>& sortOrderTypes, std::vector<int>& sortColIndices, blazing_frame& output) {
+  gdf_column_cpp ascDescCol;
+	ascDescCol.create_gdf_column(GDF_INT8, sortOrderTypes.size(), sortOrderTypes.data(), get_width_dtype(GDF_INT8), "");
+
+  gdf_column_cpp sortByColIndices;
+	sortByColIndices.create_gdf_column(GDF_INT32, sortColIndices.size(), sortColIndices.data(), get_width_dtype(GDF_INT32), "");
+
+  std::vector<gdf_column_cpp> leftCols = columns[0].getColumns();
+  std::vector<gdf_column*> rawLeftCols{leftCols.size()};
+  std::transform(leftCols.begin(), leftCols.end(), rawLeftCols.begin(), [&](gdf_column_cpp& el) {
+    return el.get_gdf_column();
+  });
+
+  for(size_t i = 1; i < columns.size(); i++)
+  {
+    std::vector<gdf_column_cpp> rightCols = columns[i].getColumns();
+    std::vector<gdf_column*> rawRightCols{rightCols.size()};
+    std::transform(rightCols.begin(), rightCols.end(), rawRightCols.begin(), [&](gdf_column_cpp& el) {
+      return el.get_gdf_column();
+    });
+
+    // Create output cols
+    std::vector<gdf_column_cpp> sortedColumns{leftCols.size()};
+    std::vector<gdf_column*> rawSortedColumns{sortedColumns.size()};
+    for(size_t j = 0; j < sortedColumns.size(); j++) {
+      sortedColumns[j].create_gdf_column(leftCols[j].dtype(),
+                                        leftCols[j].size() + rightCols[j].size(),
+                                        nullptr,
+                                        get_width_dtype(leftCols[j].dtype()),
+                                        leftCols[j].name());
+      rawSortedColumns[j] = sortedColumns[j].get_gdf_column();
+    }
+
+
+    CUDF_CALL( gdf_sorted_merge(rawLeftCols.data(),
+                                rawRightCols.data(),
+                                rawLeftCols.size(),
+                                sortByColIndices.get_gdf_column(),
+                                ascDescCol.get_gdf_column(),
+                                rawSortedColumns.data()));
+
+    leftCols = std::move(sortedColumns);
+    rawLeftCols = std::move(rawSortedColumns);
+  }
+
+  output.clear();
+  output.add_table(leftCols);
 }
 
 }  // namespace distribution

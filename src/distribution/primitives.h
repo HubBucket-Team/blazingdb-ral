@@ -62,7 +62,7 @@ std::vector<NodeColumns> partitionData(const Context& context, std::vector<gdf_c
 
 void distributePartitions(const Context& context, std::vector<NodeColumns>& partitions);
 
-void sortedMerger(std::vector<NodeColumns>& columns, blazing_frame& output);
+void sortedMerger(std::vector<NodeColumns>& columns, std::vector<int8_t>& sortOrderTypes, std::vector<int>& sortColIndices, blazing_frame& output);
 
 }  // namespace distribution
 }  // namespace ral

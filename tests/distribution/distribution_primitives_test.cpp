@@ -316,7 +316,7 @@ struct GeneratePartitionPlansTest : public ::testing::Test {
 
     std::vector<gdf_valid_type> boolVectorToBitVector(const std::vector<uint8_t>& input){
         std::vector<gdf_valid_type> bitVector;
-        bitVector.resize(ral::traits::get_valid_size(input.size()));
+        bitVector.resize(ral::traits::get_bitmask_size_in_bytes(input.size()));
 
         auto* bitDataPtr = bitVector.data();
         for(size_t i = 0; i < input.size(); i++)

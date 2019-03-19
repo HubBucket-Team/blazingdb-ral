@@ -21,8 +21,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=0")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler -D_GLIBCXX_USE_CXX11_ABI=0")
 message(AUTHOR_WARNING "Using old C++ ABI: -D_GLIBCXX_USE_CXX11_ABI=0")
 
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules/" ${CMAKE_MODULE_PATH})
-message(STATUS "CMAKE_MODULE_PATH:" "${CMAKE_MODULE_PATH}")
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_MODULE_PATH})
+message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
+
+# NOTE Import cmake modules from blazingdb-dependencies (Mandatory: First step!)
+include(ImportCMakeModules)
 
 # Include CMake modules
 include(FeatureSummary)
@@ -30,11 +33,13 @@ include(CheckIncludeFiles)
 include(CheckLibraryExists)
 include(CTest)
 
+# NOTE Configure dependencies (always include this one first)
+include(ConfigureBlazingDBDependencies)
+
 # Configure CUDA
 include(ConfigureCUDA)
 
 # NOTE Do not change the inclusion order
-# Configure dependencies
 include(ConfigureBoost)
 include(ConfigureAWSSDK)
 include(ConfigureFlatBuffers)
@@ -45,6 +50,8 @@ include(ConfigureSnappy)
 include(ConfigureThrift)
 include(ConfigureArrow)
 include(ConfigureParquet)
+include(ConfigureNVStrings)
+include(ConfigureJitify)
 include(ConfigureLibGDF)
 include(ConfigureBlazingDBProtocol)
 include(ConfigureBlazingDBIO)

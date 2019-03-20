@@ -85,7 +85,7 @@ generateSamples(std::vector<std::vector<gdf_column_cpp>> &input_tables,
 
 void
 normalizeSamples(std::vector<NodeSamples>& samples) {
-    std::vector<double> representativities{samples.size()};
+    std::vector<double> representativities(samples.size());
 
     for (std::size_t i = 0; i < samples.size(); i++) {
         representativities[i] = (double)samples[i].getColumns()[0].size()
@@ -278,8 +278,8 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
     rawSortedSamples[i] = sortedSamples[i].get_gdf_column();
 	}
 
-  cudf::table srcTable{rawSortedSamples.data(), rawSortedSamples.size()};
-  cudf::table destTable{rawPivots.data(), rawPivots.size()};
+  cudf::table srcTable{rawSortedSamples.data(), (gdf_size_type)rawSortedSamples.size()};
+  cudf::table destTable{rawPivots.data(), (gdf_size_type)rawPivots.size()};
 
   int step = outputRowSize / context.getTotalNodes();
   gdf_column_cpp gatherMap;

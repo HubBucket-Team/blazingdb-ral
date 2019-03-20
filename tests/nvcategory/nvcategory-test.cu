@@ -266,13 +266,21 @@ struct NVCategoryTest : public ::testing::Test {
 		}
 	}
 
-	void Check(gdf_column_cpp out_col, std::vector<std::string> reference_result, bool ordered = false){
+	void Check(gdf_column_cpp out_col, std::vector<std::string> reference_result, size_t length, bool ordered = false){
 
 		const size_t num_values = out_col.size();
 		NVStrings * temp_strings = static_cast<NVCategory *>(out_col.get_gdf_column()->dtype_info.category)->gather_strings( (int*) out_col.get_gdf_column()->data, num_values, true );
 
 		char** host_strings = new char*[num_values];
+		for(size_t i=0;i<num_values;i++){
+			host_strings[i]=new char[length+1];
+		}
+
 		temp_strings->to_host(host_strings, 0, num_values);
+
+		for(size_t i=0;i<num_values;i++){
+			host_strings[i][length]=0;
+		}
 
 		std::vector<std::string> strings_vector(host_strings, host_strings + num_values);
 
@@ -481,8 +489,8 @@ TEST_F(NVCategoryTest, processing_filter_comparison_both_strings) {
 		print_gdf_column(outputs[0].get_gdf_column());
 		print_gdf_column(outputs[1].get_gdf_column());
 
-		Check(outputs[0], left_reference_result);
-		Check(outputs[1], right_reference_result);
+		Check(outputs[0], left_reference_result, length);
+		Check(outputs[1], right_reference_result, length);
 	}
 }
 
@@ -552,8 +560,8 @@ TEST_F(NVCategoryTest, processing_filter_join) {
 		print_gdf_column(outputs[1].get_gdf_column());
 
 		bool ordered = true;
-		Check(outputs[0], left_string_reference_result, ordered);
-		Check(outputs[1], right_string_reference_result, ordered);
+		Check(outputs[0], left_string_reference_result, length, ordered);
+		Check(outputs[1], right_string_reference_result, length, ordered);
 	}
 }
 
@@ -609,7 +617,7 @@ TEST_F(NVCategoryTest, processing_orderby) {
 		print_gdf_column(outputs[0].get_gdf_column());
 		print_gdf_column(outputs[1].get_gdf_column());
 
-		Check(outputs[0], string_reference_result);
+		Check(outputs[0], string_reference_result, length);
 		Check(outputs[1], int_reference_result.data(), int_reference_result.size());
 	}
 }
@@ -666,7 +674,7 @@ TEST_F(NVCategoryTest, processing_orderby_desc) {
 		print_gdf_column(outputs[0].get_gdf_column());
 		print_gdf_column(outputs[1].get_gdf_column());
 
-		Check(outputs[0], string_reference_result);
+		Check(outputs[0], string_reference_result, length);
 		Check(outputs[1], int_reference_result.data(), int_reference_result.size());
 	}
 }
@@ -715,7 +723,7 @@ TEST_F(NVCategoryTest, processing_filter_union_all) {
 		print_gdf_column(outputs[0].get_gdf_column());
 
 		bool ordered = true;
-		Check(outputs[0], reference_result, ordered);
+		Check(outputs[0], reference_result, length, ordered);
 	}
 }
 
@@ -777,7 +785,7 @@ TEST_F(NVCategoryTest, processing_filter_count_group_by) {
 		print_gdf_column(outputs[1].get_gdf_column());
 
 		Check(outputs[0], int_reference_result.data(), int_reference_result.size());
-		Check(outputs[1], string_reference_result);
+		Check(outputs[1], string_reference_result, length);
 	}
 }
 

@@ -166,16 +166,33 @@ static void print_gdf_column(gdf_column const * the_column)
         col_type * col_data = static_cast<col_type*>(the_column->data);
         print_typed_column<col_type>(col_data, the_column->valid, num_rows);
 
-        std::cout<<"Data on category:\n";
-        size_t keys_size = static_cast<NVCategory *>(the_column->dtype_info.category)->keys_size();
-        char ** data = new char *[200];
-        static_cast<NVCategory *>(the_column->dtype_info.category)->get_keys()->to_host(data, 0, keys_size);
+        if(the_column->dtype_info.category != nullptr){
+          std::cout<<"Data on category:\n";
+          size_t length = 1;
+          size_t keys_size = static_cast<NVCategory *>(the_column->dtype_info.category)->keys_size();
+          if(keys_size>0){
+            char ** data = new char *[keys_size];
+            for(size_t i=0; i<keys_size; i++){
+              data[i]=new char[length+1];
+            }
+            static_cast<NVCategory *>(the_column->dtype_info.category)->get_keys()->to_host(data, 0, keys_size);
 
-        for(int i = 0; i < keys_size; i++){
-          std::cout<<"("<<data[i]<<"|"<<i<<")\t";
+            for(size_t i=0; i<keys_size; i++){
+              data[i][length]=0;
+            }
+
+            for(int i = 0; i < keys_size; i++){
+              std::cout<<"("<<data[i]<<"|"<<i<<")\t";
+            }
+            std::cout<<std::endl;
+          }
+          else{
+            std::cout<<"Empty!\n";
+          }
         }
-        std::cout<<std::endl;
-
+        else{
+            std::cout<<"Category nulled!\n";
+        }
         break;
       }
     default:

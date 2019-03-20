@@ -281,7 +281,7 @@ TEST_F(DistributionPrimitivesTest, partitionData_SingleColumn) {
     std::vector<gdf_column_cpp> table;
 
     {
-        std::vector<DATA_TYPE> data{10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
+        std::vector<DATA_TYPE> data {10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
         table.emplace_back(ral::utilities::create_column<DATA_TYPE>(data, GDF_INT32));
     }
 
@@ -289,14 +289,16 @@ TEST_F(DistributionPrimitivesTest, partitionData_SingleColumn) {
     std::vector<gdf_column_cpp> pivots;
 
     {
-        std::vector<DATA_TYPE> data{ 13, 15, 18 };
+        std::vector<DATA_TYPE> data {13, 15, 18};
         pivots.emplace_back(ral::utilities::create_column<DATA_TYPE>(data, GDF_INT32));
     }
 
     // output data
-    std::vector<std::vector<DATA_TYPE>> output_result = { {10, 11, 12},
-                                                          {15, 16, 17},
-                                                          {18, 19} };
+    std::vector<std::vector<DATA_TYPE>> output_result = {
+            {10, 11, 12},
+            {15, 16, 17},
+            {18, 19}
+    };
 
     // execute distributed function
     std::vector<ral::distribution::NodeColumns> columns;
@@ -327,10 +329,10 @@ TEST_F(DistributionPrimitivesTest, PartitionData_DoubleColumns) {
     std::vector<gdf_column_cpp> table;
 
     {
-        std::vector<DATA_TYPE> data_1{10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
+        std::vector<DATA_TYPE> data_1 {10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
         table.emplace_back(ral::utilities::create_column<DATA_TYPE>(data_1, GDF_INT64));
 
-        std::vector<DATA_TYPE> data_2{210, 211, 212, 213, 214, 215, 216, 217, 218, 219};
+        std::vector<DATA_TYPE> data_2 {210, 211, 212, 213, 214, 215, 216, 217, 218, 219};
         table.emplace_back(ral::utilities::create_column<DATA_TYPE>(data_2, GDF_INT64));
     }
 
@@ -338,17 +340,125 @@ TEST_F(DistributionPrimitivesTest, PartitionData_DoubleColumns) {
     std::vector<gdf_column_cpp> pivots;
 
     {
-        std::vector<DATA_TYPE> data_1{ 13, 15, 18 };
+        std::vector<DATA_TYPE> data_1 { 13, 15, 18 };
         pivots.emplace_back(ral::utilities::create_column<DATA_TYPE>(data_1, GDF_INT64));
 
-        std::vector<DATA_TYPE> data_2{ 213, 215, 218 };
+        std::vector<DATA_TYPE> data_2 { 213, 215, 218 };
         pivots.emplace_back(ral::utilities::create_column<DATA_TYPE>(data_2, GDF_INT64));
     }
 
     // output data
-    std::vector<std::vector<std::vector<DATA_TYPE>>> output_result = { {{10, 11, 12}, {210, 211, 212}},
-                                                                       {{15, 16, 17}, {215, 216, 217}},
-                                                                       {{18, 19},     {218, 219}} };
+    std::vector<std::vector<std::vector<DATA_TYPE>>> output_result = {
+            { {10, 11, 12}, {210, 211, 212} },
+            { {15, 16, 17}, {215, 216, 217} },
+            { {18, 19},     {218, 219}      }
+    };
+
+    // execute distributed function
+    std::vector<ral::distribution::NodeColumns> columns;
+    ASSERT_NO_THROW(columns = ral::distribution::partitionData(*context_, table, pivots));
+
+    // verify
+    ASSERT_EQ(columns.size(), output_result.size());
+
+    for (std::size_t i = 0; i < columns.size(); ++i) {
+        std::vector<gdf_column_cpp> node_columns = columns[i].getColumns();
+        ASSERT_EQ(node_columns.size(), output_result[i].size());
+
+        for (std::size_t j = 0; j < node_columns.size(); ++j) {
+            std::vector<DATA_TYPE> output_data = ral::test::get_column_data<DATA_TYPE>(node_columns[j]);
+            ASSERT_EQ(output_data.size(), output_result[i][j].size());
+
+            for (std::size_t k = 0; k < output_data.size(); ++k) {
+                ASSERT_EQ(output_data[k], output_result[i][j][k]);
+            }
+        }
+    }
+}
+
+
+TEST_F(DistributionPrimitivesTest, partitionData_SingleColumn__WithInvalidIndex_WithUnSortedIndex) {
+    // data type
+    using DATA_TYPE = float;
+
+    // create data - gdf_column_cpp
+    std::vector<gdf_column_cpp> table;
+
+    {
+        std::vector<DATA_TYPE> data {10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0};
+        table.emplace_back(ral::utilities::create_column<DATA_TYPE>(data, GDF_FLOAT32));
+    }
+
+    // create pivots - gdf_column_cpp
+    std::vector<gdf_column_cpp> pivots;
+
+    {
+        std::vector<DATA_TYPE> data {13.0, 100.0, 15.0};
+        pivots.emplace_back(ral::utilities::create_column<DATA_TYPE>(data, GDF_FLOAT32));
+    }
+
+    // output data
+    std::vector<std::vector<std::vector<DATA_TYPE>>> output_result = {
+            { {10.0, 11.0, 12.0}             },
+            { {15.0, 16.0, 17.0, 18.0, 19.0} },
+            {                                }
+    };
+
+    // execute distributed function
+    std::vector<ral::distribution::NodeColumns> columns;
+    ASSERT_NO_THROW(columns = ral::distribution::partitionData(*context_, table, pivots));
+
+    // verify
+    ASSERT_EQ(columns.size(), output_result.size());
+
+    for (std::size_t i = 0; i < columns.size(); ++i) {
+        std::vector<gdf_column_cpp> node_columns = columns[i].getColumns();
+        ASSERT_EQ(node_columns.size(), output_result[i].size());
+
+        for (std::size_t j = 0; j < node_columns.size(); ++j) {
+            std::vector<DATA_TYPE> output_data = ral::test::get_column_data<DATA_TYPE>(node_columns[j]);
+            ASSERT_EQ(output_data.size(), output_result[i][j].size());
+
+            for (std::size_t k = 0; k < output_data.size(); ++k) {
+                ASSERT_FLOAT_EQ(output_data[k], output_result[i][j][k]);
+            }
+        }
+    }
+}
+
+
+TEST_F(DistributionPrimitivesTest, PartitionData_DoubleColumns_WithInvalidIndex_WithUnSortedIndex) {
+    // data type
+    using DATA_TYPE = std::int16_t;
+
+    // create data - gdf_column_cpp
+    std::vector<gdf_column_cpp> table;
+
+    {
+        std::vector<DATA_TYPE> data_1 {110, 111, 112, 113, 114, 115, 116, 117, 118, 119};
+        table.emplace_back(ral::utilities::create_column<DATA_TYPE>(data_1, GDF_INT16));
+
+        std::vector<DATA_TYPE> data_2 {210, 211, 212, 213, 214, 215, 216, 217, 218, 219};
+        table.emplace_back(ral::utilities::create_column<DATA_TYPE>(data_2, GDF_INT16));
+    }
+
+    // create pivots - gdf_column_cpp
+    std::vector<gdf_column_cpp> pivots;
+
+    {
+        std::vector<DATA_TYPE> data_1 {116, 119, 112};
+        pivots.emplace_back(ral::utilities::create_column<DATA_TYPE>(data_1, GDF_INT16));
+
+        std::vector<DATA_TYPE> data_2 {216, 119, 212};
+        pivots.emplace_back(ral::utilities::create_column<DATA_TYPE>(data_2, GDF_INT16));
+    }
+
+    // output data
+    std::vector<std::vector<std::vector<DATA_TYPE>>> output_result = {
+            { {110, 111},           {210, 211}           },
+            { {116, 117, 118, 119}, {216, 217, 218, 219} },
+            {                                            }
+    };
 
     // execute distributed function
     std::vector<ral::distribution::NodeColumns> columns;

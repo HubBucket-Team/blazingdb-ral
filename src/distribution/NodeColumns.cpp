@@ -19,5 +19,9 @@ std::vector<gdf_column_cpp> NodeColumns::getColumns() {
     return std::move(columns_);
 }
 
+const std::vector<gdf_column_cpp>& NodeColumns::getColumnsRef() const {
+    return columns_;
+}
+
 } // namespace distribution
 } // namespace ral

@@ -36,6 +36,8 @@ public:
      */
     std::vector<gdf_column_cpp> getColumns();
 
+    const std::vector<gdf_column_cpp>& getColumnsRef() const;
+
 private:
     const Node node_;
     std::vector<gdf_column_cpp> columns_;

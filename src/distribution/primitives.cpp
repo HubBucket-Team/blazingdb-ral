@@ -369,6 +369,7 @@ std::vector<NodeColumns> partitionData(const Context& context,
         // TODO: improve exception functionality
         throw ral::exception::BaseRalException("cannot copy from GPU to CPU");
     }
+    std::sort(indexes_host.begin(), indexes_host.end());
 
     using CommunicationData = ral::communication::CommunicationData;
     auto nodes = context.getAllNodes();
@@ -381,14 +382,23 @@ std::vector<NodeColumns> partitionData(const Context& context,
             continue;
         }
 
-        gdf_size_type position = 0;
-        if (i != 0) {
+        gdf_size_type position = table_column_size;
+        if (i == 0) {
+            position = 0;
+        }
+        else if (i <= indexes_host.size()) {
             position = indexes_host[i - 1];
         }
 
-        gdf_size_type length = indexes_host[i] - position;
-        if ((nodes.size() - 1) <= i) {
-            length = table_column_size - position;
+        gdf_size_type length = table_column_size - position;
+        if (i < indexes_host.size()) {
+            length = indexes_host[i] - position;
+        }
+
+        // index not valid
+        if (position == table_column_size) {
+            array_node_columns.emplace_back(*nodes[i], std::vector<gdf_column_cpp>{});
+            continue;
         }
 
         std::vector<gdf_column_cpp> columns;

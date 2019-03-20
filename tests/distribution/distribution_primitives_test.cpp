@@ -1,8 +1,10 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include "CalciteExpressionParsing.h"
 #include "blazingdb/communication/network/Status.h"
 #include "distribution/Exception.h"
 #include "distribution/NodeColumns.h"
+#include "distribution/NodeSamples.h"
 #include "distribution/primitives.h"
 #include "communication/CommunicationData.h"
 #include "communication/factory/MessageFactory.h"
@@ -11,6 +13,7 @@
 #include "tests/distribution/mocking/ClientMock.h"
 #include "tests/distribution/mocking/ServerMock.h"
 #include "tests/utilities/gdf_column_cpp_utilities.h"
+#include "cuio/parquet/util/bit_util.cuh"
 
 namespace {
 
@@ -342,6 +345,226 @@ TEST_F(DistributionPrimitivesTest, distributePartitionsTest) {
 
     // Execute test
     ral::distribution::distributePartitions(*context_, node_columns);
+}
+
+
+struct GeneratePartitionPlansTest : public ::testing::Test {
+    GeneratePartitionPlansTest() {
+    }
+
+    ~GeneratePartitionPlansTest() {
+    }
+
+    void SetUp() override {
+    }
+
+    void TearDown() override {
+    }
+
+    std::vector<gdf_valid_type> boolVectorToBitVector(const std::vector<uint8_t>& input){
+        std::vector<gdf_valid_type> bitVector;
+        bitVector.resize(ral::traits::get_bitmask_size_in_bytes(input.size()));
+
+        auto* bitDataPtr = bitVector.data();
+        for(size_t i = 0; i < input.size(); i++)
+        {
+            if(input[i]){
+                gdf::util::turn_bit_on(bitDataPtr, i);
+            } else {
+                gdf::util::turn_bit_off(bitDataPtr, i);
+            }
+        }
+
+        return bitVector;
+    }
+};
+
+TEST_F(GeneratePartitionPlansTest, SingleColumn) {
+    std::vector<std::shared_ptr<Node>> nodes;
+    nodes.push_back(Node::makeShared(13, "192.168.0.3", 1013));
+    nodes.push_back(Node::makeShared(14, "192.168.0.4", 1014));
+
+    // Create context
+    std::shared_ptr<Context> context = std::make_shared<Context>(nodes, nodes[0], "logical_plan");
+
+    // Create data - NodeSamples
+    std::vector<gdf_column_cpp> columnsSample1{1};
+    std::vector<int> colData1 = {27, 5, 13, 30, 16};
+    columnsSample1[0].create_gdf_column(GDF_INT32, colData1.size(), colData1.data(), get_width_dtype(GDF_INT32), "");
+
+    std::vector<gdf_column_cpp> columnsSample2{1};
+    std::vector<int>  colData2 = {11, 41, 1, 3};
+    columnsSample2[0].create_gdf_column(GDF_INT32, colData2.size(), colData2.data(), get_width_dtype(GDF_INT32), "");
+
+    using ral::distribution::NodeSamples;
+    std::vector<NodeSamples> node_samples;
+    node_samples.emplace_back(15, *nodes[0], std::move(columnsSample1));
+    node_samples.emplace_back(12, *nodes[1], std::move(columnsSample2));
+
+    std::vector<int8_t> sortOrderTypes = {0};
+
+    // Execute test
+    auto pivots = ral::distribution::generatePartitionPlans(*context, node_samples, sortOrderTypes);
+
+    std::vector<std::vector<int>> result = {{13}};
+    ASSERT_EQ(result.size(), pivots.size());
+    for(std::size_t i = 0; i < pivots.size(); ++i)
+    {
+        auto& p = pivots[i];
+        ASSERT_EQ(result[i].size(), p.size());
+
+        auto dataByteArr = ral::test::get_column_data(p.get_gdf_column());
+        int* dataPtr = reinterpret_cast<int*>(dataByteArr.data());
+        for (std::size_t j = 0; j < p.size(); ++j) {
+            ASSERT_EQ(result[i][j], dataPtr[j]);
+        }
+    }
+}
+
+TEST_F(GeneratePartitionPlansTest, MultiColumn) {
+    std::vector<std::shared_ptr<Node>> nodes;
+    nodes.push_back(Node::makeShared(13, "192.168.0.3", 1013));
+    nodes.push_back(Node::makeShared(14, "192.168.0.4", 1014));
+
+    // Create context
+    std::shared_ptr<Context> context = std::make_shared<Context>(nodes, nodes[0], "logical_plan");
+
+    // Create data - NodeSamples
+    std::vector<std::vector<int>> colData1 = {{27, 5, 13, 30, 16}, {711, 121, 7498, 2866, 7638}};
+    std::vector<gdf_column_cpp> columnsSample1{colData1.size()};
+    columnsSample1[0].create_gdf_column(GDF_INT32, colData1[0].size(), colData1[0].data(), get_width_dtype(GDF_INT32), "");
+    columnsSample1[1].create_gdf_column(GDF_INT32, colData1[1].size(), colData1[1].data(), get_width_dtype(GDF_INT32), "");
+
+    std::vector<std::vector<int>> colData2 = {{11, 41, 1, 3}, {4643, 1182, 2182, 5500}};
+    std::vector<gdf_column_cpp> columnsSample2{colData2.size()};
+    columnsSample2[0].create_gdf_column(GDF_INT32, colData2[0].size(), colData2[0].data(), get_width_dtype(GDF_INT32), "");
+    columnsSample2[1].create_gdf_column(GDF_INT32, colData2[1].size(), colData2[1].data(), get_width_dtype(GDF_INT32), "");
+
+    using ral::distribution::NodeSamples;
+    std::vector<NodeSamples> node_samples;
+    node_samples.emplace_back(15, *nodes[0], std::move(columnsSample1));
+    node_samples.emplace_back(12, *nodes[1], std::move(columnsSample2));
+
+    std::vector<int8_t> sortOrderTypes = {0, 1};
+
+    // Execute test
+    auto pivots = ral::distribution::generatePartitionPlans(*context, node_samples, sortOrderTypes);
+
+    std::vector<std::vector<int>> result = {{13}, {7498}};
+    std::vector<std::vector<uint8_t>> resultvalids = {{1}, {1}};
+    ASSERT_EQ(result.size(), pivots.size());
+    for(std::size_t i = 0; i < pivots.size(); ++i)
+    {
+        auto& p = pivots[i];
+        ASSERT_EQ(result[i].size(), p.size());
+
+        auto dataByteArr = ral::test::get_column_data(p.get_gdf_column());
+        int* dataPtr = reinterpret_cast<int*>(dataByteArr.data());
+        auto validByteArr = ral::test::get_column_valid(p.get_gdf_column());
+        uint8_t* validPtr = validByteArr.data();
+        for (std::size_t j = 0; j < p.size(); ++j) {
+            ASSERT_EQ(resultvalids[i][j], gdf::util::is_valid(validPtr, j));
+            if (resultvalids[i][j]) {
+                ASSERT_EQ(result[i][j], dataPtr[j]);
+            }
+        }
+    }
+}
+
+TEST_F(GeneratePartitionPlansTest, SingleColumnWithNulls) {
+    std::vector<std::shared_ptr<Node>> nodes;
+    nodes.push_back(Node::makeShared(13, "192.168.0.3", 1013));
+    nodes.push_back(Node::makeShared(14, "192.168.0.4", 1014));
+
+    // Create context
+    std::shared_ptr<Context> context = std::make_shared<Context>(nodes, nodes[0], "logical_plan");
+
+    // Create data - NodeSamples
+    std::vector<gdf_column_cpp> columnsSample1{1};
+    std::vector<int> colData1 = {27, 5, 13, 30, 16, 13, 1,  12, 17, 7};
+    std::vector<uint8_t> valids1 = {1, 0, 1, 0, 1, 1, 1, 1, 1, 0};
+    columnsSample1[0].create_gdf_column(GDF_INT32, colData1.size(), colData1.data(), boolVectorToBitVector(valids1).data(), get_width_dtype(GDF_INT32), "");
+
+    std::vector<gdf_column_cpp> columnsSample2{1};
+    std::vector<int>  colData2 = {11, 41, 1, 3,  16, 24, 18, 7};
+    std::vector<uint8_t> valids2 = {1, 1, 1, 1, 0, 0, 1, 1};
+    columnsSample2[0].create_gdf_column(GDF_INT32, colData2.size(), colData2.data(), boolVectorToBitVector(valids2).data(), get_width_dtype(GDF_INT32), "");
+
+    using ral::distribution::NodeSamples;
+    std::vector<NodeSamples> node_samples;
+    node_samples.emplace_back(30, *nodes[0], std::move(columnsSample1));
+    node_samples.emplace_back(24, *nodes[1], std::move(columnsSample2));
+
+    std::vector<int8_t> sortOrderTypes = {0};
+
+    // Execute test
+    auto pivots = ral::distribution::generatePartitionPlans(*context, node_samples, sortOrderTypes);
+
+    std::vector<std::vector<int>> result = {{17}};
+    ASSERT_EQ(result.size(), pivots.size());
+    for(std::size_t i = 0; i < pivots.size(); ++i)
+    {
+        auto& p = pivots[i];
+        ASSERT_EQ(result[i].size(), p.size());
+
+        auto dataByteArr = ral::test::get_column_data(p.get_gdf_column());
+        int* dataPtr = reinterpret_cast<int*>(dataByteArr.data());
+        for (std::size_t j = 0; j < p.size(); ++j) {
+            ASSERT_EQ(result[i][j], dataPtr[j]);
+        }
+    }
+}
+
+TEST_F(GeneratePartitionPlansTest, MultiColumnWithNull) {
+    std::vector<std::shared_ptr<Node>> nodes;
+    nodes.push_back(Node::makeShared(13, "192.168.0.3", 1013));
+    nodes.push_back(Node::makeShared(14, "192.168.0.4", 1014));
+
+    // Create context
+    std::shared_ptr<Context> context = std::make_shared<Context>(nodes, nodes[0], "logical_plan");
+
+    // Create data - NodeSamples
+    std::vector<std::vector<int>> colData1 = {{27, 5, 13, 30, 16, 13, 1,  12, 17, 7}, {711, 121, 7498, 2866, 7638, 8166, 6853, 1709, 4867, -611}};
+    std::vector<std::vector<uint8_t>> valids1 = {{1, 0, 1, 0, 1, 1, 1, 1, 1, 0}, {0, 0, 1, 1, 1, 1, 1, 1, 0, 0}};
+    std::vector<gdf_column_cpp> columnsSample1{colData1.size()};
+    columnsSample1[0].create_gdf_column(GDF_INT32, colData1[0].size(), colData1[0].data(), boolVectorToBitVector(valids1[0]).data(), get_width_dtype(GDF_INT32), "");
+    columnsSample1[1].create_gdf_column(GDF_INT32, colData1[1].size(), colData1[1].data(), boolVectorToBitVector(valids1[1]).data(), get_width_dtype(GDF_INT32), "");
+
+    std::vector<std::vector<int>> colData2 = {{11, 41, 1, 3,  16, 24, 18, 7}, {4643, 1182, 2182, 5500, -716, 7462, 6505, 2953}};
+    std::vector<std::vector<uint8_t>> valids2 = {{1, 1, 1, 1, 0, 0, 1, 1}, {0, 1, 1, 1, 1, 1, 1, 1}};
+    std::vector<gdf_column_cpp> columnsSample2{colData2.size()};
+    columnsSample2[0].create_gdf_column(GDF_INT32, colData2[0].size(), colData2[0].data(), boolVectorToBitVector(valids2[0]).data(), get_width_dtype(GDF_INT32), "");
+    columnsSample2[1].create_gdf_column(GDF_INT32, colData2[1].size(), colData2[1].data(), boolVectorToBitVector(valids2[1]).data(), get_width_dtype(GDF_INT32), "");
+
+    using ral::distribution::NodeSamples;
+    std::vector<NodeSamples> node_samples;
+    node_samples.emplace_back(15, *nodes[0], std::move(columnsSample1));
+    node_samples.emplace_back(12, *nodes[1], std::move(columnsSample2));
+
+    std::vector<int8_t> sortOrderTypes = {0, 1};
+
+    // Execute test
+    auto pivots = ral::distribution::generatePartitionPlans(*context, node_samples, sortOrderTypes);
+
+    std::vector<std::vector<int>> result = {{17}, {7498}};
+    std::vector<std::vector<uint8_t>> resultvalids = {{1}, {0}};
+    ASSERT_EQ(result.size(), pivots.size());
+    for(std::size_t i = 0; i < pivots.size(); ++i)
+    {
+        auto& p = pivots[i];
+        ASSERT_EQ(result[i].size(), p.size());
+
+        auto dataByteArr = ral::test::get_column_data(p.get_gdf_column());
+        int* dataPtr = reinterpret_cast<int*>(dataByteArr.data());
+        auto validByteArr = ral::test::get_column_valid(p.get_gdf_column());
+        uint8_t* validPtr = validByteArr.data();
+        for (std::size_t j = 0; j < p.size(); ++j) {
+            ASSERT_EQ(resultvalids[i][j], gdf::util::is_valid(validPtr, j));
+            if (resultvalids[i][j]) {
+                ASSERT_EQ(result[i][j], dataPtr[j]);
+            }
+        }
+    }
 }
 
 } // namespace

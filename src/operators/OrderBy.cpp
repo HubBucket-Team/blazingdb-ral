@@ -43,11 +43,10 @@ void sort(blazing_frame& input, std::vector<gdf_column*>& rawCols, std::vector<i
 	timer.reset();
 
 	gdf_column_cpp asc_desc_col;
-	asc_desc_col.create_gdf_column(GDF_INT8, rawCols.size(), nullptr, 1, "");
-	CheckCudaErrors(cudaMemcpy(asc_desc_col.get_gdf_column()->data, sortOrderTypes.data(), sortOrderTypes.size() * sizeof(int8_t), cudaMemcpyHostToDevice));
+	asc_desc_col.create_gdf_column(GDF_INT8, sortOrderTypes.size(), sortOrderTypes.data(), get_width_dtype(GDF_INT8), "");
 
 	gdf_column_cpp index_col;
-	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
+	index_col.create_gdf_column(GDF_INT32, input.get_column(0).size(), nullptr, get_width_dtype(GDF_INT32), "");
 
 	gdf_context context;
 	context.flag_null_sort_behavior = GDF_NULL_AS_LARGEST; // Nulls are are treated as largest
@@ -91,7 +90,7 @@ void single_node_sort(blazing_frame& input, std::vector<gdf_column*>& rawCols, s
 	}
 }
 
-void distributed_sort(const Context* queryContext, blazing_frame& input, std::vector<gdf_column_cpp>& cols, std::vector<gdf_column*>& rawCols, std::vector<int8_t>& sortOrderTypes) {
+void distributed_sort(const Context* queryContext, blazing_frame& input, std::vector<gdf_column_cpp>& cols, std::vector<gdf_column*>& rawCols, std::vector<int8_t>& sortOrderTypes, std::vector<int>& sortColIndices) {
 	using ral::communication::CommunicationData;
 
 	std::vector<gdf_column_cpp> sortedTable(input.get_size_column(0));
@@ -114,7 +113,7 @@ void distributed_sort(const Context* queryContext, blazing_frame& input, std::ve
 		std::vector<ral::distribution::NodeSamples> samples = ral::distribution::collectSamples(*queryContext);
     samples.emplace_back(rowSize, CommunicationData::getInstance().getSelfNode(), std::move(selfSamples));
 
-		partitionPlan = ral::distribution::generatePartitionPlans(samples);
+		partitionPlan = ral::distribution::generatePartitionPlans(*queryContext, samples, sortOrderTypes);
 
     ral::distribution::distributePartitionPlan(*queryContext, partitionPlan);
 	}
@@ -138,7 +137,7 @@ void distributed_sort(const Context* queryContext, blazing_frame& input, std::ve
 	// Could "it" be partitions.end()?
 	partitionsToMerge.push_back(std::move(*it));
 
-	ral::distribution::sortedMerger(partitionsToMerge, input);
+	ral::distribution::sortedMerger(partitionsToMerge, sortOrderTypes, sortColIndices, input);
 }
 
 void process_sort(blazing_frame & input, std::string query_part, const Context* queryContext){
@@ -156,12 +155,14 @@ void process_sort(blazing_frame & input, std::string query_part, const Context* 
 	std::vector<gdf_column_cpp> cols(num_sort_columns);
 	std::vector<gdf_column*> rawCols(num_sort_columns);
 	std::vector<int8_t> sortOrderTypes(num_sort_columns);
+	std::vector<int> sortColIndices(num_sort_columns);
 	for(int i = 0; i < num_sort_columns; i++){
 		int sort_column_index = get_index(get_named_expression(combined_expression, "sort" + std::to_string(i)));
 		gdf_column_cpp col = input.get_column(sort_column_index).clone();
 		rawCols[i] = col.get_gdf_column();
 		cols[i] = std::move(col);
 		sortOrderTypes[i] = (get_named_expression(combined_expression, "dir" + std::to_string(i)) == DESCENDING_ORDER_SORT_TEXT);
+		sortColIndices[i] = sort_column_index;
 	}
 
 	Library::Logging::Logger().logInfo("-> Sort sub block 1 took " + std::to_string(timer.getDuration()) + " ms");
@@ -170,7 +171,7 @@ void process_sort(blazing_frame & input, std::string query_part, const Context* 
 		single_node_sort(input, rawCols, sortOrderTypes);
 	}
 	else {
-		distributed_sort(queryContext, input, cols, rawCols, sortOrderTypes);
+		distributed_sort(queryContext, input, cols, rawCols, sortOrderTypes, sortColIndices);
 	}
 }
 

@@ -16,7 +16,7 @@
 #include <blazingdb/io/Library/Logging/CoutOutput.h>
 #include "blazingdb/io/Library/Logging/ServiceLogging.h"
 
-#include <NVCategory.h>
+#include <nvstrings/NVCategory.h>
 #include <utilities/bit_mask.h>
 
 class TestEnvironment : public testing::Environment {

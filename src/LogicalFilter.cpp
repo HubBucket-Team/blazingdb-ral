@@ -11,8 +11,8 @@
 #include <iostream>
 
 #include "CalciteExpressionParsing.h"
-#include <NVCategory.h>
-#include <NVStrings.h>
+#include <nvstrings/NVCategory.h>
+#include <nvstrings/NVStrings.h>
 
 #include <blazingdb/io/Library/Logging/Logger.h>
 #include "CodeTimer.h"

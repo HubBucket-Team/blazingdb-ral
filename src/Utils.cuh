@@ -12,8 +12,8 @@
 #include <thrust/device_ptr.h>
 #include <thrust/sequence.h>
 
-#include <NVCategory.h>
-#include <NVStrings.h>
+#include <nvstrings/NVCategory.h>
+#include <nvstrings/NVStrings.h>
 
 #include <rmm/rmm.h>
 

@@ -19,8 +19,8 @@ target_link_libraries(${test_name}
                       GTest::GTest
                       GTest::Main
                       cudart
-                      ${CUDA_CUDA_LIBRARY}
                       ${LIBGDF_STATIC_LIB}
+                      NVCategory
                       NVStrings
                       rmm)
 

@@ -317,18 +317,18 @@ gdf_column_cpp::~gdf_column_cpp()
 bool gdf_column_cpp::is_ipc() const {
 	return this->is_ipc_column;
 }
-void* gdf_column_cpp::data(){
+void* gdf_column_cpp::data() const {
     return column->data;
 }
 
 gdf_valid_type* gdf_column_cpp::valid() const {
     return column->valid;
 }
-gdf_size_type gdf_column_cpp::size(){
+gdf_size_type gdf_column_cpp::size() const {
     return column->size;
 }
 
-gdf_dtype gdf_column_cpp::dtype(){
+gdf_dtype gdf_column_cpp::dtype() const {
     return column->dtype;
 }
 
@@ -367,6 +367,7 @@ gdf_column_cpp gdf_column_cpp::slice(gdf_size_type data_position, gdf_size_type 
 
     // update cudf column
     update_null_count(result.column);
+    result.column->dtype = column->dtype;
     result.column->dtype_info = column->dtype_info;
 
     // update ral column

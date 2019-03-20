@@ -7,8 +7,10 @@
 #include "communication/CommunicationData.h"
 #include "communication/factory/MessageFactory.h"
 #include "Traits/RuntimeTraits.h"
+#include "utilities/RalColumn.h"
 #include "tests/distribution/mocking/ClientMock.h"
 #include "tests/distribution/mocking/ServerMock.h"
+#include "tests/utilities/gdf_column_cpp_utilities.h"
 
 namespace {
 
@@ -265,6 +267,52 @@ TEST_F(DistributionPrimitivesTest, getPartitionPlanExceptionTest) {
     // Execute Test
     using ral::distribution::MessageMismatchException;
     ASSERT_THROW(ral::distribution::getPartitionPlan(*context_), MessageMismatchException);
+}
+
+
+TEST_F(DistributionPrimitivesTest, partitionDataTest) {
+    // data type
+    using DATA_TYPE = std::int32_t;
+
+    // create data - gdf_column_cpp
+    std::vector<gdf_column_cpp> table;
+
+    {
+        std::vector<DATA_TYPE> data{10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
+        table.emplace_back(ral::utilities::create_column<DATA_TYPE>(data, GDF_INT32));
+    }
+
+    // create pivots - gdf_column_cpp
+    std::vector<gdf_column_cpp> pivots;
+
+    {
+        std::vector<DATA_TYPE> data{ 13, 15, 18 };
+        pivots.emplace_back(ral::utilities::create_column<DATA_TYPE>(data, GDF_INT32));
+    }
+
+    // output data
+    std::vector<std::vector<DATA_TYPE>> output_result = { {10, 11, 12 },
+                                                          {15, 16, 17},
+                                                          {18, 19} };
+
+    // execute distributed function
+    std::vector<ral::distribution::NodeColumns> columns;
+    ASSERT_NO_THROW(columns = ral::distribution::partitionData(*context_, table, pivots));
+
+    // verify
+    ASSERT_EQ(columns.size(), output_result.size());
+
+    for (std::size_t k = 0; k < columns.size(); ++k) {
+        std::vector<gdf_column_cpp> node_columns = columns[k].getColumns();
+
+        ASSERT_EQ(node_columns.size(), 1);
+
+        std::vector<DATA_TYPE> output_data = ral::test::get_column_data<DATA_TYPE>(node_columns[0]);
+        ASSERT_EQ(output_data.size(), output_result[k].size());
+        for (std::size_t i = 0; i < output_data.size(); ++i) {
+            ASSERT_EQ(output_data[i], output_result[k][i]);
+        }
+    }
 }
 
 

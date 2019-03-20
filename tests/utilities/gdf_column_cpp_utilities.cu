@@ -3,7 +3,7 @@
 #include <random>
 #include <algorithm>
 #include <thrust/equal.h>
-#include "Traits/RuntimeTraits.h"
+
 
 namespace ral {
 namespace test {

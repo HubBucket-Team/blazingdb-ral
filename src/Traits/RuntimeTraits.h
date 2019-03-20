@@ -52,6 +52,8 @@ inline bool is_dtype_integer(gdf_dtype type) {
 } // Traits
 } // Ral
 
+class gdf_column_cpp;
+
 namespace ral {
 namespace traits {
 
@@ -64,6 +66,8 @@ namespace traits {
 
     gdf_size_type get_dtype_size_in_bytes(gdf_dtype dtype);
 
+
+    gdf_size_type get_data_size_in_bytes(const gdf_column_cpp& column);
 
     gdf_size_type get_data_size_in_bytes(const gdf_column* column);
 

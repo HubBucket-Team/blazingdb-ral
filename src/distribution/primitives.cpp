@@ -6,6 +6,9 @@
 #include "communication/factory/MessageFactory.h"
 #include "communication/CommunicationData.h"
 #include "distribution/Exception.h"
+#include "Traits/RuntimeTraits.h"
+#include "utilities/RalColumn.h"
+#include "utilities/TableWrapper.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -219,10 +222,74 @@ std::vector<gdf_column_cpp> getPartitionPlan(const Context& context){
   return std::move(concreteMessage->getColumns());
 }
 
-std::vector<NodeColumns> partitionData(const Context& context, std::vector<gdf_column_cpp>& table, std::vector<gdf_column_cpp>& pivots){
-  // TODO
+std::vector<NodeColumns> partitionData(const Context& context,
+                                       std::vector<gdf_column_cpp>& table,
+                                       std::vector<gdf_column_cpp>& pivots) {
+    // verify input
+    if (pivots.size() == 0) {
+        throw ral::exception::BaseRalException("pivots array is empty");
+    }
 
-  return std::vector<NodeColumns>{};
+    // create output column
+    auto& pivot = pivots[0];
+    gdf_column_cpp indexes = ral::utilities::create_zero_column(pivot.size(), pivot.dtype());
+
+    // apply gdf_multisearch
+    ral::utilities::TableWrapper haystack(table);
+    ral::utilities::TableWrapper needles(pivots);
+
+    auto cudf_error = gdf_multisearch(indexes.get_gdf_column(),
+                                      haystack.getColumns(),
+                                      needles.getColumns(),
+                                      haystack.getQuantity(),
+                                      false,
+                                      false,
+                                      true);
+    if (cudf_error != GDF_SUCCESS) {
+        throw ral::exception::BaseRalException("error on 'gdf_multisearch': " + std::to_string(cudf_error));
+    }
+
+    // TODO: split functionality, must be changed for the cudf function.
+    // apply split
+    std::vector<gdf_size_type> indexes_host(indexes.size(), 0);
+    gdf_size_type total_bytes = ral::traits::get_data_size_in_bytes(indexes.get_gdf_column());
+
+    auto cuda_error = cudaMemcpy(indexes_host.data(), indexes.data(), total_bytes, cudaMemcpyDeviceToHost);
+    if (cuda_error != cudaSuccess) {
+        // TODO: improve exception functionality
+        throw ral::exception::BaseRalException("cannot copy from GPU to CPU");
+    }
+
+    using CommunicationData = ral::communication::CommunicationData;
+    auto nodes = context.getAllNodes();
+    auto current_node = CommunicationData::getInstance().getSelfNode();
+
+    gdf_size_type table_column_size = table[0].size();
+    std::vector<NodeColumns> array_node_columns;
+    for (std::size_t i = 0; i < nodes.size(); ++i) {
+        if (*nodes[i] == current_node) {
+            continue;
+        }
+
+        gdf_size_type position = 0;
+        if (i != 0) {
+            position = indexes_host[i - 1];
+        }
+
+        gdf_size_type length = indexes_host[i] - position;
+        if ((nodes.size() - 1) <= i) {
+            length = table_column_size - position;
+        }
+
+        std::vector<gdf_column_cpp> columns;
+        for (std::size_t k = 0; k < table.size(); ++k) {
+            columns.emplace_back(table[k].slice(position, length));
+        }
+
+        array_node_columns.emplace_back(*nodes[i], std::move(columns));
+    }
+
+    return array_node_columns;
 }
 
 void distributePartitions(const Context& context, std::vector<NodeColumns>& partitions){

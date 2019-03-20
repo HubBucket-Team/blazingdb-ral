@@ -22,7 +22,7 @@
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 const std::string LOGICAL_UNION_TEXT = "LogicalUnion";
-const std::string LOGICAL_SCAN_TEXT = "TableScainn";
+const std::string LOGICAL_SCAN_TEXT = "TableScan";
 const std::string LOGICAL_AGGREGATE_TEXT = "LogicalAggregate";
 const std::string LOGICAL_PROJECT_TEXT = "LogicalProject";
 const std::string LOGICAL_SORT_TEXT = "LogicalSort";

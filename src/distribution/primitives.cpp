@@ -342,7 +342,7 @@ std::vector<NodeColumns> partitionData(const Context& context,
 
     // create output column
     auto& pivot = pivots[0];
-    gdf_column_cpp indexes = ral::utilities::create_zero_column(pivot.size(), pivot.dtype());
+    gdf_column_cpp indexes = ral::utilities::create_zero_column(pivot.size(), GDF_SIZE_TYPE);
 
     // apply gdf_multisearch
     ral::utilities::TableWrapper haystack(table);

@@ -295,9 +295,9 @@ TEST_F(DistributionPrimitivesTest, partitionData_SingleColumn) {
 
     // output data
     std::vector<std::vector<DATA_TYPE>> output_result = {
-            {10, 11, 12},
-            {15, 16, 17},
-            {18, 19}
+            {10, 11, 12, 13},
+            {16, 17, 18},
+            {19}
     };
 
     // execute distributed function
@@ -340,10 +340,10 @@ TEST_F(DistributionPrimitivesTest, PartitionData_DoubleColumns) {
     std::vector<gdf_column_cpp> pivots;
 
     {
-        std::vector<DATA_TYPE> data_1 { 13, 15, 18 };
+        std::vector<DATA_TYPE> data_1 { 12, 14, 17 };
         pivots.emplace_back(ral::utilities::create_column<DATA_TYPE>(data_1, GDF_INT64));
 
-        std::vector<DATA_TYPE> data_2 { 213, 215, 218 };
+        std::vector<DATA_TYPE> data_2 { 212, 214, 217 };
         pivots.emplace_back(ral::utilities::create_column<DATA_TYPE>(data_2, GDF_INT64));
     }
 
@@ -377,7 +377,7 @@ TEST_F(DistributionPrimitivesTest, PartitionData_DoubleColumns) {
 }
 
 
-TEST_F(DistributionPrimitivesTest, partitionData_SingleColumn__WithInvalidIndex_WithUnSortedIndex) {
+TEST_F(DistributionPrimitivesTest, partitionData_SingleColumn__WithInvalidIndex) {
     // data type
     using DATA_TYPE = float;
 
@@ -385,7 +385,7 @@ TEST_F(DistributionPrimitivesTest, partitionData_SingleColumn__WithInvalidIndex_
     std::vector<gdf_column_cpp> table;
 
     {
-        std::vector<DATA_TYPE> data {10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0};
+        std::vector<DATA_TYPE> data {10.0, 12.0, 14.0, 16.0, 18.0, 20.0, 22.0, 24.0, 26.0, 28.0};
         table.emplace_back(ral::utilities::create_column<DATA_TYPE>(data, GDF_FLOAT32));
     }
 
@@ -393,15 +393,15 @@ TEST_F(DistributionPrimitivesTest, partitionData_SingleColumn__WithInvalidIndex_
     std::vector<gdf_column_cpp> pivots;
 
     {
-        std::vector<DATA_TYPE> data {13.0, 100.0, 15.0};
+        std::vector<DATA_TYPE> data {13.0, 20.0, 28.0};
         pivots.emplace_back(ral::utilities::create_column<DATA_TYPE>(data, GDF_FLOAT32));
     }
 
     // output data
     std::vector<std::vector<std::vector<DATA_TYPE>>> output_result = {
-            { {10.0, 11.0, 12.0}             },
-            { {15.0, 16.0, 17.0, 18.0, 19.0} },
-            {                                }
+            { {10.0, 12.0}             },
+            { {22.0, 24.0, 26.0, 28.0} },
+            {                          }
     };
 
     // execute distributed function
@@ -427,7 +427,7 @@ TEST_F(DistributionPrimitivesTest, partitionData_SingleColumn__WithInvalidIndex_
 }
 
 
-TEST_F(DistributionPrimitivesTest, PartitionData_DoubleColumns_WithInvalidIndex_WithUnSortedIndex) {
+TEST_F(DistributionPrimitivesTest, PartitionData_DoubleColumns_WithInvalidIndex) {
     // data type
     using DATA_TYPE = std::int16_t;
 
@@ -435,10 +435,10 @@ TEST_F(DistributionPrimitivesTest, PartitionData_DoubleColumns_WithInvalidIndex_
     std::vector<gdf_column_cpp> table;
 
     {
-        std::vector<DATA_TYPE> data_1 {110, 111, 112, 113, 114, 115, 116, 117, 118, 119};
+        std::vector<DATA_TYPE> data_1 {110, 112, 114, 116, 118, 120, 122, 124, 126, 128};
         table.emplace_back(ral::utilities::create_column<DATA_TYPE>(data_1, GDF_INT16));
 
-        std::vector<DATA_TYPE> data_2 {210, 211, 212, 213, 214, 215, 216, 217, 218, 219};
+        std::vector<DATA_TYPE> data_2 {210, 212, 214, 216, 218, 220, 222, 224, 226, 228};
         table.emplace_back(ral::utilities::create_column<DATA_TYPE>(data_2, GDF_INT16));
     }
 
@@ -446,18 +446,18 @@ TEST_F(DistributionPrimitivesTest, PartitionData_DoubleColumns_WithInvalidIndex_
     std::vector<gdf_column_cpp> pivots;
 
     {
-        std::vector<DATA_TYPE> data_1 {116, 119, 112};
+        std::vector<DATA_TYPE> data_1 {114, 119, 130};
         pivots.emplace_back(ral::utilities::create_column<DATA_TYPE>(data_1, GDF_INT16));
 
-        std::vector<DATA_TYPE> data_2 {216, 119, 212};
+        std::vector<DATA_TYPE> data_2 {214, 221, 230};
         pivots.emplace_back(ral::utilities::create_column<DATA_TYPE>(data_2, GDF_INT16));
     }
 
     // output data
     std::vector<std::vector<std::vector<DATA_TYPE>>> output_result = {
-            { {110, 111},           {210, 211}           },
-            { {116, 117, 118, 119}, {216, 217, 218, 219} },
-            {                                            }
+            { {110, 112, 114},           {210, 212, 214}           },
+            { {120, 122, 124, 126, 128}, {220, 222, 224, 226, 228} },
+            {                                                      }
     };
 
     // execute distributed function

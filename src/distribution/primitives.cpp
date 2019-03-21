@@ -352,9 +352,9 @@ std::vector<NodeColumns> partitionData(const Context& context,
                                       haystack.getColumns(),
                                       needles.getColumns(),
                                       haystack.getQuantity(),
-                                      false,
-                                      false,
-                                      true);
+                                      true,   // find_first_greater
+                                      false,  // nulls_appear_before_values
+                                      true);  // use_haystack_length_for_not_found
     if (cudf_error != GDF_SUCCESS) {
         throw ral::exception::BaseRalException("error on 'gdf_multisearch': " + std::to_string(cudf_error));
     }
@@ -369,12 +369,16 @@ std::vector<NodeColumns> partitionData(const Context& context,
         // TODO: improve exception functionality
         throw ral::exception::BaseRalException("cannot copy from GPU to CPU");
     }
-    std::sort(indexes_host.begin(), indexes_host.end());
 
+    // TODO: maybe unnecessary step due to the pivots are already sorted.
+    // std::sort(indexes_host.begin(), indexes_host.end());
+
+    // get nodes and the current node
     using CommunicationData = ral::communication::CommunicationData;
     auto nodes = context.getAllNodes();
     auto current_node = CommunicationData::getInstance().getSelfNode();
 
+    // generate NodeColumns
     gdf_size_type table_column_size = table[0].size();
     std::vector<NodeColumns> array_node_columns;
     for (std::size_t i = 0; i < nodes.size(); ++i) {

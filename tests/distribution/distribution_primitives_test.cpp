@@ -552,11 +552,11 @@ TEST_F(GeneratePartitionPlansTest, SingleColumn) {
     std::shared_ptr<Context> context = std::make_shared<Context>(nodes, nodes[0], "logical_plan");
 
     // Create data - NodeSamples
-    std::vector<gdf_column_cpp> columnsSample1{1};
+    std::vector<gdf_column_cpp> columnsSample1(1);
     std::vector<int> colData1 = {27, 5, 13, 30, 16};
     columnsSample1[0].create_gdf_column(GDF_INT32, colData1.size(), colData1.data(), get_width_dtype(GDF_INT32), "");
 
-    std::vector<gdf_column_cpp> columnsSample2{1};
+    std::vector<gdf_column_cpp> columnsSample2(1);
     std::vector<int>  colData2 = {11, 41, 1, 3};
     columnsSample2[0].create_gdf_column(GDF_INT32, colData2.size(), colData2.data(), get_width_dtype(GDF_INT32), "");
 
@@ -595,12 +595,12 @@ TEST_F(GeneratePartitionPlansTest, MultiColumn) {
 
     // Create data - NodeSamples
     std::vector<std::vector<int>> colData1 = {{27, 5, 13, 30, 16}, {711, 121, 7498, 2866, 7638}};
-    std::vector<gdf_column_cpp> columnsSample1{colData1.size()};
+    std::vector<gdf_column_cpp> columnsSample1(colData1.size());
     columnsSample1[0].create_gdf_column(GDF_INT32, colData1[0].size(), colData1[0].data(), get_width_dtype(GDF_INT32), "");
     columnsSample1[1].create_gdf_column(GDF_INT32, colData1[1].size(), colData1[1].data(), get_width_dtype(GDF_INT32), "");
 
     std::vector<std::vector<int>> colData2 = {{11, 41, 1, 3}, {4643, 1182, 2182, 5500}};
-    std::vector<gdf_column_cpp> columnsSample2{colData2.size()};
+    std::vector<gdf_column_cpp> columnsSample2(colData2.size());
     columnsSample2[0].create_gdf_column(GDF_INT32, colData2[0].size(), colData2[0].data(), get_width_dtype(GDF_INT32), "");
     columnsSample2[1].create_gdf_column(GDF_INT32, colData2[1].size(), colData2[1].data(), get_width_dtype(GDF_INT32), "");
 
@@ -644,12 +644,12 @@ TEST_F(GeneratePartitionPlansTest, SingleColumnWithNulls) {
     std::shared_ptr<Context> context = std::make_shared<Context>(nodes, nodes[0], "logical_plan");
 
     // Create data - NodeSamples
-    std::vector<gdf_column_cpp> columnsSample1{1};
+    std::vector<gdf_column_cpp> columnsSample1(1);
     std::vector<int> colData1 = {27, 5, 13, 30, 16, 13, 1,  12, 17, 7};
     std::vector<uint8_t> valids1 = {1, 0, 1, 0, 1, 1, 1, 1, 1, 0};
     columnsSample1[0].create_gdf_column(GDF_INT32, colData1.size(), colData1.data(), boolVectorToBitVector(valids1).data(), get_width_dtype(GDF_INT32), "");
 
-    std::vector<gdf_column_cpp> columnsSample2{1};
+    std::vector<gdf_column_cpp> columnsSample2(1);
     std::vector<int>  colData2 = {11, 41, 1, 3,  16, 24, 18, 7};
     std::vector<uint8_t> valids2 = {1, 1, 1, 1, 0, 0, 1, 1};
     columnsSample2[0].create_gdf_column(GDF_INT32, colData2.size(), colData2.data(), boolVectorToBitVector(valids2).data(), get_width_dtype(GDF_INT32), "");
@@ -690,13 +690,13 @@ TEST_F(GeneratePartitionPlansTest, MultiColumnWithNull) {
     // Create data - NodeSamples
     std::vector<std::vector<int>> colData1 = {{27, 5, 13, 30, 16, 13, 1,  12, 17, 7}, {711, 121, 7498, 2866, 7638, 8166, 6853, 1709, 4867, -611}};
     std::vector<std::vector<uint8_t>> valids1 = {{1, 0, 1, 0, 1, 1, 1, 1, 1, 0}, {0, 0, 1, 1, 1, 1, 1, 1, 0, 0}};
-    std::vector<gdf_column_cpp> columnsSample1{colData1.size()};
+    std::vector<gdf_column_cpp> columnsSample1(colData1.size());
     columnsSample1[0].create_gdf_column(GDF_INT32, colData1[0].size(), colData1[0].data(), boolVectorToBitVector(valids1[0]).data(), get_width_dtype(GDF_INT32), "");
     columnsSample1[1].create_gdf_column(GDF_INT32, colData1[1].size(), colData1[1].data(), boolVectorToBitVector(valids1[1]).data(), get_width_dtype(GDF_INT32), "");
 
     std::vector<std::vector<int>> colData2 = {{11, 41, 1, 3,  16, 24, 18, 7}, {4643, 1182, 2182, 5500, -716, 7462, 6505, 2953}};
     std::vector<std::vector<uint8_t>> valids2 = {{1, 1, 1, 1, 0, 0, 1, 1}, {0, 1, 1, 1, 1, 1, 1, 1}};
-    std::vector<gdf_column_cpp> columnsSample2{colData2.size()};
+    std::vector<gdf_column_cpp> columnsSample2(colData2.size());
     columnsSample2[0].create_gdf_column(GDF_INT32, colData2[0].size(), colData2[0].data(), boolVectorToBitVector(valids2[0]).data(), get_width_dtype(GDF_INT32), "");
     columnsSample2[1].create_gdf_column(GDF_INT32, colData2[1].size(), colData2[1].data(), boolVectorToBitVector(valids2[1]).data(), get_width_dtype(GDF_INT32), "");
 

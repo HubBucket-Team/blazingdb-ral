@@ -85,12 +85,11 @@ void single_node_sort(blazing_frame& input, std::vector<gdf_column*>& rawCols, s
 
 	sort(input, rawCols, sortOrderTypes, sortedTable);
 
-	for(int i = 0; i < sortedTable.size(); i++){
-		input.set_column(i, sortedTable[i].clone());
-	}
+	input.clear();
+	input.add_table(sortedTable);
 }
 
-void distributed_sort(const Context* queryContext, blazing_frame& input, std::vector<gdf_column_cpp>& cols, std::vector<gdf_column*>& rawCols, std::vector<int8_t>& sortOrderTypes, std::vector<int>& sortColIndices) {
+void distributed_sort(const Context& queryContext, blazing_frame& input, std::vector<gdf_column_cpp>& cols, std::vector<gdf_column*>& rawCols, std::vector<int8_t>& sortOrderTypes, std::vector<int>& sortColIndices) {
 	using ral::communication::CommunicationData;
 
 	std::vector<gdf_column_cpp> sortedTable(input.get_size_column(0));
@@ -109,32 +108,32 @@ void distributed_sort(const Context* queryContext, blazing_frame& input, std::ve
 	std::thread sortThread{sort, std::ref(input), std::ref(rawCols), std::ref(sortOrderTypes), std::ref(sortedTable)};
 
 	std::vector<gdf_column_cpp> partitionPlan;
-	if (queryContext->isMasterNode(CommunicationData::getInstance().getSelfNode())) {
-		std::vector<ral::distribution::NodeSamples> samples = ral::distribution::collectSamples(*queryContext);
+	if (queryContext.isMasterNode(CommunicationData::getInstance().getSelfNode())) {
+		std::vector<ral::distribution::NodeSamples> samples = ral::distribution::collectSamples(queryContext);
     samples.emplace_back(rowSize, CommunicationData::getInstance().getSelfNode(), std::move(selfSamples));
 
-		partitionPlan = ral::distribution::generatePartitionPlans(*queryContext, samples, sortOrderTypes);
+		partitionPlan = ral::distribution::generatePartitionPlans(queryContext, samples, sortOrderTypes);
 
-    ral::distribution::distributePartitionPlan(*queryContext, partitionPlan);
+    ral::distribution::distributePartitionPlan(queryContext, partitionPlan);
 	}
 	else {
-		ral::distribution::sendSamplesToMaster(*queryContext, std::move(selfSamples), rowSize);
+		ral::distribution::sendSamplesToMaster(queryContext, std::move(selfSamples), rowSize);
 
-		partitionPlan = ral::distribution::getPartitionPlan(*queryContext);
+		partitionPlan = ral::distribution::getPartitionPlan(queryContext);
 	}
 
 	// Wait for sortThread
 	sortThread.join();
 
-	std::vector<ral::distribution::NodeColumns> partitions = ral::distribution::partitionData(*queryContext, sortedTable, partitionPlan);
+	std::vector<ral::distribution::NodeColumns> partitions = ral::distribution::partitionData(queryContext, sortedTable, partitionPlan);
 
-	ral::distribution::distributePartitions(*queryContext, partitions);
+	ral::distribution::distributePartitions(queryContext, partitions);
 
-	std::vector<ral::distribution::NodeColumns> partitionsToMerge = ral::distribution::collectPartition(*queryContext);
+	std::vector<ral::distribution::NodeColumns> partitionsToMerge = ral::distribution::collectPartition(queryContext);
 	auto it = std::find_if(partitions.begin(), partitions.end(), [&](ral::distribution::NodeColumns& el) {
 			return el.getNode() == CommunicationData::getInstance().getSelfNode();
 		});
-	// Could "it" be partitions.end()?
+	// Could "it" iterator be partitions.end()?
 	partitionsToMerge.push_back(std::move(*it));
 
 	ral::distribution::sortedMerger(partitionsToMerge, sortOrderTypes, sortColIndices, input);
@@ -171,7 +170,7 @@ void process_sort(blazing_frame & input, std::string query_part, const Context* 
 		single_node_sort(input, rawCols, sortOrderTypes);
 	}
 	else {
-		distributed_sort(queryContext, input, cols, rawCols, sortOrderTypes, sortColIndices);
+		distributed_sort(*queryContext, input, cols, rawCols, sortOrderTypes, sortColIndices);
 	}
 }
 

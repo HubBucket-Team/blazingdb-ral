@@ -17,9 +17,9 @@
 typedef short column_index_type;
 
 void evaluate_expression(
-		blazing_frame inputs,
-		std::string expression,
-		gdf_column_cpp output);
+		blazing_frame& inputs,
+		const std::string& expression,
+		gdf_column_cpp& output);
 
 
 void add_expression_to_plan(	blazing_frame & inputs,

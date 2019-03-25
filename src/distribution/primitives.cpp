@@ -337,11 +337,28 @@ std::vector<NodeColumns> partitionData(const Context& context,
                                        std::vector<gdf_column_cpp>& pivots) {
     // verify input
     if (pivots.size() == 0) {
-        throw ral::exception::BaseRalException("pivots array is empty");
+        throw ral::exception::BaseRalException("The pivots array is empty");
+    }
+
+    auto& pivot = pivots[0];
+    {
+        std::size_t size = pivot.size();
+
+        // verify the size of the pivots.
+        for (std::size_t k = 1; k < pivots.size(); ++k) {
+            if (size != pivots[k].size()) {
+                throw ral::exception::BaseRalException("The pivots don't have the same size");
+            }
+        }
+
+        // verify the size in pivots and nodes
+        auto nodes = context.getAllNodes();
+        if (nodes.size() != (size + 1)) {
+            throw ral::exception::BaseRalException("The size of the nodes needs to be the same as the size of the pivots plus one");
+        }
     }
 
     // create output column
-    auto& pivot = pivots[0];
     gdf_column_cpp indexes = ral::utilities::create_zero_column(pivot.size(), GDF_SIZE_TYPE);
 
     // apply gdf_multisearch
@@ -373,19 +390,13 @@ std::vector<NodeColumns> partitionData(const Context& context,
     // TODO: maybe unnecessary step due to the pivots are already sorted.
     // std::sort(indexes_host.begin(), indexes_host.end());
 
-    // get nodes and the current node
-    using CommunicationData = ral::communication::CommunicationData;
+    // get nodes
     auto nodes = context.getAllNodes();
-    auto current_node = CommunicationData::getInstance().getSelfNode();
 
     // generate NodeColumns
     gdf_size_type table_column_size = table[0].size();
     std::vector<NodeColumns> array_node_columns;
     for (std::size_t i = 0; i < nodes.size(); ++i) {
-        if (*nodes[i] == current_node) {
-            continue;
-        }
-
         gdf_size_type position = table_column_size;
         if (i == 0) {
             position = 0;
@@ -399,7 +410,7 @@ std::vector<NodeColumns> partitionData(const Context& context,
             length = indexes_host[i] - position;
         }
 
-        // index not valid
+        // index not found in the node.
         if (position == table_column_size) {
             array_node_columns.emplace_back(*nodes[i], std::vector<gdf_column_cpp>{});
             continue;
@@ -412,6 +423,9 @@ std::vector<NodeColumns> partitionData(const Context& context,
 
         array_node_columns.emplace_back(*nodes[i], std::move(columns));
     }
+
+    // erase input gdf_column_cpp
+    table.clear();
 
     return array_node_columns;
 }

@@ -58,7 +58,29 @@ void distributePartitionPlan(const Context& context, std::vector<gdf_column_cpp>
 
 std::vector<gdf_column_cpp> getPartitionPlan(const Context& context);
 
-std::vector<NodeColumns> partitionData(const Context& context, std::vector<gdf_column_cpp>& table, std::vector<gdf_column_cpp>& pivots);
+/**
+ * The implementation of the partition must be changed with the 'split' or 'slice' function in cudf.
+ * The current implementation transfer the output of the function 'gdf_multisearch' to the CPU
+ * memory and then uses the 'slice' function from gdf_column_cpp (each column) in order to create
+ * the partitions.
+ *
+ * The parameters in the 'gdf_multisearch' function are true for 'find_first_greater', false for
+ * 'nulls_appear_before_values' and true for 'use_haystack_length_for_not_found'.
+ * It doesn't matter whether the value is not found due to the 'gdf_multisearch' retrieve always
+ * the position of the greater value or the size of the column in the worst case.
+ * The second parameters is used to maintain the order of the positions of the indexes in the output.
+ *
+ * Precondition:
+ * The size of the nodes will be the same as the number of pivots (in one column) plus one.
+ *
+ * Example:
+ * pivots = { 11, 16 }
+ * table = { { 10, 12, 14, 16, 18, 20 } }
+ * output = { {10} , {12, 14, 16}, {18, 20} }
+ */
+std::vector<NodeColumns> partitionData(const Context& context,
+                                       std::vector<gdf_column_cpp>& table,
+                                       std::vector<gdf_column_cpp>& pivots);
 
 void distributePartitions(const Context& context, std::vector<NodeColumns>& partitions);
 

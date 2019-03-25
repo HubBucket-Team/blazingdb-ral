@@ -296,6 +296,7 @@ TEST_F(DistributionPrimitivesTest, partitionData_SingleColumn) {
     // output data
     std::vector<std::vector<DATA_TYPE>> output_result = {
             {10, 11, 12, 13},
+            {14, 15},
             {16, 17, 18},
             {19}
     };
@@ -305,6 +306,7 @@ TEST_F(DistributionPrimitivesTest, partitionData_SingleColumn) {
     ASSERT_NO_THROW(columns = ral::distribution::partitionData(*context_, table, pivots));
 
     // verify
+    ASSERT_EQ(table.size(), 0);
     ASSERT_EQ(columns.size(), output_result.size());
 
     for (std::size_t k = 0; k < columns.size(); ++k) {
@@ -350,6 +352,7 @@ TEST_F(DistributionPrimitivesTest, PartitionData_DoubleColumns) {
     // output data
     std::vector<std::vector<std::vector<DATA_TYPE>>> output_result = {
             { {10, 11, 12}, {210, 211, 212} },
+            { {13, 14},     {213, 214} },
             { {15, 16, 17}, {215, 216, 217} },
             { {18, 19},     {218, 219}      }
     };
@@ -359,6 +362,7 @@ TEST_F(DistributionPrimitivesTest, PartitionData_DoubleColumns) {
     ASSERT_NO_THROW(columns = ral::distribution::partitionData(*context_, table, pivots));
 
     // verify
+    ASSERT_EQ(table.size(), 0);
     ASSERT_EQ(columns.size(), output_result.size());
 
     for (std::size_t i = 0; i < columns.size(); ++i) {
@@ -400,6 +404,7 @@ TEST_F(DistributionPrimitivesTest, partitionData_SingleColumn__WithInvalidIndex)
     // output data
     std::vector<std::vector<std::vector<DATA_TYPE>>> output_result = {
             { {10.0, 12.0}             },
+            { {14.0, 16.0, 18.0, 20.0} },
             { {22.0, 24.0, 26.0, 28.0} },
             {                          }
     };
@@ -409,6 +414,7 @@ TEST_F(DistributionPrimitivesTest, partitionData_SingleColumn__WithInvalidIndex)
     ASSERT_NO_THROW(columns = ral::distribution::partitionData(*context_, table, pivots));
 
     // verify
+    ASSERT_EQ(table.size(), 0);
     ASSERT_EQ(columns.size(), output_result.size());
 
     for (std::size_t i = 0; i < columns.size(); ++i) {
@@ -456,6 +462,7 @@ TEST_F(DistributionPrimitivesTest, PartitionData_DoubleColumns_WithInvalidIndex)
     // output data
     std::vector<std::vector<std::vector<DATA_TYPE>>> output_result = {
             { {110, 112, 114},           {210, 212, 214}           },
+            { {116, 118},                {216, 218}                },
             { {120, 122, 124, 126, 128}, {220, 222, 224, 226, 228} },
             {                                                      }
     };
@@ -465,6 +472,7 @@ TEST_F(DistributionPrimitivesTest, PartitionData_DoubleColumns_WithInvalidIndex)
     ASSERT_NO_THROW(columns = ral::distribution::partitionData(*context_, table, pivots));
 
     // verify
+    ASSERT_EQ(table.size(), 0);
     ASSERT_EQ(columns.size(), output_result.size());
 
     for (std::size_t i = 0; i < columns.size(); ++i) {

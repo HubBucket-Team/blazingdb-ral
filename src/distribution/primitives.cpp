@@ -438,6 +438,9 @@ void distributePartitions(const Context& context, std::vector<NodeColumns>& part
   const auto& self_node = CommunicationData::getInstance().getSelfNode();
   for(auto& nodeColumn : partitions)
   {
+    if (nodeColumn.getNode() == self_node) {
+      continue;
+    }
     auto message = Factory::createColumnDataMessage(context.getContextToken(),
                                                     self_node,
                                                     std::move(nodeColumn.getColumns()));

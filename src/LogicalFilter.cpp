@@ -213,9 +213,9 @@ void add_expression_to_plan(	blazing_frame & inputs,
 
 // processing in reverse we never need to have more than TWO spaces to work in
 void evaluate_expression(
-		blazing_frame inputs,
-		std::string expression,
-		gdf_column_cpp output){
+		blazing_frame& inputs,
+		const std::string& expression,
+		gdf_column_cpp& output){
 
 	// make temp a column of size 8 bytes so it can accomodate the largest possible size
 	static CodeTimer timer;
@@ -304,4 +304,3 @@ void evaluate_expression(
 
 	// Library::Logging::Logger().logInfo("-> evaluate_expression took " + std::to_string(timer.getDuration()) + " ms processing expression:\n" + expression);
 }
-

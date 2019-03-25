@@ -77,4 +77,6 @@ gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_unary_operator operatio
 
 std::string get_named_expression(std::string query_part, std::string expression_name);
 
+bool contains_evaluation(std::string expression);
+
 #endif /* CALCITEEXPRESSIONPARSING_H_ */

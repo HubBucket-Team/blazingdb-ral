@@ -273,37 +273,37 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 
 // TODO this function needs to be revisited. the cudf csv reader now supports actually selecting what columns you want
 
-	// csv_read_arg raw_args{};
-    // raw_args.num_cols		= args.num_cols;
-    // raw_args.names			= args.names;
-    // raw_args.dtype			= args.dtype;
-    // raw_args.delimiter		= args.delimiter;
-    // raw_args.lineterminator = args.lineterminator;
-	// raw_args.skip_blank_lines = args.skip_blank_lines;
-    // raw_args.header = args.header;
-    // raw_args.nrows = args.nrows;
+	csv_read_arg raw_args{};
+    raw_args.num_cols		= args.num_cols;
+    raw_args.names			= args.names;
+    raw_args.dtype			= args.dtype;
+    raw_args.delimiter		= args.delimiter;
+    raw_args.lineterminator = args.lineterminator;
+	raw_args.skip_blank_lines = args.skip_blank_lines;
+    raw_args.header = args.header;
+    raw_args.nrows = args.nrows;
     
-	// CUDF_CALL(read_csv_arrow(&raw_args,file));
+	CUDF_CALL(read_csv_arrow(&raw_args,file));
 
-	// std::cout << "args.num_cols_out " << raw_args.num_cols_out << std::endl;
-	// std::cout << "args.num_rows_out " <<raw_args.num_rows_out << std::endl;
-	// assert(raw_args.num_cols_out > 0);
+	std::cout << "args.num_cols_out " << raw_args.num_cols_out << std::endl;
+	std::cout << "args.num_rows_out " <<raw_args.num_rows_out << std::endl;
+	assert(raw_args.num_cols_out > 0);
 
-	// //This is kind of legacy but we need to copy the name to gdf_column_cpp
-	// //TODO: make it so we dont have to do this
-	// // for(size_t output_column_index = 0; output_column_index < args.use_cols_int_len; output_column_index++){
-	// // 	size_t index_in_original_columns = args.use_cols_int[output_column_index];
-	// // 	columns[index_in_original_columns].create_gdf_column(
-	// // 			args.data[output_column_index]);
-	// // }
- 	// for(size_t i = 0; i < raw_args.num_cols_out; i++ ){
-	// 	if(include_column[i]) {
-	// 		gdf_column_cpp c;
-	// 		c.create_gdf_column(raw_args.data[i]); 
-	// 		c.set_name(std::string{raw_args.names[i]});
-	// 		columns.push_back(c);
-	// 	}
+	//This is kind of legacy but we need to copy the name to gdf_column_cpp
+	//TODO: make it so we dont have to do this
+	// for(size_t output_column_index = 0; output_column_index < args.use_cols_int_len; output_column_index++){
+	// 	size_t index_in_original_columns = args.use_cols_int[output_column_index];
+	// 	columns[index_in_original_columns].create_gdf_column(
+	// 			args.data[output_column_index]);
 	// }
+ 	for(size_t i = 0; i < raw_args.num_cols_out; i++ ){
+		if(include_column[i]) {
+			gdf_column_cpp c;
+			c.create_gdf_column(raw_args.data[i]); 
+			c.set_name(std::string{raw_args.names[i]});
+			columns.push_back(c);
+		}
+	}
 }
 
 void csv_parser::parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> file, std::vector<gdf_column_cpp> & columns)  {

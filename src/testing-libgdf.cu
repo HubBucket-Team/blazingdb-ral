@@ -154,9 +154,9 @@ query_token_t loadParquetAndInsertToResultRepository(std::string path, connectio
 
       std::vector<gdf_column_cpp> columns;
       if (schema_only){
-        parser->parse(provider->get_next(), columns);
-      } else {
         parser->parse_schema(provider->get_next(), columns);
+      } else {
+        parser->parse(provider->get_next(), columns);
       }
 
       blazing_frame output_frame;
@@ -224,9 +224,9 @@ query_token_t loadCsvAndInsertToResultRepository(std::string path, std::vector<s
       
       std::vector<gdf_column_cpp> columns;
       if (schema_only){
-        parser->parse(provider->get_next(), columns);
-      } else {
         parser->parse_schema(provider->get_next(), columns);
+      } else {
+        parser->parse(provider->get_next(), columns);
       }
 
       blazing_frame output_frame;

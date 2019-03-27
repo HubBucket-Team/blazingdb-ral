@@ -316,12 +316,13 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
 
         auto data = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->data);
         auto valid = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->valid);
-        //auto custrings_views = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->custrings_views);
-        //.custrings_views = custrings_views,
+        auto custrings_membuffer = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->valid);//custrings_membuffer); todo fix this
+        auto custrings_views = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->valid);//custrings_views); todo fix this
         auto col = ::gdf_dto::gdf_column {
               .data = data,
               .valid = valid,
-              .custrings_views = 0,
+              .custrings_membuffer = custrings_membuffer,
+              .custrings_views = custrings_views,
               .size = result.result_frame.get_columns()[0][i].size(),
               .dtype = (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype(),
               .null_count = result.result_frame.get_columns()[0][i].null_count(),

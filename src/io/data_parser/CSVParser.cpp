@@ -18,30 +18,56 @@
 namespace ral {
 namespace io {
 
-/**
- * csv reader takes gdf_column** and sets up
- */
-void create_csv_args(size_t num_columns,
-		csv_read_arg & args,
-		const std::vector<bool> & include_column ){
+void init_default_csv_args(csv_read_arg & args){
 
-	size_t num_columns_output = 0;
-	for(size_t column_index = 0; column_index < num_columns; column_index++){
-		if(include_column[0])	num_columns_output++;
-	}
+	args.delimiter = '|';
+	args.lineterminator = '\n';
+	args.quotechar = '"';
+	args.quoting = QUOTE_MINIMAL;
+	args.doublequote = true;
+	args.delim_whitespace = false;
+	args.skipinitialspace = false;
+	args.dayfirst = false;
+	args.skiprows = 0;
+	args.skipfooter = 0;
+	args.mangle_dupe_cols = true;
+	args.windowslinetermination = false;
+	args.compression = nullptr;
+	args.decimal = '.';
+	// args.thousands
+	args.skip_blank_lines = true;
+	// args.comment
+	args.keep_default_na = true;
+	args.na_filter = false;
+	// args.prefix
+	args.nrows = -1;
+	args.header = -1;
+}
 
-
-	args.data = new gdf_column*[num_columns_output];
-	args.use_cols_int = new int[num_columns_output];
-	args.use_cols_char_len = num_columns_output;
-	size_t output_column_index = 0;
-	for(size_t column_index = 0; column_index < num_columns; column_index++){
-		if(include_column[column_index]){
-			args.data[output_column_index] = new gdf_column;
-			args.use_cols_int[output_column_index] = column_index;
-			output_column_index++;
-		}
-	}
+void copy_non_data_csv_args(csv_read_arg & args, csv_read_arg & new_args){
+	new_args.num_cols		= args.num_cols;
+    new_args.names			= args.names;
+    new_args.dtype			= args.dtype;
+    new_args.delimiter		= args.delimiter;
+    new_args.lineterminator = args.lineterminator;
+	new_args.skip_blank_lines = args.skip_blank_lines;
+    new_args.header 		= args.header;
+    new_args.nrows 			= args.nrows;
+	new_args.decimal 		= args.decimal;
+	new_args.quotechar 		= args.quotechar;
+    new_args.quoting 		= args.quoting;
+	new_args.doublequote 	= args.doublequote;
+	new_args.delim_whitespace = args.delim_whitespace;
+    new_args.skipinitialspace = args.skipinitialspace;
+	new_args.dayfirst 		= args.dayfirst;
+	new_args.skiprows 		= args.skiprows;
+    new_args.skipfooter 	= args.skipfooter;
+	new_args.mangle_dupe_cols = args.mangle_dupe_cols;
+	new_args.windowslinetermination	= args.windowslinetermination;
+    new_args.compression 	= args.compression;
+	new_args.keep_default_na = args.keep_default_na;
+	new_args.na_filter		= args.na_filter;
+	
 }
 
 /**
@@ -147,27 +173,12 @@ csv_parser::csv_parser(const std::string & delimiter,
 		const std::vector<std::string> & names,
 		const std::vector<gdf_dtype> & dtypes) {
 
-
-	// args.windowslinetermination = false;
-	
-	// if(names.size() != dtypes.size()){
-	// 	//TODO: something graceful, like a swan diving in a pristine lake, not this duck flinging feces in a coop
-	// }
 	int num_columns = names.size();
-	// if(delimiter.size() == 1){
-	// 	args.lineterminator = '\n';
-	// }else{
-	// 	if(delimiter[0] == '\n' && delimiter[1] == '\r'){
-	// 		args.lineterminator = '\n';
-	// 		args.windowslinetermination = true;
-	// 	}else{
-	// 		//god knows what to do, set an invalid flag in this class?
-	// 		//i guess this is why factories are good
-	// 	}
-	// }
 		
 	this->column_names = names;
 	this->dtype_strings.resize(num_columns);
+
+	init_default_csv_args(args);
 
 	args.names = new const char *[num_columns];
 	args.dtype = new const char *[num_columns]; //because dynamically allocating metadata is fun
@@ -177,32 +188,9 @@ csv_parser::csv_parser(const std::string & delimiter,
 		args.names[column_index] = this->column_names[column_index].c_str();
 	}
 
-	// args.num_cols = num_columns; //why not?
-	// args.delim_whitespace = 0;
-	// args.skipinitialspace = 0;
-	// args.skiprows 		= skip_rows;
-	// args.skipfooter 	= 0;
-	// args.dayfirst 		= 0;
-
-	// args.mangle_dupe_cols=true;
-	// args.num_cols_out=0;
-
-	// args.use_cols_int       = NULL;
-	// args.use_cols_char      = NULL;
-	// args.use_cols_char_len  = 0;
-	// args.use_cols_int_len   = 0;
-	// // args.parse_dates = true; @check
-	// std::cout<<"if im last it was me"<<std::endl;
-	// args.quotechar = this->quote_character;
-	// std::cout<<"nope still good"<<std::endl;
-
 	args.num_cols		= num_columns; 
 	args.delimiter 		= delimiter[0];
 	args.lineterminator = line_terminator[0];
-	args.skip_blank_lines = true;
-    args.header = -1;
-	args.nrows = -1;
-	
 }
 
 
@@ -217,15 +205,8 @@ csv_parser::~csv_parser() {
 
 void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file, std::vector<gdf_column_cpp> & columns) {
 	csv_read_arg raw_args{};
-    raw_args.num_cols		= args.num_cols;
-    raw_args.names			= args.names;
-    raw_args.dtype			= args.dtype;
-    raw_args.delimiter		= args.delimiter;
-    raw_args.lineterminator = args.lineterminator;
-	raw_args.skip_blank_lines = args.skip_blank_lines;
-    raw_args.header = args.header;
-    raw_args.nrows = args.nrows;
-    
+	copy_non_data_csv_args(args, raw_args);
+       
 	CUDF_CALL(read_csv_arrow(&raw_args,file));
 
 	std::cout << "args.num_cols_out " << raw_args.num_cols_out << std::endl;
@@ -244,14 +225,7 @@ void csv_parser::parse(const char *fname, std::vector<gdf_column_cpp> & columns)
 	args.filepath_or_buffer		= fname;
 	csv_read_arg raw_args{};
     raw_args.filepath_or_buffer		= fname;
-    raw_args.num_cols		= args.num_cols;
-    raw_args.names			= args.names;
-    raw_args.dtype			= args.dtype;
-    raw_args.delimiter		= args.delimiter;
-    raw_args.lineterminator = args.lineterminator;
-	raw_args.skip_blank_lines = args.skip_blank_lines;
-    raw_args.header = args.header;
-    raw_args.nrows = args.nrows;
+    copy_non_data_csv_args(args, raw_args);
     
 	CUDF_CALL(read_csv(&raw_args));
 
@@ -274,14 +248,7 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 // TODO this function needs to be revisited. the cudf csv reader now supports actually selecting what columns you want
 
 	csv_read_arg raw_args{};
-    raw_args.num_cols		= args.num_cols;
-    raw_args.names			= args.names;
-    raw_args.dtype			= args.dtype;
-    raw_args.delimiter		= args.delimiter;
-    raw_args.lineterminator = args.lineterminator;
-	raw_args.skip_blank_lines = args.skip_blank_lines;
-    raw_args.header = args.header;
-    raw_args.nrows = args.nrows;
+    copy_non_data_csv_args(args, raw_args);
     
 	CUDF_CALL(read_csv_arrow(&raw_args,file));
 
@@ -308,14 +275,7 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 
 void csv_parser::parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> file, std::vector<gdf_column_cpp> & columns)  {
 	csv_read_arg raw_args{};
-    raw_args.num_cols		= args.num_cols;
-    raw_args.names			= args.names;
-    raw_args.dtype			= args.dtype;
-    raw_args.delimiter		= args.delimiter;
-    raw_args.lineterminator = args.lineterminator;
-	raw_args.skip_blank_lines = args.skip_blank_lines;
-    raw_args.header = args.header;
-    raw_args.nrows = 1;
+    copy_non_data_csv_args(args, raw_args);
     
 	CUDF_CALL(read_csv_arrow(&raw_args,file));
 

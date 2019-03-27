@@ -128,7 +128,7 @@ static result_pair  deregisterFileSystem(uint64_t accessToken, Buffer&& buffer) 
 }
 
 
-query_token_t loadParquetAndInsertToResultRepository(std::string path, connection_id_t connection) {
+query_token_t loadParquetAndInsertToResultRepository(std::string path, connection_id_t connection, bool schema_only) {
 	std::cout<<"loadParquet\n";
 
 	query_token_t token = result_set_repository::get_instance().register_query(connection); //register the query so we can receive result requests for it
@@ -153,7 +153,11 @@ query_token_t loadParquetAndInsertToResultRepository(std::string path, connectio
       CodeTimer blazing_timer;
 
       std::vector<gdf_column_cpp> columns;
-      parser->parse(provider->get_next(), columns);
+      if (schema_only){
+        parser->parse_schema(provider->get_next(), columns);
+      } else {
+        parser->parse(provider->get_next(), columns);
+      }
 
       blazing_frame output_frame;
       output_frame.add_table(columns);
@@ -177,7 +181,8 @@ static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
   uint64_t resultToken = 0L;
   try {
     // @todo, what about other parameters
-    resultToken = loadParquetAndInsertToResultRepository(message.fileSchema()->path, accessToken);
+    bool schema_only = true;
+    resultToken = loadParquetAndInsertToResultRepository(message.fileSchema()->path, accessToken, schema_only);
 
   } catch (const std::exception& e) {
      std::cerr << e.what() << std::endl;
@@ -193,7 +198,8 @@ static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
   return std::make_pair(Status_Success, responsePayload.getBufferData());
 }
 
-query_token_t loadCsvAndInsertToResultRepository(std::string path, std::vector<std::string> names, std::vector<gdf_dtype> dtypes, std::string delimiter, std::string line_terminator, int skip_rows, connection_id_t connection) {
+query_token_t loadCsvAndInsertToResultRepository(std::string path, std::vector<std::string> names, std::vector<gdf_dtype> dtypes, std::string delimiter, std::string line_terminator, 
+  int skip_rows, connection_id_t connection, bool schema_only) {
 	std::cout<<"loadCsv\n";
 
 	query_token_t token = result_set_repository::get_instance().register_query(connection); //register the query so we can receive result requests for it
@@ -216,11 +222,12 @@ query_token_t loadCsvAndInsertToResultRepository(std::string path, std::vector<s
     {
       CodeTimer blazing_timer;
       
-      size_t num_cols = names.size();
-      std::vector<bool> include_column(num_cols, true);
-
       std::vector<gdf_column_cpp> columns;
-      parser->parse(provider->get_next(), columns, include_column);
+      if (schema_only){
+        parser->parse_schema(provider->get_next(), columns);
+      } else {
+        parser->parse(provider->get_next(), columns);
+      }
 
       blazing_frame output_frame;
       output_frame.add_table(columns);
@@ -247,7 +254,8 @@ static result_pair loadCsvSchema(uint64_t accessToken, Buffer&& buffer) {
 
   uint64_t resultToken = 0L;
   try {
-    resultToken = loadCsvAndInsertToResultRepository(schema->path, schema->names, types, schema->delimiter, schema->line_terminator, schema->skip_rows, accessToken);
+    bool schema_only = true;
+    resultToken = loadCsvAndInsertToResultRepository(schema->path, schema->names, types, schema->delimiter, schema->line_terminator, schema->skip_rows, accessToken, schema_only);
   } catch (const std::exception& e) {
      std::cerr << e.what() << std::endl;
      ResponseErrorMessage errorMessage{ std::string{e.what()} };

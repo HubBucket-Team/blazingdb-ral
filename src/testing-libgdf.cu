@@ -151,7 +151,7 @@ query_token_t loadParquetAndInsertToResultRepository(std::string path, connectio
 
 		auto provider = std::make_unique<ral::io::uri_data_provider>(uris);
 		auto parser = std::make_unique<ral::io::parquet_parser>();
-    
+
     try
     {
       CodeTimer blazing_timer;
@@ -219,7 +219,7 @@ query_token_t loadCsvAndInsertToResultRepository(std::string path, std::vector<s
     try
     {
       CodeTimer blazing_timer;
-      
+
       size_t num_cols = names.size();
       std::vector<bool> include_column(num_cols, true);
 
@@ -230,7 +230,7 @@ query_token_t loadCsvAndInsertToResultRepository(std::string path, std::vector<s
       output_frame.add_table(columns);
 
       double duration = blazing_timer.getDuration();
-      
+
       result_set_repository::get_instance().update_token(token, output_frame, duration);
     } catch (const std::exception& e){
       std::cerr << e.what() << '\n';
@@ -274,7 +274,7 @@ static result_pair closeConnectionService(uint64_t accessToken, Buffer&& request
 
   try {
     result_set_repository::get_instance().remove_all_connection_tokens(accessToken);
-    // NOTE: use next 3 lines to check with "/usr/local/cuda/bin/cuda-memcheck  --leak-check full  ./testing-libgdf"   
+    // NOTE: use next 3 lines to check with "/usr/local/cuda/bin/cuda-memcheck  --leak-check full  ./testing-libgdf"
     // GDFRefCounter::getInstance()->show_summary();
     // cudaDeviceReset();
     // exit(0);
@@ -298,7 +298,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
     // get result from repository using accessToken and resultToken
     result_set_t result = result_set_repository::get_instance().get_result(accessToken, request.getResultToken());
 
-    
+
     std::string status = "Error";
     std::string errorMsg = result.errorMsg;
     std::vector<std::string> fieldNames;
@@ -334,7 +334,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
 
         values.push_back(col);
       }
-    }   
+    }
 
     interpreter::BlazingMetadataDTO  metadata = {
       .status = status,
@@ -448,9 +448,9 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 	std::cout << "FirstColumn File: "
             << requestPayload.tableGroup().tables[0].files[0]
             << std::endl;
-  std::cout << "contextToken: " << requestPayload.communicationContext().token() << std::endl;
-  std::cout << "contextTotalNodes: " << requestPayload.communicationContext().nodes().size() << std::endl;
-  
+  std::cout << "contextToken: " << requestPayload.communicationContext().token << std::endl;
+  std::cout << "contextTotalNodes: " << requestPayload.communicationContext().nodes.size() << std::endl;
+
   uint64_t resultToken = 0L;
   try {
     // Read files
@@ -487,12 +487,12 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
     using blazingdb::communication::Node;
     using blazingdb::communication::Buffer;
     std::vector<std::shared_ptr<Node>> contextNodes;
-    for(auto& rawNode: requestPayload.communicationContext().nodes()){
-      auto rawBuffer = rawNode.buffer();
-      contextNodes.push_back(Node::Make(Buffer(reinterpret_cast<char*>(rawBuffer.data()), rawBuffer.size())));
+    for(auto& rawNode: requestPayload.communicationContext().nodes){
+      auto& rawBuffer = rawNode.buffer;
+      contextNodes.push_back(Node::Make(Buffer(reinterpret_cast<const char*>(rawBuffer.data()), rawBuffer.size())));
     }
     Context queryContext{contextNodes, contextNodes[0], ""};
-    
+
     // Execute query
     resultToken = evaluate_query(input_tables, table_names, all_column_names, requestPayload.statement(), accessToken, {}, queryContext);
   } catch (const std::exception& e) {
@@ -577,8 +577,8 @@ int main(int argc, const char *argv[])
 
   // #ifndef VERBOSE
   // std::cout.rdbuf(nullptr); // substitute internal std::cout buffer with
-  // #endif // VERBOSE 
-  
+  // #endif // VERBOSE
+
     std::cout << "RAL Engine starting" << std::endl;
 
     std::string identifier {"1"};
@@ -607,7 +607,7 @@ int main(int argc, const char *argv[])
         return 1;
       }
     }
-    
+
     auto& config = ral::config::BlazingConfig::getInstance();
 
     config.setLogName("RAL." + identifier + ".log")
@@ -624,7 +624,7 @@ int main(int argc, const char *argv[])
 
     // Init AWS S3 ... TODO see if we need to call shutdown and avoid leaks from s3 percy
     BlazingContext::getInstance()->initExternalSystems();
-    
+
   //global_ip = "/tmp/ral.socket";
   //global_port = atoi(port.c_str());
 

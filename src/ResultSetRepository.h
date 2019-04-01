@@ -17,13 +17,21 @@
 #include <condition_variable>
 
 typedef void * response_descriptor; //this shoudl be substituted for something that can generate a response
-typedef std::tuple<blazing_frame, double, std::string> result_set_type;
-//singleton class
 
+struct result_set_t {
+    bool is_ready;
+    blazing_frame result_frame;
+    double duration;
+	std::string errorMsg;
+    size_t ref_counter;
+};
+
+//singleton class
 class result_set_repository {
 public:
 
-	bool free_result(connection_id_t connection, query_token_t token);
+	bool try_free_result(connection_id_t connection, query_token_t token);
+	void free_result(connection_id_t connection, query_token_t token);
 	virtual ~result_set_repository();
 	result_set_repository();
 	static result_set_repository & get_instance(){
@@ -35,13 +43,13 @@ public:
 	void update_token(query_token_t token, blazing_frame frame, double duration, std::string errorMsg = "");
 	connection_id_t init_session();
 	void remove_all_connection_tokens(connection_id_t connection);
-	result_set_type get_result(connection_id_t connection, query_token_t token);
+	result_set_t get_result(connection_id_t connection, query_token_t token);
 	gdf_column_cpp get_column(connection_id_t connection, column_token_t columnToken);
 
 	result_set_repository(result_set_repository const&)	= delete;
 	void operator=(result_set_repository const&)		= delete;
 private:
-	std::map<query_token_t,std::tuple<bool, blazing_frame, double, std::string> > result_sets;
+	std::map<query_token_t,result_set_t> result_sets;
 	std::map<connection_id_t,std::vector<query_token_t> > connection_result_sets;
 	std::map<column_token_t,gdf_column_cpp> precalculated_columns;
 

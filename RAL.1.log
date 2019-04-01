@@ -1,0 +1,9 @@
+[2019-04-01T15:23:01Z][TRACE]deregisterFileSystem: filesystem authority not found
+[2019-04-01T15:23:01Z][TRACE]filesystem previously created. It was found and will be reused
+[2019-04-01T15:23:01Z][TRACE]Loading registed namespaces: 
+[2019-04-01T15:23:01Z][TRACE]tpch -> /
+[2019-04-01T15:23:01Z][INFO]process_project took 3.017270 ms for 75 rows
+[2019-04-01T15:23:01Z][INFO]-> Sort sub block 1 took 0.102335 ms
+[2019-04-01T15:23:01Z][INFO]-> Sort sub block 2 took 0.589913 ms
+[2019-04-01T15:23:01Z][INFO]-> Sort sub block 3 took 0.756038 ms
+[2019-04-01T15:23:02Z][INFO]process_sort took 149.063275 ms for 86 rows

@@ -67,7 +67,7 @@ TEST(ComponentMessageTest, SampleToNodeMasterMessage) {
 
     // create context token
     using ContextToken = blazingdb::communication::ContextToken;
-    std::unique_ptr<ContextToken> context_token = ContextToken::Make(3589);
+    std::shared_ptr<ContextToken> context_token = ContextToken::Make(3589);
 
     // Register the context token in the server
     Server::getInstance().registerContext(*context_token);

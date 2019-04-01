@@ -61,6 +61,7 @@ using namespace blazingdb::protocol;
 #include "communication/CommunicationData.h"
 #include "communication/factory/MessageFactory.h"
 #include "communication/network/Client.h"
+#include "communication/network/Server.h"
 #include <blazingdb/communication/Context.h>
 
 const Path FS_NAMESPACES_FILE("/tmp/file_system.bin");
@@ -483,16 +484,19 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
       all_column_names.push_back(table_info.columnNames);
     }
 
+    using blazingdb::communication::ContextToken;
     using blazingdb::communication::Context;
     using blazingdb::communication::Node;
     using blazingdb::communication::Buffer;
+    auto& rawCommContext = requestPayload.communicationContext();
     std::vector<std::shared_ptr<Node>> contextNodes;
-    for(auto& rawNode: requestPayload.communicationContext().nodes){
+    for(auto& rawNode: rawCommContext.nodes){
       auto& rawBuffer = rawNode.buffer;
       contextNodes.push_back(Node::Make(Buffer(reinterpret_cast<const char*>(rawBuffer.data()), rawBuffer.size())));
     }
-    Context queryContext{contextNodes, contextNodes[0], ""};
-
+    auto ctxToken = ContextToken::Make(rawCommContext.token);
+    Context queryContext{ctxToken, contextNodes, contextNodes[rawCommContext.masterIndex], ""};
+    ral::communication::network::Server::getInstance().registerContext(*ctxToken);
     // Execute query
     resultToken = evaluate_query(input_tables, table_names, all_column_names, requestPayload.statement(), accessToken, {}, queryContext);
   } catch (const std::exception& e) {
@@ -602,6 +606,7 @@ int main(int argc, const char *argv[])
         ral::communication::network::Client::sendNodeData(communicationData.getOrchestratorIp(),
                                                           communicationData.getOrchestratorPort(),
                                                           nodeDataMesssage);
+        ral::communication::network::Server::start(std::atoi(argv[5]));
       } catch (std::exception &e) {
         std::cerr << e.what() << "\n";
         return 1;

@@ -818,11 +818,7 @@ query_token_t evaluate_query(
 				}else{
 					output_column.delete_set_name(output_column.name());
 				}*/
-
-
 			}
-
-
 
 			result_set_repository::get_instance().update_token(token, output_frame, duration);
 		}

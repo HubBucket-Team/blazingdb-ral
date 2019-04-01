@@ -192,7 +192,7 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
   // Concat
   size_t totalConcatsOperations = samples[0].getColumnsRef().size();
   int outputRowSize = 0;
-  std::vector<std::vector<gdf_column*>> columnsToConcatArray{totalConcatsOperations};
+  std::vector<std::vector<gdf_column*>> columnsToConcatArray(totalConcatsOperations);
   for(size_t i = 0; i < samples.size(); i++)
   {
     auto& columns = samples[i].getColumnsRef();
@@ -206,7 +206,7 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
   }
 
   auto& tempCols = samples[0].getColumnsRef();
-  std::vector<gdf_column_cpp> concatSamples{totalConcatsOperations};
+  std::vector<gdf_column_cpp> concatSamples(totalConcatsOperations);
   for(size_t i = 0; i < concatSamples.size(); i++)
   {
     concatSamples[i].create_gdf_column(tempCols[i].dtype(), outputRowSize, nullptr, get_width_dtype(tempCols[i].dtype()), tempCols[i].name());
@@ -222,7 +222,7 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
   }
 
   // Sort
-  std::vector<gdf_column*> rawCols{concatSamples.size()};
+  std::vector<gdf_column*> rawCols(concatSamples.size());
   for(size_t i = 0; i < concatSamples.size(); i++)
   {
     rawCols[i] = concatSamples[i].get_gdf_column();
@@ -243,7 +243,7 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
                           indexCol.get_gdf_column(),
                           &gdfContext) );
 
-  std::vector<gdf_column_cpp> sortedSamples{concatSamples.size()};
+  std::vector<gdf_column_cpp> sortedSamples(concatSamples.size());
  	for(size_t i = 0; i < sortedSamples.size(); i++) {
     sortedSamples[i].create_gdf_column(concatSamples[i].dtype(),
 																			concatSamples[i].size(),
@@ -265,9 +265,9 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
   }
 
   // Gather
-  std::vector<gdf_column*> rawSortedSamples{sortedSamples.size()};
-  std::vector<gdf_column*> rawPivots{sortedSamples.size()};
-  std::vector<gdf_column_cpp> pivots{sortedSamples.size()};
+  std::vector<gdf_column*> rawSortedSamples(sortedSamples.size());
+  std::vector<gdf_column*> rawPivots(sortedSamples.size());
+  std::vector<gdf_column_cpp> pivots(sortedSamples.size());
  	for(size_t i = 0; i < sortedSamples.size(); i++) {
     pivots[i].create_gdf_column(sortedSamples[i].dtype(),
                                 context.getTotalNodes() - 1,
@@ -307,7 +307,7 @@ void distributePartitionPlan(const Context& context, std::vector<gdf_column_cpp>
 
   auto message = Factory::createColumnDataMessage(context.getContextToken(),
                                                   CommunicationData::getInstance().getSelfNode(),
-                                                  std::move(pivots));
+                                                  pivots);
   auto workers = context.getWorkerNodes();
   for(auto& workerNode : workers)
   {
@@ -456,7 +456,7 @@ void sortedMerger(std::vector<NodeColumns>& columns, std::vector<int8_t>& sortOr
 	sortByColIndices.create_gdf_column(GDF_INT32, sortColIndices.size(), sortColIndices.data(), get_width_dtype(GDF_INT32), "");
 
   std::vector<gdf_column_cpp> leftCols = columns[0].getColumns();
-  std::vector<gdf_column*> rawLeftCols{leftCols.size()};
+  std::vector<gdf_column*> rawLeftCols(leftCols.size());
   std::transform(leftCols.begin(), leftCols.end(), rawLeftCols.begin(), [&](gdf_column_cpp& el) {
     return el.get_gdf_column();
   });
@@ -464,14 +464,14 @@ void sortedMerger(std::vector<NodeColumns>& columns, std::vector<int8_t>& sortOr
   for(size_t i = 1; i < columns.size(); i++)
   {
     std::vector<gdf_column_cpp> rightCols = columns[i].getColumns();
-    std::vector<gdf_column*> rawRightCols{rightCols.size()};
+    std::vector<gdf_column*> rawRightCols(rightCols.size());
     std::transform(rightCols.begin(), rightCols.end(), rawRightCols.begin(), [&](gdf_column_cpp& el) {
       return el.get_gdf_column();
     });
 
     // Create output cols
-    std::vector<gdf_column_cpp> sortedColumns{leftCols.size()};
-    std::vector<gdf_column*> rawSortedColumns{sortedColumns.size()};
+    std::vector<gdf_column_cpp> sortedColumns(leftCols.size());
+    std::vector<gdf_column*> rawSortedColumns(leftCols.size());
     for(size_t j = 0; j < sortedColumns.size(); j++) {
       sortedColumns[j].create_gdf_column(leftCols[j].dtype(),
                                         leftCols[j].size() + rightCols[j].size(),
@@ -480,7 +480,6 @@ void sortedMerger(std::vector<NodeColumns>& columns, std::vector<int8_t>& sortOr
                                         leftCols[j].name());
       rawSortedColumns[j] = sortedColumns[j].get_gdf_column();
     }
-
 
     CUDF_CALL( gdf_sorted_merge(rawLeftCols.data(),
                                 rawRightCols.data(),

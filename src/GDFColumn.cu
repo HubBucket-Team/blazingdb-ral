@@ -215,7 +215,7 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     this->column_token = 0;
 
     gdf_valid_type * valid_device = allocate_valid();
-    this->allocated_size_data = (width_per_value * num_values); 
+    this->allocated_size_data = (width_per_value * num_values);
 
     cuDF::Allocator::allocate((void**)&data, allocated_size_data);
 
@@ -232,7 +232,7 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     if(host_valids != nullptr){
         this->update_null_count();
     }
-    
+
     GDFRefCounter::getInstance()->register_column(this->column);
 }
 
@@ -252,7 +252,7 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     this->column_token = 0;
 
     gdf_valid_type * valid_device = allocate_valid();
-    this->allocated_size_data = (width_per_value * num_values); 
+    this->allocated_size_data = (width_per_value * num_values);
 
     cuDF::Allocator::allocate((void**)&data, allocated_size_data);
 
@@ -371,8 +371,8 @@ gdf_column_cpp gdf_column_cpp::slice(gdf_size_type data_position, gdf_size_type 
     result.column->dtype_info = column->dtype_info;
 
     // update ral column
+    result.set_name(column_name);
     result.is_ipc_column = false;
-    result.column_name = column_name;
     result.column_token = column_token;
 
     // register column

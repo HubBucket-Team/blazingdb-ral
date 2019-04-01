@@ -106,6 +106,7 @@ void distributed_sort(const Context& queryContext, blazing_frame& input, std::ve
 	std::vector<gdf_column_cpp> selfSamples = ral::distribution::sampling::generateSample(cols, 0.1);
 
 	std::thread sortThread{sort, std::ref(input), std::ref(rawCols), std::ref(sortOrderTypes), std::ref(sortedTable)};
+	// sort(input, rawCols, sortOrderTypes, sortedTable);
 
 	std::vector<gdf_column_cpp> partitionPlan;
 	if (queryContext.isMasterNode(CommunicationData::getInstance().getSelfNode())) {

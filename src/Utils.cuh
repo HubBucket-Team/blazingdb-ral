@@ -204,8 +204,10 @@ void print_column(gdf_column * column){
 
 void free_gdf_column(gdf_column * column);
 
+// TODO: Convert to templated function
 void gdf_sequence(int32_t* data, size_t size, int32_t init_val);
 
+// TODO: Convert to templated function
 void gdf_sequence(int32_t* data, size_t size, int32_t init_val, int32_t step);
 
 #endif /* UTILS_CUH_ */

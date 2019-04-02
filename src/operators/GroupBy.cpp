@@ -126,7 +126,7 @@ std::vector<gdf_column_cpp> groupby_without_aggregations(blazing_frame& input, s
                                               (gdf_size_type*)(index_col.get_gdf_column()->data),
                                               &index_col_num_rows,
                                               &ctxt));
-  index_col.get_gdf_column()->size = index_col_num_rows;
+  index_col.resize(index_col_num_rows);
 
   std::vector<gdf_column_cpp> grouped_output(nCols);
   for(size_t i = 0; i < nCols; i++){
@@ -152,6 +152,52 @@ void single_node_groupby_without_aggregations(blazing_frame& input, std::vector<
 }
 
 void distributed_groupby_without_aggregations(const Context& queryContext, blazing_frame& input, std::vector<int>& group_column_indices){
+	using ral::communication::CommunicationData;
+
+	std::vector<gdf_column_cpp> group_columns(group_column_indices.size());
+	for(size_t i = 0; i < group_column_indices.size(); i++){
+		group_columns[i] = input.get_column(group_column_indices[i]);
+	}
+
+	size_t rowSize = input.get_column(0).size();
+
+	std::vector<gdf_column_cpp> selfSamples = ral::distribution::sampling::generateSample(group_columns, 0.1);
+
+	auto groupByTask = std::async(std::launch::async,
+																		groupby_without_aggregations,
+																		std::ref(input),
+																		std::ref(group_column_indices));
+
+	std::vector<gdf_column_cpp> partitionPlan;
+	if (queryContext.isMasterNode(CommunicationData::getInstance().getSelfNode())) {
+		std::vector<ral::distribution::NodeSamples> samples = ral::distribution::collectSamples(queryContext);
+    samples.emplace_back(rowSize, CommunicationData::getInstance().getSelfNode(), std::move(selfSamples));
+
+		partitionPlan = ral::distribution::generatePartitionPlansGroupBy(queryContext, samples);
+
+    ral::distribution::distributePartitionPlan(queryContext, partitionPlan);
+	}
+	else {
+		ral::distribution::sendSamplesToMaster(queryContext, std::move(selfSamples), rowSize);
+
+		partitionPlan = ral::distribution::getPartitionPlan(queryContext);
+	}
+
+	// Wait for groupByThread
+	std::vector<gdf_column_cpp> groupedTable = groupByTask.get();
+
+	std::vector<ral::distribution::NodeColumns> partitions = ral::distribution::partitionData(queryContext, groupedTable, partitionPlan);
+
+	ral::distribution::distributePartitions(queryContext, partitions);
+
+	std::vector<ral::distribution::NodeColumns> partitionsToMerge = ral::distribution::collectPartition(queryContext);
+	auto it = std::find_if(partitions.begin(), partitions.end(), [&](ral::distribution::NodeColumns& el) {
+			return el.getNode() == CommunicationData::getInstance().getSelfNode();
+		});
+	// Could "it" iterator be partitions.end()?
+	partitionsToMerge.push_back(std::move(*it));
+
+	ral::distribution::groupByMerger(partitionsToMerge, group_column_indices, input);
 }
 
 void aggregations_with_groupby(gdf_agg_op agg_op, std::vector<gdf_column*>& group_by_columns_ptr, gdf_column_cpp& aggregation_input, std::vector<gdf_column*>& group_by_columns_ptr_out, gdf_column_cpp& output_column){
@@ -282,21 +328,7 @@ void aggregations_without_groupby(gdf_agg_op agg_op, gdf_column_cpp& aggregation
 	}
 }
 
-struct AggregationOutput
-{
-	std::vector<gdf_column_cpp> grouped_columns;
-	std::vector<gdf_column_cpp> aggregated_columns;
-};
-
-AggregationOutput compute_aggregations(blazing_frame& input, std::vector<int>& group_column_indices, std::vector<gdf_agg_op>& aggregation_types, std::vector<std::string>& aggregation_input_expressions, std::vector<std::string>& aggregation_column_assigned_aliases){
-	std::vector<gdf_dtype> aggregation_input_types;
-	for(size_t i = 0; i < aggregation_input_expressions.size(); i++){
-		if(contains_evaluation(aggregation_input_expressions[i])){
-			gdf_dtype max_temp_type;
-			aggregation_input_types[i] = get_output_type_expression(&input, &max_temp_type, aggregation_input_expressions[i]);
-		}
-	}
-
+std::vector<gdf_column_cpp> compute_aggregations(blazing_frame& input, std::vector<int>& group_column_indices, std::vector<gdf_agg_op>& aggregation_types, std::vector<std::string>& aggregation_input_expressions, std::vector<std::string>& aggregation_column_assigned_aliases){
 	size_t row_size = input.get_column(0).size();
 
 	std::vector<gdf_column*> group_by_columns_ptr(group_column_indices.size());
@@ -314,7 +346,7 @@ AggregationOutput compute_aggregations(blazing_frame& input, std::vector<int>& g
 	}
 
 	// If we have no groups you will output only one row
-	size_t aggregation_size = (group_column_indices.size() == 0 ? 1 :row_size);
+	size_t aggregation_size = (group_column_indices.size() == 0 ? 1 : row_size);
 
 	std::vector<gdf_column_cpp> output_columns_aggregations(aggregation_types.size());
 	for(size_t i = 0; i < aggregation_types.size(); i++){
@@ -323,7 +355,9 @@ AggregationOutput compute_aggregations(blazing_frame& input, std::vector<int>& g
 		if(contains_evaluation(expression)){
 			//we dont knwo what the size of this input will be so allcoate max size
 			//TODO de donde saco el nombre de la columna aqui???
-			aggregation_input.create_gdf_column(aggregation_input_types[i], row_size, nullptr, get_width_dtype(aggregation_input_types[i]), "");
+			gdf_dtype unused;
+			gdf_dtype agg_input_type = get_output_type_expression(&input, &unused, expression);
+			aggregation_input.create_gdf_column(agg_input_type, row_size, nullptr, get_width_dtype(agg_input_type), "");
 			evaluate_expression(input, expression, aggregation_input);
 		}else{
 			aggregation_input = input.get_column(get_index(expression));
@@ -356,33 +390,39 @@ AggregationOutput compute_aggregations(blazing_frame& input, std::vector<int>& g
 	//these steps would have to be divided up in order to really work
 
 	//TODO: consider compacting columns here before moving on
-	for(size_t i = 0; i < output_columns_aggregations.size(); i++){
-		output_columns_aggregations[i].resize(aggregation_size);
-		output_columns_aggregations[i].update_null_count();
-	}
+	// for(size_t i = 0; i < output_columns_aggregations.size(); i++){
+	// 	output_columns_aggregations[i].resize(aggregation_size);
+	// 	output_columns_aggregations[i].update_null_count();
+	// }
 
-	for(size_t i = 0; i < output_columns_group.size(); i++){
-		output_columns_group[i].resize(aggregation_size);
-		output_columns_group[i].update_null_count();
-	}
+	// for(size_t i = 0; i < output_columns_group.size(); i++){
+	// 	output_columns_group[i].resize(aggregation_size);
+	// 	output_columns_group[i].update_null_count();
+	// }
 
-	return AggregationOutput{std::move(output_columns_group), std::move(output_columns_aggregations)};
+	// Concat grouped columns and then aggregated columns
+	std::vector<gdf_column_cpp> aggregatedTable(std::move(output_columns_group));
+	aggregatedTable.insert(
+		aggregatedTable.end(),
+		std::make_move_iterator(output_columns_aggregations.begin()),
+		std::make_move_iterator(output_columns_aggregations.end())
+	);
+
+	return aggregatedTable;
 }
 
 void single_node_aggregations(blazing_frame& input, std::vector<int>& group_column_indices, std::vector<gdf_agg_op>& aggregation_types, std::vector<std::string>& aggregation_input_expressions, std::vector<std::string>& aggregation_column_assigned_aliases) {
-	auto output = compute_aggregations(input, group_column_indices, aggregation_types, aggregation_input_expressions, aggregation_column_assigned_aliases);
+	std::vector<gdf_column_cpp> aggregatedTable = compute_aggregations(input,
+																																		group_column_indices,
+																																		aggregation_types,
+																																		aggregation_input_expressions,
+																																		aggregation_column_assigned_aliases);
 
-	std::vector<gdf_column_cpp> output_table(std::move(output.grouped_columns));
-	output_table.insert(
-		output_table.end(),
-		std::make_move_iterator(output.aggregated_columns.begin()),
-		std::make_move_iterator(output.aggregated_columns.end())
-	);
 	input.clear();
-	input.add_table(output_table);
+	input.add_table(aggregatedTable);
 }
 
-void distributed_aggregations(const Context& queryContext, blazing_frame& input, std::vector<int>& group_column_indices, std::vector<gdf_agg_op>& aggregation_types, std::vector<std::string>& aggregation_input_expressions, std::vector<std::string>& aggregation_column_assigned_aliases) {
+void distributed_aggregations_with_groupby(const Context& queryContext, blazing_frame& input, std::vector<int>& group_column_indices, std::vector<gdf_agg_op>& aggregation_types, std::vector<std::string>& aggregation_input_expressions, std::vector<std::string>& aggregation_column_assigned_aliases) {
 	using ral::communication::CommunicationData;
 
 	std::vector<gdf_column_cpp> group_columns(group_column_indices.size());
@@ -394,14 +434,20 @@ void distributed_aggregations(const Context& queryContext, blazing_frame& input,
 
 	std::vector<gdf_column_cpp> selfSamples = ral::distribution::sampling::generateSample(group_columns, 0.1);
 
-	auto aggregationTask = std::async(std::launch::async, compute_aggregations, std::ref(input), std::ref(group_column_indices), std::ref(aggregation_types), std::ref(aggregation_input_expressions), std::ref(aggregation_column_assigned_aliases));
+	auto aggregationTask = std::async(std::launch::async,
+																		compute_aggregations,
+																		std::ref(input),
+																		std::ref(group_column_indices),
+																		std::ref(aggregation_types),
+																		std::ref(aggregation_input_expressions),
+																		std::ref(aggregation_column_assigned_aliases));
 
 	std::vector<gdf_column_cpp> partitionPlan;
 	if (queryContext.isMasterNode(CommunicationData::getInstance().getSelfNode())) {
 		std::vector<ral::distribution::NodeSamples> samples = ral::distribution::collectSamples(queryContext);
     samples.emplace_back(rowSize, CommunicationData::getInstance().getSelfNode(), std::move(selfSamples));
 
-		// partitionPlan = ral::distribution::generatePartitionPlans(queryContext, samples, sortOrderTypes);
+		partitionPlan = ral::distribution::generatePartitionPlansGroupBy(queryContext, samples);
 
     ral::distribution::distributePartitionPlan(queryContext, partitionPlan);
 	}
@@ -411,10 +457,10 @@ void distributed_aggregations(const Context& queryContext, blazing_frame& input,
 		partitionPlan = ral::distribution::getPartitionPlan(queryContext);
 	}
 
-	// Wait for sortThread
-	AggregationOutput aggregatedOutput = aggregationTask.get();
+	// Wait for aggregationThread
+	std::vector<gdf_column_cpp> aggregatedTable = aggregationTask.get();
 
-	std::vector<ral::distribution::NodeColumns> partitions;// = ral::distribution::partitionData(queryContext, aggregatedTable, partitionPlan);
+	std::vector<ral::distribution::NodeColumns> partitions = ral::distribution::partitionData(queryContext, aggregatedTable, partitionPlan);
 
 	ral::distribution::distributePartitions(queryContext, partitions);
 
@@ -425,7 +471,35 @@ void distributed_aggregations(const Context& queryContext, blazing_frame& input,
 	// Could "it" iterator be partitions.end()?
 	partitionsToMerge.push_back(std::move(*it));
 
-	// ral::distribution::sortedMerger(partitionsToMerge, sortOrderTypes, sortColIndices, input);
+  std::vector<int> groupColumnIndices(group_column_indices.size());
+  std::iota(groupColumnIndices.begin(), groupColumnIndices.end(), 0);
+	ral::distribution::aggregationsMerger(partitionsToMerge, groupColumnIndices, aggregation_types, input);
+}
+
+void distributed_aggregations_without_groupby(const Context& queryContext, blazing_frame& input, std::vector<int>& group_column_indices, std::vector<gdf_agg_op>& aggregation_types, std::vector<std::string>& aggregation_input_expressions, std::vector<std::string>& aggregation_column_assigned_aliases) {
+	using ral::communication::CommunicationData;
+
+	std::vector<gdf_column_cpp> aggregatedTable = compute_aggregations(input,
+																																		group_column_indices,
+																																		aggregation_types,
+																																		aggregation_input_expressions,
+																																		aggregation_column_assigned_aliases);
+
+	if (queryContext.isMasterNode(CommunicationData::getInstance().getSelfNode())) {
+		std::vector<ral::distribution::NodeColumns> partitionsToMerge = ral::distribution::collectPartition(queryContext);
+		partitionsToMerge.emplace_back(CommunicationData::getInstance().getSelfNode(), std::move(aggregatedTable));
+
+		std::vector<int> groupColumnIndices(group_column_indices.size());
+		std::iota(groupColumnIndices.begin(), groupColumnIndices.end(), 0);
+		ral::distribution::aggregationsMerger(partitionsToMerge, groupColumnIndices, aggregation_types, input);
+	}else{
+		std::vector<ral::distribution::NodeColumns> selfPartition;
+		selfPartition.emplace_back(queryContext.getMasterNode(), std::move(aggregatedTable));
+		ral::distribution::distributePartitions(queryContext, selfPartition);
+
+		// TODO: clear input
+		// input.clear();
+	}
 }
 
 void process_aggregate(blazing_frame& input, std::string query_part, const Context* queryContext){
@@ -469,7 +543,6 @@ void process_aggregate(blazing_frame& input, std::string query_part, const Conte
 	}
 
 	if (aggregation_types.size() == 0) {
-		// Do group by without aggregation
    	if (!queryContext || queryContext->getTotalNodes() <= 1) {
       single_node_groupby_without_aggregations(input, group_column_indices);
     }else{
@@ -479,7 +552,12 @@ void process_aggregate(blazing_frame& input, std::string query_part, const Conte
 		if (!queryContext || queryContext->getTotalNodes() <= 1) {
       single_node_aggregations(input, group_column_indices, aggregation_types, aggregation_input_expressions, aggregation_column_assigned_aliases);
     }else{
-      distributed_aggregations(*queryContext, input, group_column_indices, aggregation_types, aggregation_input_expressions, aggregation_column_assigned_aliases);
+			if (group_column_indices.size() == 0) {
+				distributed_aggregations_without_groupby(*queryContext, input, group_column_indices, aggregation_types, aggregation_input_expressions, aggregation_column_assigned_aliases);
+			}
+			else {
+	      distributed_aggregations_with_groupby(*queryContext, input, group_column_indices, aggregation_types, aggregation_input_expressions, aggregation_column_assigned_aliases);
+			}
     }
 	}
 }

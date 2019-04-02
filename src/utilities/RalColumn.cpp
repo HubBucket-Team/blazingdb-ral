@@ -3,6 +3,22 @@
 namespace ral {
 namespace utilities {
 
+gdf_column_cpp create_column(const gdf_size_type size, const gdf_dtype dtype, std::string&& name) {
+    return create_column(size, dtype, name);
+}
+
+gdf_column_cpp create_column(const gdf_size_type size, const gdf_dtype dtype, const std::string& name) {
+    // create gdf_column_cpp
+    gdf_column_cpp column;
+
+    // populate gdf_column_cpp
+    auto width = ral::traits::get_dtype_size_in_bytes(dtype);
+    column.create_gdf_column(dtype, size, nullptr, width, name);
+
+    // done
+    return column;
+}
+
 gdf_column_cpp create_zero_column(const gdf_size_type size, const gdf_dtype dtype, std::string&& name) {
     return create_zero_column(size, dtype, name);
 }

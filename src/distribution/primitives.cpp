@@ -987,3 +987,94 @@ void aggregationsMerger(std::vector<NodeColumns>& aggregations, const std::vecto
 
 }  // namespace distribution
 }  // namespace ral
+
+
+namespace ral {
+namespace distribution {
+
+std::vector<gdf_column_cpp> generateOutputColumns(gdf_size_type column_quantity,
+                                                  gdf_size_type column_size,
+                                                  std::vector<gdf_column_cpp>& table) {
+    // Create outcome
+    std::vector<gdf_column_cpp> result(column_quantity);
+
+    // Create columns
+    for (gdf_size_type k = 0; k < column_quantity; ++k) {
+        result[k] = ral::utilities::create_column(column_size, table[k].dtype());
+    }
+
+    // Done
+    return result;
+}
+
+std::vector<NodeColumns> generateJoinPartitions(const Context& context,
+                                                std::vector<gdf_column_cpp>& table) {
+    assert(table.size() != 0);
+    assert(table[0].size() != 0);
+
+    // Table data
+    gdf_size_type input_column_quantity = table.size();
+    gdf_size_type input_column_size = table[0].size();
+
+    // Create input wrapper
+    ral::utilities::TableWrapper input_table_wrapper(table);
+
+    // Generate column vector to hash
+    std::vector<gdf_size_type> columns_hash(input_column_quantity);
+    std::iota(columns_hash.begin(), columns_hash.end(), 0);
+
+    // Generate partition offset vector
+    gdf_size_type number_nodes = context.getTotalNodes();
+    std::vector<gdf_index_type> partition_offset(number_nodes);
+
+    // Preallocate output columns
+    std::vector<gdf_column_cpp> output_columns = generateOutputColumns(input_column_quantity,
+                                                                       input_column_size,
+                                                                       table);
+    ral::utilities::TableWrapper output_table_wrapper(output_columns);
+
+    // Execute operation
+    auto error = gdf_hash_partition(input_table_wrapper.getQuantity(),
+                                    input_table_wrapper.getColumns(),
+                                    columns_hash.data(),
+                                    columns_hash.size(),
+                                    partition_offset.size(),
+                                    output_table_wrapper.getColumns(),
+                                    partition_offset.data(),
+                                    gdf_hash_func::GDF_HASH_MURMUR3);
+    if (error != GDF_SUCCESS) {
+        throw ral::exception::BaseRalException("ERROR | " +
+                                               std::string(__FUNCTION__) +
+                                               " | gdf_hash_partition | " +
+                                               std::to_string(error));
+    }
+
+    // Erase input table
+    table.clear();
+
+    // Get all nodes
+    auto nodes = context.getAllNodes();
+
+    // Create output - NodeColumns
+    std::vector<NodeColumns> result;
+
+    // Populate output - NodeColumns
+    for (gdf_size_type k = 0; k < number_nodes; ++k) {
+        std::vector<gdf_column_cpp> columns;
+        for (gdf_size_type i = 0; i < (gdf_size_type) output_columns.size(); ++i) {
+            gdf_size_type init = partition_offset[k];
+            gdf_size_type length = input_column_size - init;
+            if (i < (gdf_size_type)(partition_offset.size() - 1)) {
+                length = partition_offset[k + 1] - init;
+            }
+            columns.emplace_back(output_columns[i].slice(init, length));
+        }
+        result.emplace_back(*nodes[k], std::move(columns));
+    }
+
+    // Done
+    return result;
+}
+
+} // namespace distribution
+} // namespace ral

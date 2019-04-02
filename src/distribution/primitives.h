@@ -95,4 +95,25 @@ void aggregationsMerger(std::vector<NodeColumns>& aggregations, const std::vecto
 }  // namespace distribution
 }  // namespace ral
 
+
+namespace ral {
+namespace distribution {
+
+/**
+ * It uses a hash partition algorithm in order to split a table. Each partition is stored with the corresponding
+ * node in a 'NodeColumn' class. It is primary used for join operation, but it can be used for any operation.
+ * The input table will be deleted.
+ *
+ * @param[in] context 'blazingdb::communication::Context' belongs to communication library. It contains
+ * information related to the current query.
+ * @param[in] table represents the input columns (table) used in the 'join' operation. The table will be deleted.
+ * @return std::vector<NodeColumns> represents an array of NodeColumn (@see NodeColumn), which contains
+ * a node with their corresponding partition table.
+ */
+std::vector<NodeColumns> generateJoinPartitions(const Context& context,
+                                                std::vector<gdf_column_cpp>& table);
+
+} // namespace distribution
+} // namespace ral
+
 #endif  //BLAZINGDB_RAL_DISTRIBUTION_PRIMITIVES_H

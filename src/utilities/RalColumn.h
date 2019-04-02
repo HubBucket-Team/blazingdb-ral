@@ -30,6 +30,10 @@ gdf_column_cpp create_column(const std::vector<ColumnType>& data, const gdf_dtyp
     return column;
 }
 
+gdf_column_cpp create_column(const gdf_size_type size, const gdf_dtype dtype, std::string&& name);
+
+gdf_column_cpp create_column(const gdf_size_type size, const gdf_dtype dtype, const std::string& name = "");
+
 gdf_column_cpp create_zero_column(const gdf_size_type size, const gdf_dtype dtype, std::string&& name);
 
 gdf_column_cpp create_zero_column(const gdf_size_type size, const gdf_dtype dtype, const std::string& name = "");

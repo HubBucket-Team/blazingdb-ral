@@ -59,6 +59,10 @@ using namespace blazingdb::protocol;
 
 #include "CodeTimer.h"
 
+#include <nvstrings/NVCategory.h>
+#include <nvstrings/NVStrings.h>
+#include <nvstrings/ipc_transfer.h>
+
 const Path FS_NAMESPACES_FILE("/tmp/file_system.bin");
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);
@@ -314,20 +318,27 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
 
         std::cout << "col_name: " << result.result_frame.get_columns()[0][i].name() << std::endl;
 
+        nvstrings_ipc_transfer ipc;
+        NVCategory* category =  static_cast<NVCategory *>(result.result_frame.get_columns()[0][i].get_gdf_column()->dtype_info.category);
+        NVStrings* strings = category->to_strings();
+        strings->create_ipc_transfer(ipc);
+
         auto data = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->data);
         auto valid = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->valid);
-        auto custrings_membuffer = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->valid);//custrings_membuffer); todo fix this
-        auto custrings_views = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->valid);//custrings_views); todo fix this
         auto col = ::gdf_dto::gdf_column {
               .data = data,
               .valid = valid,
-              .custrings_membuffer = custrings_membuffer,
-              .custrings_views = custrings_views,
               .size = result.result_frame.get_columns()[0][i].size(),
               .dtype = (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype(),
               .null_count = result.result_frame.get_columns()[0][i].null_count(),
               .dtype_info = gdf_dto::gdf_dtype_extra_info {
                 .time_unit = (gdf_dto::gdf_time_unit)0,
+                // custrings data
+                .custrings_views = libgdf::ConvertCudaIpcMemHandler(ipc.hstrs),
+                .custrings_views_count = ipc.count,
+                .custrings_membuffer = libgdf::ConvertCudaIpcMemHandler(ipc.hmem),
+                .custrings_membuffer_size = ipc.size,
+                .custrings_base_ptr = reinterpret_cast<unsigned long>(ipc.base_address)
               }
           };
 

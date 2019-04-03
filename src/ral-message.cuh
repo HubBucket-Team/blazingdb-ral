@@ -9,10 +9,24 @@
 #include "Utils.cuh"
 #include "ResultSetRepository.h"
 #include "DataFrame.h"
-
+#include <nvstrings/NVStrings.h>
+#include <nvstrings/ipc_transfer.h>
 #include "FreeMemory.h"
 
 namespace libgdf {
+
+static std::basic_string<int8_t> ConvertCudaIpcMemHandler (cudaIpcMemHandle_t ipc_memhandle) {
+  std::basic_string<int8_t> bytes;
+  bytes.resize(sizeof(cudaIpcMemHandle_t));
+  memcpy((void*)bytes.data(), (int8_t*)(&ipc_memhandle), sizeof(cudaIpcMemHandle_t));
+  return bytes;
+}
+
+static cudaIpcMemHandle_t ConvertByteArray (std::basic_string<int8_t>& bytes) {
+  cudaIpcMemHandle_t ipc_memhandle;
+  memcpy((int8_t*)&ipc_memhandle, bytes.data(), sizeof(cudaIpcMemHandle_t));
+  return ipc_memhandle;
+}
 
 static std::basic_string<int8_t> BuildCudaIpcMemHandler (void *data) {
   FreeMemory::registerIPCPointer(data);
@@ -27,7 +41,6 @@ static std::basic_string<int8_t> BuildCudaIpcMemHandler (void *data) {
   }
   return bytes;
 }
-
 
 static void* CudaIpcMemHandlerFrom (const std::basic_string<int8_t>& handler) {
   void * response = nullptr;
@@ -62,9 +75,25 @@ std::tuple<std::vector<std::vector<gdf_column_cpp>>,
       if (table.columnTokens[column_index] == 0){
         const std::string column_name = table.columnNames.at(column_index);
         
-        // col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),(gdf_valid_type*)libgdf::CudaIpcMemHandlerFrom(column.valid),column.size,column_name);
-        col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),nullptr,column.size,column_name);
-        handles.push_back(col.data());
+        if((::gdf_dtype)column.dtype == GDF_STRING_CATEGORY){
+
+          nvstrings_ipc_transfer ipc;
+          ipc.hstrs = ConvertByteArray(column.dtype_info.custrings_views); // cudaIpcMemHandle_t
+          ipc.count = column.dtype_info.custrings_views_count; // unsigned int
+          ipc.hmem = ConvertByteArray(column.dtype_info.custrings_membuffer); // cudaIpcMemHandle_t
+          ipc.size = column.dtype_info.custrings_membuffer_size; // size_t
+          ipc.base_address = reinterpret_cast<char*>(column.dtype_info.custrings_base_ptr); // char*
+
+          NVStrings* strs = NVStrings::create_from_ipc(ipc);
+          NVCategory* category = NVCategory::create_from_strings(*strs);
+
+          col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype, nullptr, nullptr, column.size, column_name, category);
+        }
+        else {
+          // col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),(gdf_valid_type*)libgdf::CudaIpcMemHandlerFrom(column.valid),column.size,column_name);
+          col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),nullptr,column.size,column_name);
+          handles.push_back(col.data());
+        }
 
         if(col.valid() == nullptr){
           //TODO: we can remove this when libgdf properly

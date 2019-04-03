@@ -185,7 +185,7 @@ gdf_valid_type * gdf_column_cpp::allocate_valid(){
 	return valid_device;
 }
 
-void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,gdf_valid_type * valid_data,size_t num_values,std::string column_name){
+void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,gdf_valid_type * valid_data,size_t num_values,std::string column_name, NVCategory* category){
     assert(type != GDF_invalid);
     decrement_counter(column);
 
@@ -196,13 +196,29 @@ void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,g
     gdf_column_view(this->column, col_data, valid_data, num_values, type);
     get_column_byte_width(this->column, &width);
     this->allocated_size_data = num_values * width;
+
+    if(col_data == nullptr){
+        cuDF::Allocator::allocate((void**)&this->column->data, this->allocated_size_data);
+    }
+
     this->allocate_set_valid();
     is_ipc_column = true;
     this->column_token = 0;
     this->set_name(column_name);
 
+    if(type == GDF_STRING_CATEGORY){
+        column->dtype_info.category = (void*) category;
+
+        CheckCudaErrors( cudaMemcpy(
+            this->column->data,
+            static_cast<NVCategory *>(this->column->dtype_info.category)->values_cptr(),
+            sizeof(nv_category_index_type) * this->column->size,
+            cudaMemcpyDeviceToDevice) );
+    }
+
     FreeMemory::registerIPCPointer(column->data);
     FreeMemory::registerIPCPointer(column->valid);
+    //Todo: deprecated? or need to register the nvstrings pointers?
 }
 
 

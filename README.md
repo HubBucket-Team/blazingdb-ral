@@ -2,7 +2,11 @@
 BlazingDB Relational Algebra Interpreter
 
 # Dependencies
-See https://github.com/BlazingDB/blazingdb-toolchain
+- General dependencies: https://github.com/BlazingDB/blazingdb-toolchain
+- BlazingDB Protocol library: https://github.com/BlazingDB/blazingdb-protocol
+- BlazingDB IO library: https://github.com/BlazingDB/blazingdb-io
+- BlazingDB Communication: https://github.com/BlazingDB/blazingdb-communication
+- BlazingDB/cudf (develop branch): https://github.com/BlazingDB/cudf/tree/develop
 
 # Clone
 This repo uses submodules. Make sure you cloned recursively:

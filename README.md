@@ -31,7 +31,7 @@ CUDACXX=/usr/local/cuda-9.2/bin/nvcc cmake -DCMAKE_BUILD_TYPE=Debug \
       -DBUILD_TESTING=ON \
       -DBLAZINGDB_DEPENDENCIES_INSTALL_DIR=/foo/blazingsql/dependencies/ \
       -DLIBGDF_INSTALL_DIR=/foo/cudf_install_dir/ \
-      -DBLAZINGDB_PROTOCOL_INSTALL_DIR=/foor/blazingdb_protocol_install_dir/ \
+      -DBLAZINGDB_PROTOCOL_INSTALL_DIR=/foo/blazingdb_protocol_install_dir/ \
       -DBLAZINGDB_IO_INSTALL_DIR=/foo/blazingdb_io_install_dir/ \
       -DBLAZINGDB_COMMUNICATION_INSTALL_DIR=/foo/blazingdb_communication_install_dir/ \
       ..

@@ -19,6 +19,7 @@
 #include "Traits/RuntimeTraits.h"
 #include "cuDF/Allocator.h"
 #include "Interpreter/interpreter_cpp.h"
+#include <stream_compaction.hpp>
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 const std::string LOGICAL_UNION_TEXT = "LogicalUnion";
@@ -1152,9 +1153,9 @@ void process_filter(blazing_frame & input, std::string query_part){
 	Library::Logging::Logger().logInfo("-> Filter sub block 5 took " + std::to_string(timer.getDuration()) + " ms");
 
 	timer.reset();
-	
-	gdf_column temp_idx_col = apply_boolean_mask(gdf_column const *input,
-                              gdf_column const *boolean_mask);
+
+	gdf_column temp_idx_col = apply_boolean_mask(index_col.get_gdf_column(),
+                              stencil.get_gdf_column());
 	gdf_column * temp_idx_col_ptr = new gdf_column;	
 	*temp_idx_col_ptr = temp_idx_col;   
 	gdf_column_cpp temp_idx;

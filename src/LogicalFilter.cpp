@@ -116,7 +116,7 @@ void add_expression_to_plan(	blazing_frame & inputs,
 
 				gdf_binary_operator operation = get_binary_operation(token);
 				operators.push_back(operation);
-				unary_operators.push_back(GDF_INVALID_UNARY);
+				unary_operators.push_back(BLZ_INVALID_UNARY);
 
 				if(is_literal(left_operand) && is_literal(right_operand)){
 					//both are literal have to deduce types, nuts

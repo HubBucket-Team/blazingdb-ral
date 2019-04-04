@@ -721,57 +721,57 @@ private:
 				//left is null do whatever
 			}
 			/*
-			 * GDF_FLOOR,
-	GDF_CEIL,
-	GDF_SIN,
-	GDF_COS,
-	GDF_ASIN,
-	GDF_ACOS,
-	GDF_TAN,
-	GDF_COTAN,
-	GDF_ATAN,
-	GDF_ABS,
-	GDF_NOT,
-	GDF_LN,
-	GDF_LOG,
-	GDF_YEAR,
-	GDF_MONTH,
-	GDF_DAY,
-	GDF_HOUR,
-	GDF_MINUTE,
-	GDF_SECOND,
-	GDF_INVALID_UNARY
+			 * BLZ_FLOOR,
+	BLZ_CEIL,
+	BLZ_SIN,
+	BLZ_COS,
+	BLZ_ASIN,
+	BLZ_ACOS,
+	BLZ_TAN,
+	BLZ_COTAN,
+	BLZ_ATAN,
+	BLZ_ABS,
+	BLZ_NOT,
+	BLZ_LN,
+	BLZ_LOG,
+	BLZ_YEAR,
+	BLZ_MONTH,
+	BLZ_DAY,
+	BLZ_HOUR,
+	BLZ_MINUTE,
+	BLZ_SECOND,
+	BLZ_INVALID_UNARY
 			 */
 			OutputTypeOperator computed = left_value;
 
-			if(oper == GDF_FLOOR){
+			if(oper == BLZ_FLOOR){
 				computed = floor(left_value);
-			}else if(oper == GDF_CEIL){
+			}else if(oper == BLZ_CEIL){
 				computed = ceil(left_value);
-			}else if(oper == GDF_SIN){
+			}else if(oper == BLZ_SIN){
 				computed = sin(left_value);
-			}else if(oper == GDF_COS){
+			}else if(oper == BLZ_COS){
 				computed = cos(left_value);
 			} 	
-			else if(oper == GDF_ASIN){
+			else if(oper == BLZ_ASIN){
 				computed = asin(left_value);
-			}else if(oper == GDF_ACOS){
+			}else if(oper == BLZ_ACOS){
 				computed = acos(left_value);
-			}else if(oper == GDF_TAN){
+			}else if(oper == BLZ_TAN){
 				computed = tan(left_value);
-			}else if(oper == GDF_COTAN){
+			}else if(oper == BLZ_COTAN){
 				computed = cos(left_value)/sin(left_value);
-			}else if(oper == GDF_ATAN){
+			}else if(oper == BLZ_ATAN){
 				computed = atan(left_value);
-			}else if(oper == GDF_ABS){
+			}else if(oper == BLZ_ABS){
 				computed = fabs(left_value);
-			}else if(oper == GDF_NOT){
+			}else if(oper == BLZ_NOT){
 				computed = ! left_value;
-			}else if(oper == GDF_LN){
+			}else if(oper == BLZ_LN){
 				computed = log(left_value);
-			}else if(oper == GDF_LOG){
+			}else if(oper == BLZ_LOG){
 				computed = log10(left_value);
-			}else if(oper == GDF_YEAR){
+			}else if(oper == BLZ_YEAR){
 				if(isDate32((gdf_dtype) __ldg((int32_t *) &this->input_types_left[op_index]))){
 					computed = extract_year_op_32(left_value);
 
@@ -779,7 +779,7 @@ private:
 					//assume date64
 					computed = extract_year_op(left_value);
 				}
-			}else if(oper == GDF_MONTH){
+			}else if(oper == BLZ_MONTH){
 				if(isDate32((gdf_dtype) __ldg((int32_t *) &this->input_types_left[op_index]))){
 					computed = extract_month_op_32(left_value);
 
@@ -787,25 +787,25 @@ private:
 
 					computed = extract_month_op(left_value);
 				}
-			}else if(oper == GDF_DAY){
+			}else if(oper == BLZ_DAY){
 				if(isDate32((gdf_dtype) __ldg((int32_t *) &this->input_types_left[op_index]))){
 					computed = extract_day_op_32(left_value);
 				}else{
 					computed = extract_day_op(left_value);
 				}
-			}else if(oper == GDF_HOUR){
+			}else if(oper == BLZ_HOUR){
 				if(isDate32((gdf_dtype) __ldg((int32_t *) &this->input_types_left[op_index]))){
 					computed = 0;
 				}else{
 					computed = extract_hour_op(left_value);
 				}
-			}else if(oper == GDF_MINUTE){
+			}else if(oper == BLZ_MINUTE){
 				if(isDate32((gdf_dtype) __ldg((int32_t *) &this->input_types_left[op_index]))){
 					computed = 0;
 				}else{
 					computed = extract_minute_op(left_value);
 				}
-			}else if(oper == GDF_SECOND){
+			}else if(oper == BLZ_SECOND){
 				if(isDate32((gdf_dtype) __ldg((int32_t *) &this->input_types_left[op_index]))){
 					computed = 0;
 				}else{

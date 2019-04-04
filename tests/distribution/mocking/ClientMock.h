@@ -18,5 +18,5 @@ struct ClientMock {
         return mock;
     }
 
-    MOCK_METHOD2(send, std::unique_ptr<Status>(const Node&, std::shared_ptr<Message>&));
+    MOCK_METHOD2(send, std::shared_ptr<Status>(const Node&, std::shared_ptr<Message>&));
 };

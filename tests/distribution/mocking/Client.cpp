@@ -5,7 +5,7 @@ namespace ral {
 namespace communication {
 namespace network {
 
-std::unique_ptr<Client::Status> Client::send(const Node& node, std::shared_ptr<Message>& message) {
+std::shared_ptr<Client::Status> Client::send(const Node& node, std::shared_ptr<Message>& message) {
     return ClientMock::getInstance().send(node, message);
 }
 

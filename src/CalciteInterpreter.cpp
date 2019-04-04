@@ -21,6 +21,7 @@
 #include "Interpreter/interpreter_cpp.h"
 #include "operators/OrderBy.h"
 #include "operators/GroupBy.h"
+#include "operators/JoinOperator.h"
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 const std::string LOGICAL_UNION_TEXT = "LogicalUnion";
@@ -413,78 +414,78 @@ void process_project(blazing_frame & input, std::string query_part){
 
 }
 
-blazing_frame process_join(blazing_frame input, std::string query_part){
-	static CodeTimer timer;
-	timer.reset();
-
-	size_t size = 0; //libgdf will be handling the outputs for these
-
-	gdf_column_cpp left_indices, right_indices;
-	//right now it outputs int32
-	//TODO de donde saco el nombre de la columna aqui???
-	left_indices.create_gdf_column(GDF_INT32,size,nullptr,sizeof(int), "");
-	right_indices.create_gdf_column(GDF_INT32,size,nullptr,sizeof(int), "");
-
-	std::string condition = get_named_expression(query_part,"condition");
-	std::string join_type = get_named_expression(query_part,"joinType");
-
-	evaluate_join(
-			condition,
-			join_type,
-			input,
-			left_indices.get_gdf_column(),
-			right_indices.get_gdf_column()
-	);
-
-	//TODO: On error clean up everything here so we dont run out of memory
-
-	Library::Logging::Logger().logInfo("-> Join sub block 1 took " + std::to_string(timer.getDuration()) + " ms");
-	// std::cout<<"Indices are starting!"<<std::endl;
-	// print_gdf_column(left_indices.get_gdf_column());
-	// print_gdf_column(right_indices.get_gdf_column());
-	// std::cout<<"Indices are done!"<<std::endl;
-
-	//the options get interesting here. So if the join nis smaller than the input
-	// you could write the output in place, saving time for allocations then shrink later on
-	// the simplest solution is to reallocate space and free up the old after copying it over
-
-	timer.reset();
-	//a data frame should have two "tables"or groups of columns at this point
-	std::vector<gdf_column_cpp> new_columns(input.get_size_columns());
-	size_t first_table_end_index = input.get_size_column();
-	int column_width;
-	for(int column_index = 0; column_index < input.get_size_columns(); column_index++){
-		gdf_column_cpp output;
-
-		CUDF_CALL( get_column_byte_width(input.get_column(column_index).get_gdf_column(), &column_width) );
-
-		//TODO de donde saco el nombre de la columna aqui???
-		output.create_gdf_column(input.get_column(column_index).dtype(),left_indices.size(),nullptr,column_width, input.get_column(column_index).name());
-
-		if(column_index < first_table_end_index)
-		{
-			//materialize with left_indices
-			materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),left_indices.get_gdf_column());
-			// std::cout<<"left table output"<<std::endl;
-			// print_gdf_column(output.get_gdf_column());
-		}else{
-			//materialize with right indices
-			materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),right_indices.get_gdf_column());
-			// std::cout<<"right table output"<<std::endl;
-			// print_gdf_column(output.get_gdf_column());
-		}
-
-		//TODO: On error clean up all the resources
-		//free_gdf_column(input.get_column(column_index));
-		output.update_null_count();
-
-		new_columns[column_index] = output;
-	}
-	input.clear();
-	input.add_table(new_columns);
-	Library::Logging::Logger().logInfo("-> Join sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
-	return input;
-}
+//blazing_frame process_join(blazing_frame input, std::string query_part){
+//	static CodeTimer timer;
+//	timer.reset();
+//
+//	size_t size = 0; //libgdf will be handling the outputs for these
+//
+//	gdf_column_cpp left_indices, right_indices;
+//	//right now it outputs int32
+//	//TODO de donde saco el nombre de la columna aqui???
+//	left_indices.create_gdf_column(GDF_INT32,size,nullptr,sizeof(int), "");
+//	right_indices.create_gdf_column(GDF_INT32,size,nullptr,sizeof(int), "");
+//
+//	std::string condition = get_named_expression(query_part,"condition");
+//	std::string join_type = get_named_expression(query_part,"joinType");
+//
+//	evaluate_join(
+//			condition,
+//			join_type,
+//			input,
+//			left_indices.get_gdf_column(),
+//			right_indices.get_gdf_column()
+//	);
+//
+//	//TODO: On error clean up everything here so we dont run out of memory
+//
+//	Library::Logging::Logger().logInfo("-> Join sub block 1 took " + std::to_string(timer.getDuration()) + " ms");
+//	// std::cout<<"Indices are starting!"<<std::endl;
+//	// print_gdf_column(left_indices.get_gdf_column());
+//	// print_gdf_column(right_indices.get_gdf_column());
+//	// std::cout<<"Indices are done!"<<std::endl;
+//
+//	//the options get interesting here. So if the join nis smaller than the input
+//	// you could write the output in place, saving time for allocations then shrink later on
+//	// the simplest solution is to reallocate space and free up the old after copying it over
+//
+//	timer.reset();
+//	//a data frame should have two "tables"or groups of columns at this point
+//	std::vector<gdf_column_cpp> new_columns(input.get_size_columns());
+//	size_t first_table_end_index = input.get_size_column();
+//	int column_width;
+//	for(int column_index = 0; column_index < input.get_size_columns(); column_index++){
+//		gdf_column_cpp output;
+//
+//		CUDF_CALL( get_column_byte_width(input.get_column(column_index).get_gdf_column(), &column_width) );
+//
+//		//TODO de donde saco el nombre de la columna aqui???
+//		output.create_gdf_column(input.get_column(column_index).dtype(),left_indices.size(),nullptr,column_width, input.get_column(column_index).name());
+//
+//		if(column_index < first_table_end_index)
+//		{
+//			//materialize with left_indices
+//			materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),left_indices.get_gdf_column());
+//			// std::cout<<"left table output"<<std::endl;
+//			// print_gdf_column(output.get_gdf_column());
+//		}else{
+//			//materialize with right indices
+//			materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),right_indices.get_gdf_column());
+//			// std::cout<<"right table output"<<std::endl;
+//			// print_gdf_column(output.get_gdf_column());
+//		}
+//
+//		//TODO: On error clean up all the resources
+//		//free_gdf_column(input.get_column(column_index));
+//		output.update_null_count();
+//
+//		new_columns[column_index] = output;
+//	}
+//	input.clear();
+//	input.add_table(new_columns);
+//	Library::Logging::Logger().logInfo("-> Join sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
+//	return input;
+//}
 
 blazing_frame process_union(blazing_frame& left, blazing_frame& right, std::string query_part){
 	bool isUnionAll = (get_named_expression(query_part, "all") == "true");
@@ -723,12 +724,13 @@ blazing_frame evaluate_split_query(
 		);
 
 		blazing_frame result_frame;
-		if(is_join(query[0])){
+
+		if (ral::operators::is_join(query[0])) {
 			//we know that left and right are dataframes we want to join together
 			left_frame.add_table(right_frame.get_columns()[0]);
 			///left_frame.consolidate_tables();
 			blazing_timer.reset();
-			result_frame = process_join(left_frame,query[0]);
+			result_frame = ral::operators::process_join(queryContext, left_frame, query[0]);
 			Library::Logging::Logger().logInfo("process_join took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(left_frame.get_column(0).size()) + " rows with an output of " + std::to_string(result_frame.get_column(0).size()));
 			return result_frame;
 		}else if(is_union(query[0])){

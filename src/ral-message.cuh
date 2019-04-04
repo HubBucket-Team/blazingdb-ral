@@ -75,7 +75,7 @@ std::tuple<std::vector<std::vector<gdf_column_cpp>>,
       if (table.columnTokens[column_index] == 0){
         const std::string column_name = table.columnNames.at(column_index);
         
-        if((::gdf_dtype)column.dtype == GDF_STRING_CATEGORY){
+        if((::gdf_dtype)column.dtype == GDF_STRING){
 
           nvstrings_ipc_transfer ipc;
           ipc.hstrs = ConvertByteArray(column.dtype_info.custrings_views); // cudaIpcMemHandle_t

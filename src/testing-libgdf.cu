@@ -319,8 +319,8 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
         std::cout << "col_name: " << result.result_frame.get_columns()[0][i].name() << std::endl;
 
         nvstrings_ipc_transfer ipc;
-        NVCategory* category =  static_cast<NVCategory *>(result.result_frame.get_columns()[0][i].get_gdf_column()->dtype_info.category);
-        NVStrings* strings = category->to_strings();
+     //   NVCategory* category =  static_cast<NVCategory *>(result.result_frame.get_columns()[0][i].get_gdf_column()->dtype_info.category);
+        NVStrings* strings = static_cast<NVStrings *> (result.result_frame.get_columns()[0][i].get_gdf_column().data);
         strings->create_ipc_transfer(ipc);
 
         auto data = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->data);
@@ -329,7 +329,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
               .data = data,
               .valid = valid,
               .size = result.result_frame.get_columns()[0][i].size(),
-              .dtype = (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype(),
+              .dtype = (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype(), // GDF_STRING
               .null_count = result.result_frame.get_columns()[0][i].null_count(),
               .dtype_info = gdf_dto::gdf_dtype_extra_info {
                 .time_unit = (gdf_dto::gdf_time_unit)0,

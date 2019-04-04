@@ -78,6 +78,18 @@ namespace traits {
 
     gdf_size_type get_bitmask_size_in_bytes(gdf_size_type quantity);
 
+
+    template <typename Type>
+    struct GetDType;
+
+    template<>
+    struct GetDType<gdf_index_type> {
+        constexpr static gdf_dtype dtype{GDF_INT32};
+    };
+
+    template <typename Type>
+    constexpr gdf_dtype dtype = GetDType<Type>::dtype;
+
 } // namespace traits
 } // namespace ral
 

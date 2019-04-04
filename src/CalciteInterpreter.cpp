@@ -1154,8 +1154,7 @@ void process_filter(blazing_frame & input, std::string query_part){
 
 	timer.reset();
 
-	gdf_column temp_idx_col = apply_boolean_mask(index_col.get_gdf_column(),
-                              stencil.get_gdf_column());
+	gdf_column temp_idx_col = cudf::apply_boolean_mask(index_col.get_gdf_column(), stencil.get_gdf_column());
 	gdf_column * temp_idx_col_ptr = new gdf_column;	
 	*temp_idx_col_ptr = temp_idx_col;   
 	gdf_column_cpp temp_idx;

@@ -70,12 +70,14 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 		if(frame.get_column(i).dtype() == GDF_STRING_CATEGORY){
 			//we need to convert GDF_STRING_CATEGORY to GDF_STRING
 			//for now we can do something hacky lik euse the data pointer to store this
-			NVStrings * new_strings = static_cast<NVCategory *> (frame.get_column(i).dtype_info().category).to_strings();
+			NVStrings * new_strings = static_cast<NVCategory *> (frame.get_column(i).dtype_info().category)->to_strings();
 			gdf_column_cpp string_column;
-			string_column.get_gdf_column().size = frame.get_column(i).size();
-			string_column.get_gdf_column().null_count = frame.get_column(i).null_count;
-			string_column.get_gdf_column().data = (void * ) new_strings;
-			string_column.get_gdf_column().dtype = GDF_STRING;
+			string_column.get_gdf_column()->size = frame.get_column(i).size();
+			string_column.get_gdf_column()->null_count = frame.get_column(i).null_count();
+			string_column.get_gdf_column()->data = (void * ) new_strings;
+			string_column.get_gdf_column()->dtype = GDF_STRING;
+			string_column.set_name(frame.get_column(i).name());
+			
 			frame.set_column(i,string_column);
 			
 		}else{
@@ -136,7 +138,7 @@ void result_set_repository::free_result(connection_id_t connection, query_token_
 		if(output_frame.get_column(i).dtype() == GDF_STRING){
 			NVStrings::destroy(static_cast<NVStrings *>(output_frame.get_column(i).data()));
 		} else if (output_frame.get_column(i).dtype() == GDF_STRING_CATEGORY){
-			NVCategory::destroy(static_cast<NVCategory *>(output_frame.get_column(i).dtype_info().category);
+			NVCategory::destroy(static_cast<NVCategory *>(output_frame.get_column(i).dtype_info().category));
 		}else{
 			GDFRefCounter::getInstance()->free(output_frame.get_column(i).get_gdf_column());
 		}
@@ -210,6 +212,7 @@ result_set_t result_set_repository::get_result(connection_id_t connection, query
 	}
 }
 
+//WARNING do not call this on anything that will be ipced!!! 
 gdf_column_cpp result_set_repository::get_column(connection_id_t connection, column_token_t columnToken){
 	if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
 		throw std::runtime_error{"Connection does not exist"};
@@ -221,9 +224,10 @@ gdf_column_cpp result_set_repository::get_column(connection_id_t connection, col
 	if(this->precalculated_columns[columnToken].dtype() == GDF_STRING){
 		gdf_column_cpp temp_column; //allocar convertir a NVCategory
 		NVStrings * strings = static_cast<NVStrings *>(this->precalculated_columns[columnToken].data());
-		NVCategory * category = strings.create_from_strings(*strings);
-
-		
+		NVCategory * category = NVCategory::create_from_strings(*strings);
+		temp_column.create_gdf_column(GDF_STRING_CATEGORY,this->precalculated_columns[columnToken].size(),nullptr,sizeof(int32_t),this->precalculated_columns[columnToken].name());
+		temp_column.get_gdf_column()->dtype_info.category = category;
+		return temp_column;
 	}else{
 		return this->precalculated_columns[columnToken];
 	}

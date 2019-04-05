@@ -317,21 +317,18 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
         columnTokens.push_back(result.result_frame.get_columns()[0][i].get_column_token());
 
         std::cout << "col_name: " << result.result_frame.get_columns()[0][i].name() << std::endl;
-
         nvstrings_ipc_transfer ipc;
-     //   NVCategory* category =  static_cast<NVCategory *>(result.result_frame.get_columns()[0][i].get_gdf_column()->dtype_info.category);
-        NVStrings* strings = static_cast<NVStrings *> (result.result_frame.get_columns()[0][i].get_gdf_column().data);
-        strings->create_ipc_transfer(ipc);
+        gdf_dto::gdf_dtype_extra_info dtype_info;
+        ::gdf_dto::gdf_column col;
 
-        auto data = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->data);
-        auto valid = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->valid);
-        auto col = ::gdf_dto::gdf_column {
-              .data = data,
-              .valid = valid,
-              .size = result.result_frame.get_columns()[0][i].size(),
-              .dtype = (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype(), // GDF_STRING
-              .null_count = result.result_frame.get_columns()[0][i].null_count(),
-              .dtype_info = gdf_dto::gdf_dtype_extra_info {
+        std::basic_string<int8_t> data;
+        std::basic_string<int8_t> valid;
+
+        if(result.result_frame.get_columns()[0][i].dtype() == GDF_STRING){
+          NVCategory* category =  static_cast<NVCategory *>(result.result_frame.get_columns()[0][i].get_gdf_column()->dtype_info.category);
+          NVStrings* strings = static_cast<NVStrings *> (result.result_frame.get_columns()[0][i].get_gdf_column()->data);
+          strings->create_ipc_transfer(ipc);
+          dtype_info = gdf_dto::gdf_dtype_extra_info {
                 .time_unit = (gdf_dto::gdf_time_unit)0,
                 // custrings data
                 .custrings_views = libgdf::ConvertCudaIpcMemHandler(ipc.hstrs),
@@ -339,8 +336,34 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
                 .custrings_membuffer = libgdf::ConvertCudaIpcMemHandler(ipc.hmem),
                 .custrings_membuffer_size = ipc.size,
                 .custrings_base_ptr = reinterpret_cast<unsigned long>(ipc.base_address)
-              }
+            };
+
+          col = ::gdf_dto::gdf_column {
+              .data = data,
+              .valid = valid,
+              .size = result.result_frame.get_columns()[0][i].size(),
+              .dtype = (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype(), // GDF_STRING
+              .null_count = result.result_frame.get_columns()[0][i].null_count(),
+              .dtype_info = dtype_info
+            };
+
+        }else{
+          dtype_info = gdf_dto::gdf_dtype_extra_info {
+                .time_unit = (gdf_dto::gdf_time_unit)0
           };
+
+          data = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->data);
+          valid = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->valid);
+
+          col = ::gdf_dto::gdf_column {
+              .data = data,
+              .valid = valid,
+              .size = result.result_frame.get_columns()[0][i].size(),
+              .dtype = (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype(), // GDF_STRING
+              .null_count = result.result_frame.get_columns()[0][i].null_count(),
+              .dtype_info = dtype_info
+          };
+        }
 
         values.push_back(col);
       }

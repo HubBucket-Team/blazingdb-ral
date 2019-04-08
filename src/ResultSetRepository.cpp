@@ -71,19 +71,23 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 			//we need to convert GDF_STRING_CATEGORY to GDF_STRING
 			//for now we can do something hacky lik euse the data pointer to store this
 			NVStrings * new_strings = static_cast<NVCategory *> (frame.get_column(i).dtype_info().category)->to_strings();
+
+			gdf_column * new_gdf_column = new gdf_column;
+			new_gdf_column->size = frame.get_column(i).size();
+			new_gdf_column->null_count = frame.get_column(i).null_count();
+			new_gdf_column->data = (void * ) new_strings;
+			new_gdf_column->dtype = frame.get_column(i).dtype();
+
 			gdf_column_cpp string_column;
-			string_column.get_gdf_column()->size = frame.get_column(i).size();
-			string_column.get_gdf_column()->null_count = frame.get_column(i).null_count();
-			string_column.get_gdf_column()->data = (void * ) new_strings;
-			string_column.get_gdf_column()->dtype = GDF_STRING;
+			string_column.create_gdf_column(new_gdf_column);
 			string_column.set_name(frame.get_column(i).name());
-			
+			string_column.get_gdf_column()->dtype = GDF_STRING; //TODO create_gdf_column no soporta GDF_STRING porque type_dispatcher tampoco lo soporta
+																//esto significa que allocated_size_data tecnicamente esta incorrecto
 			frame.set_column(i,string_column);
-			
+
 		}else{
 			GDFRefCounter::getInstance()->deregister_column(frame.get_column(i).get_gdf_column());
 		}
-
 	}
 
 	for(size_t i = 0; i < frame.get_width(); i++){

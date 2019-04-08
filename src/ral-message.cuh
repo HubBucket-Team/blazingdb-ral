@@ -87,7 +87,7 @@ std::tuple<std::vector<std::vector<gdf_column_cpp>>,
           NVStrings* strs = NVStrings::create_from_ipc(ipc);
           NVCategory* category = NVCategory::create_from_strings(*strs);
 
-          col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype, nullptr, nullptr, column.size, column_name, category);
+          col.create_gdf_column_for_ipc(GDF_STRING_CATEGORY, nullptr, nullptr, column.size, column_name, category);
         }
         else {
           // col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),(gdf_valid_type*)libgdf::CudaIpcMemHandlerFrom(column.valid),column.size,column_name);

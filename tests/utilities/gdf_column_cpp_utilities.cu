@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <thrust/equal.h>
 
-
 namespace ral {
 namespace test {
 
@@ -80,6 +79,10 @@ std::vector<std::uint8_t> get_column_valid(gdf_column* column) {
     return result;
 }
 
+} // namespace test
+} // namespace ral
+
+
 bool operator==(const gdf_column& lhs, const gdf_column& rhs) {
     if (lhs.size != rhs.size) {
         return false;
@@ -130,6 +133,3 @@ bool operator==(const gdf_column_cpp& lhs, const gdf_column_cpp& rhs) {
     }
     return *(lhs.get_gdf_column()) == *(rhs.get_gdf_column());
 }
-
-} // namespace test
-} // namespace ral

@@ -4,6 +4,7 @@
 #include "CodeTimer.h"
 #include "ColumnManipulation.cuh"
 #include "JoinProcessor.h"
+#include "exception/RalException.h"
 #include "communication/CommunicationData.h"
 #include "distribution/primitives.h"
 #include "distribution/NodeColumns.h"
@@ -59,10 +60,12 @@ public:
     blazing_frame operator()(blazing_frame& input, const std::string& query_part) override;
 
 protected:
-    blazing_frame process_distribution(blazing_frame& input);
+    blazing_frame process_distribution(blazing_frame& frame);
 
-    blazing_frame concat_columns(std::vector<NodeColumns>& local_partition,
-                                 std::vector<NodeColumns>& remote_partition);
+    std::vector<gdf_column_cpp> process_distribution_table(std::vector<gdf_column_cpp>& table);
+
+    std::vector<gdf_column_cpp> concat_columns(std::vector<NodeColumns>& local_partition,
+                                               std::vector<NodeColumns>& remote_partition);
 };
 
 }  // namespace operators
@@ -150,118 +153,103 @@ DistributedJoinOperator::DistributedJoinOperator(const Context* context)
 : JoinOperator(context)
 { }
 
-blazing_frame DistributedJoinOperator::operator()(blazing_frame& input, const std::string& query) {
+blazing_frame DistributedJoinOperator::operator()(blazing_frame& frame, const std::string& query) {
     // Execute distribution
     timer_.reset();
-    process_distribution(input);
+    auto distributed_frame = process_distribution(frame);
     Library::Logging::Logger().logInfo("-> Join sub block 0 took " + std::to_string(timer_.getDuration()) + " ms");
 
     // Evaluate join
     timer_.reset();
-    evaluate_join(input, query);
+    evaluate_join(distributed_frame, query);
     Library::Logging::Logger().logInfo("-> Join sub block 1 took " + std::to_string(timer_.getDuration()) + " ms");
 
     // Materialize columns
     timer_.reset();
-    materialize_column(input);
+    materialize_column(distributed_frame);
     Library::Logging::Logger().logInfo("-> Join sub block 2 took " + std::to_string(timer_.getDuration()) + " ms");
 
     // Done
-    return input;
+    return distributed_frame;
 }
 
-blazing_frame DistributedJoinOperator::process_distribution(blazing_frame& input) {
+std::vector<gdf_column_cpp> DistributedJoinOperator::process_distribution_table(std::vector<gdf_column_cpp>& table) {
     auto future_node_columns = std::async(std::launch::async,
                                           ral::distribution::collectPartition,
                                           std::ref(*context_));
 
-    // TODO: review whether 'input.get_columns()[0]' is the correct input.
-    auto local_node_columns = ral::distribution::generateJoinPartitions(*context_, input.get_columns()[0]);
+    auto local_node_columns = ral::distribution::generateJoinPartitions(*context_, table);
 
     distributePartitions(*context_, local_node_columns);
 
     auto remote_node_columns = future_node_columns.get();
 
-    // TODO: review whether is it necessary to concat columns.
     return concat_columns(local_node_columns, remote_node_columns);
 }
 
-// TODO: Improve algorithm
-blazing_frame DistributedJoinOperator::concat_columns(std::vector<NodeColumns>& local_node_columns,
-                                                      std::vector<NodeColumns>& remote_node_columns) {
-    std::vector<std::vector<gdf_column_cpp>> columns;
+blazing_frame DistributedJoinOperator::process_distribution(blazing_frame& frame) {
+    blazing_frame join_frame;
 
+    for (auto& table : frame.get_columns()) {
+        join_frame.add_table(std::move(process_distribution_table(table)));
+    }
+
+    return join_frame;
+}
+
+std::vector<gdf_column_cpp> DistributedJoinOperator::concat_columns(std::vector<NodeColumns>& local_node_columns,
+                                                                    std::vector<NodeColumns>& remote_node_columns) {
     // Obtain the current node
     using ral::communication::CommunicationData;
     const Node& node = CommunicationData::getInstance().getSelfNode();
 
-    // Transform local node columns
+    // Obtain local table partition
+    std::vector<gdf_column_cpp> local_table;
     for (auto& local_node_column : local_node_columns) {
         if (node == local_node_column.getNode()) {
-            auto local_columns = local_node_column.getColumns();
-            for (auto local_column : local_columns) {
-                std::vector<gdf_column_cpp> vector;
-                vector.emplace_back(local_column);
-                columns.emplace_back((vector));
-            }
+            local_table = local_node_column.getColumns();
         }
     }
 
-    // Erase input data
-    local_node_columns.clear();
+    // Get column quantity
+    gdf_size_type column_quantity = local_table.size();
 
-    // Transform remote node columns
-    for (auto& remote_node_column : remote_node_columns) {
-        auto remote_columns = remote_node_column.getColumns();
-        for (std::size_t k = 0; k < remote_columns.size(); ++k) {
-            columns[k].emplace_back((remote_columns[k]));
-        }
-    }
-
-    // Erase input data
-    remote_node_columns.clear();
-
-    // Create result
+    // Concatenate table
     std::vector<gdf_column_cpp> result;
-
-    // Concat columns
-    for (auto column_vector : columns) {
-        // Whether column vector
-        if (column_vector.empty()) {
-            continue;
-        }
-
-        // Get column dtype
-        gdf_dtype dtype = column_vector[0].dtype();
-
-        // Calculate total column size
+    for (gdf_size_type k = 0; k < column_quantity; ++k) {
+        gdf_dtype dtype {GDF_invalid};
         gdf_size_type size{0};
-        for (auto column : column_vector) {
-            size += column.size();
+        std::vector<gdf_column*> columns_wrapper;
+
+        if (local_table.size() && local_table[k].size()) {
+            size += local_table[k].size();
+            dtype = local_table[k].dtype();
+            columns_wrapper.emplace_back(local_table[k].get_gdf_column());
+        }
+        for (auto& remote_node_column : remote_node_columns) {
+            auto& remote_columns = remote_node_column.getColumnsRef();
+            if (remote_columns.size() && remote_columns[k].get_gdf_column() != nullptr) {
+                size += remote_columns[k].size();
+                dtype = remote_columns[k].dtype();
+                columns_wrapper.emplace_back(remote_columns[k].get_gdf_column());
+            }
         }
 
         // Create output column
         gdf_column_cpp output = ral::utilities::create_column(size, dtype);
 
-        // Table wrapper input
-        ral::utilities::TableWrapper column_split(column_vector);
-
         // Perform concatenation
         auto error = gdf_column_concat(output.get_gdf_column(),
-                                       column_split.getColumns(),
-                                       column_split.getQuantity());
-        // TODO: Generate Exception
+                                       columns_wrapper.data(),
+                                       columns_wrapper.size());
         if (error != GDF_SUCCESS) {
+            throw ral::exception::BaseRalException("distributed join, cannot concat columns");
         }
 
         result.emplace_back(output);
     }
 
-    // Create output
-    blazing_frame frame;
-    frame.add_table(std::move(result));
-
-    return frame;
+    return result;
 }
 
 }  // namespace operators
@@ -273,18 +261,21 @@ namespace operators {
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 
-bool is_join(const std::string& query_part) {
-    return (query_part.find(LOGICAL_JOIN_TEXT) != std::string::npos);
+bool is_join(const std::string& query) {
+    return (query.find(LOGICAL_JOIN_TEXT) != std::string::npos);
 }
 
-blazing_frame process_join(const Context* context, blazing_frame& input, const std::string& query_part) {
-    std::unique_ptr<JoinOperator> join_processor;
+blazing_frame process_join(const Context* context, blazing_frame& frame, const std::string& query) {
+    std::unique_ptr<JoinOperator> join_operator;
     if (context == nullptr) {
-        join_processor = std::make_unique<LocalJoinOperator>(context);
-    } else {
-        join_processor = std::make_unique<DistributedJoinOperator>(context);
+        join_operator = std::make_unique<LocalJoinOperator>(context);
+    } else if (context->getTotalNodes() <= 1) {
+        join_operator = std::make_unique<LocalJoinOperator>(context);
     }
-    return (*join_processor)(input, query_part);
+    else {
+        join_operator = std::make_unique<DistributedJoinOperator>(context);
+    }
+    return (*join_operator)(frame, query);
 }
 
 }  // namespace operators

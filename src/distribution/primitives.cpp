@@ -1060,12 +1060,19 @@ std::vector<NodeColumns> generateJoinPartitions(const Context& context,
 
     // Populate output - NodeColumns
     for (gdf_size_type k = 0; k < number_nodes; ++k) {
+        // Calculate indices
+        gdf_size_type init = partition_offset[k];
+        gdf_size_type length = input_column_size - init;
+        if (k < (gdf_size_type)(partition_offset.size() - 1)) {
+            length = partition_offset[k + 1] - init;
+        }
+
+        // Populate data
         std::vector<gdf_column_cpp> columns;
         for (gdf_size_type i = 0; i < (gdf_size_type) output_columns.size(); ++i) {
-            gdf_size_type init = partition_offset[k];
-            gdf_size_type length = input_column_size - init;
-            if (i < (gdf_size_type)(partition_offset.size() - 1)) {
-                length = partition_offset[k + 1] - init;
+            if (length == 0) {
+                columns.emplace_back(gdf_column_cpp());
+                continue;
             }
             columns.emplace_back(output_columns[i].slice(init, length));
         }

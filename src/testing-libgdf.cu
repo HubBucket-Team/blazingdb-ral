@@ -330,12 +330,6 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
           strings->create_ipc_transfer(ipc);
           dtype_info = gdf_dto::gdf_dtype_extra_info {
                 .time_unit = (gdf_dto::gdf_time_unit)0,
-                // custrings data
-                .custrings_views = libgdf::ConvertCudaIpcMemHandler(ipc.hstrs),
-                .custrings_viewscount = ipc.count,
-                .custrings_membuffer = libgdf::ConvertCudaIpcMemHandler(ipc.hmem),
-                .custrings_membuffersize = ipc.size,
-                .custrings_baseptr = reinterpret_cast<unsigned long>(ipc.base_address)
             };
 
           col = ::gdf_dto::gdf_column {
@@ -344,7 +338,13 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
               .size = result.result_frame.get_columns()[0][i].size(),
               .dtype = (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype(), // GDF_STRING
               .null_count = result.result_frame.get_columns()[0][i].null_count(),
-              .dtype_info = dtype_info
+              .dtype_info = dtype_info,
+              // custrings data
+              .custrings_views = libgdf::ConvertCudaIpcMemHandler(ipc.hstrs),
+              .custrings_viewscount = ipc.count,
+              .custrings_membuffer = libgdf::ConvertCudaIpcMemHandler(ipc.hmem),
+              .custrings_membuffersize = ipc.size,
+              .custrings_baseptr = reinterpret_cast<unsigned long>(ipc.base_address)
             };
 
         }else{

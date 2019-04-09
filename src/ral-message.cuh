@@ -78,11 +78,11 @@ std::tuple<std::vector<std::vector<gdf_column_cpp>>,
         if((::gdf_dtype)column.dtype == GDF_STRING){
 
           nvstrings_ipc_transfer ipc;
-          ipc.hstrs = ConvertByteArray(column.dtype_info.custrings_views); // cudaIpcMemHandle_t
-          ipc.count = column.dtype_info.custrings_viewscount; // unsigned int
-          ipc.hmem = ConvertByteArray(column.dtype_info.custrings_membuffer); // cudaIpcMemHandle_t
-          ipc.size = column.dtype_info.custrings_membuffersize; // size_t
-          ipc.base_address = reinterpret_cast<char*>(column.dtype_info.custrings_baseptr); // char*
+          ipc.hstrs = ConvertByteArray(column.custrings_views); // cudaIpcMemHandle_t
+          ipc.count = column.custrings_viewscount; // unsigned int
+          ipc.hmem = ConvertByteArray(column.custrings_membuffer); // cudaIpcMemHandle_t
+          ipc.size = column.custrings_membuffersize; // size_t
+          ipc.base_address = reinterpret_cast<char*>(column.custrings_baseptr); // char*
 
           NVStrings* strs = NVStrings::create_from_ipc(ipc);
           NVCategory* category = NVCategory::create_from_strings(*strs);

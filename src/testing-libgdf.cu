@@ -332,10 +332,10 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
                 .time_unit = (gdf_dto::gdf_time_unit)0,
                 // custrings data
                 .custrings_views = libgdf::ConvertCudaIpcMemHandler(ipc.hstrs),
-                .custrings_views_count = ipc.count,
+                .custrings_viewscount = ipc.count,
                 .custrings_membuffer = libgdf::ConvertCudaIpcMemHandler(ipc.hmem),
-                .custrings_membuffer_size = ipc.size,
-                .custrings_base_ptr = reinterpret_cast<unsigned long>(ipc.base_address)
+                .custrings_membuffersize = ipc.size,
+                .custrings_baseptr = reinterpret_cast<unsigned long>(ipc.base_address)
             };
 
           col = ::gdf_dto::gdf_column {
@@ -590,9 +590,9 @@ auto  interpreterServices(const blazingdb::protocol::Buffer &requestPayloadBuffe
 int main(int argc, const char *argv[])
 {
 
-  #ifndef VERBOSE
+  /*#ifndef VERBOSE
   std::cout.rdbuf(nullptr); // substitute internal std::cout buffer with
-  #endif // VERBOSE 
+  #endif // VERBOSE*/
   
     std::cout << "RAL Engine starting" << std::endl;
 

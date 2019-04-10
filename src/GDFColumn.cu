@@ -51,7 +51,7 @@ gdf_column_cpp::gdf_column_cpp(const gdf_column_cpp& col)
     column = col.column;
     this->allocated_size_data = col.allocated_size_data;
     this->allocated_size_valid = col.allocated_size_valid;
-    this->column_name= col.column_name;
+    this->set_name(col.column_name);
     this->is_ipc_column = col.is_ipc_column;
     this->column_token = col.column_token;
     GDFRefCounter::getInstance()->increment(const_cast<gdf_column*>(col.column));
@@ -63,7 +63,7 @@ gdf_column_cpp::gdf_column_cpp(gdf_column_cpp& col)
 	column = col.column;
     this->allocated_size_data = col.allocated_size_data;
     this->allocated_size_valid = col.allocated_size_valid;
-    this->column_name= col.column_name;
+    this->set_name(col.column_name);
     this->is_ipc_column = col.is_ipc_column;
     this->column_token = col.column_token;
     GDFRefCounter::getInstance()->increment(const_cast<gdf_column*>(col.column));
@@ -281,7 +281,7 @@ void gdf_column_cpp::create_gdf_column(gdf_column * column){
     this->is_ipc_column = false;
     this->column_token = 0;
     if (column->col_name)
-    	this->column_name = std::string(column->col_name);
+    	this->set_name(std::string(column->col_name));
 
     GDFRefCounter::getInstance()->register_column(this->column);
 }

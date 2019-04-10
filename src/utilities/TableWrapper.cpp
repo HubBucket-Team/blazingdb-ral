@@ -5,26 +5,25 @@ namespace ral {
 namespace utilities {
 
 TableWrapper::TableWrapper(const std::vector<gdf_column_cpp>& columns) {
-    size_ = columns.size();
-    columns_ = new gdf_column*[size_];
-    for (gdf_size_type i = 0; i < size_; ++i) {
+    columns_.resize(columns.size());
+    for (size_t i = 0; i < columns_.size(); ++i) {
         columns_[i] = columns[i].get_gdf_column();
     }
 }
 
-TableWrapper::~TableWrapper() {
-    if (columns_ != nullptr) {
-        delete[] columns_;
-        columns_ = nullptr;
+TableWrapper::TableWrapper(const std::vector<gdf_column_cpp>& columns, const std::vector<int>& colIndices) {
+    columns_.resize(colIndices.size());
+    for (size_t i = 0; i < columns_.size(); ++i) {
+        columns_[i] = columns[colIndices[i]].get_gdf_column();
     }
 }
 
 gdf_column** TableWrapper::getColumns() {
-    return columns_;
+    return columns_.data();
 }
 
 gdf_size_type TableWrapper::getQuantity() {
-    return size_;
+    return columns_.size();
 }
 
 } // namespace utilities

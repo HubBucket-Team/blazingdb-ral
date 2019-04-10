@@ -302,8 +302,10 @@ TEST_F(DistributionPrimitivesTest, partitionData_SingleColumn) {
     };
 
     // execute distributed function
+    std::vector<int> searchColIndices(table.size());
+    std::iota(searchColIndices.begin(), searchColIndices.end(), 0);
     std::vector<ral::distribution::NodeColumns> columns;
-    ASSERT_NO_THROW(columns = ral::distribution::partitionData(*context_, table, pivots));
+    ASSERT_NO_THROW(columns = ral::distribution::partitionData(*context_, table, searchColIndices, pivots));
 
     // verify
     ASSERT_EQ(table.size(), 0);
@@ -358,8 +360,10 @@ TEST_F(DistributionPrimitivesTest, PartitionData_DoubleColumns) {
     };
 
     // execute distributed function
+    std::vector<int> searchColIndices(table.size());
+    std::iota(searchColIndices.begin(), searchColIndices.end(), 0);
     std::vector<ral::distribution::NodeColumns> columns;
-    ASSERT_NO_THROW(columns = ral::distribution::partitionData(*context_, table, pivots));
+    ASSERT_NO_THROW(columns = ral::distribution::partitionData(*context_, table, searchColIndices, pivots));
 
     // verify
     ASSERT_EQ(table.size(), 0);
@@ -410,8 +414,10 @@ TEST_F(DistributionPrimitivesTest, partitionData_SingleColumn__WithInvalidIndex)
     };
 
     // execute distributed function
+    std::vector<int> searchColIndices(table.size());
+    std::iota(searchColIndices.begin(), searchColIndices.end(), 0);
     std::vector<ral::distribution::NodeColumns> columns;
-    ASSERT_NO_THROW(columns = ral::distribution::partitionData(*context_, table, pivots));
+    ASSERT_NO_THROW(columns = ral::distribution::partitionData(*context_, table, searchColIndices, pivots));
 
     // verify
     ASSERT_EQ(table.size(), 0);
@@ -468,8 +474,10 @@ TEST_F(DistributionPrimitivesTest, PartitionData_DoubleColumns_WithInvalidIndex)
     };
 
     // execute distributed function
+    std::vector<int> searchColIndices(table.size());
+    std::iota(searchColIndices.begin(), searchColIndices.end(), 0);
     std::vector<ral::distribution::NodeColumns> columns;
-    ASSERT_NO_THROW(columns = ral::distribution::partitionData(*context_, table, pivots));
+    ASSERT_NO_THROW(columns = ral::distribution::partitionData(*context_, table, searchColIndices, pivots));
 
     // verify
     ASSERT_EQ(table.size(), 0);

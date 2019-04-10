@@ -164,9 +164,9 @@ void distributed_groupby_without_aggregations(const Context& queryContext, blazi
 	std::vector<gdf_column_cpp> selfSamples = ral::distribution::sampling::generateSample(group_columns, 0.1);
 
 	auto groupByTask = std::async(std::launch::async,
-																		groupby_without_aggregations,
-																		std::ref(input),
-																		std::ref(group_column_indices));
+																groupby_without_aggregations,
+																std::ref(input),
+																std::ref(group_column_indices));
 
 	std::vector<gdf_column_cpp> partitionPlan;
 	if (queryContext.isMasterNode(CommunicationData::getInstance().getSelfNode())) {
@@ -186,7 +186,7 @@ void distributed_groupby_without_aggregations(const Context& queryContext, blazi
 	// Wait for groupByThread
 	std::vector<gdf_column_cpp> groupedTable = groupByTask.get();
 
-	std::vector<ral::distribution::NodeColumns> partitions = ral::distribution::partitionData(queryContext, groupedTable, partitionPlan);
+	std::vector<ral::distribution::NodeColumns> partitions = ral::distribution::partitionData(queryContext, groupedTable, group_column_indices, partitionPlan);
 
 	ral::distribution::distributePartitions(queryContext, partitions);
 
@@ -460,7 +460,10 @@ void distributed_aggregations_with_groupby(const Context& queryContext, blazing_
 	// Wait for aggregationThread
 	std::vector<gdf_column_cpp> aggregatedTable = aggregationTask.get();
 
-	std::vector<ral::distribution::NodeColumns> partitions = ral::distribution::partitionData(queryContext, aggregatedTable, partitionPlan);
+	std::vector<int> groupColumnIndices(group_column_indices.size());
+  std::iota(groupColumnIndices.begin(), groupColumnIndices.end(), 0);
+
+	std::vector<ral::distribution::NodeColumns> partitions = ral::distribution::partitionData(queryContext, aggregatedTable, groupColumnIndices, partitionPlan);
 
 	ral::distribution::distributePartitions(queryContext, partitions);
 
@@ -471,8 +474,6 @@ void distributed_aggregations_with_groupby(const Context& queryContext, blazing_
 	// Could "it" iterator be partitions.end()?
 	partitionsToMerge.push_back(std::move(*it));
 
-  std::vector<int> groupColumnIndices(group_column_indices.size());
-  std::iota(groupColumnIndices.begin(), groupColumnIndices.end(), 0);
 	ral::distribution::aggregationsMerger(partitionsToMerge, groupColumnIndices, aggregation_types, input);
 }
 

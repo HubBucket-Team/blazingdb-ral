@@ -80,6 +80,7 @@ std::vector<gdf_column_cpp> getPartitionPlan(const Context& context);
  */
 std::vector<NodeColumns> partitionData(const Context& context,
                                        std::vector<gdf_column_cpp>& table,
+                                       std::vector<int>& searchColIndices,
                                        std::vector<gdf_column_cpp>& pivots);
 
 void distributePartitions(const Context& context, std::vector<NodeColumns>& partitions);

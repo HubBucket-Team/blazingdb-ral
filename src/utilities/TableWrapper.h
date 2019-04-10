@@ -13,7 +13,7 @@ class TableWrapper {
 public:
     TableWrapper(const std::vector<gdf_column_cpp>& columns);
 
-    ~TableWrapper();
+    TableWrapper(const std::vector<gdf_column_cpp>& columns, const std::vector<int>& colIndices);
 
 protected:
     TableWrapper(TableWrapper&&) = delete;
@@ -30,8 +30,7 @@ public:
     gdf_size_type getQuantity();
 
 private:
-    gdf_size_type size_;
-    gdf_column** columns_;
+    std::vector<gdf_column*> columns_;
 };
 
 } // namespace utilities

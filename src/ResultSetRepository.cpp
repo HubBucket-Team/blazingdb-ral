@@ -77,10 +77,10 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 			new_gdf_column->null_count = frame.get_column(i).null_count();
 			new_gdf_column->data = (void * ) new_strings;
 			new_gdf_column->dtype = frame.get_column(i).dtype();
+			new_gdf_column->col_name = const_cast<char*>(frame.get_column(i).name().c_str());
 
 			gdf_column_cpp string_column;
 			string_column.create_gdf_column(new_gdf_column);
-			string_column.set_name(frame.get_column(i).name());
 			string_column.get_gdf_column()->dtype = GDF_STRING; //TODO create_gdf_column no soporta GDF_STRING porque type_dispatcher tampoco lo soporta
 																//esto significa que allocated_size_data tecnicamente esta incorrecto
 			frame.set_column(i,string_column);

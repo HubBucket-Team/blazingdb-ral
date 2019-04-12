@@ -333,9 +333,9 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
         std::basic_string<int8_t> valid;
 
         if(result.result_frame.get_columns()[0][i].dtype() == GDF_STRING){
-          NVCategory* category =  static_cast<NVCategory *>(result.result_frame.get_columns()[0][i].get_gdf_column()->dtype_info.category);
           NVStrings* strings = static_cast<NVStrings *> (result.result_frame.get_columns()[0][i].get_gdf_column()->data);
-          strings->create_ipc_transfer(ipc);
+          if(result.result_frame.get_columns()[0][i].size() > 0)
+            strings->create_ipc_transfer(ipc);
           dtype_info = gdf_dto::gdf_dtype_extra_info {
                 .time_unit = (gdf_dto::gdf_time_unit)0,
             };
@@ -348,9 +348,9 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
               .null_count = result.result_frame.get_columns()[0][i].null_count(),
               .dtype_info = dtype_info,
               // custrings data
-              .custrings_views = libgdf::ConvertCudaIpcMemHandler(ipc.hstrs),
+              .custrings_views = ipc.count > 0 ? libgdf::ConvertCudaIpcMemHandler(ipc.hstrs) : std::basic_string<int8_t>(),
               .custrings_viewscount = ipc.count,
-              .custrings_membuffer = libgdf::ConvertCudaIpcMemHandler(ipc.hmem),
+              .custrings_membuffer = ipc.count > 0 ? libgdf::ConvertCudaIpcMemHandler(ipc.hmem) : std::basic_string<int8_t>(),
               .custrings_membuffersize = ipc.size,
               .custrings_baseptr = reinterpret_cast<unsigned long>(ipc.base_address)
             };

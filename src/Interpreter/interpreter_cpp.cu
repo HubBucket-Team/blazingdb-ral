@@ -64,7 +64,7 @@ std::vector<column_index_type> & left_inputs = { 0, 5, 5, 1 ,5},
  std::vector<column_index_type> & final_output_positions = { 3 , 4 }
 
  std::vector<gdf_binary_operator> & operators = { GDF_ADD, GDF_MULT, GDF_ADD, GDF_INVALID_BINARY, GDF_ADD}
-		std::vector<gdf_unary_operator> & unary_operators = { GDF_INVALID_UNARY,GDF_INVALID_UNARY,GDF_INVALID_UNARY,GDF_SIN,GDF_INVALID_UNARY  }
+		std::vector<gdf_unary_operator> & unary_operators = { BLZ_INVALID_UNARY,BLZ_INVALID_UNARY,BLZ_INVALID_UNARY,GDF_SIN,BLZ_INVALID_UNARY  }
 
  		std::vector<gdf_scalar> & left_scalars = { junk, junk, junk, junk, junk }
 		std::vector<gdf_scalar> & right_scalars = {junk, junk ,junk , 2.33, junk }

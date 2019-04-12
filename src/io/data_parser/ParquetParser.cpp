@@ -106,12 +106,20 @@ void parquet_parser::parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> f
 	std::vector<std::size_t> row_group_ind(num_row_groups); // check, include all row groups
     std::iota(row_group_ind.begin(), row_group_ind.end(), 0);
 
-	auto n_cols = column_names.size();
+	size_t n_cols = 0;
+	for (size_t index =0; index < include_columns.size(); index++) {
+		if (include_columns[index]){
+			n_cols++;
+		}
+	}
 	gdf_columns_out.resize(n_cols);
-
+	size_t index =0;
 	for (size_t i = 0; i < dtypes.size(); i++) {
-		auto dtype = dtypes[i];
-		gdf_columns_out[i].create_gdf_column(dtype, 0U, nullptr, 0U, column_names[i]);
+		if (include_columns[i]){
+			auto dtype = dtypes[i];
+			gdf_columns_out[index].create_gdf_column(dtype, 0U, nullptr, 0U, column_names[i]);
+			index++;
+		}
 	}
 }
 

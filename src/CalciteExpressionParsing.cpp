@@ -196,13 +196,13 @@ bool is_comparison_operation(gdf_binary_operator operation){
 }
 
 bool is_trig_operation(gdf_unary_operator operation){
-	return (operation == GDF_SIN ||
-			operation == GDF_COS ||
-			operation == GDF_ASIN||
-			operation == GDF_ACOS ||
-			operation == GDF_TAN ||
-			operation == GDF_COTAN ||
-			operation == GDF_ATAN
+	return (operation == BLZ_SIN ||
+			operation == BLZ_COS ||
+			operation == BLZ_ASIN||
+			operation == BLZ_ACOS ||
+			operation == BLZ_TAN ||
+			operation == BLZ_COTAN ||
+			operation == BLZ_ATAN
 	);
 }
 
@@ -225,7 +225,7 @@ gdf_dtype get_signed_type_from_unsigned(gdf_dtype type){
 gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_unary_operator operation){
 	if(is_date_type(input_left_type)){
 		return GDF_INT16;
-	} else if (is_trig_operation(operation) || operation == GDF_LOG || operation == GDF_LN){
+	} else if (is_trig_operation(operation) || operation == BLZ_LOG || operation == BLZ_LN){
 		if (input_left_type == GDF_FLOAT32 || input_left_type == GDF_FLOAT64){
 			return input_left_type;
 		} else {
@@ -554,24 +554,24 @@ gdf_agg_op get_aggregation_operation(std::string operator_string){
 }
 
 static std::map<std::string, gdf_unary_operator> gdf_unary_operator_map = {
-	{"NOT", GDF_NOT},
-	{"SIN", GDF_SIN},
-	{"ASIN", GDF_ASIN},
-	{"COS", GDF_COS},
-	{"ACOS", GDF_ACOS},
-	{"TAN", GDF_TAN},
-	{"ATAN", GDF_ATAN},
-	{"BL_FLOUR", GDF_FLOOR},
-	{"CEIL", GDF_CEIL},
-	{"ABS", GDF_ABS},
-	{"LOG10", GDF_LOG},
-	{"LN", GDF_LN},
-	{"BL_YEAR", GDF_YEAR},
-	{"BL_MONTH", GDF_MONTH},
-	{"BL_DAY", GDF_DAY},
-	{"BL_HOUR", GDF_HOUR},
-	{"BL_MINUTE", GDF_MINUTE},
-	{"BL_SECOND", GDF_SECOND}
+	{"NOT", BLZ_NOT},
+	{"SIN", BLZ_SIN},
+	{"ASIN", BLZ_ASIN},
+	{"COS", BLZ_COS},
+	{"ACOS", BLZ_ACOS},
+	{"TAN", BLZ_TAN},
+	{"ATAN", BLZ_ATAN},
+	{"BL_FLOUR", BLZ_FLOOR},
+	{"CEIL", BLZ_CEIL},
+	{"ABS", BLZ_ABS},
+	{"LOG10", BLZ_LOG},
+	{"LN", BLZ_LN},
+	{"BL_YEAR", BLZ_YEAR},
+	{"BL_MONTH", BLZ_MONTH},
+	{"BL_DAY", BLZ_DAY},
+	{"BL_HOUR", BLZ_HOUR},
+	{"BL_MINUTE", BLZ_MINUTE},
+	{"BL_SECOND", BLZ_SECOND}
 };
 
 
@@ -875,6 +875,7 @@ std::vector<std::string> get_expressions_from_expression_list(std::string & comb
 	StringUtil::findAndReplaceAll(combined_expression,"EXTRACT(FLAG(DAY), ","BL_DAY(");
 	StringUtil::findAndReplaceAll(combined_expression,"FLOOR(","BL_FLOUR(");
 
+
 	std::vector<std::string> expressions;
 
 	int curInd = 0;
@@ -922,6 +923,25 @@ std::vector<std::string> get_expressions_from_expression_list(std::string & comb
 		else
 			expressions.push_back(exp);
 	}
+
+	static const std::regex re{R""(CASE\(IS NOT NULL\((\W\(.+?\)|.+)\), \1, (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
+	static const std::regex count_re{R""(COUNT\(DISTINCT (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
+
+	for (int i = 0; i < expressions.size(); i++){
+		expressions[i] = std::regex_replace(expressions[i], re, "COALESCE($1, $2)");
+		expressions[i] = std::regex_replace(expressions[i], count_re, "COUNT_DISTINCT($1)");
+
+		StringUtil::findAndReplaceAll(expressions[i]," NOT NULL","");
+		StringUtil::findAndReplaceAll(expressions[i],"):DOUBLE","");
+		StringUtil::findAndReplaceAll(expressions[i],"CAST(","");
+		StringUtil::findAndReplaceAll(expressions[i],"EXTRACT(FLAG(YEAR), ","BL_YEAR(");
+		StringUtil::findAndReplaceAll(expressions[i],"EXTRACT(FLAG(MONTH), ","BL_MONTH(");
+		StringUtil::findAndReplaceAll(expressions[i],"EXTRACT(FLAG(DAY), ","BL_DAY(");
+		StringUtil::findAndReplaceAll(expressions[i],"FLOOR(","BL_FLOUR(");
+	}
+
+	
+
 
 	return expressions;
 }

@@ -112,7 +112,7 @@ TEST_F(EvaluateQueryTest, TEST_00)
     std::vector<column_index_type> final_output_positions = {3, 4};
 
     std::vector<gdf_binary_operator> operators = {GDF_ADD, GDF_MUL, GDF_ADD, GDF_ADD};
-    std::vector<gdf_unary_operator> unary_operators = {GDF_INVALID_UNARY, GDF_INVALID_UNARY, GDF_INVALID_UNARY, GDF_INVALID_UNARY};
+    std::vector<gdf_unary_operator> unary_operators = {BLZ_INVALID_UNARY, BLZ_INVALID_UNARY, BLZ_INVALID_UNARY, BLZ_INVALID_UNARY};
 
     using I32 = gdf::library::GdfEnumType<GDF_INT32>;
 
@@ -205,7 +205,7 @@ TEST_F(EvaluateQueryTest, TEST_FLOATS)
     std::vector<column_index_type> final_output_positions = {3, 4};
 
     std::vector<gdf_binary_operator> operators = std::initializer_list<gdf_binary_operator>{GDF_MUL, GDF_ADD};
-    std::vector<gdf_unary_operator> unary_operators = std::initializer_list<gdf_unary_operator>{GDF_INVALID_UNARY, GDF_INVALID_UNARY};
+    std::vector<gdf_unary_operator> unary_operators = std::initializer_list<gdf_unary_operator>{BLZ_INVALID_UNARY, BLZ_INVALID_UNARY};
 
     using I32 = gdf::library::GdfEnumType<GDF_INT32>;
 
@@ -291,7 +291,7 @@ TEST_F(EvaluateQueryTest, TEST_SCALAR_ADD)
     std::vector<column_index_type> final_output_positions = {3};
 
     std::vector<gdf_binary_operator> operators = std::initializer_list<gdf_binary_operator>{GDF_ADD};
-    std::vector<gdf_unary_operator> unary_operators = std::initializer_list<gdf_unary_operator>{GDF_INVALID_UNARY};
+    std::vector<gdf_unary_operator> unary_operators = std::initializer_list<gdf_unary_operator>{BLZ_INVALID_UNARY};
 
     using I32 = gdf::library::GdfEnumType<GDF_INT32>;
 
@@ -378,7 +378,7 @@ TEST_F(EvaluateQueryTest, TEST_01_Unary_Operators)
     std::vector<column_index_type> final_output_positions = {3, 4};
 
     std::vector<gdf_binary_operator> operators = {GDF_INVALID_BINARY, GDF_INVALID_BINARY};
-    std::vector<gdf_unary_operator> unary_operators = {GDF_FLOOR, GDF_SIN};
+    std::vector<gdf_unary_operator> unary_operators = {BLZ_FLOOR, BLZ_SIN};
 
     using I32 = gdf::library::GdfEnumType<GDF_INT32>;
 
@@ -469,7 +469,7 @@ TEST_F(EvaluateQueryTest, TEST_02)
     std::vector<column_index_type> final_output_positions = {3, 4};
     // + sin $1 2.33
     std::vector<gdf_binary_operator> operators = {GDF_ADD, GDF_MUL, GDF_ADD, GDF_INVALID_BINARY, GDF_ADD};
-    std::vector<gdf_unary_operator> unary_operators = { GDF_INVALID_UNARY,GDF_INVALID_UNARY,GDF_INVALID_UNARY,GDF_SIN,GDF_INVALID_UNARY };
+    std::vector<gdf_unary_operator> unary_operators = { BLZ_INVALID_UNARY,BLZ_INVALID_UNARY,BLZ_INVALID_UNARY,GDF_SIN,BLZ_INVALID_UNARY };
 
     using FP32 = gdf::library::GdfEnumType<GDF_FLOAT32>;
 
@@ -556,7 +556,7 @@ TEST_F(EvaluateQueryTest, TEST_02)
     std::vector<column_index_type> final_output_positions = {3, 4};
 
     std::vector<gdf_binary_operator> operators = {GDF_INVALID_BINARY, GDF_INVALID_BINARY, GDF_ADD};
-    std::vector<gdf_unary_operator> unary_operators = {GDF_SUM, GDF_COUNT, GDF_INVALID_UNARY};
+    std::vector<gdf_unary_operator> unary_operators = {GDF_SUM, GDF_COUNT, BLZ_INVALID_UNARY};
 
     using I32 = gdf::library::GdfEnumType<GDF_INT32>;
 

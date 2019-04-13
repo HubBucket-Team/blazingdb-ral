@@ -861,8 +861,8 @@ std::vector<std::string> get_expressions_from_expression_list(std::string & comb
 
 	//todo:
 	//combined_expression
-	static const std::regex re{R""(CASE\(IS NOT NULL\((\W\(.+?\)|.+)\), \1, (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
-	static const std::regex count_re{R""(COUNT\(DISTINCT (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
+    static const std::regex re{R""(CASE\(IS NOT NULL\((\W\(.+?\)|.+)\), \1, (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
+    static const std::regex count_re{R""(COUNT\(DISTINCT (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
 
 	combined_expression = std::regex_replace(combined_expression, re, "COALESCE($1, $2)");
 	combined_expression = std::regex_replace(combined_expression, count_re, "COUNT_DISTINCT($1)");
@@ -923,9 +923,6 @@ std::vector<std::string> get_expressions_from_expression_list(std::string & comb
 		else
 			expressions.push_back(exp);
 	}
-
-	static const std::regex re{R""(CASE\(IS NOT NULL\((\W\(.+?\)|.+)\), \1, (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
-	static const std::regex count_re{R""(COUNT\(DISTINCT (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
 
 	for (int i = 0; i < expressions.size(); i++){
 		expressions[i] = std::regex_replace(expressions[i], re, "COALESCE($1, $2)");

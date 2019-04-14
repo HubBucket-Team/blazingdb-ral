@@ -147,8 +147,6 @@ else()
 endif()
 
 # Print the project summary
-#TODO cmake bug, it says blazingdb-protocol was not deteected but everything seems
-#fine (cmake test fail with link issues with pthreads_create)
-#feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)
+feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)
 
 #END MAIN #

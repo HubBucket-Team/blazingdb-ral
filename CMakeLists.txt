@@ -43,7 +43,6 @@ include(ConfigureLibGDF)
 include(ConfigureBlazingDBProtocol)
 include(ConfigureBlazingDBIO)
 include(ConfigureGoogleBenchmark)
-include(ConfigureNVStrings)
 
 find_package(Threads)
 

@@ -11,6 +11,8 @@
 #include "gdf_wrapper/gdf_wrapper.cuh"
 #include "DataFrame.h"
 
+void parseJoinConditionToColumnIndices(const std::string& condition, std::vector<int>& columnIndices);
+
 void evaluate_join(std::string condition,
 		std::string join_type,
 		blazing_frame data_frame,

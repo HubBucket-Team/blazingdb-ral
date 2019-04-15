@@ -108,11 +108,13 @@ namespace distribution {
  * @param[in] context 'blazingdb::communication::Context' belongs to communication library. It contains
  * information related to the current query.
  * @param[in] table represents the input columns (table) used in the 'join' operation. The table will be deleted.
+ * @param[in] columnIndices indices of the columns to be joined.
  * @return std::vector<NodeColumns> represents an array of NodeColumn (@see NodeColumn), which contains
  * a node with their corresponding partition table.
  */
 std::vector<NodeColumns> generateJoinPartitions(const Context& context,
-                                                std::vector<gdf_column_cpp>& table);
+                                                std::vector<gdf_column_cpp>& table,
+                                                std::vector<int>& columnIndices);
 
 } // namespace distribution
 } // namespace ral

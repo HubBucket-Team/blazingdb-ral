@@ -1013,7 +1013,8 @@ std::vector<gdf_column_cpp> generateOutputColumns(gdf_size_type column_quantity,
 }
 
 std::vector<NodeColumns> generateJoinPartitions(const Context& context,
-                                                std::vector<gdf_column_cpp>& table) {
+                                                std::vector<gdf_column_cpp>& table,
+                                                std::vector<int>& columnIndices) {
     assert(table.size() != 0);
     assert(table[0].size() != 0);
 
@@ -1023,10 +1024,6 @@ std::vector<NodeColumns> generateJoinPartitions(const Context& context,
 
     // Create input wrapper
     ral::utilities::TableWrapper input_table_wrapper(table);
-
-    // Generate column vector to hash
-    std::vector<gdf_size_type> columns_hash(input_column_quantity);
-    std::iota(columns_hash.begin(), columns_hash.end(), 0);
 
     // Generate partition offset vector
     gdf_size_type number_nodes = context.getTotalNodes();
@@ -1041,9 +1038,9 @@ std::vector<NodeColumns> generateJoinPartitions(const Context& context,
     // Execute operation
     auto error = gdf_hash_partition(input_table_wrapper.getQuantity(),
                                     input_table_wrapper.getColumns(),
-                                    columns_hash.data(),
-                                    columns_hash.size(),
-                                    partition_offset.size(),
+                                    columnIndices.data(),
+                                    columnIndices.size(),
+                                    number_nodes,
                                     output_table_wrapper.getColumns(),
                                     partition_offset.data(),
                                     gdf_hash_func::GDF_HASH_MURMUR3);
@@ -1075,10 +1072,6 @@ std::vector<NodeColumns> generateJoinPartitions(const Context& context,
         // Populate data
         std::vector<gdf_column_cpp> columns;
         for (gdf_size_type i = 0; i < (gdf_size_type) output_columns.size(); ++i) {
-            if (length == 0) {
-                columns.emplace_back(gdf_column_cpp());
-                continue;
-            }
             columns.emplace_back(output_columns[i].slice(init, length));
         }
         result.emplace_back(*nodes[k], std::move(columns));

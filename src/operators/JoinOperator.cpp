@@ -1,4 +1,5 @@
 #include <future>
+#include <algorithm>
 #include "operators/JoinOperator.h"
 #include "CalciteInterpreter.h"
 #include "CodeTimer.h"
@@ -60,9 +61,9 @@ public:
     blazing_frame operator()(blazing_frame& input, const std::string& query_part) override;
 
 protected:
-    blazing_frame process_distribution(blazing_frame& frame);
+    blazing_frame process_distribution(blazing_frame& frame, const std::string& query);
 
-    std::vector<gdf_column_cpp> process_distribution_table(std::vector<gdf_column_cpp>& table);
+    std::vector<gdf_column_cpp> process_distribution_table(std::vector<gdf_column_cpp>& table, std::vector<int>& columnIndices);
 
     std::vector<gdf_column_cpp> concat_columns(std::vector<NodeColumns>& local_partition,
                                                std::vector<NodeColumns>& remote_partition);
@@ -156,7 +157,7 @@ DistributedJoinOperator::DistributedJoinOperator(const Context* context)
 blazing_frame DistributedJoinOperator::operator()(blazing_frame& frame, const std::string& query) {
     // Execute distribution
     timer_.reset();
-    auto distributed_frame = process_distribution(frame);
+    auto distributed_frame = process_distribution(frame, query);
     Library::Logging::Logger().logInfo("-> Join sub block 0 took " + std::to_string(timer_.getDuration()) + " ms");
 
     // Evaluate join
@@ -173,12 +174,12 @@ blazing_frame DistributedJoinOperator::operator()(blazing_frame& frame, const st
     return distributed_frame;
 }
 
-std::vector<gdf_column_cpp> DistributedJoinOperator::process_distribution_table(std::vector<gdf_column_cpp>& table) {
+std::vector<gdf_column_cpp> DistributedJoinOperator::process_distribution_table(std::vector<gdf_column_cpp>& table, std::vector<int>& columnIndices) {
     auto future_node_columns = std::async(std::launch::async,
                                           ral::distribution::collectPartition,
                                           std::ref(*context_));
 
-    auto local_node_columns = ral::distribution::generateJoinPartitions(*context_, table);
+    auto local_node_columns = ral::distribution::generateJoinPartitions(*context_, table, columnIndices);
 
     distributePartitions(*context_, local_node_columns);
 
@@ -187,11 +188,23 @@ std::vector<gdf_column_cpp> DistributedJoinOperator::process_distribution_table(
     return concat_columns(local_node_columns, remote_node_columns);
 }
 
-blazing_frame DistributedJoinOperator::process_distribution(blazing_frame& frame) {
-    blazing_frame join_frame;
+blazing_frame DistributedJoinOperator::process_distribution(blazing_frame& frame, const std::string& query) {
+    std::vector<int> globalColumnIndices;
+    parseJoinConditionToColumnIndices(get_named_expression(query, "condition"), globalColumnIndices);
 
+    int processedColumns = 0;
+    blazing_frame join_frame;
     for (auto& table : frame.get_columns()) {
-        join_frame.add_table(std::move(process_distribution_table(table)));
+        // Get col indices relative to a table, similar to blazing_frame::get_column
+        std::vector<int> localIndices;
+        std::for_each(globalColumnIndices.begin(), globalColumnIndices.end(), [&](int i){
+            if(i >= processedColumns && i < processedColumns + table.size()){
+                localIndices.push_back(i - processedColumns);
+            }
+        } );
+        processedColumns += table.size();
+
+        join_frame.add_table(std::move(process_distribution_table(table, localIndices)));
     }
 
     return join_frame;

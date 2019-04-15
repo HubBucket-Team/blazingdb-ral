@@ -72,7 +72,9 @@ gdf_column_cpp::gdf_column_cpp(gdf_column_cpp& col)
 
 void gdf_column_cpp::set_name(std::string name){
 	this->column_name = name;
-	this->column->col_name = const_cast<char*>(this->column_name.c_str());
+    if(this->column){
+	    this->column->col_name = const_cast<char*>(this->column_name.c_str());
+    }
 }
 
 void gdf_column_cpp::set_name_cpp_only(std::string name){

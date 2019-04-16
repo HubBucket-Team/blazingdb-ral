@@ -2,6 +2,7 @@
 
 #include <blazingdb/io/Library/Logging/Logger.h>
 #include <blazingdb/io/Util/StringUtil.h>
+#include "stream_compaction.hpp"
 
 #include <algorithm>
 #include <thread>
@@ -1151,30 +1152,35 @@ void process_filter(blazing_frame & input, std::string query_part){
 	// CheckCudaErrors(cudaMemcpy(index_col.get_gdf_column()->data, idx.data(), idx.size() * sizeof(int32_t), cudaMemcpyHostToDevice));
 	Library::Logging::Logger().logInfo("-> Filter sub block 5 took " + std::to_string(timer.getDuration()) + " ms");
 
-	gdf_column_cpp temp_idx;
-	temp_idx.create_gdf_column(GDF_INT32, input.get_column(0).size(), nullptr, get_width_dtype(GDF_INT32));
 	
 	timer.reset();
-	CUDF_CALL( gdf_apply_boolean_mask( index_col.get_gdf_column(), stencil.get_gdf_column(), temp_idx.get_gdf_column())	);
+	//TODO: hacky fix until we have GDF_BOOL in interops
+	  stencil.get_gdf_column()->dtype = GDF_BOOL;
+	gdf_column indices = cudf::apply_boolean_mask(index_col.get_gdf_column(),
+	                                        stencil.get_gdf_column());
+	stencil.get_gdf_column()->dtype = GDF_INT8;
+
+	//CUDF_CALL( gdf_apply_boolean_mask( index_col.get_gdf_column(), stencil.get_gdf_column(), temp_idx.get_gdf_column())	);
 	Library::Logging::Logger().logInfo("-> Filter sub block 6 took " + std::to_string(timer.getDuration()) + " ms");
 
 	timer.reset();
 	gdf_column_cpp materialize_temp;
-	materialize_temp.create_gdf_column(input.get_column(0).dtype(),temp_idx.size(),nullptr,get_width_dtype(max_temp_type), "");
+	materialize_temp.create_gdf_column(input.get_column(0).dtype(),indices.size,nullptr,get_width_dtype(max_temp_type), "");
 	for(int i = 0; i < input.get_width();i++){
 		materialize_temp.set_dtype(input.get_column(i).dtype());
 
 		materialize_column(
 				input.get_column(i).get_gdf_column(),
 				materialize_temp.get_gdf_column(),
-				temp_idx.get_gdf_column()
+				&indices
 		);
 
 		materialize_temp.update_null_count();
 		input.set_column(i,materialize_temp.clone(input.get_column(i).name()));
+
 	}
 	Library::Logging::Logger().logInfo("-> Filter sub block 7 took " + std::to_string(timer.getDuration()) + " ms");
-
+	CUDF_CALL(gdf_column_free(&indices));
 	//free_gdf_column(&stencil);
 	//free_gdf_column(&temp);
 }

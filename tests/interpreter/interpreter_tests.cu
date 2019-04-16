@@ -469,7 +469,7 @@ TEST_F(EvaluateQueryTest, TEST_02)
     std::vector<column_index_type> final_output_positions = {3, 4};
     // + sin $1 2.33
     std::vector<gdf_binary_operator> operators = {GDF_ADD, GDF_MUL, GDF_ADD, GDF_INVALID_BINARY, GDF_ADD};
-    std::vector<gdf_unary_operator> unary_operators = { BLZ_INVALID_UNARY,BLZ_INVALID_UNARY,BLZ_INVALID_UNARY,GDF_SIN,BLZ_INVALID_UNARY };
+    std::vector<gdf_unary_operator> unary_operators = { BLZ_INVALID_UNARY,BLZ_INVALID_UNARY,BLZ_INVALID_UNARY,BLZ_SIN,BLZ_INVALID_UNARY };
 
     using FP32 = gdf::library::GdfEnumType<GDF_FLOAT32>;
 

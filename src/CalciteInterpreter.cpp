@@ -19,6 +19,8 @@
 #include "Traits/RuntimeTraits.h"
 #include "cuDF/Allocator.h"
 #include "Interpreter/interpreter_cpp.h"
+#include <copying.hpp>
+#include <types.hpp>
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 const std::string LOGICAL_UNION_TEXT = "LogicalUnion";
@@ -1093,18 +1095,9 @@ void process_filter(blazing_frame & input, std::string query_part){
 	gdf_column_cpp stencil;
 	stencil.create_gdf_column(GDF_INT8,input.get_column(0).size(),nullptr,1, "");
 
-	gdf_dtype output_type_junk; //just gets thrown away
-	gdf_dtype max_temp_type = GDF_INT8;
-	for(int i = 0; i < input.get_width(); i++){
-		if(get_width_dtype(input.get_column(i).dtype()) > get_width_dtype(max_temp_type)){
-			max_temp_type = input.get_column(i).dtype();
-		}
-	}
-
 	Library::Logging::Logger().logInfo("-> Filter sub block 1 took " + std::to_string(timer.getDuration()) + " ms");
 	timer.reset();
-	gdf_dtype output_type = get_output_type_expression(&input, &max_temp_type, get_condition_expression(query_part));
-
+	
 	Library::Logging::Logger().logInfo("-> Filter sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
 
 	timer.reset();
@@ -1113,35 +1106,6 @@ void process_filter(blazing_frame & input, std::string query_part){
 	// timer.reset();
 	evaluate_expression(input, conditional_expression, stencil);
 
-	// Library::Logging::Logger().logInfo("-> Filter sub block 4 took " + std::to_string(timer.getDuration()) + " ms");
-
-	//apply filter to all the columns
-	// for(int i = 0; i < input.get_width(); i++){
-	// 	temp.create_gdf_column(input.get_column(i).dtype(), input.get_column(i).size(), nullptr, get_width_dtype(input.get_column(i).dtype()));
-	// 	//temp.set_dtype(input.get_column(i).dtype());
-
-	// 	//			cudaPointerAttributes attributes;
-	// 	//			cudaError_t err2 = cudaPointerGetAttributes ( &attributes, (void *) temp.data );
-	// 	//			err2 = cudaPointerGetAttributes ( &attributes, (void *) input.get_column(i)->data );
-	// 	//			err2 = cudaPointerGetAttributes ( &attributes, (void *) stencil.data );
-
-
-	// 	//just for testing
-	// 	//			cudaMalloc((void **)&(temp.data),1000);
-	// 	//			cudaMalloc((void **)&(temp.valid),1000);
-
-		// 	err = gpu_apply_stencil(
-	// 			input.get_column(i).get_gdf_column(),
-	// 			stencil.get_gdf_column(),
-	// 			temp.get_gdf_column()
-	// 	);
-	// 	if(err != GDF_SUCCESS){
-	// 		return err;
-	// 	}
-
-	// 	input.set_column(i,temp.clone());
-	// }
-	
 	timer.reset();
 	gdf_column_cpp index_col;
 	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
@@ -1159,20 +1123,26 @@ void process_filter(blazing_frame & input, std::string query_part){
 	Library::Logging::Logger().logInfo("-> Filter sub block 6 took " + std::to_string(timer.getDuration()) + " ms");
 
 	timer.reset();
-	gdf_column_cpp materialize_temp;
-	materialize_temp.create_gdf_column(input.get_column(0).dtype(),temp_idx.size(),nullptr,get_width_dtype(max_temp_type), "");
+
+	gdf_size_type num_rows = temp_idx.get_gdf_column()->size;
+	std::vector<gdf_column*>  source_table_ptrs(input.get_width());
+	std::vector<gdf_column*>  destination_table_ptrs(input.get_width());
+	std::vector<gdf_column_cpp>  new_input_columns(input.get_width());
 	for(int i = 0; i < input.get_width();i++){
-		materialize_temp.set_dtype(input.get_column(i).dtype());
+		source_table_ptrs[i] = input.get_column(i).get_gdf_column();
 
-		materialize_column(
-				input.get_column(i).get_gdf_column(),
-				materialize_temp.get_gdf_column(),
-				temp_idx.get_gdf_column()
-		);
-
-		materialize_temp.update_null_count();
-		input.set_column(i,materialize_temp.clone(input.get_column(i).name()));
+		new_input_columns[i].create_gdf_column(input.get_column(i).dtype(),num_rows, nullptr, get_width_dtype(input.get_column(i).dtype()), input.get_column(i).name());
+		destination_table_ptrs[i] = new_input_columns[i].get_gdf_column();
 	}
+	cudf::table source_table(source_table_ptrs.data(), input.get_width());
+	cudf::table destination_table(destination_table_ptrs.data(), input.get_width());
+	cudf::gather(&source_table, static_cast<gdf_index_type *> (temp_idx.get_gdf_column()->data),
+                 &destination_table);
+
+	for(int i = 0; i < input.get_width();i++){
+		input.set_column(i,new_input_columns[i]);
+	}
+
 	Library::Logging::Logger().logInfo("-> Filter sub block 7 took " + std::to_string(timer.getDuration()) + " ms");
 
 	//free_gdf_column(&stencil);

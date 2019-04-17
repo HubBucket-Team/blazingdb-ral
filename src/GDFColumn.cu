@@ -237,7 +237,7 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     this->column_token = 0;
 
     gdf_valid_type * valid_device = allocate_valid();
-    this->allocated_size_data = (width_per_value * num_values); 
+    this->allocated_size_data = (width_per_value * num_values);
 
     cuDF::Allocator::allocate((void**)&data, allocated_size_data);
 
@@ -254,7 +254,7 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     if(host_valids != nullptr){
         this->update_null_count();
     }
-    
+
     GDFRefCounter::getInstance()->register_column(this->column);
 }
 
@@ -274,13 +274,13 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     this->column_token = 0;
 
     gdf_valid_type * valid_device = allocate_valid();
-    this->allocated_size_data = (width_per_value * num_values); 
+    this->allocated_size_data = (width_per_value * num_values);
 
     cuDF::Allocator::allocate((void**)&data, allocated_size_data);
 
     gdf_column_view(this->column, (void *) data, valid_device, num_values, type);
     this->column->dtype_info.category = nullptr;
-    
+
     this->set_name(column_name);
     if(input_data != nullptr){
         CheckCudaErrors(cudaMemcpy(data, input_data, num_values * width_per_value, cudaMemcpyHostToDevice));
@@ -303,8 +303,11 @@ void gdf_column_cpp::create_gdf_column(gdf_column * column){
 	}
     this->is_ipc_column = false;
     this->column_token = 0;
-    if (column->col_name)
-    	this->column_name = std::string(column->col_name);
+    if (column->col_name){
+        std::string tempName(column->col_name);
+        free(column->col_name);
+    	this->set_name(tempName);
+    }
 
     GDFRefCounter::getInstance()->register_column(this->column);
 }

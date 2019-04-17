@@ -24,6 +24,9 @@
 #include <GDFColumn.cuh>
 #include <GDFCounter.cuh>
 
+#include <cudf.h>
+#include "../Utils.cuh"
+#include "ParserUtils.h"
 
 namespace ral {
 namespace io {
@@ -38,89 +41,70 @@ parquet_parser::~parquet_parser() {
 }
 
 void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file, std::vector<gdf_column_cpp> & columns) {
-	size_t num_row_groups;
-	size_t num_cols;
-	std::vector< gdf_dtype> dtypes;
-	std::vector< std::string> column_names;
+	// size_t num_row_groups;
+	// size_t num_cols;
+	// std::vector< gdf_dtype> dtypes;
+	// std::vector< std::string> column_names;
 
  	std::vector<bool> 	include_columns;
-	gdf_error error = gdf::parquet::read_schema(file, num_row_groups, num_cols, dtypes, column_names, include_columns);
+	// gdf_error error = gdf::parquet::read_schema(file, num_row_groups, num_cols, dtypes, column_names, include_columns);
 	this->parse(file, columns, include_columns);
 }
 
 void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 			std::vector<gdf_column_cpp> & gdf_columns_out,
 			std::vector<bool> include_columns){
+	// NOTE: Not sure but seems HOST_BUFFER is not supported
+	int64_t num_bytes;
+	file->GetSize(&num_bytes);
 
-	gdf_error error;
-	size_t num_row_groups;
-	size_t num_cols;
-	std::vector<gdf_dtype> dtypes;
-	std::vector< std::string> column_names;
+	std::vector<uint8_t> byteData(num_bytes);
+	CUDF_CALL( read_file_into_buffer(file, num_bytes, byteData.data(), 100, 10) );
 
-	// TODO: The return value of this function is just a placeholder,
-	// doesn't return a meaningful value 
-	std::vector<bool> 	include_columns_test;
-	error = gdf::parquet::read_schema(file, num_row_groups, num_cols, dtypes, column_names, include_columns_test);
+	pq_read_arg readerArgs;
+	readerArgs.source_type = HOST_BUFFER;
+  readerArgs.source = reinterpret_cast<char*>(byteData.data());
+  readerArgs.buffer_size = byteData.size();
+  readerArgs.use_cols = nullptr;
+  // readerArgs.use_cols_len;
 
-	std::vector<std::size_t> column_indices;
-	for (size_t index =0; index < include_columns.size(); index++) {
-		if (include_columns[index]){
-			column_indices.push_back(index);	
-		}
+	CUDF_CALL( read_parquet(&readerArgs) );
+
+	gdf_columns_out.resize(readerArgs.num_cols_out);
+ 	for(size_t i = 0; i < gdf_columns_out.size(); i++){
+ 		gdf_columns_out[i].create_gdf_column(readerArgs.data[i]);
 	}
 
-	std::vector<std::size_t> row_group_ind(num_row_groups); // check, include all row groups
-    std::iota(row_group_ind.begin(), row_group_ind.end(), 0);
-
-    std::vector<gdf_column *> columns_out;
-
-	// TODO: Fix this error handling
-	error = gdf::parquet::read_parquet_by_ids(file, row_group_ind, column_indices, columns_out);
-	if (error != GDF_SUCCESS) {
-		throw std::runtime_error("In parquet_parser::parse: error in gdf::parquet::read_parquet_by_ids");
-	}
-	
-	auto n_cols = columns_out.size();
-	gdf_columns_out.resize(n_cols);
-
- 	for(size_t i = 0; i < n_cols; i++ ){
-	    gdf_column	*column = columns_out[i];
-		column->col_name = nullptr;
- 		gdf_columns_out[i].create_gdf_column(column);
-		gdf_columns_out[i].set_name(column_names[ column_indices[i] ]);
-	}
+	free(readerArgs.data);
+	free(readerArgs.index_col);
 }
 
 void parquet_parser::parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> file, std::vector<gdf_column_cpp> & gdf_columns_out)  {
-	size_t num_row_groups;
-	size_t num_cols;
-	std::vector<gdf_dtype> dtypes;
-	std::vector< std::string> column_names;
+	// NOTE: we are reading the whole file into memory, we should read the only needed data for the metada as in
+	// FileReaderContents::ParseMetaData() in file_reader_contents.cpp
+	// Not sure but seems HOST_BUFFER is not supported
+	int64_t num_bytes;
+	file->GetSize(&num_bytes);
 
-	// TODO: The return value of this function is just a placeholder,
-	// doesn't return a meaningful value 
-	std::vector<bool> 	include_columns;
-	gdf_error error = gdf::parquet::read_schema(file, num_row_groups, num_cols, dtypes, column_names, include_columns);
- 
-	std::vector<std::size_t> row_group_ind(num_row_groups); // check, include all row groups
-    std::iota(row_group_ind.begin(), row_group_ind.end(), 0);
+	std::vector<uint8_t> byteData(num_bytes);
+	CUDF_CALL( read_file_into_buffer(file, num_bytes, byteData.data(), 100, 10) );
 
-	size_t n_cols = 0;
-	for (size_t index =0; index < include_columns.size(); index++) {
-		if (include_columns[index]){
-			n_cols++;
-		}
+	pq_read_arg readerArgs;
+	readerArgs.source_type = HOST_BUFFER;
+  readerArgs.source = reinterpret_cast<char*>(byteData.data());
+  readerArgs.buffer_size = byteData.size();
+  readerArgs.use_cols = nullptr;
+  // readerArgs.use_cols_len;
+
+	CUDF_CALL( read_parquet_schema(&readerArgs) );
+
+	gdf_columns_out.resize(readerArgs.num_cols_out);
+ 	for(size_t i = 0; i < gdf_columns_out.size(); i++){
+ 		gdf_columns_out[i].create_gdf_column(readerArgs.data[i]);
 	}
-	gdf_columns_out.resize(n_cols);
-	size_t index =0;
-	for (size_t i = 0; i < dtypes.size(); i++) {
-		if (include_columns[i]){
-			auto dtype = dtypes[i];
-			gdf_columns_out[index].create_gdf_column(dtype, 0U, nullptr, 0U, column_names[i]);
-			index++;
-		}
-	}
+
+	free(readerArgs.data);
+	free(readerArgs.index_col);
 }
 
 } /* namespace io */

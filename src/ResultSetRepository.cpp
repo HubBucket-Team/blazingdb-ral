@@ -78,7 +78,8 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 
 			gdf_column * new_gdf_column = new gdf_column;
 			new_gdf_column->size = frame.get_column(i).size();
-			new_gdf_column->null_count = frame.get_column(i).null_count();
+			new_gdf_column->null_count = 0;
+			new_gdf_column->valid = nullptr;
 			new_gdf_column->data = (void * ) new_strings;
 			new_gdf_column->dtype = frame.get_column(i).dtype();
 			new_gdf_column->col_name = const_cast<char*>(frame.get_column(i).name().c_str());
@@ -144,8 +145,11 @@ void result_set_repository::free_result(connection_id_t connection, query_token_
 	for(size_t i = 0; i < output_frame.get_width(); i++){
 		if(output_frame.get_column(i).dtype() == GDF_STRING){
 			NVStrings::destroy(static_cast<NVStrings *>(output_frame.get_column(i).data()));
+			output_frame.get_column(i).get_gdf_column()->data = nullptr;
+			GDFRefCounter::getInstance()->free(output_frame.get_column(i).get_gdf_column());
 		} else if (output_frame.get_column(i).dtype() == GDF_STRING_CATEGORY){
 			NVCategory::destroy(static_cast<NVCategory *>(output_frame.get_column(i).dtype_info().category));
+			GDFRefCounter::getInstance()->free(output_frame.get_column(i).get_gdf_column());
 		}else{
 			GDFRefCounter::getInstance()->free(output_frame.get_column(i).get_gdf_column());
 		}

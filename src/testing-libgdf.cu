@@ -530,6 +530,19 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
       all_column_names.push_back(table_info.columnNames);
     }
 
+    // parse all columns to convert any NVStrings to NVCategory
+    for (int i = 0; i < input_tables.size(); i++){
+      for (int j = 0; j < input_tables[i].size(); j++){
+        if (input_tables[i][j].get_gdf_column()->dtype == GDF_STRING){
+          NVStrings* strs = static_cast<NVStrings*>(input_tables[i][j].get_gdf_column()->data);
+          NVCategory* category = NVCategory::create_from_strings(*strs);
+          NVStrings::destroy(strs);
+          input_tables[i][j].get_gdf_column()->data = nullptr;
+          input_tables[i][j].create_gdf_column(category, input_tables[i][j].size(), input_tables[i][j].name());
+        }
+      }
+    }
+
     // Execute query
     resultToken = evaluate_query(input_tables, table_names, all_column_names, requestPayload.statement, accessToken, {} );
   } catch (const std::exception& e) {

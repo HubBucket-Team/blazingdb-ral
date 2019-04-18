@@ -77,7 +77,7 @@ std::tuple<std::vector<std::vector<gdf_column_cpp>>,
         
         if((::gdf_dtype)column.dtype == GDF_STRING){
 
-          nvstrings_ipc_transfer ipc;
+          nvstrings_ipc_transfer ipc;  // NOTE: IPC handles will be closed when nvstrings_ipc_transfer goes out of scope
           ipc.hstrs = ConvertByteArray(column.custrings_views); // cudaIpcMemHandle_t
           ipc.count = column.custrings_viewscount; // unsigned int
           ipc.hmem = ConvertByteArray(column.custrings_membuffer); // cudaIpcMemHandle_t
@@ -86,8 +86,9 @@ std::tuple<std::vector<std::vector<gdf_column_cpp>>,
 
           NVStrings* strs = NVStrings::create_from_ipc(ipc);
           NVCategory* category = NVCategory::create_from_strings(*strs);
+          NVStrings::destroy(strs);
 
-          col.create_gdf_column_for_ipc(GDF_STRING_CATEGORY, nullptr, nullptr, column.size, column_name, category);
+          col.create_gdf_column(category, column.size, column_name);
         }
         else {
           // col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),(gdf_valid_type*)libgdf::CudaIpcMemHandlerFrom(column.valid),column.size,column_name);

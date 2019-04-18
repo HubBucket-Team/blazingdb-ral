@@ -185,7 +185,7 @@ gdf_valid_type * gdf_column_cpp::allocate_valid(){
 	return valid_device;
 }
 
-void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,gdf_valid_type * valid_data,size_t num_values,std::string column_name, NVCategory* category){
+void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,gdf_valid_type * valid_data,size_t num_values,std::string column_name){
     assert(type != GDF_invalid);
     decrement_counter(column);
 
@@ -206,19 +206,38 @@ void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,g
     this->column_token = 0;
     this->set_name(column_name);
 
-    if(type == GDF_STRING_CATEGORY){
-        column->dtype_info.category = (void*) category;
-
-        CheckCudaErrors( cudaMemcpy(
-            this->column->data,
-            static_cast<NVCategory *>(this->column->dtype_info.category)->values_cptr(),
-            sizeof(nv_category_index_type) * this->column->size,
-            cudaMemcpyDeviceToDevice) );
-    }
-
     FreeMemory::registerIPCPointer(column->data);
     FreeMemory::registerIPCPointer(column->valid);
     //Todo: deprecated? or need to register the nvstrings pointers?
+}
+
+void gdf_column_cpp::create_gdf_column(NVCategory* category, size_t num_values,std::string column_name){
+
+    decrement_counter(column);
+
+    //TODO crate column here
+    this->column = new gdf_column;
+    gdf_dtype type = GDF_STRING_CATEGORY;
+    gdf_column_view(this->column, nullptr, nullptr, num_values, type);
+    
+    this->column->dtype_info.category = (void*) category;
+
+    this->allocated_size_data = sizeof(nv_category_index_type) * this->column->size;
+    cuDF::Allocator::allocate((void**)&this->column->data, this->allocated_size_data);
+    CheckCudaErrors( cudaMemcpy(
+        this->column->data,
+        static_cast<NVCategory *>(this->column->dtype_info.category)->values_cptr(),
+        this->allocated_size_data,
+        cudaMemcpyDeviceToDevice) );
+    
+    this->column->valid = nullptr; // TODO: Nulls are not supported for strings
+    this->column->null_count = 0; // TODO: Nulls are not supported for strings
+
+    this->is_ipc_column = false;
+    this->column_token = 0;
+    this->set_name(column_name);
+
+    GDFRefCounter::getInstance()->register_column(this->column);
 }
 
 
@@ -293,11 +312,16 @@ void gdf_column_cpp::create_gdf_column(gdf_column * column){
     decrement_counter(this->column);
 
 	this->column = column;
-	int width_per_value;
-	gdf_error err = get_column_byte_width(column, &width_per_value);
+	
+    if (column->dtype != GDF_STRING){
+        int width_per_value;
+        gdf_error err = get_column_byte_width(column, &width_per_value);
 
-	//TODO: we are assuming they are not padding,
-	this->allocated_size_data = width_per_value * column->size;
+        //TODO: we are assuming they are not padding,
+        this->allocated_size_data = width_per_value * column->size;
+    } else {
+        this->allocated_size_data = 0; // TODO: do we care? what should be put there?
+    }
 	if(column->valid != nullptr){
         this->allocated_size_valid = gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(column->size)); //so allocations are supposed to be 64byte aligned
 	}

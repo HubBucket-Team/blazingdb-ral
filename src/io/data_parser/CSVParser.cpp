@@ -277,6 +277,7 @@ void csv_parser::parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	csv_read_arg raw_args{};
     copy_non_data_csv_args(args, raw_args);
     
+	raw_args.nrows=1;
 	CUDF_CALL(read_csv_arrow(&raw_args,file));
 
 	std::cout << "args.num_cols_out " << raw_args.num_cols_out << std::endl;

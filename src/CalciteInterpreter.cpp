@@ -1313,24 +1313,15 @@ query_token_t evaluate_query(
 			double duration = blazing_timer.getDuration();
 
 			//REMOVE any columns that were ipcd to put into the result set
-			std::set<gdf_column *> included_columns;
 			for(size_t index = 0; index < output_frame.get_size_columns(); index++){
 				gdf_column_cpp output_column = output_frame.get_column(index);
-				output_frame.set_column(index, output_column.clone(output_column.name()));
 				
-				// WSM IS THIS CORRECT, THIS IS PRIOR TO MERGE NEED TO LOOK INTO THIS
-				/*if(output_column.is_ipc() || included_columns.find(output_column.get_gdf_column()) != included_columns.end()){
-				output_frame.set_column(index,
-						output_column.clone(output_column.name()));
-				}else{
-					output_column.delete_set_name(output_column.name());
-				}*/
-				
-				
+				if(output_column.is_ipc()){
+					output_frame.set_column(index,
+							output_column.clone(output_column.name()));
+				}
 			}
 		
-
-
 			result_set_repository::get_instance().update_token(token, output_frame, duration);
 		}
 		catch(const std::exception& e)

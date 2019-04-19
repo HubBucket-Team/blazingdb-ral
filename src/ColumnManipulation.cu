@@ -77,37 +77,21 @@ __global__ void gather_bits(
 }
 
 void materialize_valid_ptrs(gdf_column * input, gdf_column * output, gdf_column * row_indices){
-	int grid_size, block_size;
+	
+	if (input->valid != nullptr && output->valid != nullptr){
+		int grid_size, block_size;
 
-	CheckCudaErrors(cudaOccupancyMaxPotentialBlockSize(&grid_size,&block_size,gather_bits<unsigned int, int>));
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSize(&grid_size,&block_size,gather_bits<unsigned int, int>));
 
-	gather_bits<<<grid_size, block_size>>>((int *) row_indices->data,(int *) input->valid,(int *) output->valid, row_indices->size);
+		gather_bits<<<grid_size, block_size>>>((int *) row_indices->data,(int *) input->valid,(int *) output->valid, row_indices->size);
 
-	CheckCudaErrors(cudaGetLastError());
+		CheckCudaErrors(cudaGetLastError());
+	}
 }
 
 //input and output shoudl be the same time
 template <typename ElementIterator, typename IndexIterator>
 void materialize_templated_2(gdf_column * input, gdf_column * output, gdf_column * row_indices){
-
-	if( input->dtype == GDF_STRING_CATEGORY ){
-		std::cout<<"about to print input of materialize"<<std::endl;
-		print_gdf_column(input);
-
-		std::cout<<"about to print row_indices of materialize"<<std::endl;
-		print_gdf_column(row_indices	);
-	}
-
-	// if( input->dtype == GDF_STRING_CATEGORY ){
-	// 	output->dtype_info.category = static_cast<void *>(static_cast<NVCategory *>(input->dtype_info.category)->gather( static_cast<int32_t*>(row_indices->data), row_indices->size));
-
-	//     CheckCudaErrors( cudaMemcpy(
-	// 		output->data,
-	// 		static_cast<NVCategory *>(output->dtype_info.category)->values_cptr(),
-	// 		sizeof(nv_category_index_type) * row_indices->size,
-	// 		cudaMemcpyDeviceToDevice) );
-
-	// } else {
 
 		materialize_valid_ptrs(input,output,row_indices);
 
@@ -137,22 +121,21 @@ void materialize_templated_2(gdf_column * input, gdf_column * output, gdf_column
 			assert(result == GDF_SUCCESS);
 			output->null_count = output->size - static_cast<gdf_size_type>(count);
 		}
-	// }
+	
 	if( input->dtype == GDF_STRING_CATEGORY ){
-	// 	nvcategory_gather(output,static_cast<NVCategory *>(input->dtype_info.category));
-
-		std::cout<<"about to print output of materialize"<<std::endl;
-		print_gdf_column(output);
-
-		output->dtype_info.category = static_cast<void *>(static_cast<NVCategory *>(input->dtype_info.category)->gather( static_cast<int32_t*>(output->data), output->size));
-
-	    CheckCudaErrors( cudaMemcpy(
-			output->data,
-			static_cast<NVCategory *>(output->dtype_info.category)->values_cptr(),
-			sizeof(nv_category_index_type) * output->size,
-			cudaMemcpyDeviceToDevice) );
-
+	 	nvcategory_gather(output,static_cast<NVCategory *>(input->dtype_info.category));
 	}
+	
+	// if( input->dtype == GDF_STRING_CATEGORY ){
+	// 	output->dtype_info.category = static_cast<void *>(static_cast<NVCategory *>(input->dtype_info.category)->gather( static_cast<int32_t*>(output->data), output->size));
+
+	//     CheckCudaErrors( cudaMemcpy(
+	// 		output->data,
+	// 		static_cast<NVCategory *>(output->dtype_info.category)->values_cptr(),
+	// 		sizeof(nv_category_index_type) * output->size,
+	// 		cudaMemcpyDeviceToDevice) );
+
+	// }
 }
 
 template <typename ElementIterator>

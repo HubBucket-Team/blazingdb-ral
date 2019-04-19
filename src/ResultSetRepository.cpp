@@ -236,8 +236,7 @@ gdf_column_cpp result_set_repository::get_column(connection_id_t connection, col
 		gdf_column_cpp temp_column; //allocar convertir a NVCategory
 		NVStrings * strings = static_cast<NVStrings *>(this->precalculated_columns[columnToken].data());
 		NVCategory * category = NVCategory::create_from_strings(*strings);
-		temp_column.create_gdf_column(GDF_STRING_CATEGORY,this->precalculated_columns[columnToken].size(),nullptr,sizeof(int32_t),this->precalculated_columns[columnToken].name());
-		temp_column.get_gdf_column()->dtype_info.category = category;
+		temp_column.create_gdf_column(category, this->precalculated_columns[columnToken].size(),this->precalculated_columns[columnToken].name());
 		return temp_column;
 	}else{
 		return this->precalculated_columns[columnToken];

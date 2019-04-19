@@ -62,6 +62,7 @@ add_subdirectory(count)
 add_subdirectory(groupbywoagg)
 add_subdirectory(interpreter)
 add_subdirectory(utils)
+add_subdirectory(resultset-repository)
 
 
 message(STATUS "******** Tests are ready ********")

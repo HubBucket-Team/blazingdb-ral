@@ -16,6 +16,7 @@
 #include <thrust/iterator/transform_iterator.h>
 
 #include "Utils.cuh"
+#include "string/nvcategory_util.hpp"
 
 template <typename InputType>
 struct negative_to_zero : public thrust::unary_function< InputType, InputType>
@@ -88,24 +89,70 @@ void materialize_valid_ptrs(gdf_column * input, gdf_column * output, gdf_column 
 //input and output shoudl be the same time
 template <typename ElementIterator, typename IndexIterator>
 void materialize_templated_2(gdf_column * input, gdf_column * output, gdf_column * row_indices){
-	materialize_valid_ptrs(input,output,row_indices);
 
-	thrust::detail::normal_iterator<thrust::device_ptr<ElementIterator> > element_iter =
-			thrust::detail::make_normal_iterator(thrust::device_pointer_cast((ElementIterator *) input->data));
+	if( input->dtype == GDF_STRING_CATEGORY ){
+		std::cout<<"about to print input of materialize"<<std::endl;
+		print_gdf_column(input);
 
-	thrust::detail::normal_iterator<thrust::device_ptr<IndexIterator> > index_iter =
-			thrust::detail::make_normal_iterator(thrust::device_pointer_cast((IndexIterator *) row_indices->data));
+		std::cout<<"about to print row_indices of materialize"<<std::endl;
+		print_gdf_column(row_indices	);
+	}
 
-	typedef thrust::detail::normal_iterator<thrust::device_ptr<IndexIterator> > IndexNormalIterator;
+	// if( input->dtype == GDF_STRING_CATEGORY ){
+	// 	output->dtype_info.category = static_cast<void *>(static_cast<NVCategory *>(input->dtype_info.category)->gather( static_cast<int32_t*>(row_indices->data), row_indices->size));
 
-	thrust::transform_iterator<negative_to_zero<IndexIterator>,IndexNormalIterator> transform_iter = thrust::make_transform_iterator(index_iter,negative_to_zero<IndexIterator>());
+	//     CheckCudaErrors( cudaMemcpy(
+	// 		output->data,
+	// 		static_cast<NVCategory *>(output->dtype_info.category)->values_cptr(),
+	// 		sizeof(nv_category_index_type) * row_indices->size,
+	// 		cudaMemcpyDeviceToDevice) );
+
+	// } else {
+
+		materialize_valid_ptrs(input,output,row_indices);
+
+		thrust::detail::normal_iterator<thrust::device_ptr<ElementIterator> > element_iter =
+				thrust::detail::make_normal_iterator(thrust::device_pointer_cast((ElementIterator *) input->data));
+
+		thrust::detail::normal_iterator<thrust::device_ptr<IndexIterator> > index_iter =
+				thrust::detail::make_normal_iterator(thrust::device_pointer_cast((IndexIterator *) row_indices->data));
+
+		typedef thrust::detail::normal_iterator<thrust::device_ptr<IndexIterator> > IndexNormalIterator;
+
+		thrust::transform_iterator<negative_to_zero<IndexIterator>,IndexNormalIterator> transform_iter = thrust::make_transform_iterator(index_iter,negative_to_zero<IndexIterator>());
 
 
-	thrust::permutation_iterator<thrust::detail::normal_iterator<thrust::device_ptr<ElementIterator> >,thrust::transform_iterator<negative_to_zero<IndexIterator>,IndexNormalIterator> > iter(element_iter,transform_iter);
+		thrust::permutation_iterator<thrust::detail::normal_iterator<thrust::device_ptr<ElementIterator> >,thrust::transform_iterator<negative_to_zero<IndexIterator>,IndexNormalIterator> > iter(element_iter,transform_iter);
 
-	thrust::detail::normal_iterator<thrust::device_ptr<ElementIterator> > output_iter =
-			thrust::detail::make_normal_iterator(thrust::device_pointer_cast((ElementIterator *) output->data));;
-	thrust::copy(iter,iter + row_indices->size,output_iter);
+		thrust::detail::normal_iterator<thrust::device_ptr<ElementIterator> > output_iter =
+				thrust::detail::make_normal_iterator(thrust::device_pointer_cast((ElementIterator *) output->data));;
+		thrust::copy(iter,iter + row_indices->size,output_iter);
+
+		if (output->size == 0 || output->valid == nullptr) {
+			output->null_count = 0;
+		}
+		else {
+			int count;
+			gdf_error result = gdf_count_nonzero_mask(output->valid, output->size, &count);
+			assert(result == GDF_SUCCESS);
+			output->null_count = output->size - static_cast<gdf_size_type>(count);
+		}
+	// }
+	if( input->dtype == GDF_STRING_CATEGORY ){
+	// 	nvcategory_gather(output,static_cast<NVCategory *>(input->dtype_info.category));
+
+		std::cout<<"about to print output of materialize"<<std::endl;
+		print_gdf_column(output);
+
+		output->dtype_info.category = static_cast<void *>(static_cast<NVCategory *>(input->dtype_info.category)->gather( static_cast<int32_t*>(output->data), output->size));
+
+	    CheckCudaErrors( cudaMemcpy(
+			output->data,
+			static_cast<NVCategory *>(output->dtype_info.category)->values_cptr(),
+			sizeof(nv_category_index_type) * output->size,
+			cudaMemcpyDeviceToDevice) );
+
+	}
 }
 
 template <typename ElementIterator>

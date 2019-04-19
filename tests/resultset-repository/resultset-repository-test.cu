@@ -61,12 +61,15 @@ TEST_F(ResultSetRepositoryTest, string_resulset_test) {
     for(int i = 0; i < num_strings; i++){
       char_array[i] = "test!";
     }
+
+    char * name = "some_name";
     NVStrings * string = NVStrings::create_from_array(char_array,num_strings);
     gdf_column col_struct;
     col_struct.dtype = GDF_STRING;
     col_struct.size = string->size();
     col_struct.valid = nullptr;
     col_struct.data = (void *) string;
+    col_struct.col_name = name;
     gdf_column_cpp column;
     column.create_gdf_column(&col_struct);
     blazing_frame frame;

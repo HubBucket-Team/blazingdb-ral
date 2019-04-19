@@ -9,18 +9,16 @@
 #include <DataFrame.h>
 #include <vector>
 
-template <class T>
+
 class ResultSetRepositoryTest : public ::testing::Test {
   virtual void SetUp() {
-    auto repo = result_set_repository::get_instance();
-    connection = repo.init_session();
-    token = repo.register_query(connection);
+    connection = result_set_repository::get_instance().init_session();
+    token = result_set_repository::get_instance().register_query(connection);
 
   }
 
   virtual void TearDown(){
-    auto repo = result_set_repository::get_instance();
-    repo.remove_all_connection_tokens(connection);
+    result_set_repository::get_instance().remove_all_connection_tokens(connection);
   }
 protected:
   connection_id_t connection;
@@ -37,16 +35,14 @@ TEST_F(ResultSetRepositoryTest, basic_resulset_test) {
     std::vector<gdf_column_cpp> columns;
     columns.push_back(column.clone());
     frame.add_table(columns);
-    result_set_repository repo = result_set_repository::get_instance();
-    void update_token(query_token_t token, blazing_frame frame, double duration, std::string errorMsg = "");
-    repo.update_token(token, frame , .01);
+    result_set_repository::get_instance().update_token(token, frame , .01);
 
-    result_set_t result = repo.get_result(connection,token);
+    result_set_t result = result_set_repository::get_instance().get_result(connection,token);
     EXPECT_TRUE(result.is_ready);
-    repo.free_result(connection,token);
+    result_set_repository::get_instance().free_result(connection,token);
 
     try {
-        result = repo.get_result(connection,token);
+      result_set_repository::get_instance().get_result(connection,token);
         EXPECT_TRUE(false);
        }
        catch(std::runtime_error const & err) {
@@ -56,4 +52,46 @@ TEST_F(ResultSetRepositoryTest, basic_resulset_test) {
   }
 }
 
+
+TEST_F(ResultSetRepositoryTest, string_resulset_test) {
+
+  {
+    int num_strings = 100;
+    const char ** char_array = new const char *[num_strings];
+    for(int i = 0; i < num_strings; i++){
+      char_array[i] = "test!";
+    }
+    NVStrings * string = NVStrings::create_from_array(char_array,num_strings);
+    gdf_column col_struct;
+    col_struct.dtype = GDF_STRING;
+    col_struct.size = string->size();
+    col_struct.valid = nullptr;
+    col_struct.data = (void *) string;
+    gdf_column_cpp column;
+    column.create_gdf_column(&col_struct);
+    blazing_frame frame;
+    std::vector<gdf_column_cpp> columns;
+    columns.push_back(column.clone());
+    frame.add_table(columns);
+
+    result_set_repository::get_instance().update_token(token, frame , .01);
+
+    result_set_t result = result_set_repository::get_instance().get_result(connection,token);
+    EXPECT_TRUE(result.is_ready);
+    result_set_repository::get_instance().free_result(connection,token);
+
+    try {
+        result = result_set_repository::get_instance().get_result(connection,token);
+        EXPECT_TRUE(false);
+       }
+       catch(std::runtime_error const & err) {
+           EXPECT_EQ(err.what(),std::string("Result set does not exist"));
+       }
+
+       for(int i = 0; i < 100; i++){
+       //   delete[] char_array[i];
+       }
+       delete[] char_array;
+  }
+}
 

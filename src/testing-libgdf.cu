@@ -54,6 +54,8 @@ using namespace blazingdb::protocol;
 #include "io/data_provider/UriDataProvider.h"
 #include "io/data_parser/DataParser.h"
 #include "io/data_provider/DataProvider.h"
+#include "io/DataLoader.h"
+
 
 #include "Config/Config.h"
 
@@ -149,19 +151,15 @@ query_token_t loadParquetAndInsertToResultRepository(std::string path, connectio
 		std::vector<Uri> uris(1);
 		uris[0] = Uri(path);
 
-		auto provider = std::make_unique<ral::io::uri_data_provider>(uris);
-		auto parser = std::make_unique<ral::io::parquet_parser>();
-    
-    try
-    {
-      CodeTimer blazing_timer;
+		auto provider = ral::io::uri_data_provider(uris);
+		auto parser = ral::io::parquet_parser();
+	  ral::io::data_loader loader(&parser, &provider);
 
-      std::vector<gdf_column_cpp> columns;
-      if (schema_only){
-        parser->parse_schema(provider->get_next(), columns);
-      } else {
-        parser->parse(provider->get_next(), columns);
-      }
+	  try
+	  {
+	    CodeTimer blazing_timer;
+	    std::vector<gdf_column_cpp> columns;
+	    loader.load_data(columns, {});
 
       blazing_frame output_frame;
       output_frame.add_table(columns);
@@ -219,19 +217,15 @@ query_token_t loadCsvAndInsertToResultRepository(std::string path, std::vector<s
 		std::vector<Uri> uris(1);
 		uris[0] = Uri(path);
 
-		auto provider = std::make_unique<ral::io::uri_data_provider>(uris);
-		auto parser = std::make_unique<ral::io::csv_parser>(delimiter, line_terminator, skip_rows, names, dtypes);
+		auto provider = ral::io::uri_data_provider(uris);
+		auto parser = ral::io::csv_parser(delimiter, line_terminator, skip_rows, names, dtypes);
+	  ral::io::data_loader loader(&parser, &provider);
 
     try
     {
       CodeTimer blazing_timer;
-      
       std::vector<gdf_column_cpp> columns;
-      if (schema_only){
-        parser->parse_schema(provider->get_next(), columns);
-      } else {
-        parser->parse(provider->get_next(), columns);
-      }
+      loader.load_data(columns, {});
 
       blazing_frame output_frame;
       output_frame.add_table(columns);
@@ -442,47 +436,11 @@ static result_pair freeResultService(uint64_t accessToken, Buffer&& requestPaylo
 
 }
 
-template<class FileParserType>
-void load_files(FileParserType&& parser, const std::vector<Uri>& uris, std::vector<gdf_column_cpp>& out_columns) {
-	auto provider = std::make_unique<ral::io::uri_data_provider>(uris);
-	std::vector<std::vector<gdf_column_cpp>> all_parts;
 
-  while (provider->has_next()) {
-    std::vector<gdf_column_cpp> columns;
-    std::string user_readable_file_handle = provider->get_current_user_readable_file_handle();
-    parser.parse(provider->get_next(), columns);
-    all_parts.push_back(columns);
-  }
-
-  size_t num_files = all_parts.size();
-  size_t num_columns = all_parts[0].size();
-
-  if(num_files == 0 || num_columns == 0){ 	//we got no data
-    return;
-  }
-  if (all_parts.size() == 1) {
-      out_columns = all_parts[0];
-  }
-  else if (all_parts.size() > 1) {
-    std::vector<gdf_column_cpp>& part_left = all_parts[0];
-    for(size_t index_col = 0; index_col < part_left.size(); index_col++) { //iterate each one of the columns
-
-      std::vector<gdf_column*> columns;
-      size_t col_total_size = 0;
-
-      for(size_t index_part = 0; index_part < all_parts.size(); index_part++) { //iterate each one of the parts
-        std::vector<gdf_column_cpp> &part = all_parts[index_part];
-        auto &gdf_col = part[index_col];
-        columns.push_back(gdf_col.get_gdf_column());
-        col_total_size+= gdf_col.size();
-      }
-      gdf_column_cpp output_col;
-      auto & lhs = all_parts[0][index_col];
-      output_col.create_gdf_column(lhs.dtype(), col_total_size, nullptr, get_width_dtype(lhs.dtype()), lhs.name());
-      CUDF_CALL(gdf_column_concat(output_col.get_gdf_column(), columns.data(), columns.size()));
-      out_columns.push_back(output_col);
-    }
-  }
+void load_files(ral::io::data_parser * parser, const std::vector<Uri>& uris, std::vector<gdf_column_cpp>& out_columns) {
+	auto provider = ral::io::uri_data_provider(uris);
+  ral::io::data_loader loader( parser,&provider);
+  loader.load_data(out_columns, {});
 }
 
 static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& requestPayloadBuffer) {
@@ -514,7 +472,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
           uris.push_back(Uri{file_path});
         }
         ral::io::parquet_parser parser;
-        load_files(std::move(parser), uris, table_cpp);
+        load_files(&parser, uris, table_cpp);
       } else {
         std::vector<Uri> uris = { Uri{table_info.files[0]} }; //@todo, concat many files in one single table
         auto csv_params = table_info.csv;
@@ -523,7 +481,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
           types.push_back( (gdf_dtype) val );
         }
         ral::io::csv_parser parser(csv_params.delimiter, csv_params.line_terminator, csv_params.skip_rows, csv_params.names, types);
-        load_files(std::move(parser), uris, table_cpp);
+        load_files(&parser, uris, table_cpp);
       }
       input_tables.push_back(table_cpp);
       table_names.push_back(table_info.name);

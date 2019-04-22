@@ -269,33 +269,38 @@ struct NVCategoryTest : public ::testing::Test {
 	void Check(gdf_column_cpp out_col, std::vector<std::string> reference_result, size_t length, bool ordered = false){
 
 		const size_t num_values = out_col.size();
-		NVStrings * temp_strings = static_cast<NVCategory *>(out_col.get_gdf_column()->dtype_info.category)->gather_strings( (int*) out_col.get_gdf_column()->data, num_values, true );
 
-		char** host_strings = new char*[num_values];
-		for(size_t i=0;i<num_values;i++){
-			host_strings[i]=new char[length+1];
+		EXPECT_EQ(num_values, reference_result.size()) << "Mismatch columns size";
+
+		if(reference_result.size()>0){
+			NVStrings * temp_strings = static_cast<NVCategory *>(out_col.get_gdf_column()->dtype_info.category)->gather_strings( (int*) out_col.get_gdf_column()->data, num_values, true );
+
+			char** host_strings = new char*[num_values];
+			for(size_t i=0;i<num_values;i++){
+				host_strings[i]=new char[length+1];
+			}
+
+			temp_strings->to_host(host_strings, 0, num_values);
+
+			for(size_t i=0;i<num_values;i++){
+				host_strings[i][length]=0;
+			}
+
+			std::vector<std::string> strings_vector(host_strings, host_strings + num_values);
+
+			if(ordered){
+				std::sort(strings_vector.begin(), strings_vector.end());
+				std::sort(reference_result.begin(), reference_result.end());
+			}
+
+			EXPECT_EQ(out_col.size(), reference_result.size()) << "Mismatch columns size";
+			
+			for(size_t i = 0; i < reference_result.size(); i++){
+				EXPECT_TRUE(reference_result[i] == strings_vector[i]);
+			}
+
+			NVStrings::destroy(temp_strings);
 		}
-
-		temp_strings->to_host(host_strings, 0, num_values);
-
-		for(size_t i=0;i<num_values;i++){
-			host_strings[i][length]=0;
-		}
-
-		std::vector<std::string> strings_vector(host_strings, host_strings + num_values);
-
-		if(ordered){
-			std::sort(strings_vector.begin(), strings_vector.end());
-			std::sort(reference_result.begin(), reference_result.end());
-		}
-
-		EXPECT_EQ(out_col.size(), reference_result.size()) << "Mismatch columns size";
-		
-		for(size_t i = 0; i < reference_result.size(); i++){
-			EXPECT_TRUE(reference_result[i] == strings_vector[i]);
-		}
-
-		NVStrings::destroy(temp_strings);
 	}
 
 	gdf_column_cpp left;

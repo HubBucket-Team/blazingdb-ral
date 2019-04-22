@@ -94,6 +94,9 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 		}
 	}
 
+	// lets deduplicate before we put into the results repo, because we wont be able to reopen an ipc
+	frame.deduplicate(); 
+
 	for(size_t i = 0; i < frame.get_width(); i++){
 		column_token_t column_token = frame.get_column(i).get_column_token();
 

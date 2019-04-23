@@ -11,6 +11,7 @@
 #include <GDFCounter.cuh>
 #include "gdf/library/types.h"
 
+
 using namespace gdf::library;
 
 
@@ -51,6 +52,10 @@ int dtype_size(gdf_dtype col_type) {
 
         return sizeof(ColType);
       }
+    case GDF_STRING:
+    {
+      return 0;
+    }
     case GDF_INT32:
       {
         using ColType = int32_t;
@@ -86,8 +91,19 @@ std::vector<gdf_column_cpp> ToGdfColumnCpps(gdf_column	**data, const char	**name
   std::vector<gdf_column_cpp> gdfColumnsCpps;
   for(size_t i = 0; i < ncols; i++ ){
     gdf_column	*column = data[i];
-    size_t type_size = dtype_size(column->dtype);
-    gdfColumnsCpps.push_back(ToGdfColumnCpp(names[i], column->dtype, column->size, column->data, type_size));
+    if(column->dtype == GDF_STRING){
+      size_t type_size = dtype_size(column->dtype);
+      gdf_column_cpp column;
+      NVStrings * string = static_cast<NVStrings *>(data[i]->data);
+      NVCategory * category = NVCategory::create_from_strings(*string);
+      size_t num_values = category->size();
+      column.create_gdf_column(category,num_values,std::string(names[i]));
+      gdfColumnsCpps.push_back(column);
+    }else{
+      size_t type_size = dtype_size(column->dtype);
+      gdfColumnsCpps.push_back(ToGdfColumnCpp(names[i], column->dtype, column->size, column->data, type_size));
+    }
+
   }
   return gdfColumnsCpps;
 }

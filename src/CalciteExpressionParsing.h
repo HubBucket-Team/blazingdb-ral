@@ -10,8 +10,8 @@
 
 #include <string>
 #include <vector>
-
 #include "gdf_wrapper/gdf_wrapper.cuh"
+#include "cudf/types.h"
 
 class blazing_frame;
 
@@ -23,9 +23,11 @@ bool is_binary_operator_token(std::string token);
 
 bool is_unary_operator_token(std::string token);
 
-bool is_other_binary_operator_token(std::string token);
+
 
 bool is_literal(std::string operand);
+
+bool is_string(const std::string &operand);
 
 bool is_digits(const std::string &str);
 

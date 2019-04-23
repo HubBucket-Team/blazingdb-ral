@@ -16,6 +16,7 @@
 #include <thrust/iterator/transform_iterator.h>
 
 #include "Utils.cuh"
+#include "string/nvcategory_util.hpp"
 
 template <typename InputType>
 struct negative_to_zero : public thrust::unary_function< InputType, InputType>
@@ -76,36 +77,54 @@ __global__ void gather_bits(
 }
 
 void materialize_valid_ptrs(gdf_column * input, gdf_column * output, gdf_column * row_indices){
-	int grid_size, block_size;
+	
+	if (input->valid != nullptr && output->valid != nullptr){
+		int grid_size, block_size;
 
-	CheckCudaErrors(cudaOccupancyMaxPotentialBlockSize(&grid_size,&block_size,gather_bits<unsigned int, int>));
+		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSize(&grid_size,&block_size,gather_bits<unsigned int, int>));
 
-	gather_bits<<<grid_size, block_size>>>((int *) row_indices->data,(int *) input->valid,(int *) output->valid, row_indices->size);
+		gather_bits<<<grid_size, block_size>>>((int *) row_indices->data,(int *) input->valid,(int *) output->valid, row_indices->size);
 
-	CheckCudaErrors(cudaGetLastError());
+		CheckCudaErrors(cudaGetLastError());
+	}
 }
 
 //input and output shoudl be the same time
 template <typename ElementIterator, typename IndexIterator>
 void materialize_templated_2(gdf_column * input, gdf_column * output, gdf_column * row_indices){
-	materialize_valid_ptrs(input,output,row_indices);
 
-	thrust::detail::normal_iterator<thrust::device_ptr<ElementIterator> > element_iter =
-			thrust::detail::make_normal_iterator(thrust::device_pointer_cast((ElementIterator *) input->data));
+		materialize_valid_ptrs(input,output,row_indices);
 
-	thrust::detail::normal_iterator<thrust::device_ptr<IndexIterator> > index_iter =
-			thrust::detail::make_normal_iterator(thrust::device_pointer_cast((IndexIterator *) row_indices->data));
+		thrust::detail::normal_iterator<thrust::device_ptr<ElementIterator> > element_iter =
+				thrust::detail::make_normal_iterator(thrust::device_pointer_cast((ElementIterator *) input->data));
 
-	typedef thrust::detail::normal_iterator<thrust::device_ptr<IndexIterator> > IndexNormalIterator;
+		thrust::detail::normal_iterator<thrust::device_ptr<IndexIterator> > index_iter =
+				thrust::detail::make_normal_iterator(thrust::device_pointer_cast((IndexIterator *) row_indices->data));
 
-	thrust::transform_iterator<negative_to_zero<IndexIterator>,IndexNormalIterator> transform_iter = thrust::make_transform_iterator(index_iter,negative_to_zero<IndexIterator>());
+		typedef thrust::detail::normal_iterator<thrust::device_ptr<IndexIterator> > IndexNormalIterator;
+
+		thrust::transform_iterator<negative_to_zero<IndexIterator>,IndexNormalIterator> transform_iter = thrust::make_transform_iterator(index_iter,negative_to_zero<IndexIterator>());
 
 
-	thrust::permutation_iterator<thrust::detail::normal_iterator<thrust::device_ptr<ElementIterator> >,thrust::transform_iterator<negative_to_zero<IndexIterator>,IndexNormalIterator> > iter(element_iter,transform_iter);
+		thrust::permutation_iterator<thrust::detail::normal_iterator<thrust::device_ptr<ElementIterator> >,thrust::transform_iterator<negative_to_zero<IndexIterator>,IndexNormalIterator> > iter(element_iter,transform_iter);
 
-	thrust::detail::normal_iterator<thrust::device_ptr<ElementIterator> > output_iter =
-			thrust::detail::make_normal_iterator(thrust::device_pointer_cast((ElementIterator *) output->data));;
-	thrust::copy(iter,iter + row_indices->size,output_iter);
+		thrust::detail::normal_iterator<thrust::device_ptr<ElementIterator> > output_iter =
+				thrust::detail::make_normal_iterator(thrust::device_pointer_cast((ElementIterator *) output->data));;
+		thrust::copy(iter,iter + row_indices->size,output_iter);
+
+		if (output->size == 0 || output->valid == nullptr) {
+			output->null_count = 0;
+		}
+		else {
+			int count;
+			gdf_error result = gdf_count_nonzero_mask(output->valid, output->size, &count);
+			assert(result == GDF_SUCCESS);
+			output->null_count = output->size - static_cast<gdf_size_type>(count);
+		}
+	
+	if( input->dtype == GDF_STRING_CATEGORY ){
+	 	nvcategory_gather(output,static_cast<NVCategory *>(input->dtype_info.category));
+	}
 }
 
 template <typename ElementIterator>

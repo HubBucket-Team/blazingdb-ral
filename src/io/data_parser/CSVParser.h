@@ -13,6 +13,7 @@
 #include <memory>
 #include "arrow/io/interfaces.h"
 #include "GDFColumn.cuh"
+#include "cudf.h"
 
 namespace ral {
 namespace io {

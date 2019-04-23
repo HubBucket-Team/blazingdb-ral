@@ -12,7 +12,8 @@
 
 #include <vector>
 #include "GDFColumn.cuh"
-
+#include "data_parser/DataParser.h"
+#include "data_provider/DataProvider.h"
 #include <arrow/io/interfaces.h>
 #include <memory>
 
@@ -23,10 +24,9 @@ namespace io {
  * in our case we will be using blazing-io to read and write files but a local version could also be made
  */
 
-template <typename DataProvider, typename FileParser>
 class data_loader {
 public:
-	data_loader(FileParser parser, DataProvider data_provider);
+	data_loader(data_parser  * parser, data_provider * provider);
 	virtual ~data_loader();
 
 	/**
@@ -39,11 +39,11 @@ private:
 	/**
 	 * DataProviders are able to serve up one or more arrow::io::RandomAccessFile objects
 	 */
-	DataProvider data_provider;
+	data_provider * provider;
 	/**
 	 * parsers are able to parse arrow::io::RandomAccessFile objects of a specific file type and convert them into gdf_column_cpp
 	 */
-	FileParser parser;
+	data_parser * parser;
 };
 
 
@@ -87,42 +87,37 @@ size_t get_width_dtype(gdf_dtype type){
 	}
 }
 
-template <typename DataProvider, typename FileParser>
-data_loader<DataProvider, FileParser>::data_loader(FileParser _parser, DataProvider _data_provider): data_provider(_data_provider), parser(_parser)  {
+data_loader::data_loader(data_parser * _parser, data_provider * _data_provider): provider(_data_provider), parser(_parser)  {
 
 }
 
-template <typename DataProvider, typename FileParser>
-data_loader<DataProvider, FileParser>::~data_loader() {
+
+data_loader::~data_loader() {
 
 }
 
-template <typename DataProvider, typename FileParser>
-void data_loader<DataProvider, FileParser>::load_data(std::vector<gdf_column_cpp> & columns, std::vector<bool> include_column){
+
+void data_loader::load_data(std::vector<gdf_column_cpp> & columns, std::vector<bool> include_column){
 
 	std::vector<std::vector<gdf_column_cpp> > columns_per_file; //stores all of the columns parsed from each file
 	//iterates through files and parses them into columns
-	while(this->data_provider.has_next()){
+	while(this->provider->has_next()){
 		std::vector<gdf_column_cpp> converted_data;
 		//a file handle that we can use in case errors occur to tell the user which file had parsing issues
-		std::string user_readable_file_handle = this->data_provider.get_current_user_readable_file_handle();
-		std::shared_ptr<arrow::io::RandomAccessFile> file = this->data_provider.get_next();
+		std::string user_readable_file_handle = this->provider->get_current_user_readable_file_handle();
+		std::shared_ptr<arrow::io::RandomAccessFile> file = this->provider->get_next();
 
 		if(file != nullptr){
-			gdf_error error = parser.parse(file,converted_data,include_column);
-			if(error != GDF_SUCCESS){
-				//TODO: probably want to pass this up as an error
-				std::cout<<"Could not parse "<<user_readable_file_handle<<std::endl;
-			}else{
-				columns_per_file.push_back(converted_data);
-			}
+			parser->parse(file,converted_data,include_column);
+
+			columns_per_file.push_back(converted_data);
 		}else{
 			std::cout<<"Was unable to open "<<user_readable_file_handle<<std::endl;
 		}
 	}
 
 	//checking if any errors occurred
-	std::vector<std::string> provider_errors = this->data_provider.get_errors();
+	std::vector<std::string> provider_errors = this->provider->get_errors();
 	if(provider_errors.size() != 0){
 		for(size_t error_index = 0; error_index < provider_errors.size(); error_index++){
 			std::cout<<provider_errors[error_index]<<std::endl;
@@ -156,7 +151,7 @@ void data_loader<DataProvider, FileParser>::load_data(std::vector<gdf_column_cpp
 			column.create_gdf_column(columns_per_file[0][column_index].dtype(),
 					total_row_count,
 					nullptr,
-					get_width_dtype(columns_per_file[0][column_index].dtype()),
+					ral::io::get_width_dtype(columns_per_file[0][column_index].dtype()),
 					columns_per_file[0][column_index].name());
 			columns[column_index] = column;
 

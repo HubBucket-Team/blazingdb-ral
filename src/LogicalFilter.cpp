@@ -11,6 +11,8 @@
 #include <iostream>
 
 #include "CalciteExpressionParsing.h"
+#include <nvstrings/NVCategory.h>
+#include <nvstrings/NVStrings.h>
 
 #include <blazingdb/io/Library/Logging/Logger.h>
 #include "CodeTimer.h"
@@ -40,6 +42,7 @@ column_index_type get_first_open_position(std::vector<bool> & open_positions, co
  * Creates a physical plan for the expression that can be added to the total plan
  */
 void add_expression_to_plan(	blazing_frame & inputs,
+		std::vector<gdf_column *>& input_columns, 
 		std::string expression,
 		column_index_type expression_position,
 		column_index_type num_outputs,
@@ -137,7 +140,7 @@ void add_expression_to_plan(	blazing_frame & inputs,
 
 					left_inputs.push_back(left.is_valid ? SCALAR_INDEX : SCALAR_NULL_INDEX);
 					right_inputs.push_back(right_index);
-				}else if(is_literal(right_operand)){
+				}else if(is_literal(right_operand) && !is_string(right_operand)){
 					size_t left_index = get_index(left_operand);
 					// TODO: remove get_type_from_string dirty fix
 					// gdf_scalar right = get_scalar_from_string(right_operand,inputs.get_column(get_index(left_operand)).dtype());
@@ -147,10 +150,70 @@ void add_expression_to_plan(	blazing_frame & inputs,
 
 					right_inputs.push_back(right.is_valid ? SCALAR_INDEX : SCALAR_NULL_INDEX);
 					left_inputs.push_back(left_index);
-				}
-				else{
+				}else if(is_literal(right_operand) && is_string(right_operand)){
+					right_operand = right_operand.substr(1,right_operand.size()-2);
 					size_t left_index = get_index(left_operand);
-					size_t right_index =get_index(right_operand);
+					gdf_column* left_column = input_columns[left_index];
+
+					int found = static_cast<NVCategory *>(left_column->dtype_info.category)->get_value(right_operand.c_str());
+
+					if(found != -1){
+						gdf_data data;
+						data.si32 = found;
+						gdf_scalar right = {data, GDF_INT32, true};
+
+						right_scalars.push_back(right);
+						left_scalars.push_back(dummy_scalar);
+
+						right_inputs.push_back(right.is_valid ? SCALAR_INDEX : SCALAR_NULL_INDEX);
+						left_inputs.push_back(left_index);
+					}
+					else{ //insertar nuevo value, reemplazar columna left
+
+						const char* str = right_operand.c_str();
+						const char** strs = &str;
+						NVStrings* temp_string = NVStrings::create_from_array(strs, 1);
+						NVCategory* new_category = static_cast<NVCategory *>(left_column->dtype_info.category)->add_strings(*temp_string);
+						left_column->dtype_info.category = new_category;
+
+						size_t size_to_copy = sizeof(int32_t) * left_column->size;
+
+						cudaMemcpyAsync(left_column->data,
+							static_cast<NVCategory *>(left_column->dtype_info.category)->values_cptr(),
+							size_to_copy,
+							cudaMemcpyDeviceToDevice);
+						
+						int found = static_cast<NVCategory *>(left_column->dtype_info.category)->get_value(right_operand.c_str());
+
+						gdf_data data;
+						data.si32 = found;
+						gdf_scalar right = {data, GDF_INT32, true};
+
+						right_scalars.push_back(right);
+						left_scalars.push_back(dummy_scalar);
+
+						right_inputs.push_back(right.is_valid ? SCALAR_INDEX : SCALAR_NULL_INDEX);
+						left_inputs.push_back(left_index);
+					}
+				}else{
+					size_t left_index = get_index(left_operand);
+					size_t right_index = get_index(right_operand);
+
+					if(input_columns.size() > left_index && input_columns.size() > right_index){
+						gdf_column* left_column = input_columns[left_index];
+						gdf_column* right_column = input_columns[right_index];
+
+						if(left_column->dtype == GDF_STRING_CATEGORY && right_column->dtype == GDF_STRING_CATEGORY) {
+							gdf_column * process_columns[2] = {left_column, right_column};
+							gdf_column * output_columns[2] = {left_column, right_column};
+
+							//CUDF_CALL( combine_column_categories(process_columns, output_columns, 2) );
+							CUDF_CALL( sync_column_categories(process_columns, output_columns, 2) );
+
+							input_columns[left_index] = output_columns[0];
+							input_columns[right_index] = output_columns[1];
+						}
+					}
 
 					left_inputs.push_back(left_index);
 					right_inputs.push_back(right_index);
@@ -180,11 +243,8 @@ void add_expression_to_plan(	blazing_frame & inputs,
 
 					left_scalars.push_back(dummy_scalar);
 					right_scalars.push_back(dummy_scalar);
-
 				}
 
-			} else if (is_other_binary_operator_token(token)){
-				//well we can figure this out later
 			}else{
 				//uh oh
 			}
@@ -200,12 +260,11 @@ void add_expression_to_plan(	blazing_frame & inputs,
 				operand_stack.push({std::string("$") + std::to_string(output_position),output_position});
 			}
 		}else{
-			if(is_literal(token)){
+			if(is_literal(token) || is_string(token)){
 				operand_stack.push({token,SCALAR_INDEX});
 			}else{
 				operand_stack.push({std::string("$" + std::to_string(new_input_indices[get_index(token)])),new_input_indices[get_index(token)]});
 			}
-
 		}
 	}
 }
@@ -237,12 +296,11 @@ void evaluate_expression(
 	while(position > 0){
 		std::string token = get_last_token(clean_expression,&position);
 
-		if(!is_operator_token(token) && !is_literal(token)){
+		if(!is_operator_token(token) && !is_literal(token) && !is_string(token)){
 			size_t index = get_index(token);
 			input_used_in_expression[index] = true;
 		}
 	}
-
 
 	std::vector<column_index_type>  left_inputs;
 	std::vector<column_index_type>  right_inputs;
@@ -272,6 +330,7 @@ void evaluate_expression(
 
 
 	add_expression_to_plan(	inputs,
+						input_columns,
 						expression,
 						0,
 						1,

@@ -54,10 +54,16 @@ using namespace blazingdb::protocol;
 #include "io/data_provider/UriDataProvider.h"
 #include "io/data_parser/DataParser.h"
 #include "io/data_provider/DataProvider.h"
+#include "io/DataLoader.h"
+
 
 #include "Config/Config.h"
 
 #include "CodeTimer.h"
+
+#include <nvstrings/NVCategory.h>
+#include <nvstrings/NVStrings.h>
+#include <nvstrings/ipc_transfer.h>
 
 const Path FS_NAMESPACES_FILE("/tmp/file_system.bin");
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
@@ -145,19 +151,15 @@ query_token_t loadParquetAndInsertToResultRepository(std::string path, connectio
 		std::vector<Uri> uris(1);
 		uris[0] = Uri(path);
 
-		auto provider = std::make_unique<ral::io::uri_data_provider>(uris);
-		auto parser = std::make_unique<ral::io::parquet_parser>();
-    
-    try
-    {
-      CodeTimer blazing_timer;
+		auto provider = ral::io::uri_data_provider(uris);
+		auto parser = ral::io::parquet_parser();
+	  ral::io::data_loader loader(&parser, &provider);
 
-      std::vector<gdf_column_cpp> columns;
-      if (schema_only){
-        parser->parse_schema(provider->get_next(), columns);
-      } else {
-        parser->parse(provider->get_next(), columns);
-      }
+	  try
+	  {
+	    CodeTimer blazing_timer;
+	    std::vector<gdf_column_cpp> columns;
+	    loader.load_data(columns, {});
 
       blazing_frame output_frame;
       output_frame.add_table(columns);
@@ -215,19 +217,15 @@ query_token_t loadCsvAndInsertToResultRepository(std::string path, std::vector<s
 		std::vector<Uri> uris(1);
 		uris[0] = Uri(path);
 
-		auto provider = std::make_unique<ral::io::uri_data_provider>(uris);
-		auto parser = std::make_unique<ral::io::csv_parser>(delimiter, line_terminator, skip_rows, names, dtypes);
+		auto provider = ral::io::uri_data_provider(uris);
+		auto parser = ral::io::csv_parser(delimiter, line_terminator, skip_rows, names, dtypes);
+	  ral::io::data_loader loader(&parser, &provider);
 
     try
     {
       CodeTimer blazing_timer;
-      
       std::vector<gdf_column_cpp> columns;
-      if (schema_only){
-        parser->parse_schema(provider->get_next(), columns);
-      } else {
-        parser->parse(provider->get_next(), columns);
-      }
+      loader.load_data(columns, {});
 
       blazing_frame output_frame;
       output_frame.add_table(columns);
@@ -321,20 +319,53 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
         columnTokens.push_back(result.result_frame.get_columns()[0][i].get_column_token());
 
         std::cout << "col_name: " << result.result_frame.get_columns()[0][i].name() << std::endl;
+        nvstrings_ipc_transfer ipc;
+        gdf_dto::gdf_dtype_extra_info dtype_info;
+        ::gdf_dto::gdf_column col;
 
-        auto data = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->data);
-        auto valid = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->valid);
+        std::basic_string<int8_t> data;
+        std::basic_string<int8_t> valid;
 
-        auto col = ::gdf_dto::gdf_column {
+        if(result.result_frame.get_columns()[0][i].dtype() == GDF_STRING){
+          NVStrings* strings = static_cast<NVStrings *> (result.result_frame.get_columns()[0][i].get_gdf_column()->data);
+          if(result.result_frame.get_columns()[0][i].size() > 0)
+            strings->create_ipc_transfer(ipc);
+          dtype_info = gdf_dto::gdf_dtype_extra_info {
+                .time_unit = (gdf_dto::gdf_time_unit)0,
+            };
+
+          col = ::gdf_dto::gdf_column {
               .data = data,
               .valid = valid,
               .size = result.result_frame.get_columns()[0][i].size(),
-              .dtype = (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype(),
+              .dtype = (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype(), // GDF_STRING
               .null_count = result.result_frame.get_columns()[0][i].null_count(),
-              .dtype_info = gdf_dto::gdf_dtype_extra_info {
-                .time_unit = (gdf_dto::gdf_time_unit)0,
-              }
+              .dtype_info = dtype_info,
+              // custrings data
+              .custrings_views = ipc.count > 0 ? libgdf::ConvertCudaIpcMemHandler(ipc.hstrs) : std::basic_string<int8_t>(),
+              .custrings_viewscount = ipc.count,
+              .custrings_membuffer = ipc.count > 0 ? libgdf::ConvertCudaIpcMemHandler(ipc.hmem) : std::basic_string<int8_t>(),
+              .custrings_membuffersize = ipc.size,
+              .custrings_baseptr = reinterpret_cast<unsigned long>(ipc.base_address)
+            };
+
+        }else{
+          dtype_info = gdf_dto::gdf_dtype_extra_info {
+                .time_unit = (gdf_dto::gdf_time_unit)0     // TODO: why is this hardcoded?
           };
+
+          data = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->data);
+          valid = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->valid);
+
+          col = ::gdf_dto::gdf_column {
+              .data = data,
+              .valid = valid,
+              .size = result.result_frame.get_columns()[0][i].size(),
+              .dtype = (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype(), 
+              .null_count = result.result_frame.get_columns()[0][i].null_count(),
+              .dtype_info = dtype_info
+          };
+        }
 
         values.push_back(col);
       }
@@ -405,47 +436,11 @@ static result_pair freeResultService(uint64_t accessToken, Buffer&& requestPaylo
 
 }
 
-template<class FileParserType>
-void load_files(FileParserType&& parser, const std::vector<Uri>& uris, std::vector<gdf_column_cpp>& out_columns) {
-	auto provider = std::make_unique<ral::io::uri_data_provider>(uris);
-	std::vector<std::vector<gdf_column_cpp>> all_parts;
 
-  while (provider->has_next()) {
-    std::vector<gdf_column_cpp> columns;
-    std::string user_readable_file_handle = provider->get_current_user_readable_file_handle();
-    parser.parse(provider->get_next(), columns);
-    all_parts.push_back(columns);
-  }
-
-  size_t num_files = all_parts.size();
-  size_t num_columns = all_parts[0].size();
-
-  if(num_files == 0 || num_columns == 0){ 	//we got no data
-    return;
-  }
-  if (all_parts.size() == 1) {
-      out_columns = all_parts[0];
-  }
-  else if (all_parts.size() > 1) {
-    std::vector<gdf_column_cpp>& part_left = all_parts[0];
-    for(size_t index_col = 0; index_col < part_left.size(); index_col++) { //iterate each one of the columns
-
-      std::vector<gdf_column*> columns;
-      size_t col_total_size = 0;
-
-      for(size_t index_part = 0; index_part < all_parts.size(); index_part++) { //iterate each one of the parts
-        std::vector<gdf_column_cpp> &part = all_parts[index_part];
-        auto &gdf_col = part[index_col];
-        columns.push_back(gdf_col.get_gdf_column());
-        col_total_size+= gdf_col.size();
-      }
-      gdf_column_cpp output_col;
-      auto & lhs = all_parts[0][index_col];
-      output_col.create_gdf_column(lhs.dtype(), col_total_size, nullptr, get_width_dtype(lhs.dtype()), lhs.name());
-      CUDF_CALL(gdf_column_concat(output_col.get_gdf_column(), columns.data(), columns.size()));
-      out_columns.push_back(output_col);
-    }
-  }
+void load_files(ral::io::data_parser * parser, const std::vector<Uri>& uris, std::vector<gdf_column_cpp>& out_columns) {
+	auto provider = ral::io::uri_data_provider(uris);
+  ral::io::data_loader loader( parser,&provider);
+  loader.load_data(out_columns, {});
 }
 
 static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& requestPayloadBuffer) {
@@ -477,7 +472,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
           uris.push_back(Uri{file_path});
         }
         ral::io::parquet_parser parser;
-        load_files(std::move(parser), uris, table_cpp);
+        load_files(&parser, uris, table_cpp);
       } else {
         std::vector<Uri> uris = { Uri{table_info.files[0]} }; //@todo, concat many files in one single table
         auto csv_params = table_info.csv;
@@ -486,11 +481,23 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
           types.push_back( (gdf_dtype) val );
         }
         ral::io::csv_parser parser(csv_params.delimiter, csv_params.line_terminator, csv_params.skip_rows, csv_params.names, types);
-        load_files(std::move(parser), uris, table_cpp);
+        load_files(&parser, uris, table_cpp);
       }
       input_tables.push_back(table_cpp);
       table_names.push_back(table_info.name);
       all_column_names.push_back(table_info.columnNames);
+    }
+
+    // parse all columns to convert any NVStrings to NVCategory
+    for (int i = 0; i < input_tables.size(); i++){
+      for (int j = 0; j < input_tables[i].size(); j++){
+        if (input_tables[i][j].get_gdf_column()->dtype == GDF_STRING){
+          NVStrings* strs = static_cast<NVStrings*>(input_tables[i][j].get_gdf_column()->data);
+          NVCategory* category = NVCategory::create_from_strings(*strs);
+          input_tables[i][j].get_gdf_column()->data = nullptr;
+          input_tables[i][j].create_gdf_column(category, input_tables[i][j].size(), input_tables[i][j].name());
+        }
+      }
     }
 
     // Execute query
@@ -569,9 +576,9 @@ auto  interpreterServices(const blazingdb::protocol::Buffer &requestPayloadBuffe
 int main(int argc, const char *argv[])
 {
 
-  #ifndef VERBOSE
+  /*#ifndef VERBOSE
   std::cout.rdbuf(nullptr); // substitute internal std::cout buffer with
-  #endif // VERBOSE 
+  #endif // VERBOSE*/
   
     std::cout << "RAL Engine starting" << std::endl;
 

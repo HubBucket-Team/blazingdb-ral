@@ -265,8 +265,8 @@ TEST_F(EvaluateQueryTest, TEST_00) {
       .tableNames = {"main.customer"},
       .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
                        "c_phone", "c_acctbal", "c_mktsegment", "c_comment"}},
-      .columnTypes = {{"int32", "int64", "int64", "int32", "int64", "float32",
-                       "int64", "int64"}},
+      .columnTypes = {{"int32", "str", "str", "int32", "int64", "float32",
+                       "str", "str"}},
       .resultTable =
           LiteralTableBuilder{
               "ResultSet",

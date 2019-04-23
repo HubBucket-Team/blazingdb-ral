@@ -319,6 +319,7 @@ project_plan_params parse_project_plan(blazing_frame& input, std::string query_p
 			output_columns.push_back(output.get_gdf_column());
 
 			add_expression_to_plan(	input,
+					input_columns,
 					expression,
 					cur_expression_out,
 					num_expressions_out,
@@ -556,13 +557,10 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 		{
 			//materialize with left_indices
 			materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),left_indices.get_gdf_column());
-			// std::cout<<"left table output"<<std::endl;
-			// print_gdf_column(output.get_gdf_column());
+
 		}else{
 			//materialize with right indices
 			materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),right_indices.get_gdf_column());
-			// std::cout<<"right table output"<<std::endl;
-			// print_gdf_column(output.get_gdf_column());
 		}
 
 		//TODO: On error clean up all the resources
@@ -711,6 +709,7 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 		gdf_size_type index_col_num_rows;
 
 		gdf_context ctxt;
+
 		ctxt.flag_null_sort_behavior = GDF_NULL_AS_LARGEST; //  Nulls are are treated as largest
 		ctxt.flag_groupby_include_nulls = 1; // Nulls are treated as values in group by keys where NULL == NULL (SQL style)
 
@@ -744,7 +743,7 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 			materialize_column(group_by_columns_ptr_out[i],
 					temp_output.get_gdf_column(),
 					index_col.get_gdf_column());
-			temp_output.update_null_count();
+			
 			input.set_column(i,temp_output.clone(input.get_column(i).name()));
 		}
 
@@ -1053,7 +1052,6 @@ void process_sort(blazing_frame & input, std::string query_part){
 				index_col.get_gdf_column()
 		);
 
-		temp_output.update_null_count();
 		input.set_column(i,temp_output.clone(input.get_column(i).name()));
 
 		/*gdf_column_cpp empty;
@@ -1093,56 +1091,15 @@ void process_filter(blazing_frame & input, std::string query_part){
 	gdf_column_cpp stencil;
 	stencil.create_gdf_column(GDF_INT8,input.get_column(0).size(),nullptr,1, "");
 
-	gdf_dtype output_type_junk; //just gets thrown away
-	gdf_dtype max_temp_type = GDF_INT8;
-	for(int i = 0; i < input.get_width(); i++){
-		if(get_width_dtype(input.get_column(i).dtype()) > get_width_dtype(max_temp_type)){
-			max_temp_type = input.get_column(i).dtype();
-		}
-	}
-
 	Library::Logging::Logger().logInfo("-> Filter sub block 1 took " + std::to_string(timer.getDuration()) + " ms");
 	timer.reset();
-	gdf_dtype output_type = get_output_type_expression(&input, &max_temp_type, get_condition_expression(query_part));
-
-	Library::Logging::Logger().logInfo("-> Filter sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
-
-	timer.reset();
+	
 	std::string conditional_expression = get_condition_expression(query_part);
-	Library::Logging::Logger().logInfo("-> Filter sub block 3 took " + std::to_string(timer.getDuration()) + " ms");
-	// timer.reset();
 	evaluate_expression(input, conditional_expression, stencil);
 
-	// Library::Logging::Logger().logInfo("-> Filter sub block 4 took " + std::to_string(timer.getDuration()) + " ms");
-
-	//apply filter to all the columns
-	// for(int i = 0; i < input.get_width(); i++){
-	// 	temp.create_gdf_column(input.get_column(i).dtype(), input.get_column(i).size(), nullptr, get_width_dtype(input.get_column(i).dtype()));
-	// 	//temp.set_dtype(input.get_column(i).dtype());
-
-	// 	//			cudaPointerAttributes attributes;
-	// 	//			cudaError_t err2 = cudaPointerGetAttributes ( &attributes, (void *) temp.data );
-	// 	//			err2 = cudaPointerGetAttributes ( &attributes, (void *) input.get_column(i)->data );
-	// 	//			err2 = cudaPointerGetAttributes ( &attributes, (void *) stencil.data );
-
-
-	// 	//just for testing
-	// 	//			cudaMalloc((void **)&(temp.data),1000);
-	// 	//			cudaMalloc((void **)&(temp.valid),1000);
-
-		// 	err = gpu_apply_stencil(
-	// 			input.get_column(i).get_gdf_column(),
-	// 			stencil.get_gdf_column(),
-	// 			temp.get_gdf_column()
-	// 	);
-	// 	if(err != GDF_SUCCESS){
-	// 		return err;
-	// 	}
-
-	// 	input.set_column(i,temp.clone());
-	// }
-	
+	Library::Logging::Logger().logInfo("-> Filter sub block 3 took " + std::to_string(timer.getDuration()) + " ms");
 	timer.reset();
+	
 	gdf_column_cpp index_col;
 	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
 	gdf_sequence(static_cast<int32_t*>(index_col.get_gdf_column()->data), input.get_column(0).size(), 0);
@@ -1159,19 +1116,17 @@ void process_filter(blazing_frame & input, std::string query_part){
 	Library::Logging::Logger().logInfo("-> Filter sub block 6 took " + std::to_string(timer.getDuration()) + " ms");
 
 	timer.reset();
-	gdf_column_cpp materialize_temp;
-	materialize_temp.create_gdf_column(input.get_column(0).dtype(),temp_idx.size(),nullptr,get_width_dtype(max_temp_type), "");
+	
 	for(int i = 0; i < input.get_width();i++){
-		materialize_temp.set_dtype(input.get_column(i).dtype());
+		gdf_column_cpp materialize_temp;
+		materialize_temp.create_gdf_column(input.get_column(i).dtype(),temp_idx.size(),nullptr,get_width_dtype(input.get_column(i).dtype()), input.get_column(i).name());
 
 		materialize_column(
 				input.get_column(i).get_gdf_column(),
-				materialize_temp.get_gdf_column(),
-				temp_idx.get_gdf_column()
-		);
-
-		materialize_temp.update_null_count();
-		input.set_column(i,materialize_temp.clone(input.get_column(i).name()));
+				materialize_temp.get_gdf_column(), //output
+				temp_idx.get_gdf_column() //indexes
+		);	
+		input.set_column(i,materialize_temp);
 	}
 	Library::Logging::Logger().logInfo("-> Filter sub block 7 took " + std::to_string(timer.getDuration()) + " ms");
 
@@ -1348,24 +1303,15 @@ query_token_t evaluate_query(
 			double duration = blazing_timer.getDuration();
 
 			//REMOVE any columns that were ipcd to put into the result set
-			std::set<gdf_column *> included_columns;
 			for(size_t index = 0; index < output_frame.get_size_columns(); index++){
 				gdf_column_cpp output_column = output_frame.get_column(index);
-				output_frame.set_column(index, output_column.clone(output_column.name()));
 				
-				// WSM IS THIS CORRECT, THIS IS PRIOR TO MERGE NEED TO LOOK INTO THIS
-				/*if(output_column.is_ipc() || included_columns.find(output_column.get_gdf_column()) != included_columns.end()){
-				output_frame.set_column(index,
-						output_column.clone(output_column.name()));
-				}else{
-					output_column.delete_set_name(output_column.name());
-				}*/
-				
-				
+				if(output_column.is_ipc()){
+					output_frame.set_column(index,
+							output_column.clone(output_column.name()));
+				}
 			}
 		
-
-
 			result_set_repository::get_instance().update_token(token, output_frame, duration);
 		}
 		catch(const std::exception& e)

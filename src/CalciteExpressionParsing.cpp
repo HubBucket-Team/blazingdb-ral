@@ -8,7 +8,7 @@
 #include "CalciteExpressionParsing.h"
 #include "DataFrame.h"
 #include <map>
-
+#include <cudf.h>
 bool is_null(std::string token){
 	return token == "null";
 }
@@ -169,6 +169,8 @@ size_t get_width_dtype(gdf_dtype type){
 		return 0;
 	}else if(type == GDF_STRING){
 		return 0;
+	}else if(type == GDF_STRING_CATEGORY){
+		return 4;
 	}
 }
 
@@ -475,7 +477,7 @@ gdf_dtype get_output_type_expression(blazing_frame * input, gdf_dtype * max_temp
 		std::string token = get_last_token(clean_expression,&position);
 
 		if(is_operator_token(token)){
-			if(is_binary_operator_token(token) || is_other_binary_operator_token(token)){
+			if(is_binary_operator_token(token) ){
 
 				if(operands.size()<2)
 					throw std::runtime_error("In function get_output_type_expression, the operator cannot be processed on less than one or zero elements");
@@ -498,7 +500,6 @@ gdf_dtype get_output_type_expression(blazing_frame * input, gdf_dtype * max_temp
 				}
 				gdf_binary_operator operation = get_binary_operation(token);
 				operands.push(get_output_type(left_operand,right_operand,operation));
-				
 				if(position > 0 && get_width_dtype(operands.top()) > get_width_dtype(*max_temp_type)){
 					*max_temp_type = operands.top();
 				}
@@ -517,7 +518,7 @@ gdf_dtype get_output_type_expression(blazing_frame * input, gdf_dtype * max_temp
 			}
 
 		}else{
-			if(is_literal(token)){
+			if(is_literal(token) || is_string(token)){
 				operands.push(GDF_invalid);
 			}else{
 				operands.push(input->get_column(get_index(token)).dtype() );
@@ -608,6 +609,7 @@ gdf_binary_operator get_binary_operation(std::string operator_string){
 }
 
 
+
 bool is_binary_operator_token(std::string token){
 	return (gdf_binary_operator_map.find(token) != gdf_binary_operator_map.end());
 }
@@ -616,10 +618,9 @@ bool is_unary_operator_token(std::string token){
 	return (gdf_unary_operator_map.find(token) != gdf_unary_operator_map.end());
 }
 
-//todo, remove after,  it is not used anymore.
-bool is_other_binary_operator_token(std::string token){
-	return false;
-	// return (gdf_other_binary_operator_map.find(token) != gdf_other_binary_operator_map.end());
+
+bool is_string(const std::string &operand) {
+	return operand[0] == '\'' && operand[operand.size()-1] == '\'';
 }
 
 bool is_literal(std::string operand){
@@ -644,7 +645,7 @@ std::string get_last_token(std::string expression, int * position){
 }
 
 bool is_operator_token(std::string operand) {
-	return (operand[0] != '$' && !is_number(operand) && !is_date(operand));
+	return (operand[0] != '$' && !is_number(operand) && !is_date(operand) && !is_string(operand));
 }
 
 std::size_t

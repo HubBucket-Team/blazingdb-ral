@@ -59,6 +59,8 @@ class gdf_column_cpp
 
 	gdf_column* get_gdf_column();
 
+	void create_gdf_column(NVCategory* category, size_t num_values,std::string column_name);
+
 	void create_gdf_column(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value, const std::string &column_name = "");
 
 	void create_gdf_column(gdf_dtype type, size_t num_values, void * input_data, gdf_valid_type * host_valid, size_t width_per_value, const std::string &column_name = "");

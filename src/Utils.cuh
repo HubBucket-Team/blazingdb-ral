@@ -12,6 +12,9 @@
 #include <thrust/device_ptr.h>
 #include <thrust/sequence.h>
 
+#include <nvstrings/NVCategory.h>
+#include <nvstrings/NVStrings.h>
+
 #include <rmm/rmm.h>
 
 #ifndef DEVICE_RESET
@@ -156,13 +159,34 @@ static void print_gdf_column(gdf_column const * the_column)
         print_typed_column<col_type>(col_data, the_column->valid, num_rows);
         break;
       }
+    case GDF_STRING_CATEGORY:
+      {
+        std::cout<<"Data on column:\n";
+        using col_type = int32_t;
+        col_type * col_data = static_cast<col_type*>(the_column->data);
+        print_typed_column<col_type>(col_data, the_column->valid, num_rows);
+
+        if(the_column->dtype_info.category != nullptr){
+          std::cout<<"Data on category:\n";
+          size_t keys_size = static_cast<NVCategory *>(the_column->dtype_info.category)->keys_size();
+          if(keys_size>0){
+            static_cast<NVCategory *>(the_column->dtype_info.category)->get_keys()->print();
+          }
+          else{
+            std::cout<<"Empty!\n";
+          }
+        }
+        else{
+            std::cout<<"Category nulled!\n";
+        }
+        break;
+      }
     default:
       {
         std::cout << "Attempted to print unsupported type.\n";
       }
   }
 }
-
 
 template <typename HostDataType>
 void print_column(gdf_column * column){

@@ -125,17 +125,6 @@ void materialize_templated_2(gdf_column * input, gdf_column * output, gdf_column
 	if( input->dtype == GDF_STRING_CATEGORY ){
 	 	nvcategory_gather(output,static_cast<NVCategory *>(input->dtype_info.category));
 	}
-	
-	// if( input->dtype == GDF_STRING_CATEGORY ){
-	// 	output->dtype_info.category = static_cast<void *>(static_cast<NVCategory *>(input->dtype_info.category)->gather( static_cast<int32_t*>(output->data), output->size));
-
-	//     CheckCudaErrors( cudaMemcpy(
-	// 		output->data,
-	// 		static_cast<NVCategory *>(output->dtype_info.category)->values_cptr(),
-	// 		sizeof(nv_category_index_type) * output->size,
-	// 		cudaMemcpyDeviceToDevice) );
-
-	// }
 }
 
 template <typename ElementIterator>

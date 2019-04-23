@@ -1126,16 +1126,6 @@ void process_filter(blazing_frame & input, std::string query_part){
 				materialize_temp.get_gdf_column(), //output
 				temp_idx.get_gdf_column() //indexes
 		);	
-		std::cout<<"Input"<<std::endl;
-		print_gdf_column(input.get_column(i).get_gdf_column());
-
-		std::cout<<"Indices"<<std::endl;
-		print_gdf_column(temp_idx.get_gdf_column());
-
-		std::cout<<"Output"<<std::endl;
-    print_gdf_column(materialize_temp.get_gdf_column());
-
-
 		input.set_column(i,materialize_temp);
 	}
 	Library::Logging::Logger().logInfo("-> Filter sub block 7 took " + std::to_string(timer.getDuration()) + " ms");

@@ -65,6 +65,17 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 		throw std::runtime_error{"Token does not exist"};
 	}
 
+	std::cout<<"Beginning of update token"<<std::endl;
+	for(size_t i = 0; i < frame.get_width(); i++){
+		std::cout<<"Output column name: "<<frame.get_column(i).name()<<std::endl;
+		print_gdf_column(frame.get_column(i).get_gdf_column());
+	}
+
+	std::cout<<"printed update token columns"<<std::endl;
+
+	// lets deduplicate before we put into the results repo, because we wont be able to reopen an ipc
+	frame.deduplicate(); 
+
 	//deregister output since we are going to ipc it
 	for(size_t i = 0; i < frame.get_width(); i++){
 		if(frame.get_column(i).dtype() == GDF_STRING_CATEGORY){
@@ -75,27 +86,26 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 			//we must figure out a way to avoid this when is no needed
 			NVCategory* new_category = static_cast<NVCategory *> (frame.get_column(i).dtype_info().category)->gather_and_remap( static_cast<int *>(frame.get_column(i).data()), frame.get_column(i).size());
 			NVStrings * new_strings = new_category->to_strings();
+			NVCategory::destroy(new_category);
 
 			gdf_column * new_gdf_column = new gdf_column;
 			new_gdf_column->size = frame.get_column(i).size();
 			new_gdf_column->null_count = 0;
 			new_gdf_column->valid = nullptr;
 			new_gdf_column->data = (void * ) new_strings;
-			new_gdf_column->dtype = frame.get_column(i).dtype();
+			new_gdf_column->dtype = GDF_STRING;
 			new_gdf_column->col_name = const_cast<char*>(frame.get_column(i).name().c_str());
 
 			gdf_column_cpp string_column;
 			string_column.create_gdf_column(new_gdf_column);
-			string_column.get_gdf_column()->dtype = GDF_STRING; //TODO create_gdf_column no soporta GDF_STRING porque type_dispatcher tampoco lo soporta
-																//esto significa que allocated_size_data tecnicamente esta incorrecto
-			frame.set_column(i,string_column);
+			
+			frame.set_column(i,string_column);			
+			GDFRefCounter::getInstance()->deregister_column(frame.get_column(i).get_gdf_column());
 		}else{
 			GDFRefCounter::getInstance()->deregister_column(frame.get_column(i).get_gdf_column());
 		}
 	}
-
-	// lets deduplicate before we put into the results repo, because we wont be able to reopen an ipc
-	frame.deduplicate(); 
+	
 
 	for(size_t i = 0; i < frame.get_width(); i++){
 		column_token_t column_token = frame.get_column(i).get_column_token();
@@ -111,10 +121,17 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 		std::lock_guard<std::mutex> guard(this->repo_mutex);
 		this->result_sets[token] = {true, frame, duration, errorMsg, 0};
 	}
+
+	for(size_t i = 0; i < frame.get_width(); i++){
+		std::cout<<"Output column name: "<<frame.get_column(i).name()<<std::endl;
+		print_gdf_column(frame.get_column(i).get_gdf_column());
+	}
+
+	std::cout<<"Completed update token"<<std::endl;
+
+
 	cv.notify_all();
-	/*if(this->requested_responses.find(token) != this->requested_responses.end()){
-		write_response(std::get<1>(this->result_sets[token]),this->requested_responses[token]);
-	}*/
+	
 }
 
 //ToDo uuid instead dummy random
@@ -146,16 +163,7 @@ void result_set_repository::free_result(connection_id_t connection, query_token_
 	blazing_frame output_frame = this->result_sets[token].result_frame;
 
 	for(size_t i = 0; i < output_frame.get_width(); i++){
-		if(output_frame.get_column(i).dtype() == GDF_STRING){
-			NVStrings::destroy(static_cast<NVStrings *>(output_frame.get_column(i).data()));
-			output_frame.get_column(i).get_gdf_column()->data = nullptr;
-			GDFRefCounter::getInstance()->free(output_frame.get_column(i).get_gdf_column());
-		} else if (output_frame.get_column(i).dtype() == GDF_STRING_CATEGORY){
-			NVCategory::destroy(static_cast<NVCategory *>(output_frame.get_column(i).dtype_info().category));
-			GDFRefCounter::getInstance()->free(output_frame.get_column(i).get_gdf_column());
-		}else{
-			GDFRefCounter::getInstance()->free(output_frame.get_column(i).get_gdf_column());
-		}
+		GDFRefCounter::getInstance()->free(output_frame.get_column(i).get_gdf_column());		
 	}
 
 	this->result_sets.erase(token);

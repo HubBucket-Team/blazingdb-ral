@@ -351,7 +351,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
 
         }else{
           dtype_info = gdf_dto::gdf_dtype_extra_info {
-                .time_unit = (gdf_dto::gdf_time_unit)0
+                .time_unit = (gdf_dto::gdf_time_unit)0     // TODO: why is this hardcoded?
           };
 
           data = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->data);
@@ -361,7 +361,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
               .data = data,
               .valid = valid,
               .size = result.result_frame.get_columns()[0][i].size(),
-              .dtype = (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype(), // GDF_STRING
+              .dtype = (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype(), 
               .null_count = result.result_frame.get_columns()[0][i].null_count(),
               .dtype_info = dtype_info
           };
@@ -494,7 +494,6 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
         if (input_tables[i][j].get_gdf_column()->dtype == GDF_STRING){
           NVStrings* strs = static_cast<NVStrings*>(input_tables[i][j].get_gdf_column()->data);
           NVCategory* category = NVCategory::create_from_strings(*strs);
-          NVStrings::destroy(strs);
           input_tables[i][j].get_gdf_column()->data = nullptr;
           input_tables[i][j].create_gdf_column(category, input_tables[i][j].size(), input_tables[i][j].name());
         }

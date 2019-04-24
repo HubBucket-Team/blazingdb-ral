@@ -23,6 +23,7 @@ void evaluate_expression(
 
 
 void add_expression_to_plan(	blazing_frame & inputs,
+		std::vector<gdf_column *>& input_columns,
 		std::string expression,
 		column_index_type expression_position,
 		column_index_type num_outputs,

@@ -65,7 +65,7 @@ void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 
 	std::vector<std::size_t> column_indices;
 	for (size_t index =0; index < include_columns.size(); index++) {
-		if (include_columns[index]){
+		if (include_columns.size() == 0 || include_columns[index]){
 			column_indices.push_back(index);	
 		}
 	}

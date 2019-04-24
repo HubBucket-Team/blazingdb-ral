@@ -7,7 +7,6 @@ cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 
 project(blazingdb-ral C CXX CUDA)
 
-
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_MODULE_PATH})
 message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
 
@@ -57,7 +56,9 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/thirdparty/jitify
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper
-    ${RAPIDJSON_INCLUDE_DIRS})
+    ${RAPIDJSON_INCLUDE_DIRS}
+    ${NVSTRINGS_INCLUDEDIR}
+    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper)
 
 ## cuDF adapter source files
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/cuDF)
@@ -118,6 +119,7 @@ target_link_libraries(testing-libgdf_lib
     ${BLAZINGDB_COMMUNICATION_STATIC_LIB}
 
     ${LIBGDF_STATIC_LIB}
+    NVCategory
     NVStrings
     rmm
 
@@ -170,8 +172,6 @@ else()
 endif()
 
 # Print the project summary
-#TODO cmake bug, it says blazingdb-protocol was not deteected but everything seems
-#fine (cmake test fail with link issues with pthreads_create)
-#feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)
+feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)
 
 #END MAIN #

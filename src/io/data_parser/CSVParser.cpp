@@ -264,7 +264,8 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	// 			args.data[output_column_index]);
 	// }
  	for(size_t i = 0; i < raw_args.num_cols_out; i++ ){
-		if(include_column[i]) {
+
+		if(include_column.size() == 0 || include_column[i]) {
 			gdf_column_cpp c;
 			c.create_gdf_column(raw_args.data[i]); 
 			c.set_name(std::string{raw_args.names[i]});
@@ -277,6 +278,7 @@ void csv_parser::parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	csv_read_arg raw_args{};
     copy_non_data_csv_args(args, raw_args);
     
+	raw_args.nrows=1;
 	CUDF_CALL(read_csv_arrow(&raw_args,file));
 
 	std::cout << "args.num_cols_out " << raw_args.num_cols_out << std::endl;

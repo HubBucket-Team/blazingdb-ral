@@ -90,6 +90,10 @@ gdf_column_cpp gdf_column_cpp::clone(std::string name)  // TODO clone needs to r
 	char * data_dev = nullptr;
 	char * valid_dev = nullptr;
 
+    if (this->column->dtype == GDF_STRING){
+        throw std::runtime_error("In gdf_column_cpp::clone unsupported data type GDF_STRING");
+    }
+
     cuDF::Allocator::allocate((void**)&data_dev, allocated_size_data);
     if (column->valid != nullptr) {
         cuDF::Allocator::allocate((void**)&valid_dev, allocated_size_valid);
@@ -108,6 +112,11 @@ gdf_column_cpp gdf_column_cpp::clone(std::string name)  // TODO clone needs to r
 	col1.column->valid =(gdf_valid_type *) valid_dev;
 	col1.allocated_size_data = this->allocated_size_data;
 	col1.allocated_size_valid = this->allocated_size_valid;
+
+    if (this->column->dtype == GDF_STRING_CATEGORY){
+        col1.column->dtype_info.category =  static_cast<void*>(static_cast<NVCategory *>(this->column->dtype_info.category)->copy());
+    }
+    
     col1.is_ipc_column = false;
     col1.column_token = 0;
 	if(name == ""){
@@ -192,6 +201,11 @@ void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,g
     gdf_column_view(this->column, col_data, valid_data, num_values, type);
     get_column_byte_width(this->column, &width);
     this->allocated_size_data = num_values * width;
+
+    if(col_data == nullptr){
+        cuDF::Allocator::allocate((void**)&this->column->data, this->allocated_size_data);
+    }
+
     this->allocate_set_valid();
     is_ipc_column = true;
     this->column_token = 0;
@@ -199,6 +213,37 @@ void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,g
 
     FreeMemory::registerIPCPointer(column->data);
     FreeMemory::registerIPCPointer(column->valid);
+    //Todo: deprecated? or need to register the nvstrings pointers?
+}
+
+void gdf_column_cpp::create_gdf_column(NVCategory* category, size_t num_values,std::string column_name){
+
+    decrement_counter(column);
+
+    //TODO crate column here
+    this->column = new gdf_column;
+    gdf_dtype type = GDF_STRING_CATEGORY;
+    gdf_column_view(this->column, nullptr, nullptr, num_values, type);
+    
+    this->column->dtype_info.category = (void*) category;
+
+    this->allocated_size_data = sizeof(nv_category_index_type) * this->column->size;
+    cuDF::Allocator::allocate((void**)&this->column->data, this->allocated_size_data);
+    CheckCudaErrors( cudaMemcpy(
+        this->column->data,
+        static_cast<NVCategory *>(this->column->dtype_info.category)->values_cptr(),
+        this->allocated_size_data,
+        cudaMemcpyDeviceToDevice) );
+    
+    this->column->valid = nullptr; // TODO: Nulls are not supported for strings
+    this->column->null_count = 0; // TODO: Nulls are not supported for strings
+
+    this->is_ipc_column = false;
+    this->column_token = 0;
+    this->set_name(column_name);
+
+    GDFRefCounter::getInstance()->register_column(this->column);
+
 }
 
 
@@ -253,30 +298,47 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     this->is_ipc_column = false;
     this->column_token = 0;
 
-    gdf_valid_type * valid_device = allocate_valid();
-    this->allocated_size_data = (width_per_value * num_values);
+
+    //percy original distribution
+    //gdf_valid_type * valid_device = allocate_valid();
+    //this->allocated_size_data = (width_per_value * num_values);
+
+    gdf_valid_type * valid_device = nullptr;
+    if (type != GDF_STRING_CATEGORY && type != GDF_STRING){
+        valid_device = allocate_valid();        
+    } else {
+        this->allocated_size_valid = 0;
+    }
+    this->allocated_size_data = (width_per_value * num_values); 
+
 
     cuDF::Allocator::allocate((void**)&data, allocated_size_data);
 
     gdf_column_view(this->column, (void *) data, valid_device, num_values, type);
+    this->column->dtype_info.category = nullptr;
+    
     this->set_name(column_name);
     if(input_data != nullptr){
         CheckCudaErrors(cudaMemcpy(data, input_data, num_values * width_per_value, cudaMemcpyHostToDevice));
     }
 
     GDFRefCounter::getInstance()->register_column(this->column);
-
 }
 
 void gdf_column_cpp::create_gdf_column(gdf_column * column){
     decrement_counter(this->column);
 
 	this->column = column;
-	int width_per_value;
-	gdf_error err = get_column_byte_width(column, &width_per_value);
+	
+    if (column->dtype != GDF_STRING){
+        int width_per_value;
+        gdf_error err = get_column_byte_width(column, &width_per_value);
 
-	//TODO: we are assuming they are not padding,
-	this->allocated_size_data = width_per_value * column->size;
+        //TODO: we are assuming they are not padding,
+        this->allocated_size_data = width_per_value * column->size;
+    } else {
+        this->allocated_size_data = 0; // TODO: do we care? what should be put there?
+    }
 	if(column->valid != nullptr){
         this->allocated_size_valid = gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(column->size)); //so allocations are supposed to be 64byte aligned
 	}

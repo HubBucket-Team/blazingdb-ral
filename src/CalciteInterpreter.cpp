@@ -233,6 +233,7 @@ project_plan_params parse_project_plan(blazing_frame& input, std::string query_p
 			output_columns.push_back(output.get_gdf_column());
 
 			add_expression_to_plan(	input,
+					input_columns,
 					expression,
 					cur_expression_out,
 					num_expressions_out,
@@ -406,6 +407,87 @@ void process_project(blazing_frame & input, std::string query_part){
 
 }
 
+
+std::string get_named_expression(std::string query_part, std::string expression_name){
+	if(query_part.find(expression_name + "=[") == query_part.npos){
+		return ""; //expression not found
+	}
+	int start_position =( query_part.find(expression_name + "=["))+ 2 + expression_name.length();
+	int end_position = (query_part.find("]",start_position));
+	return query_part.substr(start_position,end_position - start_position);
+}
+
+
+blazing_frame process_join(blazing_frame input, std::string query_part){
+	static CodeTimer timer;
+	timer.reset();
+
+	size_t size = 0; //libgdf will be handling the outputs for these
+
+	gdf_column_cpp left_indices, right_indices;
+	//right now it outputs int32
+	//TODO de donde saco el nombre de la columna aqui???
+	left_indices.create_gdf_column(GDF_INT32,size,nullptr,sizeof(int), "");
+	right_indices.create_gdf_column(GDF_INT32,size,nullptr,sizeof(int), "");
+
+	std::string condition = get_condition_expression(query_part);
+	std::string join_type = get_named_expression(query_part,"joinType");
+
+	evaluate_join(
+			condition,
+			join_type,
+			input,
+			left_indices.get_gdf_column(),
+			right_indices.get_gdf_column()
+	);
+
+	//TODO: On error clean up everything here so we dont run out of memory
+
+	Library::Logging::Logger().logInfo("-> Join sub block 1 took " + std::to_string(timer.getDuration()) + " ms");
+	// std::cout<<"Indices are starting!"<<std::endl;
+	// print_gdf_column(left_indices.get_gdf_column());
+	// print_gdf_column(right_indices.get_gdf_column());
+	// std::cout<<"Indices are done!"<<std::endl;
+
+	//the options get interesting here. So if the join nis smaller than the input
+	// you could write the output in place, saving time for allocations then shrink later on
+	// the simplest solution is to reallocate space and free up the old after copying it over
+
+	timer.reset();
+	//a data frame should have two "tables"or groups of columns at this point
+	std::vector<gdf_column_cpp> new_columns(input.get_size_columns());
+	size_t first_table_end_index = input.get_size_column();
+	int column_width;
+	for(int column_index = 0; column_index < input.get_size_columns(); column_index++){
+		gdf_column_cpp output;
+
+		CUDF_CALL( get_column_byte_width(input.get_column(column_index).get_gdf_column(), &column_width) );
+
+		//TODO de donde saco el nombre de la columna aqui???
+		output.create_gdf_column(input.get_column(column_index).dtype(),left_indices.size(),nullptr,column_width, input.get_column(column_index).name());
+
+		if(column_index < first_table_end_index)
+		{
+			//materialize with left_indices
+			materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),left_indices.get_gdf_column());
+
+		}else{
+			//materialize with right indices
+			materialize_column(input.get_column(column_index).get_gdf_column(),output.get_gdf_column(),right_indices.get_gdf_column());
+		}
+
+		//TODO: On error clean up all the resources
+		//free_gdf_column(input.get_column(column_index));
+		output.update_null_count();
+
+		new_columns[column_index] = output;
+	}
+	input.clear();
+	input.add_table(new_columns);
+	Library::Logging::Logger().logInfo("-> Join sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
+	return input;
+}
+
 blazing_frame process_union(blazing_frame& left, blazing_frame& right, std::string query_part){
 	bool isUnionAll = (get_named_expression(query_part, "all") == "true");
 	if (!isUnionAll) {
@@ -453,6 +535,464 @@ blazing_frame process_union(blazing_frame& left, blazing_frame& right, std::stri
 	return result_frame;
 }
 
+std::vector<int> get_group_columns(std::string query_part){
+
+	std::string temp_column_string = get_named_expression(query_part,"group");
+	if(temp_column_string.size() <= 2){
+		return std::vector<int>();
+	}
+	//now you have somethig like {0, 1}
+	temp_column_string = temp_column_string.substr(1,temp_column_string.length() - 2);
+	std::vector<std::string> column_numbers_string = StringUtil::split(temp_column_string,",");
+	std::vector<int> group_columns(column_numbers_string.size());
+	for(int i = 0; i < column_numbers_string.size();i++){
+		group_columns[i] = std::stoull (column_numbers_string[i],0);
+	}
+	return group_columns;
+}
+
+
+
+void process_aggregate(blazing_frame & input, std::string query_part){
+	/*
+	 * 			String sql = "select sum(e), sum(z), x, y from hr.emps group by x , y";
+	 * 			generates the following calcite relational algebra
+	 * 			LogicalProject(EXPR$0=[$2], EXPR$1=[$3], x=[$0], y=[$1])
+	 * 	  	  		LogicalAggregate(group=[{0, 1}], EXPR$0=[SUM($2)], EXPR$1=[SUM($3)])
+	 *   				LogicalProject(x=[$0], y=[$1], e=[$3], z=[$2])
+	 *     					EnumerableTableScan(table=[[hr, emps]])
+	 *
+	 * 			As you can see the project following aggregate expects the columns to be grouped by to appear BEFORE the expressions
+	 */
+	
+	//get groups
+	int pos = query_part.find("(") + 1;
+	assert(pos != std::string::npos);
+	int count = query_part.length() - pos - 1;
+	assert(count > 0);
+	query_part = query_part.substr(pos, count);
+	std::vector<int> group_columns = get_group_columns(query_part);
+
+	//get aggregations
+	std::vector<gdf_agg_op> aggregation_types;
+	std::vector<std::string>  aggregation_input_expressions;
+	std::vector<std::string>  aggregation_column_assigned_aliases;
+	std::vector<std::string> expressions = get_expressions_from_expression_list(query_part);
+
+	for(std::string expr : expressions)
+	{
+		//std::cout << expr << '\n';
+		std::string group_str("group");
+		std::string expression = std::regex_replace(expr, std::regex("^ +| +$|( ) +"), "$1");
+		if (expression.find("group=") == std::string::npos)
+		{
+			gdf_agg_op operation = get_aggregation_operation(expression);
+			aggregation_types.push_back(operation);
+			aggregation_input_expressions.push_back(get_string_between_outer_parentheses(expression));
+
+			// if the aggregation has an alias, lets capture it here, otherwise we'll figure out what to call the aggregation based on its input
+			if (expression.find("EXPR$") == 0)
+				aggregation_column_assigned_aliases.push_back("");
+			else
+				aggregation_column_assigned_aliases.push_back(expression.substr(0, expression.find("=[")));
+		}
+	}
+
+	// Group by without aggregation 
+	if (aggregation_types.size() == 0) {
+		gdf_size_type num_group_columns = group_columns.size();
+		std::vector<gdf_column*> cols(num_group_columns);
+		for(int i = 0; i < num_group_columns; i++){
+			cols[i] = input.get_column(i).get_gdf_column();
+		}
+
+		gdf_size_type nrows = input.get_column(0).size();
+		std::vector<gdf_column_cpp> output_columns_group(num_group_columns);
+		std::vector<gdf_column*> group_by_columns_ptr_out(num_group_columns);
+		for(int i = 0; i < num_group_columns; i++){
+			gdf_column_cpp& input_column = input.get_column(i);
+
+			output_columns_group[i].create_gdf_column(input_column.dtype(),nrows,nullptr,get_width_dtype(input_column.dtype()), input_column.name());
+
+			group_by_columns_ptr_out[i] = output_columns_group[i].get_gdf_column();
+		}
+
+		gdf_column_cpp index_col;
+		index_col.create_gdf_column(GDF_INT32,nrows,nullptr,get_width_dtype(GDF_INT32), "");
+		gdf_size_type index_col_num_rows;
+
+		gdf_context ctxt;
+
+		ctxt.flag_null_sort_behavior = GDF_NULL_AS_LARGEST; //  Nulls are are treated as largest
+		ctxt.flag_groupby_include_nulls = 1; // Nulls are treated as values in group by keys where NULL == NULL (SQL style)
+
+		CUDF_CALL( gdf_group_by_without_aggregations(num_group_columns,
+				cols.data(),
+				num_group_columns,
+				group_columns.data(),
+				group_by_columns_ptr_out.data(),
+				(gdf_size_type*)index_col.get_gdf_column()->data,
+				&index_col_num_rows,
+				&ctxt));
+
+		index_col.get_gdf_column()->size = index_col_num_rows;
+
+
+		//find the widest possible column
+		int widest_column = 0;
+		for(int i = 0; i < input.get_width();i++){
+			int cur_width;
+			get_column_byte_width(input.get_column(i).get_gdf_column(), &cur_width);
+			if(cur_width > widest_column){
+				widest_column = cur_width;
+			}
+		}
+
+		gdf_column_cpp temp_output;
+		temp_output.create_gdf_column(input.get_column(0).dtype(),index_col.size(),nullptr,widest_column, "");
+		for(int i = 0; i < num_group_columns; i++){
+			temp_output.set_dtype(output_columns_group[i].dtype());
+
+			materialize_column(group_by_columns_ptr_out[i],
+					temp_output.get_gdf_column(),
+					index_col.get_gdf_column());
+			
+			input.set_column(i,temp_output.clone(input.get_column(i).name()));
+		}
+
+		return; // since this is group by without aggregations, we dont need to do the rest
+	}
+
+
+	std::vector<gdf_dtype> aggregation_input_types;
+
+	size_t size = input.get_column(0).size();
+	size_t aggregation_size = group_columns.size() == 0 ? 1 : size; //if you have no groups you will output onlu one row
+
+	for(int i = 0; i < aggregation_types.size(); i++){
+		if(contains_evaluation(aggregation_input_expressions[i])){
+			gdf_dtype max_temp_type;
+			aggregation_input_types[i] = get_output_type_expression(&input, &max_temp_type, aggregation_input_expressions[i]);
+		}
+	}
+
+
+
+	std::vector<gdf_column *> group_by_columns_ptr{group_columns.size()};
+	std::vector<gdf_column *> group_by_columns_ptr_out{group_columns.size()};
+	std::vector<gdf_column_cpp> output_columns_group;
+	std::vector<gdf_column_cpp> output_columns_aggregations;
+
+	//TODO: fix this input_column goes out of scope before its used
+	//create output here and pass in its pointers to this
+	for(int group_columns_index = 0; group_columns_index < group_columns.size(); group_columns_index++){
+		gdf_column_cpp input_column = input.get_column(group_columns[group_columns_index]);
+		group_by_columns_ptr[group_columns_index] = input_column.get_gdf_column();
+		gdf_column_cpp output_group;
+
+		//TODO de donde saco el nombre de la columna aqui???
+		output_group.create_gdf_column(input_column.dtype(),size,nullptr,get_width_dtype(input_column.dtype()), input_column.name());
+		output_columns_group.push_back(output_group);
+		//TODO: we have to do this because the gdf_column is not the same as it gets moved
+		//aroudn but the pointers are so you cant use the one that you created you have to use int
+		group_by_columns_ptr_out[group_columns_index] = output_columns_group[group_columns_index].get_gdf_column();
+	}
+
+
+	for(int i = 0; i < aggregation_types.size(); i++){
+		std::string expression = aggregation_input_expressions[i];
+		gdf_column_cpp aggregation_input;
+		if(contains_evaluation(expression)){
+			//we dont knwo what the size of this input will be so allcoate max size
+			//TODO de donde saco el nombre de la columna aqui???
+			aggregation_input.create_gdf_column(aggregation_input_types[i],size,nullptr,get_width_dtype(aggregation_input_types[i]),"");
+			evaluate_expression(input, expression, aggregation_input);
+		}else{
+			aggregation_input = input.get_column(get_index(expression));
+		}
+
+		gdf_dtype output_type = get_aggregation_output_type(aggregation_input.dtype(),aggregation_types[i], group_columns.size());
+
+		/*
+        // The 'gdf_sum' libgdf function requires that all input operands have the same dtype.
+        if ((group_columns.size() == 0) && (aggregation_types[i] == GDF_SUM)) {
+            output_type = aggregation_input.dtype();
+        }
+		 */
+
+		gdf_column_cpp output_column;
+		// if the aggregation was given an alias lets use it, otherwise we'll name it based on the aggregation and input
+		if (aggregation_column_assigned_aliases[i] == "")
+			output_column.create_gdf_column(output_type,aggregation_size,nullptr,get_width_dtype(output_type), aggregator_to_string(aggregation_types[i]) + "(" + aggregation_input.name() + ")" );
+		else
+			output_column.create_gdf_column(output_type,aggregation_size,nullptr,get_width_dtype(output_type), aggregation_column_assigned_aliases[i]);
+
+		output_columns_aggregations.push_back(output_column);
+
+		gdf_context ctxt;
+		ctxt.flag_distinct = aggregation_types[i] == GDF_COUNT_DISTINCT ? true : false;
+		ctxt.flag_method = GDF_HASH;
+		ctxt.flag_sort_result = 1;
+		switch(aggregation_types[i]){
+		case GDF_SUM:
+			if (group_columns.size() == 0) {
+				if (aggregation_input.get_gdf_column()->size != 0) {
+					unsigned int reduction_temp_size = gdf_reduction_get_intermediate_output_size();
+					gdf_column_cpp temp;
+					temp.create_gdf_column(output_type,reduction_temp_size,nullptr,get_width_dtype(output_type), "");
+					CUDF_CALL( gdf_sum(aggregation_input.get_gdf_column(), temp.get_gdf_column()->data, reduction_temp_size) );
+					CheckCudaErrors(cudaMemcpy(output_column.get_gdf_column()->data, temp.get_gdf_column()->data, 1 * get_width_dtype(output_type), cudaMemcpyDeviceToDevice));
+				}
+				else {
+					create_null_value_gdf_column(0,
+							output_type,
+							aggregation_size,
+							aggregator_to_string(aggregation_types[i]),
+							output_column,
+							output_columns_aggregations);
+				}
+			}else{
+				//				std::cout<<"before"<<std::endl;
+				//				print_gdf_column(output_columns_group[0].get_gdf_column());
+				CUDF_CALL( gdf_group_by_sum(group_columns.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out.data(),output_column.get_gdf_column(),&ctxt));
+				//				std::cout<<"after"<<std::endl;
+				//				print_gdf_column(output_columns_group[0].get_gdf_column());
+				//				std::cout<<"direct "<<(group_by_columns_ptr_out[0] == nullptr)<<std::endl;
+				//								print_gdf_column(group_by_columns_ptr_out[0]);
+				//								std::cout<<"direct done"<<std::endl;
+				//
+				//								std::cout<<"output column"<<std::endl;
+				//								print_gdf_column(output_column.get_gdf_column());
+			}
+			break;
+		case GDF_MIN:
+			if(group_columns.size() == 0){
+                if (aggregation_input.get_gdf_column()->size != 0) {
+                    unsigned int reduction_temp_size = gdf_reduction_get_intermediate_output_size();
+					gdf_column_cpp temp;
+					temp.create_gdf_column(output_type,reduction_temp_size,nullptr,get_width_dtype(output_type), "");
+					CUDF_CALL( gdf_min(aggregation_input.get_gdf_column(), temp.get_gdf_column()->data, reduction_temp_size) );
+					CheckCudaErrors(cudaMemcpy(output_column.get_gdf_column()->data, temp.get_gdf_column()->data, 1 * get_width_dtype(output_type), cudaMemcpyDeviceToDevice));
+                }
+                else {
+                    create_null_value_gdf_column(0,
+                                                output_type,
+                                                aggregation_size,
+                                                aggregator_to_string(aggregation_types[i]),
+                                                output_column,
+                                                output_columns_aggregations);
+                }
+			}else{
+				CUDF_CALL( gdf_group_by_min(group_columns.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out.data(),output_column.get_gdf_column(),&ctxt));
+			}
+			break;
+		case GDF_MAX:
+			if(group_columns.size() == 0){
+                if (aggregation_input.get_gdf_column()->size != 0) {
+                    unsigned int reduction_temp_size = gdf_reduction_get_intermediate_output_size();
+					gdf_column_cpp temp;
+					temp.create_gdf_column(output_type,reduction_temp_size,nullptr,get_width_dtype(output_type), "");
+					CUDF_CALL( gdf_max(aggregation_input.get_gdf_column(), temp.get_gdf_column()->data, reduction_temp_size) );
+					CheckCudaErrors(cudaMemcpy(output_column.get_gdf_column()->data, temp.get_gdf_column()->data, 1 * get_width_dtype(output_type), cudaMemcpyDeviceToDevice));
+                }
+                else {
+                     create_null_value_gdf_column(0,
+                                                output_type,
+                                                aggregation_size,
+                                                aggregator_to_string(aggregation_types[i]),
+                                                output_column,
+                                                output_columns_aggregations);
+                }
+			}else{
+				CUDF_CALL( gdf_group_by_max(group_columns.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out.data(),output_column.get_gdf_column(),&ctxt));
+			}
+			break;
+		case GDF_AVG:
+            if(group_columns.size() == 0){
+                if (aggregation_input.get_gdf_column()->size != 0) {
+                    perform_avg(output_column.get_gdf_column(), aggregation_input.get_gdf_column());
+                }
+                else {
+                    create_null_value_gdf_column(0,
+                                                output_type,
+                                                aggregation_size,
+                                                aggregator_to_string(aggregation_types[i]),
+                                                output_column,
+                                                output_columns_aggregations);
+                }
+            }
+			else{
+				CUDF_CALL( gdf_group_by_avg(group_columns.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out.data(),output_column.get_gdf_column(),&ctxt));
+			}
+			break;
+		case GDF_COUNT:
+			if(group_columns.size() == 0){
+
+                // output dtype is GDF_UINT64
+                // defined in 'get_aggregation_output_type' function.
+                uint64_t result = aggregation_input.get_gdf_column()->size - aggregation_input.get_gdf_column()->null_count;                
+				CheckCudaErrors(cudaMemcpy(output_column.get_gdf_column()->data, &result, sizeof(uint64_t), cudaMemcpyHostToDevice));			
+			}else{
+			CUDF_CALL( gdf_group_by_count(group_columns.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out.data(),output_column.get_gdf_column(),&ctxt));
+			}
+			break;
+		case GDF_COUNT_DISTINCT:
+			if(group_columns.size() == 0){
+
+                // output dtype is GDF_UINT64
+                // defined in 'get_aggregation_output_type' function.
+                uint64_t result = aggregation_input.get_gdf_column()->size - aggregation_input.get_gdf_column()->null_count;                
+				CheckCudaErrors(cudaMemcpy(output_column.get_gdf_column()->data, &result, sizeof(uint64_t), cudaMemcpyHostToDevice));			
+			}else{
+				CUDF_CALL( gdf_group_by_count_distinct(group_columns.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
+						nullptr,group_by_columns_ptr_out.data(),output_column.get_gdf_column(),&ctxt));
+			}
+			break;
+		}
+
+		//so that subsequent iterations won't be too large
+		aggregation_size = output_column.size();
+
+		/*
+		 * GDF_SUM = 0,
+  GDF_MIN,
+  GDF_MAX,
+  GDF_AVG,
+  GDF_COUNT,
+  GDF_COUNT_DISTINCT,
+  N_GDF_AGG_OPS
+		 */
+		//perform aggregation now
+
+		//catpure asize for next iterationo
+
+	}
+
+	//TODO: this is pretty crappy because its recalcluating the groups each time, this is becuase the libgdf api can
+	//only process one aggregate at a time while it calculates the group,
+	//these steps would have to be divided up in order to really work
+
+	//TODO: consider compacting columns here before moving on
+	for(int i = 0; i < output_columns_aggregations.size(); i++){
+		output_columns_aggregations[i].resize(aggregation_size);
+		output_columns_aggregations[i].compact();
+		output_columns_aggregations[i].update_null_count();
+	}
+
+	for(int i = 0; i < output_columns_group.size(); i++){
+		// print_gdf_column(output_columns_group[i].get_gdf_column());
+		output_columns_group[i].resize(aggregation_size);
+		output_columns_group[i].compact();
+		output_columns_group[i].update_null_count();
+	}
+
+	input.clear();
+
+	input.add_table(output_columns_group);
+	input.add_table(output_columns_aggregations);
+	input.consolidate_tables();
+}
+
+void process_sort(blazing_frame & input, std::string query_part){
+	static CodeTimer timer;
+	timer.reset();
+	std::cout<<"about to process sort"<<std::endl;
+
+	auto rangeStart = query_part.find("(");
+	auto rangeEnd = query_part.rfind(")") - rangeStart - 1;
+	std::string combined_expression = query_part.substr(rangeStart + 1, rangeEnd - 1);
+
+	//LogicalSort(sort0=[$4], sort1=[$7], dir0=[ASC], dir1=[ASC])
+	size_t num_sort_columns = count_string_occurrence(combined_expression,"sort");
+
+	std::vector<int8_t> sort_order_types(num_sort_columns);
+	std::vector<gdf_column*> cols(num_sort_columns);
+	for(int i = 0; i < num_sort_columns; i++){
+		int sort_column_index = get_index(get_named_expression(combined_expression, "sort" + std::to_string(i)));
+		cols[i] = input.get_column(sort_column_index).get_gdf_column();
+
+		sort_order_types[i] = (get_named_expression(combined_expression, "dir" + std::to_string(i)) == DESCENDING_ORDER_SORT_TEXT);
+	}
+
+	Library::Logging::Logger().logInfo("-> Sort sub block 1 took " + std::to_string(timer.getDuration()) + " ms");
+	timer.reset();
+
+	gdf_column_cpp asc_desc_col;
+	asc_desc_col.create_gdf_column(GDF_INT8,num_sort_columns,nullptr,1, "");
+	CheckCudaErrors(cudaMemcpy(asc_desc_col.get_gdf_column()->data, sort_order_types.data(), sort_order_types.size() * sizeof(int8_t), cudaMemcpyHostToDevice));
+
+	gdf_column_cpp index_col;
+	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
+
+	gdf_context context;
+	context.flag_null_sort_behavior = GDF_NULL_AS_LARGEST; // Nulls are are treated as largest
+
+	CUDF_CALL( gdf_order_by(cols.data(),
+			(int8_t*)(asc_desc_col.get_gdf_column()->data),
+			num_sort_columns,
+			index_col.get_gdf_column(),
+			&context));
+
+	Library::Logging::Logger().logInfo("-> Sort sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
+
+	timer.reset();
+	//find the widest possible column
+	int widest_column = 0;
+	for(int i = 0; i < input.get_width();i++){
+		int cur_width;
+		get_column_byte_width(input.get_column(i).get_gdf_column(), &cur_width);
+		if(cur_width > widest_column){
+			widest_column = cur_width;
+		}
+	}
+
+	gdf_column_cpp temp_output;
+	//TODO de donde saco el nombre de la columna aqui???
+	temp_output.create_gdf_column(input.get_column(0).dtype(),input.get_column(0).size(),nullptr,widest_column, "");
+	//now we need to materialize
+	//i dont think we can do that in place since we are writing and reading out of order
+	for(int i = 0; i < input.get_width();i++){
+		temp_output.set_dtype(input.get_column(i).dtype());
+
+		materialize_column(
+				input.get_column(i).get_gdf_column(),
+				temp_output.get_gdf_column(),
+				index_col.get_gdf_column()
+		);
+
+		input.set_column(i,temp_output.clone(input.get_column(i).name()));
+
+		/*gdf_column_cpp empty;
+
+		int width;
+		get_column_byte_width(input.get_column(i).get_gdf_column(), &width);
+
+		//TODO de donde saco el nombre de la columna aqui???
+		empty.create_gdf_column(input.get_column(i).dtype(),0,nullptr,width, "");
+
+		//copy output back to dat aframe
+
+		gdf_column_cpp new_output;
+		if(input.get_column(i).is_ipc()){
+			//TODO de donde saco el nombre de la columna aqui???
+			new_output.create_gdf_column(input.get_column(i).dtype(), input.get_column(i).size(),nullptr,get_width_dtype(input.get_column(i).dtype()), "");
+			input.set_column(i,new_output);
+		}else{
+			new_output = input.get_column(i);
+		}
+		err = gpu_concat(temp_output.get_gdf_column(), empty.get_gdf_column(), new_output.get_gdf_column());
+
+		//free_gdf_column(&empty);*/
+	}
+	Library::Logging::Logger().logInfo("-> Sort sub block 3 took " + std::to_string(timer.getDuration()) + " ms");
+}
+
+
 //TODO: this does not compact the allocations which would be nice if it could
 void process_filter(blazing_frame & input, std::string query_part){
 	static CodeTimer timer;
@@ -465,16 +1005,9 @@ void process_filter(blazing_frame & input, std::string query_part){
 	gdf_column_cpp stencil;
 	stencil.create_gdf_column(GDF_INT8,input.get_column(0).size(),nullptr,1, "");
 
-	gdf_dtype output_type_junk; //just gets thrown away
-	gdf_dtype max_temp_type = GDF_INT8;
-	for(int i = 0; i < input.get_width(); i++){
-		if(get_width_dtype(input.get_column(i).dtype()) > get_width_dtype(max_temp_type)){
-			max_temp_type = input.get_column(i).dtype();
-		}
-	}
-
 	Library::Logging::Logger().logInfo("-> Filter sub block 1 took " + std::to_string(timer.getDuration()) + " ms");
 	timer.reset();
+
 	gdf_dtype output_type = get_output_type_expression(&input, &max_temp_type, get_named_expression(query_part,"condition"));
 
 	Library::Logging::Logger().logInfo("-> Filter sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
@@ -483,7 +1016,13 @@ void process_filter(blazing_frame & input, std::string query_part){
 	std::string conditional_expression = get_named_expression(query_part,"condition");
 	Library::Logging::Logger().logInfo("-> Filter sub block 3 took " + std::to_string(timer.getDuration()) + " ms");
 	// timer.reset();
+
+	
+	//percy from develop custrings
+	//std::string conditional_expression = get_condition_expression(query_part);
+
 	evaluate_expression(input, conditional_expression, stencil);
+
 
 	// Library::Logging::Logger().logInfo("-> Filter sub block 4 took " + std::to_string(timer.getDuration()) + " ms");
 
@@ -514,7 +1053,11 @@ void process_filter(blazing_frame & input, std::string query_part){
 	// 	input.set_column(i,temp.clone());
 	// }
 
+
+	Library::Logging::Logger().logInfo("-> Filter sub block 3 took " + std::to_string(timer.getDuration()) + " ms");
+
 	timer.reset();
+	
 	gdf_column_cpp index_col;
 	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
 	gdf_sequence(static_cast<int32_t*>(index_col.get_gdf_column()->data), input.get_column(0).size(), 0);
@@ -531,19 +1074,17 @@ void process_filter(blazing_frame & input, std::string query_part){
 	Library::Logging::Logger().logInfo("-> Filter sub block 6 took " + std::to_string(timer.getDuration()) + " ms");
 
 	timer.reset();
-	gdf_column_cpp materialize_temp;
-	materialize_temp.create_gdf_column(input.get_column(0).dtype(),temp_idx.size(),nullptr,get_width_dtype(max_temp_type), "");
+	
 	for(int i = 0; i < input.get_width();i++){
-		materialize_temp.set_dtype(input.get_column(i).dtype());
+		gdf_column_cpp materialize_temp;
+		materialize_temp.create_gdf_column(input.get_column(i).dtype(),temp_idx.size(),nullptr,get_width_dtype(input.get_column(i).dtype()), input.get_column(i).name());
 
 		materialize_column(
 				input.get_column(i).get_gdf_column(),
-				materialize_temp.get_gdf_column(),
-				temp_idx.get_gdf_column()
-		);
-
-		materialize_temp.update_null_count();
-		input.set_column(i,materialize_temp.clone(input.get_column(i).name()));
+				materialize_temp.get_gdf_column(), //output
+				temp_idx.get_gdf_column() //indexes
+		);	
+		input.set_column(i,materialize_temp);
 	}
 	Library::Logging::Logger().logInfo("-> Filter sub block 7 took " + std::to_string(timer.getDuration()) + " ms");
 
@@ -727,10 +1268,11 @@ query_token_t evaluate_query(
 			double duration = blazing_timer.getDuration();
 
 			//REMOVE any columns that were ipcd to put into the result set
-			std::set<gdf_column *> included_columns;
 			for(size_t index = 0; index < output_frame.get_size_columns(); index++){
 				gdf_column_cpp output_column = output_frame.get_column(index);
-				output_frame.set_column(index, output_column.clone(output_column.name()));
+
+                //percy from distribution
+				//output_frame.set_column(index, output_column.clone(output_column.name()));
 
 				// WSM IS THIS CORRECT, THIS IS PRIOR TO MERGE NEED TO LOOK INTO THIS
 				/*if(output_column.is_ipc() || included_columns.find(output_column.get_gdf_column()) != included_columns.end()){
@@ -739,6 +1281,13 @@ query_token_t evaluate_query(
 				}else{
 					output_column.delete_set_name(output_column.name());
 				}*/
+
+				
+				if(output_column.is_ipc()){
+					output_frame.set_column(index,
+							output_column.clone(output_column.name()));
+				}
+
 			}
 
 			result_set_repository::get_instance().update_token(token, output_frame, duration);

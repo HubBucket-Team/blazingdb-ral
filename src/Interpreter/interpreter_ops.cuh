@@ -160,7 +160,7 @@ static int64_t scale_to_64_bit_return_bytes(gdf_scalar input){
 		data = input.data.si08;
 	}else if(cur_type == GDF_INT16){
 		data = input.data.si16;
-	}else if(cur_type == GDF_INT32){
+	}else if(cur_type == GDF_INT32 || cur_type == GDF_STRING_CATEGORY){
 		data = input.data.si32;
 	}else if(cur_type == GDF_DATE32){
 		data = input.data.dt32;
@@ -188,7 +188,8 @@ bool isInt(gdf_dtype type){
 			(type == GDF_INT8) ||
 			(type == GDF_DATE32) ||
 			(type == GDF_DATE64) ||
-			(type == GDF_TIMESTAMP);
+			(type == GDF_TIMESTAMP) ||
+			(type == GDF_STRING_CATEGORY);
 }
 
 static __device__ __forceinline__
@@ -342,7 +343,8 @@ private:
 
 
 		}else if(cur_type == GDF_INT32 ||
-				cur_type == GDF_DATE32){
+				cur_type == GDF_DATE32 ||
+				cur_type == GDF_STRING_CATEGORY){
 			device_ptr_write_from_buffer<int32_t,int64_t>(
 
 					row_index,
@@ -392,6 +394,8 @@ private:
 	__forceinline__ void read_data(column_index_type cur_column,  BufferType * buffer,const size_t & row_index){
 		gdf_dtype cur_type = this->input_column_types[cur_column];
 
+		//printf("cur_type: %d\n", cur_type);
+
 		if(cur_type == GDF_INT8){
 			device_ptr_read_into_buffer<int8_t,int64_t>(
 					cur_column,
@@ -411,7 +415,8 @@ private:
 
 
 		}else if(cur_type == GDF_INT32 ||
-				cur_type == GDF_DATE32){
+				cur_type == GDF_DATE32 ||
+				cur_type == GDF_STRING_CATEGORY){
 			device_ptr_read_into_buffer<int32_t,int64_t>(
 					cur_column,
 					row_index,

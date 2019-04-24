@@ -136,6 +136,20 @@ public:
 		}
 	}
 
+	// This function goes over all columns in the data frame and makes sure that no two columns are actually pointing to the same data, and if so, clones the data so that they are all pointing to unique data pointers
+	void deduplicate(){
+		std::map<void*,std::pair<int, int>>  dataPtrs; // keys are the pointers, value is the table and column index it came from
+		for(int table_index = 0; table_index < columns.size(); table_index++) {
+			for(int column_index = 0; column_index < columns[table_index].size(); column_index++) {
+				auto it = dataPtrs.find(columns[table_index][column_index].get_gdf_column()->data);
+				if (it != dataPtrs.end() ){ // found a duplicate
+					columns[table_index][column_index] = columns[table_index][column_index].clone();
+				}
+				dataPtrs[columns[table_index][column_index].get_gdf_column()->data] = std::make_pair(table_index,column_index);
+			}
+		}
+	}
+
 private:
 	std::vector<std::vector<gdf_column_cpp> > columns;
 	//std::vector<gdf_column *> row_indeces; //per table row indexes used for materializing

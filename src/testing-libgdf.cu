@@ -155,19 +155,14 @@ query_token_t loadParquetAndInsertToResultRepository(std::string path, connectio
 	std::thread t = std::thread([=]{
 		std::vector<Uri> uris(1);
 		uris[0] = Uri(path);
-
-
-    try
-    {
-      CodeTimer blazing_timer;
-
-		auto provider = ral::io::uri_data_provider(uris);
-		auto parser = ral::io::parquet_parser();
-	  ral::io::data_loader loader(&parser, &provider);
-
-
+		
+        auto provider = ral::io::uri_data_provider(uris);
+        auto parser = ral::io::parquet_parser();
+      ral::io::data_loader loader(&parser, &provider);
+      
 	  try
 	  {
+	  
 	    CodeTimer blazing_timer;
 	    std::vector<gdf_column_cpp> columns;
 	    loader.load_data(columns, {});

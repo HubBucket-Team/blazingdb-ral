@@ -501,3 +501,48 @@ TEST_F(EvaluateQueryTest, TEST_NULL_OUTER_JOIN_2) {
               GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
           CHECK_RESULT(output_table, input.resultTable);
         }
+/* figure out how to reproduce this test without a huge file
+        TEST_F(EvaluateQueryTest, TEST_CUSTOMER_1_GB) {
+
+           //we are asuming the user has wget
+         // int download_status = system ("wget -O /tmp/customer.tbl 'https://drive.google.com/a/blazingdb.com/uc?authuser=1&id=1I4pGhK0nw4Gw-zI7PsB6sLm0Sya5f9Cq&export=download'");
+          //EXPECT_TRUE(download_status == 0);
+          auto input = InputTestItem{
+                    .query =
+                        "select c_acctbal + 3 as c_acctbal_new from customer where c_acctbal > 1000",
+                    .logicalPlan =
+                        "LogicalProject(EXPR$0=[+($5, 3)])\n"
+                        "  LogicalFilter(condition=[>($5, 1000)])\n"
+                        "    EnumerableTableScan(table=[[main, customer]])",
+                          .filePaths = {"/tmp/customer.tbl"},
+                          .tableNames = {"main.customer"},
+                          .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
+                                           "c_phone", "c_acctbal", "c_mktsegment", "c_comment"}},
+                          .columnTypes = {{"int32", "int64", "int64", "int32", "int64", "float32",
+                                           "int64", "int64"}},
+                    .resultTable =
+                        LiteralTableBuilder{
+                            "ResultSet",
+                            {{"EXPR$0", Literals<GDF_FLOAT32>{37496.2,47956.6,17314.9,29051.7,18251.4,27370.2, 20676.5,16785.2, 32370.1, 56047.8,41177.7,31379.0, 29994.1,34806.4, 3839.33,
+                            38188.1, 46194.8,24929.0,58479.7,45247.3}},
+                            {"EXPR$1", Literals<GDF_FLOAT32>{29,2,15,2,0,5,12,55,1,36,6,41,13,-11,75,-14,28,-9,-11,24}},
+                            {"key", Literals<GDF_FLOAT32>{0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38}},
+                            }}
+                            .Build()};
+                auto logical_plan = input.logicalPlan;
+                auto input_tables =
+                    ToBlazingFrame(input.filePaths, input.columnNames, input.columnTypes);
+                GdfColumnCppsTableBuilder{"input_table", input_tables[0]}.Build();
+                auto table_names = input.tableNames;
+                auto column_names = input.columnNames;
+                std::vector<gdf_column_cpp> outputs;
+                gdf_error err = evaluate_query(input_tables, table_names, column_names,
+                                               logical_plan, outputs);
+                std::cout<<"null count is "<<outputs[0].null_count()<<std::endl;
+                std::cout<<"size is "<<outputs[0].size()<<std::endl;
+
+                 EXPECT_TRUE(err == GDF_SUCCESS);
+                auto output_table =
+                    GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+             //   CHECK_RESULT(output_table, input.resultTable);
+              }*/

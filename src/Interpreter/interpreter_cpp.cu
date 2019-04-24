@@ -274,11 +274,12 @@ void perform_operation(	std::vector<gdf_column *> output_columns,
 					//	,1,
 					shared_memory_per_thread * block_size,
 					stream>>>(op, num_rows);
-	CheckCudaErrors(cudaGetLastError());
+
 
 	// op.update_columns_null_count(output_columns);
 
 	cuDF::Allocator::deallocate(temp_space,stream);
 	CheckCudaErrors(cudaStreamSynchronize(stream));
+  CheckCudaErrors(cudaGetLastError());
 	CheckCudaErrors(cudaStreamDestroy(stream));
 }

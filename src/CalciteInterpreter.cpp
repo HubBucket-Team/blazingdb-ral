@@ -417,6 +417,9 @@ std::string get_named_expression(std::string query_part, std::string expression_
 	return query_part.substr(start_position,end_position - start_position);
 }
 
+std::string get_condition_expression(std::string query_part){
+    return get_named_expression(query_part,"condition");
+}
 
 blazing_frame process_join(blazing_frame input, std::string query_part){
 	static CodeTimer timer;

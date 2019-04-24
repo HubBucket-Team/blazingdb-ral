@@ -1075,24 +1075,25 @@ void process_filter(blazing_frame & input, std::string query_part){
 	gdf_column_cpp stencil;
 	stencil.create_gdf_column(GDF_INT8,input.get_column(0).size(),nullptr,1, "");
 
+    gdf_dtype output_type_junk; //just gets thrown away
+    gdf_dtype max_temp_type = GDF_INT8;
+    for(int i = 0; i < input.get_width(); i++){
+        if(get_width_dtype(input.get_column(i).dtype()) > get_width_dtype(max_temp_type)){
+            max_temp_type = input.get_column(i).dtype();
+        }
+    }
+
 	Library::Logging::Logger().logInfo("-> Filter sub block 1 took " + std::to_string(timer.getDuration()) + " ms");
 	timer.reset();
-
-	gdf_dtype output_type = get_output_type_expression(&input, &max_temp_type, get_named_expression(query_part,"condition"));
+    gdf_dtype output_type = get_output_type_expression(&input, &max_temp_type, get_named_expression(query_part,"condition"));
 
 	Library::Logging::Logger().logInfo("-> Filter sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
-
-	timer.reset();
-	std::string conditional_expression = get_named_expression(query_part,"condition");
-	Library::Logging::Logger().logInfo("-> Filter sub block 3 took " + std::to_string(timer.getDuration()) + " ms");
-	// timer.reset();
-
 	
-	//percy from develop custrings
-	//std::string conditional_expression = get_condition_expression(query_part);
-
-	evaluate_expression(input, conditional_expression, stencil);
-
+	timer.reset();
+    std::string conditional_expression = get_condition_expression(query_part);
+    Library::Logging::Logger().logInfo("-> Filter sub block 3 took " + std::to_string(timer.getDuration()) + " ms");
+    // timer.reset();
+    evaluate_expression(input, conditional_expression, stencil);
 
 	// Library::Logging::Logger().logInfo("-> Filter sub block 4 took " + std::to_string(timer.getDuration()) + " ms");
 
@@ -1122,9 +1123,6 @@ void process_filter(blazing_frame & input, std::string query_part){
 
 	// 	input.set_column(i,temp.clone());
 	// }
-
-
-	Library::Logging::Logger().logInfo("-> Filter sub block 3 took " + std::to_string(timer.getDuration()) + " ms");
 
 	timer.reset();
 	

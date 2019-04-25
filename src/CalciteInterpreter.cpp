@@ -1306,7 +1306,7 @@ query_token_t evaluate_query(
 			for(size_t index = 0; index < output_frame.get_size_columns(); index++){
 				gdf_column_cpp output_column = output_frame.get_column(index);
 				
-				if(output_column.is_ipc()){
+				if(output_column.is_ipc() || output_column.has_token()){
 					output_frame.set_column(index,
 							output_column.clone(output_column.name()));
 				}

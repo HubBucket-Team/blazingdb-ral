@@ -65,13 +65,13 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 		throw std::runtime_error{"Token does not exist"};
 	}
 
-	std::cout<<"Beginning of update token"<<std::endl;
-	for(size_t i = 0; i < frame.get_width(); i++){
-		std::cout<<"Output column name: "<<frame.get_column(i).name()<<std::endl;
-		print_gdf_column(frame.get_column(i).get_gdf_column());
-	}
+	// std::cout<<"Beginning of update token"<<std::endl;
+	// for(size_t i = 0; i < frame.get_width(); i++){
+	// 	std::cout<<"Output column name: "<<frame.get_column(i).name()<<std::endl;
+	// 	print_gdf_column(frame.get_column(i).get_gdf_column());
+	// }
 
-	std::cout<<"printed update token columns"<<std::endl;
+	// std::cout<<"printed update token columns"<<std::endl;
 
 	// lets deduplicate before we put into the results repo, because we wont be able to reopen an ipc
 	frame.deduplicate(); 
@@ -122,12 +122,12 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 		this->result_sets[token] = {true, frame, duration, errorMsg, 0};
 	}
 
-	for(size_t i = 0; i < frame.get_width(); i++){
-		std::cout<<"Output column name: "<<frame.get_column(i).name()<<std::endl;
-		print_gdf_column(frame.get_column(i).get_gdf_column());
-	}
+	// for(size_t i = 0; i < frame.get_width(); i++){
+	// 	std::cout<<"Output column name: "<<frame.get_column(i).name()<<std::endl;
+	// 	print_gdf_column(frame.get_column(i).get_gdf_column());
+	// }
 
-	std::cout<<"Completed update token"<<std::endl;
+	// std::cout<<"Completed update token"<<std::endl;
 
 
 	cv.notify_all();

@@ -19,6 +19,7 @@
 #include "Traits/RuntimeTraits.h"
 #include "cuDF/Allocator.h"
 #include "Interpreter/interpreter_cpp.h"
+#include <stream_compaction.hpp>
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 const std::string LOGICAL_UNION_TEXT = "LogicalUnion";
@@ -1108,10 +1109,9 @@ void process_filter(blazing_frame & input, std::string query_part){
 	// CheckCudaErrors(cudaMemcpy(index_col.get_gdf_column()->data, idx.data(), idx.size() * sizeof(int32_t), cudaMemcpyHostToDevice));
 	Library::Logging::Logger().logInfo("-> Filter sub block 5 took " + std::to_string(timer.getDuration()) + " ms");
 
-
 	timer.reset();
-	// gdf_column_cpp temp_idx;
-	// temp_idx.create_gdf_column(GDF_INT32, input.get_column(0).size(), nullptr, get_width_dtype(GDF_INT32));
+	
+	stencil.get_gdf_column()->dtype = GDF_BOOL; // apply_boolean_mask expects BOOL
 
 	gdf_column temp_idx_col = cudf::apply_boolean_mask(index_col.get_gdf_column(), stencil.get_gdf_column());
 	gdf_column * temp_idx_col_ptr = new gdf_column;	
@@ -1119,7 +1119,6 @@ void process_filter(blazing_frame & input, std::string query_part){
 	gdf_column_cpp temp_idx;
 	temp_idx.create_gdf_column(temp_idx_col_ptr);
 
-	// CUDF_CALL( gdf_apply_boolean_mask( index_col.get_gdf_column(), stencil.get_gdf_column(), temp_idx.get_gdf_column())	);
 	Library::Logging::Logger().logInfo("-> Filter sub block 6 took " + std::to_string(timer.getDuration()) + " ms");
 
 	timer.reset();

@@ -64,8 +64,12 @@ void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	error = gdf::parquet::read_schema(file, num_row_groups, num_cols, dtypes, column_names, include_columns_test);
 
 	std::vector<std::size_t> column_indices;
-	for (size_t index =0; index < include_columns.size(); index++) {
-		if (include_columns.size() == 0 || include_columns[index]){
+	for (size_t index =0; index < num_cols; index++) {
+		if (include_columns.size() == 0) {
+			if (include_columns_test[index]){
+				column_indices.push_back(index);	
+			}
+		} else if (include_columns[index]){
 			column_indices.push_back(index);	
 		}
 	}

@@ -386,7 +386,7 @@ bool gdf_column_cpp::has_token(){
     return (this->column_token != 0);
 }
 
-void* gdf_column_cpp::data(){
+void* gdf_column_cpp::data() const{
     return column->data;
 }
 

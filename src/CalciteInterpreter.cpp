@@ -1351,7 +1351,7 @@ query_token_t evaluate_query(
 				}*/
 
 				
-				if(output_column.is_ipc()){
+				if(output_column.is_ipc() || output_column.has_token()){
 					output_frame.set_column(index,
 							output_column.clone(output_column.name()));
 				}

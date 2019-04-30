@@ -14,12 +14,12 @@
 
 #include "CalciteExpressionParsing.h"
 
-typedef int32_t temp_gdf_valid_type; //until its an int32 in cudf
+typedef int64_t temp_gdf_valid_type; //until its an int32 in cudf
 
 __host__ __device__ __forceinline__ 
 bool gdf_is_valid_32(const temp_gdf_valid_type *valid, gdf_index_type pos) {
 	if ( valid )
-		return (valid[pos / 32] >> (pos % 32)) & 1;
+		return (valid[pos / 64] >> (pos % 64)) & 1;
 	else
 		return true;
 }
@@ -309,8 +309,8 @@ private:
 
 	template<typename BufferType>
 	__device__
-	__forceinline__ void write_valid_data(column_index_type cur_column, column_index_type cur_buffer, int32_t * buffer,const size_t & row_index){
-		device_ptr_write_from_buffer<int32_t,temp_gdf_valid_type>(
+	__forceinline__ void write_valid_data(column_index_type cur_column, column_index_type cur_buffer, int64_t * buffer,const size_t & row_index){
+		device_ptr_write_from_buffer<int64_t,temp_gdf_valid_type>(
 
 				row_index,
 				(void *) this->valid_ptrs_out[cur_column],
@@ -459,9 +459,9 @@ private:
 
 
 	__device__
-	__forceinline__ void read_valid_data(column_index_type cur_column, int32_t * buffer,const size_t & row_index){
+	__forceinline__ void read_valid_data(column_index_type cur_column, int64_t * buffer,const size_t & row_index){
 
-		device_ptr_read_into_buffer<temp_gdf_valid_type,int32_t>(
+		device_ptr_read_into_buffer<temp_gdf_valid_type,int64_t>(
 				cur_column,
 				row_index,
 				(void **) this->valid_ptrs,
@@ -512,7 +512,7 @@ private:
 
 	//TODO: make it so that all this happens the same wya as normal operators by being able to supply how things are loaded and procssed
 	__device__
-	__forceinline__ void process_valids(column_index_type op_index,  const int32_t * buffer){
+	__forceinline__ void process_valids(column_index_type op_index,  const int64_t * buffer){
 
 		column_index_type right_position = this->right_input_positions[op_index];
 		column_index_type left_position = this->left_input_positions[op_index];
@@ -520,49 +520,56 @@ private:
 		column_index_type output_position = this->output_positions[op_index];
 
 		if(right_position != -1){
-			int32_t left_valid;
+			int64_t left_valid;
 			if(left_position == -2){
 				left_valid = -1;
 			}else if(left_position == -3){
 				left_valid = 0;
 			}else{
-				left_valid = get_data_from_buffer<int32_t>(buffer,left_position);
+				left_valid = get_data_from_buffer<int64_t>(buffer,left_position);
 
 			}
-			int32_t right_valid;
+			int64_t right_valid;
 
 			if(right_position == -2){
 				right_valid = -1;
 			}else if(right_position == -3){
 				right_valid = 0;
 			}else{
-				right_valid = get_data_from_buffer<int32_t>(buffer,right_position);
+				right_valid = get_data_from_buffer<int64_t>(buffer,right_position);
 
 			}
+		//	if(left_valid != -1){
+		//	  printf("left valid was not -1");
+		//	}
+
+//			if(right_valid != -1){
+//			        printf("right valid was not one");
+//			}
 			if (this->binary_operations[op_index] == GDF_COALESCE) {
-				store_data_in_buffer<int32_t>(
+				store_data_in_buffer<int64_t>(
 						left_valid
 						| right_valid,
 						buffer,
 						output_position);
 			} else {
-				store_data_in_buffer<int32_t>(
+				store_data_in_buffer<int64_t>(
 						left_valid
 						& right_valid,
 						buffer,
 						output_position);
 			} 
 		}else{
-			int32_t left_valid;
+			int64_t left_valid;
 			if(left_position == -2){
 				left_valid = -1;
 			}else if(left_position == -3){
 				left_valid = 0;
 			}else{
-				left_valid = get_data_from_buffer<int32_t>(buffer,left_position);
+				left_valid = get_data_from_buffer<int64_t>(buffer,left_position);
 
 			}
-			store_data_in_buffer<int32_t>(
+			store_data_in_buffer<int64_t>(
 					left_valid,
 					buffer,
 					output_position);
@@ -1288,7 +1295,7 @@ public:
 
 	}
 
-	__device__ __forceinline__ void valid_operator(const IndexT &row_index, int32_t total_buffer[],gdf_size_type num_valid_elements){ //, gdf_size_type temp_null_counts[]) {
+	__device__ __forceinline__ void valid_operator(const IndexT &row_index, int64_t total_buffer[],gdf_size_type num_valid_elements){ //, gdf_size_type temp_null_counts[]) {
 		//TODO: this should happen in configuration and be stored in a bool to reduce the number of instructions
 		//executed inthe kernel
 //		extern __shared__  int32_t  total_buffer[];
@@ -1302,12 +1309,17 @@ public:
 			for(column_index_type cur_column = 0; cur_column < this->num_columns; cur_column++ ){
 
 				if(this->valid_ptrs[cur_column] == nullptr || this->null_counts_inputs[cur_column] == 0){
-					store_data_in_buffer<int32_t>(
-							-1, //this shoudl be when int32_t is all 1111111...111 , i mean everyone uses 2's compliment right?
+					store_data_in_buffer<int64_t>(
+							-1, //this shoudl be when int64_t is all 1111111...111 , i mean everyone uses 2's compliment right?
 							total_buffer,
 							cur_column);
+					// printf("stored -1 in buffer");
+					// if(-1 != get_data_from_buffer<int64_t>(total_buffer,cur_column)){
+					//   printf("we stored -1 but did not get that back");
+					// }
 				}else{
 					read_valid_data(cur_column,total_buffer, row_index);
+					//printf("reading_valid_data\n");
 				}
 
 			}
@@ -1321,28 +1333,31 @@ public:
 			//		#pragma unroll
 			for(column_index_type out_index = 0; out_index < this->num_final_outputs; out_index++ ){
 				if(this->valid_ptrs_out[out_index] != nullptr){
-					//	 void write_valid_data(column_index_type cur_column, column_index_type cur_buffer, int32_t * buffer,const size_t & row_index)
+					//	 void write_valid_data(column_index_type cur_column, column_index_type cur_buffer, int64_t * buffer,const size_t & row_index)
 
-					write_valid_data<int32_t>(out_index,this->final_output_positions[out_index],total_buffer,row_index);
+					write_valid_data<int64_t>(out_index,this->final_output_positions[out_index],total_buffer,row_index);
+				//	if( __popc(get_data_from_buffer<int64_t>(total_buffer,this->final_output_positions[out_index])) != 32){
+				//	  printf("valids not all 0!");
+				//	}
 
 /*					if(row_index + (blockDim.x * gridDim.x) >= num_valid_elements){
 						//can't use popc because it will count bits that aren't relevant
-						int last_value = get_data_from_buffer<int32_t>(total_buffer,this->final_output_positions[out_index]);
+						int last_value = get_data_from_buffer<int64_t>(total_buffer,this->final_output_positions[out_index]);
 						//right shift out all the bits that are not relevant
 						int num_bits_to_shift = 0;
-						if((row_index+1) * (sizeof(int32_t)*8) > this->num_rows){
-							num_bits_to_shift = 32 - (this->num_rows % (sizeof(int32_t)*8));
+						if((row_index+1) * (sizeof(int64_t)*8) > this->num_rows){
+							num_bits_to_shift = 32 - (this->num_rows % (sizeof(int64_t)*8));
 						}
 					//	printf("num_bits_to_shift %i\n", num_bits_to_shift);
 						last_value = last_value << num_bits_to_shift;
 
-						temp_null_counts[out_index] += (sizeof(int32_t) * 8) - __popc(last_value) - num_bits_to_shift; //num_bits_to_shift are bits we set to 0 , we want to pretend like they are 1's
+						temp_null_counts[out_index] += (sizeof(int64_t) * 8) - __popc(last_value) - num_bits_to_shift; //num_bits_to_shift are bits we set to 0 , we want to pretend like they are 1's
 					//	printf("temp_null_counts %ull\n",(unsigned long long)temp_null_counts[out_index]);
 					//	printf("before total_null counts %ull\n",this->null_counts_outputs[out_index]);
 						atomicAdd( this->null_counts_outputs + out_index,temp_null_counts[out_index]);
 					//	printf("after total_null counts %ull\n",this->null_counts_outputs[out_index]);
 					}else{
-						temp_null_counts[out_index] += (sizeof(int32_t) * 8) - __popc(get_data_from_buffer<int32_t>(total_buffer,this->final_output_positions[out_index]));
+						temp_null_counts[out_index] += (sizeof(int64_t) * 8) - __popc(get_data_from_buffer<int64_t>(total_buffer,this->final_output_positions[out_index]));
 					}
 */
 				}
@@ -1431,7 +1446,7 @@ __global__ void transformKernel(interpreted_operator op, gdf_size_type size)
 			row_index < num_valid_elements;
 			row_index += blockDim.x * gridDim.x)
 	{
-		op.valid_operator(row_index,(int32_t *) total_buffer,num_valid_elements); //,null_counts);
+		op.valid_operator(row_index,(int64_t *) total_buffer,num_valid_elements); //,null_counts);
 	}
 
 	// delete null_counts;

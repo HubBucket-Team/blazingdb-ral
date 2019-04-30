@@ -767,6 +767,9 @@ std::string clean_calcite_expression(std::string expression){
 	StringUtil::findAndReplaceAll(expression,"EXTRACT(FLAG(YEAR), ","BL_YEAR(");
 	StringUtil::findAndReplaceAll(expression,"EXTRACT(FLAG(MONTH), ","BL_MONTH(");
 	StringUtil::findAndReplaceAll(expression,"EXTRACT(FLAG(DAY), ","BL_DAY(");
+	StringUtil::findAndReplaceAll(expression,"EXTRACT(FLAG(HOUR), ","BL_HOUR(");
+	StringUtil::findAndReplaceAll(expression,"EXTRACT(FLAG(MINUTE), ","BL_MINUTE(");
+	StringUtil::findAndReplaceAll(expression,"EXTRACT(FLAG(SECOND), ","BL_SECOND(");
 	StringUtil::findAndReplaceAll(expression,"FLOOR(","BL_FLOUR(");
 
 

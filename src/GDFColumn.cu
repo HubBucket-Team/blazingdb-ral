@@ -381,7 +381,12 @@ gdf_column_cpp::~gdf_column_cpp()
 bool gdf_column_cpp::is_ipc() const {
 	return this->is_ipc_column;
 }
-void* gdf_column_cpp::data() const {
+
+bool gdf_column_cpp::has_token(){
+    return (this->column_token != 0);
+}
+
+void* gdf_column_cpp::data(){
     return column->data;
 }
 

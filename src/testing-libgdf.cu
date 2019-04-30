@@ -667,7 +667,27 @@ int main(int argc, const char *argv[])
   //global_ip = "/tmp/ral.socket";
   //global_port = atoi(port.c_str());
 
+#ifdef USE_UNIX_SOCKETS
+
   blazingdb::protocol::UnixSocketConnection connection(config.getSocketPath());
+
+#else
+
+  const int ral_tcp_port_protocol = ConnectionUtils::parsePort(identifier.c_str());
+
+  if (ral_tcp_port_protocol == -1) {
+    std::cout << "FATAL: Invalid RAL TCP port " + identifier << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  ConnectionAddress connectionAddress;
+  connectionAddress.tcp_host = argv[4];
+  connectionAddress.tcp_port = ral_tcp_port_protocol;
+
+  blazingdb::protocol::TCPConnection connection(connectionAddress);
+
+#endif
+
   blazingdb::protocol::Server server(connection);
 
   services.insert(std::make_pair(interpreter::MessageType_ExecutePlan, &executePlanService));

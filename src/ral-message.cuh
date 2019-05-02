@@ -62,8 +62,8 @@ std::tuple<std::vector<std::vector<gdf_column_cpp>>,
   std::vector<std::vector<std::string>> column_names;
 
   for(auto table : request.tables) {
-    table_names.push_back(table.name);
-    column_names.push_back(table.columnNames);
+    //table_names.push_back(table.name);
+    //column_names.push_back(table.columnNames);
 
     std::vector<gdf_column_cpp> input_table;
 
@@ -73,7 +73,8 @@ std::tuple<std::vector<std::vector<gdf_column_cpp>>,
       gdf_column_cpp col;
 
       if (table.columnTokens[column_index] == 0){
-        const std::string column_name = table.columnNames.at(column_index);
+        //const std::string column_name = table.columnNames.at(column_index);
+        const std::string column_name = "";
         
         if((::gdf_dtype)column.dtype == GDF_STRING){
 

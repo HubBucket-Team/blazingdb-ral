@@ -32,11 +32,17 @@ public:
 			std::vector<gdf_column_cpp> & columns) = 0;
 
 	virtual void parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> file,
-			std::vector<gdf_column_cpp> & columns) = 0;
+			ral::io::Schema & schema) = 0;
 
 };
 
 } /* namespace io */
 } /* namespace ral */
 
+class DataParser {
+public:
+	DataParser();
+	virtual ~DataParser();
+};
 #endif /* DATAPARSER_H_ */
+

@@ -34,7 +34,8 @@ public:
 	 * @param columns a vector to receive our output should be of size 0 when it is coming in and it will be allocated by this function
 	 * @param include_column the different files we can read from can have more columns than we actual want to read, this lest us filter some of them out
 	 */
-	void load_data(std::vector<gdf_column_cpp> & columns, std::vector<bool> include_column);
+	void load_data(std::vector<gdf_column_cpp> & columns, const std::vector<size_t> & columns);
+	void get_schema(Schema & schema);
 private:
 	/**
 	 * DataProviders are able to serve up one or more arrow::io::RandomAccessFile objects
@@ -97,7 +98,8 @@ data_loader::~data_loader() {
 }
 
 
-void data_loader::load_data(std::vector<gdf_column_cpp> & columns, std::vector<bool> include_column){
+
+void data_loader::load_data(std::vector<gdf_column_cpp> & columns, std::vector<size_t> column_indices, const Schema schema){
 
 	std::vector<std::vector<gdf_column_cpp> > columns_per_file; //stores all of the columns parsed from each file
 	//iterates through files and parses them into columns
@@ -179,6 +181,10 @@ void data_loader::load_data(std::vector<gdf_column_cpp> & columns, std::vector<b
 
 	}
 
+}
+
+void data_loader::get_schema(Schema & schema){
+	this->parser->parse_schema(this->provider->get_first(),schema);
 }
 
 } /* namespace io */

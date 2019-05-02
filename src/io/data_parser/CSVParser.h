@@ -22,24 +22,19 @@ class csv_parser: public data_parser {
 public:
 	csv_parser(const std::string & delimiter,
 			const std::string & line_terminator,
-			int skip_rows,
-			const std::vector<std::string> & names,
-			const std::vector<gdf_dtype> & dtypes);
+			int skip_rows);
 	csv_parser(csv_read_arg	args);
 
 	virtual ~csv_parser();
 
-	void parse(const char *fname, std::vector<gdf_column_cpp> & columns);
 
 	void parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
-				std::vector<gdf_column_cpp> & columns,
-				std::vector<bool> include_column);
-
-	void parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
-				std::vector<gdf_column_cpp> & columns);
+			std::vector<gdf_column_cpp> & columns,
+			Schema schema,
+			std::vector<size_t> column_indices);
 
 	void parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> file,
-			std::vector<gdf_column_cpp> & columns);
+			ral::io::Schema & schema);
 
 private:
 	char quote_character = '\"';

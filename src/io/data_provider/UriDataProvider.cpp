@@ -52,6 +52,20 @@ std::shared_ptr<arrow::io::RandomAccessFile> uri_data_provider::get_next(){
 	return file;
 }
 
+std::shared_ptr<arrow::io::RandomAccessFile> uri_data_provider::get_first(){
+	// TODO: Take a look at this later, just calling this function to ensure
+	// the uri is in a valid state otherwise throw an exception
+	// because openReadable doens't  validate it and just return a nullptr
+	if(this->file_uris.size() == 0){
+		return nullptr;
+	}
+
+	std::shared_ptr<arrow::io::RandomAccessFile> file =
+			BlazingContext::getInstance()->getFileSystemManager()->openReadable(
+					this->file_uris[0]);
+	return file;
+}
+
 std::vector<std::string> uri_data_provider::get_errors(){
 	return this->errors;
 }

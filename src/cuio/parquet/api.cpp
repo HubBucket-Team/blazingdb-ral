@@ -712,7 +712,7 @@ read_parquet_by_ids(std::shared_ptr<::arrow::io::RandomAccessFile> file,
     return status;
 }
 
-gdf_error read_schema(std::shared_ptr<::arrow::io::RandomAccessFile> file, size_t &num_row_groups, size_t &num_cols, std::vector<gdf_dtype> &dtypes, std::vector<std::string> &column_names, std::vector<bool> &include_columns)
+gdf_error read_schema(std::shared_ptr<::arrow::io::RandomAccessFile> file, Schema & schema)
 {
     gdf_error error;
     auto parquet_reader = FileReader::OpenFile(file);
@@ -721,18 +721,6 @@ gdf_error read_schema(std::shared_ptr<::arrow::io::RandomAccessFile> file, size_
     auto schema = file_metadata->schema();
 
     num_row_groups = file_metadata->num_row_groups();
-    // std::vector<unsigned long long> numRowsPerGroup(num_row_groups);
-
-    // for (int j = 0; j < num_row_groups; j++)
-    // {
-    //     auto groupReader = parquet_reader->RowGroup(j);
-    //     auto rowGroupMetadata = groupReader->metadata();
-    //     numRowsPerGroup[j] = rowGroupMetadata->num_rows();
-    // }
-    num_cols = file_metadata->num_columns();
-    std::vector<std::size_t> column_indices;
-    for (size_t index = 0; index < num_cols; index++)
-        column_indices.push_back(index);
 
     const std::vector<const ::parquet::ColumnDescriptor *> column_descriptors =
         _ColumnDescriptorsFrom(parquet_reader, column_indices);
@@ -750,18 +738,16 @@ gdf_error read_schema(std::shared_ptr<::arrow::io::RandomAccessFile> file, size_
             // auto physical_type = column->physical_type();
             // auto logical_type = column->logical_type();
 
-            column_names.push_back(column->name());
+
             if (column_descriptors[columnIndex])
             {
-                dtypes.push_back(_DTypeFrom(column_descriptors[columnIndex]));
-                include_columns.push_back(true);
+            	column_names.push_back(column->name());
+            	dtypes.push_back(_DTypeFrom(column_descriptors[columnIndex]));
+                column_indices.push_back(column_index);
             }
-            else
-            {
-                dtypes.push_back(GDF_invalid);
-                include_columns.push_back(false);
-            }
+
         }
+        schema = Schema(column_names,dtypes,column_indices);
     // }
 
     return error;

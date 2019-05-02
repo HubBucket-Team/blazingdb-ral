@@ -22,7 +22,8 @@
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 const std::string LOGICAL_UNION_TEXT = "LogicalUnion";
-const std::string LOGICAL_SCAN_TEXT = "TableScan";
+const std::string LOGICAL_SCAN_TEXT = "LogicalTableScan";
+const std::string LOGICAL_SCAN_TEXT = "BindableTableScan";
 const std::string LOGICAL_AGGREGATE_TEXT = "LogicalAggregate";
 const std::string LOGICAL_PROJECT_TEXT = "LogicalProject";
 const std::string LOGICAL_SORT_TEXT = "LogicalSort";
@@ -52,8 +53,18 @@ bool is_sort(std::string query_part){
 }
 
 bool is_scan(std::string query_part){
+	return is_logical_scan() || is_bindable_scan;
+}
+
+bool is_logical_scan(std::string query_part){
 	return (query_part.find(LOGICAL_SCAN_TEXT) != std::string::npos);
 }
+
+bool is_bindable_scan(std::string query_part){
+	return (query_part.find(BINDABLE_SCAN_TEXT) != std::string::npos);
+}
+
+
 
 bool is_filter(std::string query_part){
 	return (query_part.find(LOGICAL_FILTER_TEXT) != std::string::npos);
@@ -1280,6 +1291,140 @@ blazing_frame evaluate_split_query(
 	}
 }
 
+blazing_frame evaluate_split_query(
+		std::vector<ral::io::data_loader > & input_loaders,
+		std::vector<std::string> table_names,
+		std::vector<std::string> query, int call_depth = 0){
+	assert(input_tables.size() == table_names.size());
+
+	static CodeTimer blazing_timer;
+
+	if(query.size() == 1){
+		//process yourself and return
+
+		if(is_scan(query[0])){
+			blazing_frame scan_frame;
+			std::vector<gdf_column_cpp>  input_table;
+			std::vector<bool> include_columns;
+			if(is_bindable_scan(query[0])){
+				std::string project_string = get_named_expression(query[0],"projects");
+				if(project_string != )
+			}
+			ral::io::Schema schema;
+			input_loaders[table_index].get_schema(schema);
+			for(int table_index = 0; table_index < input_loaders.size(); table_index++){
+				input_loaders[table_index].load_data(input_tables[table_index],include_columns);
+			}
+
+			//EnumerableTableScan(table=[[hr, joiner]])
+			scan_frame.add_table(
+					input_tables[
+					             get_table_index(
+					            		 table_names,
+					            		 extract_table_name(query[0])
+					             )
+					             ]
+			);
+			return scan_frame;
+		}else{
+			//i dont think there are any other type of end nodes at the moment
+		}
+	}
+
+	if(is_double_input(query[0])){
+
+		int other_depth_one_start = 2;
+		for(int i = 2; i < query.size(); i++){
+			int j = 0;
+			while(query[i][j] == ' '){
+
+				j+=2;
+			}
+			int depth = (j / 2) - call_depth;
+			if(depth == 1){
+				other_depth_one_start = i;
+			}
+		}
+		//these shoudl be split up and run on different threads
+		blazing_frame left_frame;
+		left_frame = evaluate_split_query(
+				input_loaders,
+				table_names,
+				std::vector<std::string>(
+						query.begin() + 1,
+						query.begin() + other_depth_one_start),
+						call_depth + 1
+		);
+
+		blazing_frame right_frame;
+		right_frame = evaluate_split_query(
+				input_loaders,
+				table_names,
+				std::vector<std::string>(
+						query.begin() + other_depth_one_start,
+						query.end()),
+						call_depth + 1
+		);
+
+		blazing_frame result_frame;
+		if(is_join(query[0])){
+			//we know that left and right are dataframes we want to join together
+			left_frame.add_table(right_frame.get_columns()[0]);
+			///left_frame.consolidate_tables();
+			blazing_timer.reset();
+			result_frame = process_join(left_frame,query[0]);
+			Library::Logging::Logger().logInfo("process_join took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(left_frame.get_column(0).size()) + " rows with an output of " + std::to_string(result_frame.get_column(0).size()));
+			return result_frame;
+		}else if(is_union(query[0])){
+			//TODO: append the frames to each other
+			//return right_frame;//!!
+			blazing_timer.reset();
+			result_frame = process_union(left_frame,right_frame,query[0]);
+			Library::Logging::Logger().logInfo("process_union took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(left_frame.get_column(0).size()) + " rows with an output of " + std::to_string(result_frame.get_column(0).size()));
+			return result_frame;
+		}else{
+			throw std::runtime_error{"In evaluate_split_query function: unsupported query operator"};
+		}
+
+	}else{
+		//process child
+		blazing_frame child_frame = evaluate_split_query(
+				input_loaders,
+				table_names,
+				std::vector<std::string>(
+						query.begin() + 1,
+						query.end()),
+						call_depth + 1
+		);
+		//process self
+		if(is_project(query[0])){
+			blazing_timer.reset();
+			execute_project_plan(child_frame,query[0]);
+			Library::Logging::Logger().logInfo("process_project took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
+			return child_frame;
+		}else if(is_aggregate(query[0])){
+			blazing_timer.reset();
+			process_aggregate(child_frame,query[0]);
+			Library::Logging::Logger().logInfo("process_aggregate took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
+			return child_frame;
+		}else if(is_sort(query[0])){
+			blazing_timer.reset();
+			process_sort(child_frame,query[0]);
+			Library::Logging::Logger().logInfo("process_sort took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
+			return child_frame;
+		}else if(is_filter(query[0])){
+			blazing_timer.reset();
+			process_filter(child_frame,query[0]);
+			Library::Logging::Logger().logInfo("process_filter took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
+			return child_frame;
+		}else{
+			throw std::runtime_error{"In evaluate_split_query function: unsupported query operator"};
+		}
+		//return frame
+	}
+}
+
+
 query_token_t evaluate_query(
 		std::vector<std::vector<gdf_column_cpp> > input_tables,
 		std::vector<std::string> table_names,
@@ -1344,6 +1489,29 @@ gdf_error evaluate_query(
 		splitted.erase(splitted.end() -1);
 	}
 	blazing_frame output_frame = evaluate_split_query(input_tables, table_names, column_names, splitted);
+
+	for(size_t i=0;i<output_frame.get_width();i++){
+
+		GDFRefCounter::getInstance()->deregister_column(output_frame.get_column(i).get_gdf_column());
+		outputs.push_back(output_frame.get_column(i));
+
+	}
+
+	return GDF_SUCCESS;
+}
+
+gdf_error evaluate_query(
+		std::vector<ral::io::data_loader > & input_loaders,
+		std::vector<std::string> table_names,
+		std::string logicalPlan,
+		std::vector<gdf_column_cpp> & outputs){
+
+	std::vector<std::string> splitted = StringUtil::split(logicalPlan, "\n");
+	if (splitted[splitted.size() - 1].length() == 0) {
+		splitted.erase(splitted.end() -1);
+	}
+
+	blazing_frame output_frame = evaluate_split_query(input_loaders, table_names, splitted);
 
 	for(size_t i=0;i<output_frame.get_width();i++){
 

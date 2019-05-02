@@ -473,7 +473,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
         }
         ral::io::parquet_parser parser;
         load_files(&parser, uris, table_cpp);
-      } else if (table_info.schemaType ==  blazingdb::protocol::io::FileSchemaType_CSV) {
+      } else {
         std::vector<Uri> uris = { Uri{table_info.files[0]} }; //@todo, concat many files in one single table
         auto csv_params = table_info.csv;
         std::vector<gdf_dtype> types;

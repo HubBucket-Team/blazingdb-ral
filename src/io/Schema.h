@@ -23,8 +23,7 @@ public:
 			std::vector<gdf_dtype> types);
 	Schema(	std::vector<std::string> names,
 			std::vector<gdf_dtype> types);
-	Schema(	std::vector<std::string> names,
-			std::vector<gdf_dtype> types);
+
 	virtual ~Schema();
 
 	std::vector<std::string> get_names();

@@ -35,6 +35,11 @@ public:
 	 */
 	std::shared_ptr<arrow::io::RandomAccessFile> get_next();
 	/**
+	 * gets a randomaccessfile to the uri at file_uris[0]
+	 */
+	std::shared_ptr<arrow::io::RandomAccessFile> get_first();
+
+	/**
 	 * returns any errors that were encountered when opening arrow::io::RandomAccessFile
 	 */
 	std::vector<std::string> get_errors();

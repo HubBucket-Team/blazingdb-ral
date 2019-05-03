@@ -10,6 +10,7 @@ function(configure_test TEST_NAME Tests_SRCS)
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/tests/utils
         ${CMAKE_SOURCE_DIR}/thirdparty/jitify
+        ${CMAKE_SOURCE_DIR}/thirdparty/nvstrings/include
         ${CMAKE_SOURCE_DIR}/src/gdf_wrapper
     )
 
@@ -47,6 +48,7 @@ add_subdirectory(cudf/column_slice)
 add_subdirectory(cudf/generator)
 add_subdirectory(distributed-join)
 add_subdirectory(distribution)
+add_subdirectory(nvcategory)
 add_subdirectory(integration)
 add_subdirectory(dtypes)
 add_subdirectory(pjoins)
@@ -65,6 +67,7 @@ add_subdirectory(count)
 add_subdirectory(groupbywoagg)
 add_subdirectory(interpreter)
 add_subdirectory(utils)
+add_subdirectory(resultset-repository)
 
 
 message(STATUS "******** Tests are ready ********")

@@ -45,6 +45,8 @@ class gdf_column_cpp
 	void set_dtype(gdf_dtype dtype);
 	bool is_ipc() const;
 
+	bool has_token();
+
 	gdf_column_cpp();
 	void create_gdf_column(gdf_column * column);
 	void create_gdf_column_for_ipc(gdf_dtype type, void * col_data,gdf_valid_type * valid_data,size_t size,std::string column_name);
@@ -58,6 +60,8 @@ class gdf_column_cpp
 	gdf_column_cpp clone(std::string name = "");
 
 	gdf_column* get_gdf_column() const;
+
+	void create_gdf_column(NVCategory* category, size_t num_values,std::string column_name);
 
 	void create_gdf_column(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value, const std::string &column_name = "");
 

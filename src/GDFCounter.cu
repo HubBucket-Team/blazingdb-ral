@@ -5,9 +5,12 @@
  *      Author: rqc
  */
 
- #include "GDFCounter.cuh"
- #include <iostream>
+#include "GDFCounter.cuh"
+#include <iostream>
 #include "cuDF/Allocator.h"
+#include <nvstrings/NVCategory.h>
+#include <nvstrings/NVStrings.h>
+
 
 GDFRefCounter* GDFRefCounter::Instance=0;
 
@@ -47,6 +50,25 @@ void GDFRefCounter::increment(gdf_column* col_ptr)
     }
 }
 
+
+
+void deallocate(gdf_column* col_ptr){
+
+    if (col_ptr->dtype == GDF_STRING){
+        NVStrings::destroy(static_cast<NVStrings *>(col_ptr->data));
+        col_ptr->data = nullptr;
+    } else if (col_ptr->dtype == GDF_STRING_CATEGORY){
+        NVCategory::destroy(static_cast<NVCategory *>(col_ptr->dtype_info.category));
+        cuDF::Allocator::deallocate(col_ptr->data);
+    } else {
+        cuDF::Allocator::deallocate(col_ptr->data);
+    }
+    if (col_ptr->valid != nullptr) {
+        cuDF::Allocator::deallocate(col_ptr->valid);
+    }
+}
+
+
 void GDFRefCounter::free(gdf_column* col_ptr)
 {
     std::lock_guard<std::mutex> lock(gc_mutex);
@@ -56,10 +78,7 @@ void GDFRefCounter::free(gdf_column* col_ptr)
         map.erase(map_key);
 
         try {
-            cuDF::Allocator::deallocate(map_key->data);
-            if (map_key->valid != nullptr) {
-                cuDF::Allocator::deallocate(map_key->valid);
-            }
+            deallocate(map_key);
         }
         catch (const std::exception& e) {
             delete map_key;
@@ -83,10 +102,7 @@ void GDFRefCounter::decrement(gdf_column* col_ptr)
                 map.erase(map_key);
 
                 try {
-                    cuDF::Allocator::deallocate(map_key->data);
-                    if (map_key->valid != nullptr) {
-                        cuDF::Allocator::deallocate(map_key->valid);
-                    }
+                    deallocate(map_key);
                 }
                 catch (const std::exception& e) {
                     delete map_key;

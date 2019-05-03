@@ -148,6 +148,7 @@ target_link_libraries(testing-libgdf_lib
 )
 
 set(SRC_FILES_APP ${CMAKE_SOURCE_DIR}/src/testing-libgdf.cu)
+# set(SRC_FILES_APP ${CMAKE_SOURCE_DIR}/src/ral_mock.cu)
 add_executable(testing-libgdf ${SRC_FILES_APP})
 target_link_libraries(testing-libgdf testing-libgdf_lib)
 

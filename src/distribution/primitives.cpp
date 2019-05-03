@@ -121,7 +121,7 @@ void sendSamplesToMaster(const Context& context, std::vector<gdf_column_cpp>&& s
     const Node& self_node = CommunicationData::getInstance().getSelfNode();
 
     // Get context token
-    const auto& context_token = context.getContextToken();
+    const auto& context_token = context.getContextToken(); // (str: query) => context_token
 
     // Create message
     using MessageFactory = ral::communication::messages::Factory;

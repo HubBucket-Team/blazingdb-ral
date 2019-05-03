@@ -51,7 +51,9 @@ std::shared_ptr<Message> Factory::createSampleToNodeMaster(std::shared_ptr<Conte
                                                            const Node& sender_node,
                                                            std::uint64_t total_row_size,
                                                            const std::vector<gdf_column_cpp>& samples) {
-    std::unique_ptr<MessageToken> message_token = MessageToken::Make(SampleToNodeMasterMessage::getMessageID());
+    //    SampleToNodeMasterMessage::getMessageID());  
+    // const std::string SampleToNodeMasterMessage<RalColumn, CudfColumn, GpuFunctions>::MessageID {"SampleToNodeMasterMessage"};
+    std::unique_ptr<MessageToken> message_token = MessageToken::Make(SampleToNodeMasterMessage::getMessageID());  
     return std::make_shared<SampleToNodeMasterMessage>(std::move(message_token),
                                                        std::move(context_token),
                                                        sender_node,

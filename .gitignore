@@ -71,3 +71,5 @@ CMakeLists.txt.user
 build_local/
 
 RAL\.log
+
+RAL\.1\.log

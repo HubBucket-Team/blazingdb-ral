@@ -595,7 +595,7 @@ auto  interpreterServices(const blazingdb::protocol::Buffer &requestPayloadBuffe
 }
 
 
-int main(int argc, const char *argv2[])
+int main(int argc, const char *argv[])
 {
 
   // #ifndef VERBOSE
@@ -605,19 +605,19 @@ int main(int argc, const char *argv2[])
     std::cout << "RAL Engine starting" << std::endl;
 
     std::string identifier {"1"};
-    // if (argc == 2) {
-    //     identifier = std::string(argv[1]);
-    // }
-    // if (argc > 1 && argc != 6) {
-    //   std::cout << "Usage: " << argv[0]
-    //             << " <RAL_ID>"
-    //                " <ORCHESTRATOR_[IP|HOSTNAME]> <ORCHESTRATOR_PORT>"
-    //                " <RAL_[IP|HOSTNAME]> <RAL_PORT>\n";
-    //   return 1;
-    // }
+    if (argc == 2) {
+        identifier = std::string(argv[1]);
+    }
+    if (argc > 1 && argc != 6) {
+      std::cout << "Usage: " << argv[0]
+                << " <RAL_ID>"
+                   " <ORCHESTRATOR_[IP|HOSTNAME]> <ORCHESTRATOR_PORT>"
+                   " <RAL_[IP|HOSTNAME]> <RAL_PORT>\n";
+      return 1;
+    }
 
-    argc = 6;
-    const char * argv[] = {"./testing-libgdf",  "2", "192.168.1.61",  "9000", "192.168.1.61",  "8988"};
+    // argc = 6;
+    // const char * argv[] = {"./testing-libgdf",  "2", "192.168.1.61",  "9000", "192.168.1.61",  "8988"};
    
 
     if (argc == 6) {

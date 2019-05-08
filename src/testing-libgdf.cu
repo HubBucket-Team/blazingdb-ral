@@ -474,7 +474,10 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
         ral::io::parquet_parser parser;
         load_files(&parser, uris, table_cpp);
       } else {
-        std::vector<Uri> uris = { Uri{table_info.files[0]} }; //@todo, concat many files in one single table
+        std::vector<Uri> uris;
+        std::transform(table_info.files.begin(), table_info.files.end(),
+                      std::back_inserter(uris),
+                      [](auto const& file){ return Uri{file}; });
         auto csv_params = table_info.csv;
         std::vector<gdf_dtype> types;
         for(auto val : csv_params.dtypes) {

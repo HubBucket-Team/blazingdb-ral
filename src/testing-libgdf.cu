@@ -673,10 +673,10 @@ int main(int argc, const char *argv[])
 
 #else
 
-  const int ral_tcp_port_protocol = ConnectionUtils::parsePort(identifier.c_str());
+  const int ral_tcp_port_protocol = ConnectionUtils::parsePort(argv[5]);
 
   if (ral_tcp_port_protocol == -1) {
-    std::cout << "FATAL: Invalid RAL TCP port " + identifier << std::endl;
+    std::cout << "FATAL: Invalid RAL TCP port " + ral_tcp_port_protocol << std::endl;
     return EXIT_FAILURE;
   }
 

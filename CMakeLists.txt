@@ -41,6 +41,7 @@ include(ConfigureParquet)
 include(ConfigureNVStrings)
 include(ConfigureJitify)
 include(ConfigureLibGDF)
+include(ConfigureUCX)
 include(ConfigureBlazingDBProtocol)
 include(ConfigureBlazingDBCommunication)
 include(ConfigureBlazingDBIO)
@@ -74,23 +75,6 @@ get_directory_property(communication_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/
 ## communication primitives
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/distribution)
 get_directory_property(distribution_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/distribution DEFINITION source_files)
-
-## ucx primitives
-if (NOT DEFINED UCX_INSTALL_DIR)
-  message (FATAL_ERROR
-    "- - - - - - - - - - - - - - - - -\n"
-    "Don't forget -DUCX_INSTALL_DIR=/path/to/ucx\n"
-    "- - - - - - - - - - - - - - - - -")
-endif ()
-
-add_library (UCX::UCX INTERFACE IMPORTED)
-set_target_properties(UCX::UCX PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-  "${UCX_INSTALL_DIR}/include;/usr/local/cuda/include")
-target_link_libraries (UCX::UCX INTERFACE
-  ${UCX_INSTALL_DIR}/lib/libuct.so
-  ${UCX_INSTALL_DIR}/lib/libucs.so
-  ${UCX_INSTALL_DIR}/lib/libucm.so
-  /usr/local/cuda/lib64/libcudart.so cuda)
 
 ## Target source files
 set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/config/BlazingConfig.cpp
@@ -160,7 +144,11 @@ target_link_libraries(testing-libgdf_lib
     Boost::system
     Boost::regex
 
-    UCX::UCX
+    # For BlazingDB-Communication
+    ${UCX_UCT_STATIC_LIB}
+    ${UCX_UCS_STATIC_LIB}
+    ${UCX_UCM_STATIC_LIB}
+
     # Library needed for blazing communication repository (debug)
     gcov
 )

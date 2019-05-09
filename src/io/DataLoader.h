@@ -17,6 +17,10 @@
 #include <arrow/io/interfaces.h>
 #include <memory>
 
+#include <nvstrings/NVCategory.h>
+#include <nvstrings/NVStrings.h>
+#include <nvstrings/ipc_transfer.h>
+
 namespace ral {
 namespace io {
 /**
@@ -84,6 +88,8 @@ size_t get_width_dtype(gdf_dtype type){
 		return 0;
 	}else if(type == GDF_STRING){
 		return 0;
+	}else if(type == GDF_STRING_CATEGORY){
+		return 4;
 	}
 }
 
@@ -110,6 +116,17 @@ void data_loader::load_data(std::vector<gdf_column_cpp> & columns, std::vector<b
 		if(file != nullptr){
 			parser->parse(file,converted_data,include_column);
 
+			// convert any NVStrings to NVCategory
+			for (auto& col : converted_data)
+			{
+				if (col.dtype() == GDF_STRING){
+					NVStrings* strs = static_cast<NVStrings*>(col.data());
+					NVCategory* category = NVCategory::create_from_strings(*strs);
+					col.get_gdf_column()->data = nullptr;
+					col.create_gdf_column(category, col.size(), col.name());
+				}
+			}
+			
 			columns_per_file.push_back(converted_data);
 		}else{
 			std::cout<<"Was unable to open "<<user_readable_file_handle<<std::endl;

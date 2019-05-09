@@ -61,10 +61,6 @@ using namespace blazingdb::protocol;
 
 #include "CodeTimer.h"
 
-#include <nvstrings/NVCategory.h>
-#include <nvstrings/NVStrings.h>
-#include <nvstrings/ipc_transfer.h>
-
 const Path FS_NAMESPACES_FILE("/tmp/file_system.bin");
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);
@@ -489,18 +485,6 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
       input_tables.push_back(table_cpp);
       table_names.push_back(table_info.name);
       all_column_names.push_back(table_info.columnNames);
-    }
-
-    // parse all columns to convert any NVStrings to NVCategory
-    for (int i = 0; i < input_tables.size(); i++){
-      for (int j = 0; j < input_tables[i].size(); j++){
-        if (input_tables[i][j].get_gdf_column()->dtype == GDF_STRING){
-          NVStrings* strs = static_cast<NVStrings*>(input_tables[i][j].get_gdf_column()->data);
-          NVCategory* category = NVCategory::create_from_strings(*strs);
-          input_tables[i][j].get_gdf_column()->data = nullptr;
-          input_tables[i][j].create_gdf_column(category, input_tables[i][j].size(), input_tables[i][j].name());
-        }
-      }
     }
 
     // Execute query

@@ -26,7 +26,7 @@ void init_default_csv_args(csv_read_arg & args){
 	args.lineterminator = '\n';
 	args.quotechar = '"';
 	args.quoting = QUOTE_MINIMAL;
-	args.doublequote = true;
+	args.doublequote = false;
 	args.delim_whitespace = false;
 	args.skipinitialspace = false;
 	args.dayfirst = false;

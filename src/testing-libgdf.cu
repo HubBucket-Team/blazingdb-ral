@@ -479,7 +479,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
         }
         ral::io::parquet_parser parser;
         load_files(&parser, uris, table_cpp);
-      } else {
+      } else if (table_info.schemaType ==  blazingdb::protocol::io::FileSchemaType_CSV) {
         std::vector<Uri> uris = { Uri{table_info.files[0]} }; //@todo, concat many files in one single table
         auto csv_params = table_info.csv;
         std::vector<gdf_dtype> types;
@@ -488,6 +488,11 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
         }
         ral::io::csv_parser parser(csv_params.delimiter, csv_params.line_terminator, csv_params.skip_rows, csv_params.names, types);
         load_files(&parser, uris, table_cpp);
+      } else { //blazingdb::protocol::io::FileSchemaType_GDF
+        // TODO Felipe loading gdf stuff
+        auto gdf_params = table_info.gdf;
+        //ral::io::gdf_parser parser(csv_params.delimiter, csv_params.line_terminator, csv_params.skip_rows, csv_params.names, types);
+        //load(&parser, uris, table_cpp);
       }
       input_tables.push_back(table_cpp);
       table_names.push_back(table_info.name);

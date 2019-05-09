@@ -62,6 +62,7 @@ void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		column_indices_mapped_to_parquet.resize(column_indices.size());
 		for (size_t column_index =0;column_index < column_indices.size(); column_index++) {
 			column_indices_mapped_to_parquet[column_index] = schema.get_file_index(column_indices[column_index]);
+
 		}
 	}
 

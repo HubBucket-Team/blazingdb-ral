@@ -174,7 +174,7 @@ convert_to_host_gdf_column(gdf_column *column) {
     output.valid = host_valid_out;
     return output;
 }
-
+/*
 template <typename ValueType = int8_t>
 auto
 print_column(gdf_column *column) -> void {
@@ -211,7 +211,7 @@ print_column(gdf_column *column) -> void {
     delete[] host_out;
     delete[] bitmap;
     std::cout << std::endl << std::endl;
-}
+}*/
 template <typename ValueType = int8_t>
 gdf_column
 gen_gdb_column(size_t column_size, ValueType init_value) {

@@ -712,43 +712,61 @@ read_parquet_by_ids(std::shared_ptr<::arrow::io::RandomAccessFile> file,
     return status;
 }
 
-gdf_error read_schema(std::shared_ptr<::arrow::io::RandomAccessFile> file, Schema & schema)
+gdf_error read_schema(std::vector<std::shared_ptr<::arrow::io::RandomAccessFile> > files, ral::io::Schema & schema_out)
 {
-    gdf_error error;
-    auto parquet_reader = FileReader::OpenFile(file);
-    auto file_metadata = parquet_reader->metadata();
 
-    auto schema = file_metadata->schema();
+	gdf_error error;
+	auto parquet_reader = FileReader::OpenFile(files[0]);
+	auto file_metadata = parquet_reader->metadata();
 
-    num_row_groups = file_metadata->num_row_groups();
+	auto schema = file_metadata->schema();
 
-    const std::vector<const ::parquet::ColumnDescriptor *> column_descriptors =
-        _ColumnDescriptorsFrom(parquet_reader, column_indices);
-
-    int rowGroupIndex = 0;
-    // for (int rowGroupIndex = 0; rowGroupIndex < num_row_groups; rowGroupIndex++)
-    // {
-        auto groupReader = parquet_reader->RowGroup(rowGroupIndex);
-        auto rowGroupMetadata = groupReader->metadata();
-
-        for (int columnIndex = 0; columnIndex < file_metadata->num_columns(); columnIndex++)
-        {
-            auto column = schema->Column(columnIndex);
-            // auto columnMetaData = rowGroupMetadata->ColumnChunk(columnIndex);
-            // auto physical_type = column->physical_type();
-            // auto logical_type = column->logical_type();
+	std::vector<size_t> num_row_groups(files.size());
+	num_row_groups[0] = file_metadata->num_row_groups();
 
 
-            if (column_descriptors[columnIndex])
-            {
-            	column_names.push_back(column->name());
-            	dtypes.push_back(_DTypeFrom(column_descriptors[columnIndex]));
-                column_indices.push_back(column_index);
-            }
+    std::vector<std::size_t> column_indices;
+    for (size_t index = 0; index < file_metadata->num_columns(); index++)
+        column_indices.push_back(index);
 
-        }
-        schema = Schema(column_names,dtypes,column_indices);
-    // }
+	const std::vector<const ::parquet::ColumnDescriptor *> column_descriptors =
+			_ColumnDescriptorsFrom(parquet_reader, column_indices);
+
+	int rowGroupIndex = 0;
+	// for (int rowGroupIndex = 0; rowGroupIndex < num_row_groups; rowGroupIndex++)
+	// {
+	auto groupReader = parquet_reader->RowGroup(rowGroupIndex);
+	auto rowGroupMetadata = groupReader->metadata();
+
+	std::vector<std::string> column_names;
+	std::vector<gdf_dtype> dtypes;
+	for (int columnIndex = 0; columnIndex < file_metadata->num_columns(); columnIndex++)
+	{
+		auto column = schema->Column(columnIndex);
+		// auto columnMetaData = rowGroupMetadata->ColumnChunk(columnIndex);
+		// auto physical_type = column->physical_type();
+		// auto logical_type = column->logical_type();
+
+
+		if (column_descriptors[columnIndex])
+		{
+			column_names.push_back(column->name());
+			dtypes.push_back(_DTypeFrom(column_descriptors[columnIndex]));
+			column_indices.push_back(columnIndex);
+		}
+
+	}
+	// }
+
+	for(int file_index = 1; file_index < files.size(); file_index++){
+		parquet_reader = FileReader::OpenFile(files[file_index]);
+		file_metadata = parquet_reader->metadata();
+		schema = file_metadata->schema();
+		num_row_groups[file_index] = file_metadata->num_row_groups();
+
+	}
+	schema_out = ral::io::Schema(column_names,column_indices,dtypes,num_row_groups);
+
 
     return error;
 }

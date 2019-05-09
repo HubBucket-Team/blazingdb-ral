@@ -23,10 +23,11 @@ public:
 	virtual ~parquet_parser();
 	void parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 				std::vector<gdf_column_cpp> & columns,
-				Schema schema,
-				std::vector<size_t> column_indices);
+				const Schema & schema,
+				std::vector<size_t> column_indices,
+				size_t file_index);
 
-	void parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> file,
+	void parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files,
 			Schema & schema);
 
 };

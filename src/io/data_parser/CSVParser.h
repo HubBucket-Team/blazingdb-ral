@@ -22,7 +22,9 @@ class csv_parser: public data_parser {
 public:
 	csv_parser(const std::string & delimiter,
 			const std::string & line_terminator,
-			int skip_rows);
+			int skip_rows,
+			const std::vector<std::string> & names,
+			const std::vector<gdf_dtype> & dtypes);
 	csv_parser(csv_read_arg	args);
 
 	virtual ~csv_parser();
@@ -30,10 +32,11 @@ public:
 
 	void parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 			std::vector<gdf_column_cpp> & columns,
-			Schema schema,
-			std::vector<size_t> column_indices);
+			const Schema & schema,
+			std::vector<size_t> column_indices,
+			size_t file_index);
 
-	void parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> file,
+	void parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files,
 			ral::io::Schema & schema);
 
 private:

@@ -50,6 +50,7 @@ END_NAMESPACE_GDF_PARQUET
 #include <arrow/io/file.h>
 #include <string>
 #include <vector>
+#include "io/Schema.h"
 
 namespace gdf {
 namespace parquet {
@@ -77,12 +78,7 @@ read_parquet_by_ids(std::shared_ptr<::arrow::io::RandomAccessFile> file,
                     std::vector<gdf_column *> &     out_gdf_columns);
 
 
-gdf_error read_schema(std::shared_ptr<::arrow::io::RandomAccessFile> file,
-                     size_t &num_row_groups,
-                     size_t &num_cols,
-                     std::vector< gdf_dtype > &parquet_dtypes,
-                     std::vector< std::string> &column_names,
-                     std::vector<bool> 	&include_columns);
+gdf_error read_schema(std::vector<std::shared_ptr<::arrow::io::RandomAccessFile> > files, ral::io::Schema & schema_out);
 }  // namespace parquet
 }  // namespace gdf
 

@@ -159,7 +159,9 @@ query_token_t loadParquetAndInsertToResultRepository(std::string path, connectio
 	  {
 	    CodeTimer blazing_timer;
 	    std::vector<gdf_column_cpp> columns;
-	    loader.load_data(columns, {});
+	    ral::io::Schema schema;
+	    loader.get_schema(schema);
+	    loader.load_data(columns, {},schema);
 
       blazing_frame output_frame;
       output_frame.add_table(columns);
@@ -225,7 +227,9 @@ query_token_t loadCsvAndInsertToResultRepository(std::string path, std::vector<s
     {
       CodeTimer blazing_timer;
       std::vector<gdf_column_cpp> columns;
-      loader.load_data(columns, {});
+	    ral::io::Schema schema;
+	    loader.get_schema(schema);
+	    loader.load_data(columns, {},schema);
 
       blazing_frame output_frame;
       output_frame.add_table(columns);
@@ -440,7 +444,9 @@ static result_pair freeResultService(uint64_t accessToken, Buffer&& requestPaylo
 void load_files(ral::io::data_parser * parser, const std::vector<Uri>& uris, std::vector<gdf_column_cpp>& out_columns) {
 	auto provider = ral::io::uri_data_provider(uris);
   ral::io::data_loader loader( parser,&provider);
-  loader.load_data(out_columns, {});
+  ral::io::Schema schema;
+  loader.get_schema(schema);
+  loader.load_data(out_columns, {},schema);
 }
 
 static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& requestPayloadBuffer) {

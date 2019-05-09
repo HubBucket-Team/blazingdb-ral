@@ -11,6 +11,7 @@
 #include <arrow/io/interfaces.h>
 #include <arrow/io/file.h>
 #include <arrow/io/memory.h>
+#include <arrow/buffer.h>
 #include <iostream>
 #include "../Utils.cuh"
 
@@ -71,26 +72,7 @@ void copy_non_data_csv_args(csv_read_arg & args, csv_read_arg & new_args){
 
 }
 
-/**
- * I did not want to write this and its very dangerous
- * but the csv_read_arg (what a name) currently requires a char * input
- *I have no idea why
- */
-std::string convert_dtype_to_string(const gdf_dtype & dtype) {
 
-	if(dtype == GDF_STRING)			return "str";
-	if(dtype == GDF_DATE64)			return "date64";
-	if(dtype == GDF_DATE32)			return "date32";
-	if(dtype == GDF_TIMESTAMP)		return "timestamp";
-	if(dtype == GDF_CATEGORY)		return "category";
-	if(dtype == GDF_FLOAT32)		return "float32";
-	if(dtype == GDF_FLOAT64)		return "float64";
-	if(dtype == GDF_INT16)			return "short";
-	if(dtype == GDF_INT32)			return "int32";
-	if(dtype == GDF_INT64)			return "int64";
-
-	return "str";
-}
 
 /**
  * reads contents of an arrow::io::RandomAccessFile in a char * buffer up to the number of bytes specified in bytes_to_read
@@ -196,8 +178,9 @@ csv_parser::~csv_parser() {
 //schema is not really necessary yet here, but we want it to maintain compatibility
 void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		std::vector<gdf_column_cpp> & columns,
-		Schema schema,
-		std::vector<size_t> column_indices){
+		const Schema & schema,
+		std::vector<size_t> column_indices,
+		size_t file_index){
 
 	// TODO this function needs to be revisited. the cudf csv reader now supports actually selecting what columns you want
 
@@ -205,8 +188,8 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 
 	args.num_cols = schema.get_names().size();
 	if(this->column_names.size() > 0){
-		args.names = new const char *[num_columns];
-		for(int column_index = 0; column_index < num_columns; column_index++){
+		args.names = new const char *[args.num_cols];
+		for(int column_index = 0; column_index < args.num_cols; column_index++){
 			args.names[column_index] = this->column_names[column_index].c_str();
 		}
 	}else{
@@ -214,8 +197,8 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	}
 
 	if(this->dtype_strings.size() > 0){
-		args.dtype = new const char *[num_columns]; //because dynamically allocating metadata is fun
-		for(int column_index = 0; column_index < num_columns; column_index++){
+		args.dtype = new const char *[args.num_cols]; //because dynamically allocating metadata is fun
+		for(int column_index = 0; column_index < args.num_cols; column_index++){
 
 			args.dtype[column_index] = this->dtype_strings[column_index].c_str();
 		}
@@ -231,7 +214,7 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 
 	if(column_indices.size() > 0){
 		args.use_cols_int = column_indices_int.data();
-		args.ues_cols_int_len = column_indices_int.size();
+		args.use_cols_int_len = column_indices_int.size();
 	}
 
 	copy_non_data_csv_args(args, raw_args);
@@ -254,13 +237,13 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	args.names = nullptr;
 }
 
-void csv_parser::parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> file, ral::io::Schema & schema)  {
+void csv_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files, ral::io::Schema & schema)  {
 	csv_read_arg raw_args{};
 	copy_non_data_csv_args(args, raw_args);
 
-	std::shared_ptr< arrow::io::Buffer > buffer;
+	std::shared_ptr< arrow::Buffer > buffer;
 	arrow::AllocateBuffer(8192, &buffer);
-	file->ReadAt(0,8192,&buffer);
+	files[0]->ReadAt(0,8192,&buffer);
 	auto buffer_reader = std::make_shared<arrow::io::BufferReader>(buffer);
 
 	raw_args.nrows=1;

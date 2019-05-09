@@ -47,6 +47,15 @@ public:
 	 * returns a string that the user should be able to use to identify which file is being referred to in error messages
 	 */
 	std::string get_current_user_readable_file_handle();
+	/**
+	 * returns all of the file handles
+	 */
+	std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > get_all();
+
+	/**
+	 * returns the current file index
+	 */
+	size_t get_file_index();
 private:
 	/**
 	 * stores the list of uris that will be used by the provider

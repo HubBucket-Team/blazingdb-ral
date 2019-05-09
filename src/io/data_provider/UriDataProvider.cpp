@@ -38,6 +38,20 @@ bool uri_data_provider::has_next(){
 	return this->current_file < this->file_uris.size();
 }
 
+size_t uri_data_provider::get_file_index(){
+	return this->current_file;
+}
+
+std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > uri_data_provider::get_all(){
+	std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > file_handles;
+	while(this->has_next()){
+		file_handles.push_back(this->get_next());
+	}
+
+	return file_handles;
+}
+
+
 std::shared_ptr<arrow::io::RandomAccessFile> uri_data_provider::get_next(){
 	// TODO: Take a look at this later, just calling this function to ensure
 	// the uri is in a valid state otherwise throw an exception

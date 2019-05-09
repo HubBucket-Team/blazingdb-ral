@@ -8,6 +8,7 @@
 #include "DataFrame.h"
 #include "Types.h"
 #include "LogicalFilter.h"
+#include "io/DataLoader.h"
 
 struct project_plan_params{ 
   size_t num_expressions_out;

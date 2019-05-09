@@ -19,11 +19,12 @@
 #include "Traits/RuntimeTraits.h"
 #include "cuDF/Allocator.h"
 #include "Interpreter/interpreter_cpp.h"
+#include "io/DataLoader.h"
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 const std::string LOGICAL_UNION_TEXT = "LogicalUnion";
 const std::string LOGICAL_SCAN_TEXT = "LogicalTableScan";
-const std::string LOGICAL_SCAN_TEXT = "BindableTableScan";
+const std::string BINDABLE_SCAN_TEXT = "BindableTableScan";
 const std::string LOGICAL_AGGREGATE_TEXT = "LogicalAggregate";
 const std::string LOGICAL_PROJECT_TEXT = "LogicalProject";
 const std::string LOGICAL_SORT_TEXT = "LogicalSort";
@@ -52,9 +53,6 @@ bool is_sort(std::string query_part){
 	return (query_part.find(LOGICAL_SORT_TEXT) != std::string::npos);
 }
 
-bool is_scan(std::string query_part){
-	return is_logical_scan() || is_bindable_scan;
-}
 
 bool is_logical_scan(std::string query_part){
 	return (query_part.find(LOGICAL_SCAN_TEXT) != std::string::npos);
@@ -64,6 +62,9 @@ bool is_bindable_scan(std::string query_part){
 	return (query_part.find(BINDABLE_SCAN_TEXT) != std::string::npos);
 }
 
+bool is_scan(std::string query_part){
+	return is_logical_scan(query_part) || is_bindable_scan(query_part);
+}
 
 
 bool is_filter(std::string query_part){
@@ -1293,9 +1294,10 @@ blazing_frame evaluate_split_query(
 
 blazing_frame evaluate_split_query(
 		std::vector<ral::io::data_loader > & input_loaders,
+		std::vector<ral::io::Schema> & schemas,
 		std::vector<std::string> table_names,
 		std::vector<std::string> query, int call_depth = 0){
-	assert(input_tables.size() == table_names.size());
+	assert(input_loaders.size() == table_names.size());
 
 	static CodeTimer blazing_timer;
 
@@ -1305,26 +1307,25 @@ blazing_frame evaluate_split_query(
 		if(is_scan(query[0])){
 			blazing_frame scan_frame;
 			std::vector<gdf_column_cpp>  input_table;
-			std::vector<bool> include_columns;
+
+			size_t table_index =  get_table_index(
+				            		 table_names,
+				            		 extract_table_name(query[0]));
 			if(is_bindable_scan(query[0])){
 				std::string project_string = get_named_expression(query[0],"projects");
-				if(project_string != )
-			}
-			ral::io::Schema schema;
-			input_loaders[table_index].get_schema(schema);
-			for(int table_index = 0; table_index < input_loaders.size(); table_index++){
-				input_loaders[table_index].load_data(input_tables[table_index],include_columns);
+				std::vector<std::string> project_string_split = get_expressions_from_expression_list(project_string, true);
+				std::vector<size_t> projections;
+				for(int i = 0; i < project_string_split.size(); i++){
+					projections.push_back(std::stoull(project_string_split[i]));
+				}
+				input_loaders[table_index].load_data(input_table,projections,schemas[table_index]);
+			}else{
+				input_loaders[table_index].load_data(input_table,{},schemas[table_index]);
 			}
 
+
 			//EnumerableTableScan(table=[[hr, joiner]])
-			scan_frame.add_table(
-					input_tables[
-					             get_table_index(
-					            		 table_names,
-					            		 extract_table_name(query[0])
-					             )
-					             ]
-			);
+			scan_frame.add_table(input_table);
 			return scan_frame;
 		}else{
 			//i dont think there are any other type of end nodes at the moment
@@ -1349,6 +1350,7 @@ blazing_frame evaluate_split_query(
 		blazing_frame left_frame;
 		left_frame = evaluate_split_query(
 				input_loaders,
+				schemas,
 				table_names,
 				std::vector<std::string>(
 						query.begin() + 1,
@@ -1359,6 +1361,7 @@ blazing_frame evaluate_split_query(
 		blazing_frame right_frame;
 		right_frame = evaluate_split_query(
 				input_loaders,
+				schemas,
 				table_names,
 				std::vector<std::string>(
 						query.begin() + other_depth_one_start,
@@ -1390,6 +1393,7 @@ blazing_frame evaluate_split_query(
 		//process child
 		blazing_frame child_frame = evaluate_split_query(
 				input_loaders,
+				schemas,
 				table_names,
 				std::vector<std::string>(
 						query.begin() + 1,
@@ -1502,6 +1506,7 @@ gdf_error evaluate_query(
 
 gdf_error evaluate_query(
 		std::vector<ral::io::data_loader > & input_loaders,
+		std::vector<ral::io::Schema> & schemas,
 		std::vector<std::string> table_names,
 		std::string logicalPlan,
 		std::vector<gdf_column_cpp> & outputs){
@@ -1511,7 +1516,7 @@ gdf_error evaluate_query(
 		splitted.erase(splitted.end() -1);
 	}
 
-	blazing_frame output_frame = evaluate_split_query(input_loaders, table_names, splitted);
+	blazing_frame output_frame = evaluate_split_query(input_loaders,schemas, table_names, splitted);
 
 	for(size_t i=0;i<output_frame.get_width();i++){
 

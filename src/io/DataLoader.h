@@ -38,7 +38,7 @@ public:
 	 * @param columns a vector to receive our output should be of size 0 when it is coming in and it will be allocated by this function
 	 * @param include_column the different files we can read from can have more columns than we actual want to read, this lest us filter some of them out
 	 */
-	void load_data(std::vector<gdf_column_cpp> & columns, std::vector<bool> include_column);
+	void load_data(std::vector<gdf_column_cpp> & columns, std::vector<bool> include_column, bool mapStringToStringCategory);
 private:
 	/**
 	 * DataProviders are able to serve up one or more arrow::io::RandomAccessFile objects
@@ -103,7 +103,7 @@ data_loader::~data_loader() {
 }
 
 
-void data_loader::load_data(std::vector<gdf_column_cpp> & columns, std::vector<bool> include_column){
+void data_loader::load_data(std::vector<gdf_column_cpp> & columns, std::vector<bool> include_column, bool mapStringToStringCategory){
 
 	std::vector<std::vector<gdf_column_cpp> > columns_per_file; //stores all of the columns parsed from each file
 	//iterates through files and parses them into columns
@@ -116,15 +116,18 @@ void data_loader::load_data(std::vector<gdf_column_cpp> & columns, std::vector<b
 		if(file != nullptr){
 			parser->parse(file,converted_data,include_column);
 
-			// convert any NVStrings to NVCategory
-			for (auto& col : converted_data)
+			if (mapStringToStringCategory)
 			{
-				if (col.dtype() == GDF_STRING){
-					NVStrings* strs = static_cast<NVStrings*>(col.data());
-					NVCategory* category = NVCategory::create_from_strings(*strs);
-					col.get_gdf_column()->data = nullptr;
-					col.create_gdf_column(category, col.size(), col.name());
-				}
+				// convert any NVStrings to NVCategory
+				std::for_each(converted_data.begin(), converted_data.end(), [] (auto& col) {
+					if (col.dtype() == GDF_STRING){
+						NVStrings* strs = static_cast<NVStrings*>(col.data());
+						NVCategory* category = NVCategory::create_from_strings(*strs);
+						gdf_column_cpp tempCol;
+						tempCol.create_gdf_column(category, col.size(), col.name());
+						col = tempCol;
+					}
+				});
 			}
 			
 			columns_per_file.push_back(converted_data);

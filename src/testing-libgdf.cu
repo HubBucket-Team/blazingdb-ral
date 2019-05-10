@@ -338,11 +338,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
               .null_count = result.result_frame.get_columns()[0][i].null_count(),
               .dtype_info = dtype_info,
               // custrings data
-              .custrings_views = ipc.count > 0 ? libgdf::ConvertCudaIpcMemHandler(ipc.hstrs) : std::basic_string<int8_t>(),
-              .custrings_viewscount = ipc.count,
-              .custrings_membuffer = ipc.count > 0 ? libgdf::ConvertCudaIpcMemHandler(ipc.hmem) : std::basic_string<int8_t>(),
-              .custrings_membuffersize = ipc.size,
-              .custrings_baseptr = reinterpret_cast<unsigned long>(ipc.base_address)
+              .custrings_data = libgdf::ConvertIpcByteArray(ipc)
             };
 
         }else{

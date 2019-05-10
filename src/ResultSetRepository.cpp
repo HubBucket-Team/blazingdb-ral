@@ -78,7 +78,7 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 
 	//deregister output since we are going to ipc it
 	for(size_t i = 0; i < frame.get_width(); i++){
-		if(frame.get_column(i).dtype() == GDF_STRING_CATEGORY){
+		if(frame.get_column(i).dtype() == GDF_STRING_CATEGORY && frame.get_column(i).size() > 0){
 			//we need to convert GDF_STRING_CATEGORY to GDF_STRING
 			//for now we can do something hacky lik euse the data pointer to store this
 

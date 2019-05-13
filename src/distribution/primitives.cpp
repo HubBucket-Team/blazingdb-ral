@@ -126,11 +126,16 @@ void sendSamplesToMaster(const Context& context, std::vector<gdf_column_cpp>&& s
     // Create message
     using MessageFactory = ral::communication::messages::Factory;
     using SampleToNodeMasterMessage = ral::communication::messages::SampleToNodeMasterMessage;
-    auto message = MessageFactory::createSampleToNodeMaster(context_token, self_node, total_row_size, std::move(samples));
+    try {
 
-    // Send message to master
-    using Client = ral::communication::network::Client;
-    Client::send(master_node, message);
+      auto message = MessageFactory::createSampleToNodeMaster(context_token, self_node, total_row_size, std::move(samples));
+      // Send message to master
+      using Client = ral::communication::network::Client;
+      Client::send(master_node, message);
+
+    } catch (std::exception & err) {
+      std::cerr << err.what() << std::endl;
+    }
 }
 
 std::vector<NodeColumns> collectPartition(const Context& context) {
@@ -328,7 +333,11 @@ std::vector<gdf_column_cpp> getPartitionPlan(const Context& context){
   }
 
   auto concreteMessage = std::static_pointer_cast<ColumnDataMessage>(message);
-
+  // auto& columns = concreteMessage->getColumnsRef();
+  // std::cout << "getPartitionPlan\n";
+  // for (auto& col : columns) {
+  //   print_gdf_column(col.get_gdf_column());
+  // }
   return std::move(concreteMessage->getColumns());
 }
 
@@ -464,7 +473,8 @@ void sortedMerger(std::vector<NodeColumns>& columns, std::vector<int8_t>& sortOr
 	sortByColIndices.create_gdf_column(GDF_INT32, sortColIndices.size(), sortColIndices.data(), get_width_dtype(GDF_INT32), "");
 
   auto it = std::find_if(columns.begin(), columns.end(), [](auto& e){ return !e.getColumnsRef().empty(); });
-  std::vector<gdf_column_cpp> leftCols = it->getColumns();
+  //TODO: clone this ipc columns
+  std::vector<gdf_column_cpp> leftCols = it->getColumnsRef(); // IPC 
   std::vector<gdf_column*> rawLeftCols(leftCols.size());
   std::transform(leftCols.begin(), leftCols.end(), rawLeftCols.begin(), [&](gdf_column_cpp& el) {
     return el.get_gdf_column();
@@ -506,7 +516,14 @@ void sortedMerger(std::vector<NodeColumns>& columns, std::vector<int8_t>& sortOr
   }
 
   output.clear();
-  output.add_table(leftCols);
+
+  //TODO: clone this ipc columns
+  std::vector<gdf_column_cpp> columns_to_add;
+  for (auto& col : leftCols) {
+    columns_to_add.push_back( col.clone() );
+  }
+
+  output.add_table(columns_to_add); // WTF: ipc de un ipc !! errorrr!!! 
 }
 
 std::vector<gdf_column_cpp> generatePartitionPlansGroupBy(const Context& context, std::vector<NodeSamples>& samples){

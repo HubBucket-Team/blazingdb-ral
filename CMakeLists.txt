@@ -40,6 +40,7 @@ include(ConfigureParquet)
 include(ConfigureNVStrings)
 include(ConfigureJitify)
 include(ConfigureLibGDF)
+include(ConfigureUCX)
 include(ConfigureBlazingDBProtocol)
 include(ConfigureBlazingDBCommunication)
 include(ConfigureBlazingDBIO)
@@ -144,6 +145,11 @@ target_link_libraries(testing-libgdf_lib
     Boost::filesystem
     Boost::system
     Boost::regex
+
+    # For BlazingDB-Communication
+    ${UCX_UCT_STATIC_LIB}
+    ${UCX_UCS_STATIC_LIB}
+    ${UCX_UCM_STATIC_LIB}
 
     # Library needed for blazing communication repository (debug)
     gcov

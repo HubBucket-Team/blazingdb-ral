@@ -631,6 +631,10 @@ int main(int argc, const char *argv[])
       return 1;
     }
 
+    // argc = 6;
+    // const char * argv[] = {"./testing-libgdf",  "2", "192.168.1.61",  "9000", "192.168.1.61",  "8988"};
+   
+
     if (argc == 6) {
       identifier = std::string(argv[1]);
       auto& communicationData = ral::communication::CommunicationData::getInstance();

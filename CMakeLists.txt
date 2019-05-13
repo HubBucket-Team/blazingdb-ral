@@ -130,6 +130,11 @@ target_link_libraries(testing-libgdf_lib
     ${CUDA_NVRTC_LIBRARY}
     ${CUDA_NVTX_LIBRARY}
 
+    ${UCX_UCT_STATIC_LIB}
+    ${GDR_STATIC_LIB}
+    ${UCX_UCS_STATIC_LIB}
+    ${UCX_UCM_STATIC_LIB}
+
     ${PARQUET_STATIC_LIB}
     ${ARROW_STATIC_LIB}
     ${THRIFT_STATIC_LIB}

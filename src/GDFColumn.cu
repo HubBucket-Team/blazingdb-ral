@@ -109,7 +109,7 @@ gdf_column_cpp gdf_column_cpp::clone(std::string name)  // TODO clone needs to r
 	col1.allocated_size_data = this->allocated_size_data;
 	col1.allocated_size_valid = this->allocated_size_valid;
 
-    if (this->column->dtype == GDF_STRING_CATEGORY){
+    if (this->column->dtype == GDF_STRING_CATEGORY && this->column->dtype_info.category){
         col1.column->dtype_info.category =  static_cast<void*>(static_cast<NVCategory *>(this->column->dtype_info.category)->copy());
     }
     

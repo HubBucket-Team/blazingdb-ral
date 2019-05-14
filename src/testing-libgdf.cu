@@ -61,10 +61,6 @@ using namespace blazingdb::protocol;
 
 #include "CodeTimer.h"
 
-#include <nvstrings/NVCategory.h>
-#include <nvstrings/NVStrings.h>
-#include <nvstrings/ipc_transfer.h>
-
 const Path FS_NAMESPACES_FILE("/tmp/file_system.bin");
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);
@@ -159,7 +155,7 @@ query_token_t loadParquetAndInsertToResultRepository(std::string path, connectio
 	  {
 	    CodeTimer blazing_timer;
 	    std::vector<gdf_column_cpp> columns;
-	    loader.load_data(columns, {});
+	    loader.load_data(columns, {}, false);
 
       blazing_frame output_frame;
       output_frame.add_table(columns);
@@ -225,7 +221,7 @@ query_token_t loadCsvAndInsertToResultRepository(std::string path, std::vector<s
     {
       CodeTimer blazing_timer;
       std::vector<gdf_column_cpp> columns;
-      loader.load_data(columns, {});
+      loader.load_data(columns, {}, false);
 
       blazing_frame output_frame;
       output_frame.add_table(columns);
@@ -436,7 +432,7 @@ static result_pair freeResultService(uint64_t accessToken, Buffer&& requestPaylo
 void load_files(ral::io::data_parser * parser, const std::vector<Uri>& uris, std::vector<gdf_column_cpp>& out_columns) {
 	auto provider = ral::io::uri_data_provider(uris);
   ral::io::data_loader loader( parser,&provider);
-  loader.load_data(out_columns, {});
+  loader.load_data(out_columns, {}, true);
 }
 
 static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& requestPayloadBuffer) {
@@ -470,7 +466,10 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
         ral::io::parquet_parser parser;
         load_files(&parser, uris, table_cpp);
       } else {
-        std::vector<Uri> uris = { Uri{table_info.files[0]} }; //@todo, concat many files in one single table
+        std::vector<Uri> uris;
+        std::transform(table_info.files.begin(), table_info.files.end(),
+                      std::back_inserter(uris),
+                      [](auto const& file){ return Uri{file}; });
         auto csv_params = table_info.csv;
         std::vector<gdf_dtype> types;
         for(auto val : csv_params.dtypes) {
@@ -482,18 +481,6 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
       input_tables.push_back(table_cpp);
       table_names.push_back(table_info.name);
       all_column_names.push_back(table_info.columnNames);
-    }
-
-    // parse all columns to convert any NVStrings to NVCategory
-    for (int i = 0; i < input_tables.size(); i++){
-      for (int j = 0; j < input_tables[i].size(); j++){
-        if (input_tables[i][j].get_gdf_column()->dtype == GDF_STRING){
-          NVStrings* strs = static_cast<NVStrings*>(input_tables[i][j].get_gdf_column()->data);
-          NVCategory* category = NVCategory::create_from_strings(*strs);
-          input_tables[i][j].get_gdf_column()->data = nullptr;
-          input_tables[i][j].create_gdf_column(category, input_tables[i][j].size(), input_tables[i][j].name());
-        }
-      }
     }
 
     // Execute query

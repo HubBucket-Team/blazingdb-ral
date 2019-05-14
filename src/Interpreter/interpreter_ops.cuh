@@ -826,11 +826,11 @@ private:
 			}else if(oper == BLZ_IS_NULL){
 				temp_gdf_valid_type *valid = this->valid_ptrs [ this->left_input_positions [ op_index ] ];
 
-				computed =  ! gdf_is_valid_32(valid, row_index);
+	//			computed =  ! gdf_is_valid_32(valid, row_index);
 			}else if(oper == BLZ_IS_NOT_NULL){
 				temp_gdf_valid_type *valid = this->valid_ptrs [ this->left_input_positions [ op_index ] ];
 
-				computed = gdf_is_valid_32(valid, row_index);
+//				computed = gdf_is_valid_32(valid, row_index);
 			}
 			
 			store_data_in_buffer<OutputTypeOperator>(

@@ -824,13 +824,14 @@ private:
 					computed = extract_second_op(left_value);
 				}
 			}else if(oper == BLZ_IS_NULL){
+//				printf("well im here!");
 				temp_gdf_valid_type *valid = this->valid_ptrs [ this->left_input_positions [ op_index ] ];
-
-	//			computed =  ! gdf_is_valid_32(valid, row_index);
+//computed = 1;
+				computed =  ! gdf_is_valid_32(valid, row_index);
 			}else if(oper == BLZ_IS_NOT_NULL){
 				temp_gdf_valid_type *valid = this->valid_ptrs [ this->left_input_positions [ op_index ] ];
-
-//				computed = gdf_is_valid_32(valid, row_index);
+//computed = 1;
+				computed = gdf_is_valid_32(valid, row_index);
 			}
 			
 			store_data_in_buffer<OutputTypeOperator>(
@@ -1316,7 +1317,7 @@ public:
 
 			for(column_index_type cur_column = 0; cur_column < this->num_columns; cur_column++ ){
 
-				if(this->valid_ptrs[cur_column] == nullptr || this->null_counts_inputs[cur_column] == 0){
+				if(this->valid_ptrs[cur_column] == nullptr || this->null_counts_inputs[cur_column] == 0 || this->unary_operations[cur_column] == BLZ_IS_NULL ||  this->unary_operations[cur_column] == BLZ_IS_NOT_NULL){
 					store_data_in_buffer<int64_t>(
 							-1, //this shoudl be when int64_t is all 1111111...111 , i mean everyone uses 2's compliment right?
 							total_buffer,

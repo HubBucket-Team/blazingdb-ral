@@ -178,6 +178,11 @@ bool is_exponential_operator(gdf_binary_operator operation){
 	return operation == GDF_POW;
 }
 
+bool is_null_check_operator(gdf_unary_operator operation){
+	return (operation == BLZ_IS_NULL ||
+			operation == BLZ_IS_NOT_NULL);
+}
+
 bool is_arithmetic_operation(gdf_binary_operator operation){
 	return (operation == GDF_ADD ||
 			operation == GDF_SUB ||
@@ -233,6 +238,8 @@ gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_unary_operator operatio
 		} else {
 			return GDF_FLOAT64;
 		}
+	}else if(is_null_check_operator(operation)){
+		return GDF_INT8;
 	}else{
 		return input_left_type;
 	}

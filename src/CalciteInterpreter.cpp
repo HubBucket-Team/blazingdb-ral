@@ -1110,6 +1110,7 @@ void process_filter(blazing_frame & input, std::string query_part){
 
 	gdf_column_cpp temp_idx;
 	temp_idx.create_gdf_column(GDF_INT32, input.get_column(0).size(), nullptr, get_width_dtype(GDF_INT32));
+	//Library::Logging::Logger().logInfo();
 
 	timer.reset();
 	CUDF_CALL( gdf_apply_boolean_mask( index_col.get_gdf_column(), stencil.get_gdf_column(), temp_idx.get_gdf_column())	);

@@ -84,14 +84,18 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 
 			//TODO the gather_and_remap here is for example in the case of sorting where the order of the indexes changes
 			//we must figure out a way to avoid this when is no needed
-			NVCategory* new_category = static_cast<NVCategory *> (frame.get_column(i).dtype_info().category)->gather_and_remap( static_cast<int *>(frame.get_column(i).data()), frame.get_column(i).size());
-			NVStrings * new_strings = new_category->to_strings();
-			NVCategory::destroy(new_category);
+			NVStrings * new_strings = nullptr;
+			if (frame.get_column(i).size() > 0){
+				NVCategory* new_category = static_cast<NVCategory *> (frame.get_column(i).dtype_info().category)->gather_and_remap( static_cast<int *>(frame.get_column(i).data()), frame.get_column(i).size());
+				new_strings = new_category->to_strings();
+				NVCategory::destroy(new_category);
+			}
 
 			gdf_column_cpp string_column;
 			string_column.create_gdf_column(new_strings, frame.get_column(i).size(), frame.get_column(i).name());
 			
-			frame.set_column(i, string_column);			
+			frame.set_column(i, string_column);	
+
 			GDFRefCounter::getInstance()->deregister_column(frame.get_column(i).get_gdf_column());
 		}else{
 			GDFRefCounter::getInstance()->deregister_column(frame.get_column(i).get_gdf_column());

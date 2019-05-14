@@ -63,6 +63,7 @@ using namespace blazingdb::protocol;
 #include "communication/network/Client.h"
 #include "communication/network/Server.h"
 #include <blazingdb/communication/Context.h>
+#include <blazingdb/communication/Configuration.h>
 
 const Path FS_NAMESPACES_FILE("/tmp/file_system.bin");
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
@@ -203,7 +204,7 @@ static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
   return std::make_pair(Status_Success, responsePayload.getBufferData());
 }
 
-query_token_t loadCsvAndInsertToResultRepository(std::string path, std::vector<std::string> names, std::vector<gdf_dtype> dtypes, std::string delimiter, std::string line_terminator, 
+query_token_t loadCsvAndInsertToResultRepository(std::string path, std::vector<std::string> names, std::vector<gdf_dtype> dtypes, std::string delimiter, std::string line_terminator,
   int skip_rows, connection_id_t connection, bool schema_only) {
 	std::cout<<"loadCsv\n";
 
@@ -608,17 +609,28 @@ int main(int argc, const char *argv[])
     if (argc == 2) {
         identifier = std::string(argv[1]);
     }
+
+    bool withGDR = false;
+    if (argc == 7) {
+        if ("true"  ==  std::string{argv[6]}) {
+            withGDR = true;
+        }
+        argc = 6;
+    }
+    blazingdb::communication::Configuration::Set(withGDR);
+
     if (argc > 1 && argc != 6) {
       std::cout << "Usage: " << argv[0]
                 << " <RAL_ID>"
                    " <ORCHESTRATOR_[IP|HOSTNAME]> <ORCHESTRATOR_PORT>"
-                   " <RAL_[IP|HOSTNAME]> <RAL_PORT>\n";
+                   " <RAL_[IP|HOSTNAME]> <RAL_PORT>"
+                   " <WithGDR (true|false)" << std::endl;
       return 1;
     }
 
     // argc = 6;
     // const char * argv[] = {"./testing-libgdf",  "2", "192.168.1.61",  "9000", "192.168.1.61",  "8988"};
-   
+
 
     if (argc == 6) {
       identifier = std::string(argv[1]);

@@ -612,7 +612,7 @@ int main(int argc, const char *argv[])
 
     bool withGDR = false;
     if (argc == 7) {
-        if ("true"  ==  std::string{argv[6]}) {
+        if ("GDR"  ==  std::string{argv[6]}) {
             withGDR = true;
         }
         argc = 6;

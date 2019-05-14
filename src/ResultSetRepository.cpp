@@ -78,27 +78,31 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 
 	//deregister output since we are going to ipc it
 	for(size_t i = 0; i < frame.get_width(); i++){
-		if(frame.get_column(i).dtype() == GDF_STRING_CATEGORY && frame.get_column(i).size() > 0){
+		if(frame.get_column(i).dtype() == GDF_STRING_CATEGORY){
 			//we need to convert GDF_STRING_CATEGORY to GDF_STRING
 			//for now we can do something hacky lik euse the data pointer to store this
-
-			//TODO the gather_and_remap here is for example in the case of sorting where the order of the indexes changes
-			//we must figure out a way to avoid this when is no needed
-			NVCategory* new_category = static_cast<NVCategory *> (frame.get_column(i).dtype_info().category)->gather_and_remap( static_cast<int *>(frame.get_column(i).data()), frame.get_column(i).size());
-			NVStrings * new_strings = new_category->to_strings();
-			NVCategory::destroy(new_category);
 
 			gdf_column * new_gdf_column = new gdf_column;
 			new_gdf_column->size = frame.get_column(i).size();
 			new_gdf_column->null_count = 0;
 			new_gdf_column->valid = nullptr;
-			new_gdf_column->data = (void * ) new_strings;
+			new_gdf_column->data = nullptr;
 			new_gdf_column->dtype = GDF_STRING;
 			new_gdf_column->col_name = const_cast<char*>(frame.get_column(i).name().c_str());
 
+			//TODO the gather_and_remap here is for example in the case of sorting where the order of the indexes changes
+			//we must figure out a way to avoid this when is no needed
+			if (frame.get_column(i).size() > 0){
+				NVCategory* new_category = static_cast<NVCategory *> (frame.get_column(i).dtype_info().category)->gather_and_remap( static_cast<int *>(frame.get_column(i).data()), frame.get_column(i).size());
+				NVStrings * new_strings = new_category->to_strings();
+				NVCategory::destroy(new_category);
+
+				new_gdf_column->data = (void * ) new_strings;
+			}
+
 			gdf_column_cpp string_column;
 			string_column.create_gdf_column(new_gdf_column);
-			
+
 			frame.set_column(i,string_column);			
 			GDFRefCounter::getInstance()->deregister_column(frame.get_column(i).get_gdf_column());
 		}else{

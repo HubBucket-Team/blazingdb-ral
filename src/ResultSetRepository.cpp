@@ -88,18 +88,10 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 			NVStrings * new_strings = new_category->to_strings();
 			NVCategory::destroy(new_category);
 
-			gdf_column * new_gdf_column = new gdf_column;
-			new_gdf_column->size = frame.get_column(i).size();
-			new_gdf_column->null_count = 0;
-			new_gdf_column->valid = nullptr;
-			new_gdf_column->data = (void * ) new_strings;
-			new_gdf_column->dtype = GDF_STRING;
-			new_gdf_column->col_name = const_cast<char*>(frame.get_column(i).name().c_str());
-
 			gdf_column_cpp string_column;
-			string_column.create_gdf_column(new_gdf_column);
+			string_column.create_gdf_column(new_strings, frame.get_column(i).size(), frame.get_column(i).name());
 			
-			frame.set_column(i,string_column);			
+			frame.set_column(i, string_column);			
 			GDFRefCounter::getInstance()->deregister_column(frame.get_column(i).get_gdf_column());
 		}else{
 			GDFRefCounter::getInstance()->deregister_column(frame.get_column(i).get_gdf_column());

@@ -250,6 +250,21 @@ void gdf_column_cpp::create_gdf_column(NVCategory* category, size_t num_values,s
 
 }
 
+void gdf_column_cpp::create_gdf_column(NVStrings* strings, size_t num_values, std::string column_name) {
+    decrement_counter(column);
+
+    //TODO crate column here
+    this->column = new gdf_column;
+    gdf_column_view(this->column, static_cast<void*>(strings), nullptr, num_values, GDF_STRING);
+    
+    this->allocated_size_data = 0; // TODO: do we care? what should be put there?
+
+    this->is_ipc_column = false;
+    this->column_token = 0;
+    this->set_name(column_name);
+
+    GDFRefCounter::getInstance()->register_column(this->column);
+}
 
 void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void * input_data, gdf_valid_type * host_valids, size_t width_per_value, const std::string &column_name)
 {

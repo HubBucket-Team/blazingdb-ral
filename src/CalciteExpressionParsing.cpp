@@ -572,7 +572,9 @@ static std::map<std::string, gdf_unary_operator> gdf_unary_operator_map = {
 	{"BL_DAY", BLZ_DAY},
 	{"BL_HOUR", BLZ_HOUR},
 	{"BL_MINUTE", BLZ_MINUTE},
-	{"BL_SECOND", BLZ_SECOND}
+	{"BL_SECOND", BLZ_SECOND},
+	{"IS_NULL", BLZ_IS_NULL},
+	{"IS_NOT_NULL", BLZ_IS_NOT_NULL}
 };
 
 
@@ -759,7 +761,8 @@ std::string clean_calcite_expression(std::string expression){
 	static const std::regex re{R""(CASE\(IS NOT NULL\((\W\(.+?\)|.+)\), \1, (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
 	expression = std::regex_replace(expression, re, "COALESCE($1, $2)");
 	// std::cout << "+++++++++ " << expression << std::endl;
-
+	StringUtil::findAndReplaceAll(expression,"IS NOT NULL","IS_NOT_NULL");
+	StringUtil::findAndReplaceAll(expression,"IS NULL","IS_NULL");
 	StringUtil::findAndReplaceAll(expression," NOT NULL","");
 	StringUtil::findAndReplaceAll(expression,"):DOUBLE","");
 	StringUtil::findAndReplaceAll(expression,"CAST(","");

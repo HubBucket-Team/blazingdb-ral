@@ -72,6 +72,42 @@ TEST_F(EvaluateQueryTest, TEST_01) {
       GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
   CHECK_RESULT(output_table, input.resultTable);
 }
+
+
+TEST_F(EvaluateQueryTest, TEST_IS_NULL) {
+  auto input = InputTestItem{
+      .query = "select * from main.emps where age is null",
+      .logicalPlan =
+          "LogicalProject(id=[$0], age=[$1])\n  "
+   		  "LogicalFilter(condition=[IS NULL($0)])\n    "
+          "EnumerableTableScan(table=[[main, emps]])",
+      .tableGroup =
+          LiteralTableGroupBuilder{
+              {"main.emps",
+               {{"id", Literals<GDF_INT32>{Literals<GDF_INT32>::vector{1, 2, 3, 4, 5, 6, 7, 8, 9, 1}, Literals<GDF_INT32>::bool_vector{0, 1, 1, 1, 0, 0, 0, 0, 1, 1}}},
+                       {"age",  Literals<GDF_INT32>{Literals<GDF_INT32>::vector{10, 20, 30, 40, 50, 60, 70, 80, 90, 10}, Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 0, 0, 0, 0, 1, 1}}}}}}
+              .Build(),
+      .resultTable =
+          LiteralTableBuilder{
+              "ResultSet",
+              {{"GDF_INT32", Literals<GDF_INT32>{1, 5, 6, 7, 8}},
+               {"GDF_INT32",
+                Literals<GDF_INT32>{10, 50, 60, 70, 80}}}}
+              .Build()};
+  auto logical_plan = input.logicalPlan;
+  auto input_tables = input.tableGroup.ToBlazingFrame();
+  auto table_names = input.tableGroup.table_names();
+  auto column_names = input.tableGroup.column_names();
+  std::vector<gdf_column_cpp> outputs;
+  gdf_error err = evaluate_query(input_tables, table_names, column_names,
+                                 logical_plan, outputs);
+  EXPECT_TRUE(err == GDF_SUCCESS);
+  auto output_table =
+      GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+  CHECK_RESULT(output_table, input.resultTable);
+}
+
+
 TEST_F(EvaluateQueryTest, TEST_02) {
   auto input = InputTestItem{
       .query = "select id > 3 from main.emps",

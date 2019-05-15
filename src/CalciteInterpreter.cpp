@@ -1322,7 +1322,14 @@ query_token_t evaluate_query(
 
 		//@todo: hablar con felipe sobre cudaIpcCloseMemHandle
 		for(int i = 0; i < handles.size(); i++){
-			cudaIpcCloseMemHandle(handles[i]);
+			if (handles[i]){
+				cudaError_t error = cudaIpcCloseMemHandle(handles[i]);
+				if (error != cudaSuccess){
+					std::cout<<"Closing handle failed with error: "<<error<<std::endl;
+				}
+			} else {
+				std::cout<<"Closing handle failed because the handle was null"<<std::endl;
+			}
 		}
 	});
 

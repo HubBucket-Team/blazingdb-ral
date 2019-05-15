@@ -209,10 +209,13 @@ void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,g
     this->allocated_size_data = num_values * width;
 
     if(col_data == nullptr){
+        std::cout<<"WARNING: create_gdf_column_for_ipc received null col_data"<<std::endl;
         cuDF::Allocator::allocate((void**)&this->column->data, this->allocated_size_data);
     }
-
-    this->allocate_set_valid();
+    if (valid_data == nullptr){
+        this->allocate_set_valid();
+    }
+    
     is_ipc_column = true;
     this->column_token = 0;
     this->set_name(column_name);

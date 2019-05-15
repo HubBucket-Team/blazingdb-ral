@@ -92,22 +92,22 @@ std::tuple<std::vector<std::vector<gdf_column_cpp>>,
           NVStrings::destroy(strs);
 
           col.create_gdf_column(category, column.size, column_name);
-        }
-        else {
+
+        } else {
+          if ((::gdf_dtype)column.dtype == GDF_STRING_CATEGORY) 
+            std::cout<<"WARNING: incoming data is a GDF_STRING_CATEGORY"<<std::endl;
+
           // col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),(gdf_valid_type*)libgdf::CudaIpcMemHandlerFrom(column.valid),column.size,column_name);
-          col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),nullptr,column.size,column_name);
-          handles.push_back(col.data());
+          void * dataHandle = libgdf::CudaIpcMemHandlerFrom(column.data);
+          void * validHandle = libgdf::CudaIpcMemHandlerFrom(column.valid);
+          col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,dataHandle,
+                                          static_cast<gdf_valid_type*>(validHandle),column.size,column_name);
+          handles.push_back(dataHandle);
+          if (validHandle != nullptr){
+            handles.push_back(validHandle);
+          }
         }
 
-        if(col.valid() == nullptr){
-          //TODO: we can remove this when libgdf properly
-          //implements all algorithsm with valid == nullptr support
-          //it crashes somethings like group by
-          col.allocate_set_valid();
-
-        }else{
-          handles.push_back(col.valid());
-        }
       }else{
         col = result_set_repository::get_instance().get_column(accessToken, table.columnTokens[column_index]);
       }

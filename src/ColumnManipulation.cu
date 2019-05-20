@@ -8,6 +8,7 @@
 #include <thrust/device_ptr.h>
 #include <thrust/device_vector.h>
 #include <thrust/copy.h>
+#include <thrust/gather.h>
 #include <thrust/remove.h>
 #include <thrust/iterator/counting_iterator.h>
 
@@ -18,15 +19,6 @@
 #include "Utils.cuh"
 #include "string/nvcategory_util.hpp"
 
-template <typename InputType>
-struct negative_to_zero : public thrust::unary_function< InputType, InputType>
-{
-	__host__ __device__
-	InputType operator()(InputType x)
-	{
-		return x < 0 ? 0 : x;
-	}
-};
 
 const size_t NUM_ELEMENTS_PER_THREAD_GATHER_BITS = 32;
 template <typename BitContainer, typename Index>
@@ -36,9 +28,6 @@ __global__ void gather_bits(
 		BitContainer* __restrict__ gathered_bits,
 		gdf_size_type                    num_indices
 ){
-
-
-
 	size_t thread_index = blockIdx.x * blockDim.x + threadIdx.x ;
 	size_t element_index = NUM_ELEMENTS_PER_THREAD_GATHER_BITS * thread_index;
 	while( element_index < num_indices){
@@ -77,8 +66,7 @@ __global__ void gather_bits(
 }
 
 void materialize_valid_ptrs(gdf_column * input, gdf_column * output, gdf_column * row_indices){
-	
-	if (input->valid != nullptr && output->valid != nullptr){
+	if (output->valid != nullptr){
 		int grid_size, block_size;
 
 		CheckCudaErrors(cudaOccupancyMaxPotentialBlockSize(&grid_size,&block_size,gather_bits<unsigned int, int>));
@@ -101,16 +89,16 @@ void materialize_templated_2(gdf_column * input, gdf_column * output, gdf_column
 		thrust::detail::normal_iterator<thrust::device_ptr<IndexIterator> > index_iter =
 				thrust::detail::make_normal_iterator(thrust::device_pointer_cast((IndexIterator *) row_indices->data));
 
-		typedef thrust::detail::normal_iterator<thrust::device_ptr<IndexIterator> > IndexNormalIterator;
-
-		thrust::transform_iterator<negative_to_zero<IndexIterator>,IndexNormalIterator> transform_iter = thrust::make_transform_iterator(index_iter,negative_to_zero<IndexIterator>());
-
-
-		thrust::permutation_iterator<thrust::detail::normal_iterator<thrust::device_ptr<ElementIterator> >,thrust::transform_iterator<negative_to_zero<IndexIterator>,IndexNormalIterator> > iter(element_iter,transform_iter);
-
 		thrust::detail::normal_iterator<thrust::device_ptr<ElementIterator> > output_iter =
-				thrust::detail::make_normal_iterator(thrust::device_pointer_cast((ElementIterator *) output->data));;
-		thrust::copy(iter,iter + row_indices->size,output_iter);
+				thrust::detail::make_normal_iterator(thrust::device_pointer_cast((ElementIterator *) output->data));
+
+		thrust::gather_if(index_iter, index_iter + row_indices->size,
+											index_iter,
+											element_iter,
+											output_iter,
+											[] __device__ (const IndexIterator x) {
+												return x >= 0;
+											});
 
 		if (output->size == 0 || output->valid == nullptr) {
 			output->null_count = 0;

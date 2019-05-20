@@ -196,7 +196,7 @@ gdf_valid_type * gdf_column_cpp::allocate_valid(){
 	return valid_device;
 }
 
-void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,gdf_valid_type * valid_data,size_t num_values,std::string column_name){
+void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,gdf_valid_type * valid_data, gdf_size_type num_values, gdf_size_type null_count, std::string column_name){
     assert(type != GDF_invalid);
     decrement_counter(column);
 
@@ -205,6 +205,7 @@ void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,g
     //TODO crate column here
     this->column = new gdf_column;
     gdf_column_view(this->column, col_data, valid_data, num_values, type);
+    this->column->null_count = null_count;
     get_column_byte_width(this->column, &width);
     this->allocated_size_data = num_values * width;
 
@@ -214,6 +215,8 @@ void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,g
     }
     if (valid_data == nullptr){
         this->allocate_set_valid();
+    } else {
+        this->allocated_size_valid = gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(num_values));
     }
     
     is_ipc_column = true;
@@ -245,6 +248,7 @@ void gdf_column_cpp::create_gdf_column(NVCategory* category, size_t num_values,s
         cudaMemcpyDeviceToDevice) );
     
     this->column->valid = nullptr; // TODO: Nulls are not supported for strings
+    this->allocated_size_valid = 0;
     this->column->null_count = 0; // TODO: Nulls are not supported for strings
 
     this->is_ipc_column = false;
@@ -263,6 +267,7 @@ void gdf_column_cpp::create_gdf_column(NVStrings* strings, size_t num_values, st
     gdf_column_view(this->column, static_cast<void*>(strings), nullptr, num_values, GDF_STRING);
     
     this->allocated_size_data = 0; // TODO: do we care? what should be put there?
+    this->allocated_size_valid = 0;
 
     this->is_ipc_column = false;
     this->column_token = 0;
@@ -285,13 +290,16 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     this->is_ipc_column = false;
     this->column_token = 0;
 
-    gdf_valid_type * valid_device = allocate_valid();
     this->allocated_size_data = (width_per_value * num_values); 
 
     cuDF::Allocator::allocate((void**)&data, allocated_size_data);
 
+    gdf_valid_type * valid_device = nullptr;
     if(host_valids != nullptr){
-        CheckCudaErrors(cudaMemcpy(valid_device, host_valids, allocated_size_valid, cudaMemcpyHostToDevice));
+        valid_device = allocate_valid();
+        CheckCudaErrors(cudaMemcpy(valid_device, host_valids, this->allocated_size_valid, cudaMemcpyHostToDevice));
+    } else {
+        this->allocated_size_valid = 0;
     }
 
     gdf_column_view(this->column, (void *) data, valid_device, num_values, type);
@@ -359,7 +367,9 @@ void gdf_column_cpp::create_gdf_column(gdf_column * column){
     }
 	if(column->valid != nullptr){
         this->allocated_size_valid = gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(column->size)); //so allocations are supposed to be 64byte aligned
-	}
+	} else {
+        this->allocated_size_valid = 0;
+    }
     this->is_ipc_column = false;
     this->column_token = 0;
     if (column->col_name)

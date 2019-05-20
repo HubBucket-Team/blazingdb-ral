@@ -101,7 +101,7 @@ std::tuple<std::vector<std::vector<gdf_column_cpp>>,
           void * dataHandle = libgdf::CudaIpcMemHandlerFrom(column.data);
           void * validHandle = libgdf::CudaIpcMemHandlerFrom(column.valid);
           col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,dataHandle,
-                                          static_cast<gdf_valid_type*>(validHandle),column.size,column_name);
+                                          static_cast<gdf_valid_type*>(validHandle), column.size, column.null_count, column_name);
           handles.push_back(dataHandle);
           if (validHandle != nullptr){
             handles.push_back(validHandle);

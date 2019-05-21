@@ -363,6 +363,18 @@ std::vector<NodeColumns> partitionData(const Context& context,
         }
     }
 
+    gdf_size_type table_column_size = table[0].size();
+    if (table_column_size == 0)
+    {
+      std::vector<NodeColumns> array_node_columns;
+      auto nodes = context.getAllNodes();
+      for (std::size_t i = 0; i < nodes.size(); ++i) {
+          std::vector<gdf_column_cpp> columns = table;
+          array_node_columns.emplace_back(*nodes[i], std::move(columns));
+      }
+      return array_node_columns;
+    }
+
     // create output column
     gdf_column_cpp indexes = ral::utilities::create_zero_column(pivot.size(), GDF_SIZE_TYPE);
 
@@ -370,16 +382,13 @@ std::vector<NodeColumns> partitionData(const Context& context,
     ral::utilities::TableWrapper haystack(table, searchColIndices);
     ral::utilities::TableWrapper needles(pivots);
 
-    auto cudf_error = gdf_multisearch(indexes.get_gdf_column(),
-                                      haystack.getColumns(),
-                                      needles.getColumns(),
-                                      haystack.getQuantity(),
-                                      true,   // find_first_greater
-                                      false,  // nulls_appear_before_values
-                                      true);  // use_haystack_length_for_not_found
-    if (cudf_error != GDF_SUCCESS) {
-        throw ral::exception::BaseRalException("error on 'gdf_multisearch': " + std::to_string(cudf_error));
-    }
+    CUDF_CALL( gdf_multisearch(indexes.get_gdf_column(),
+                              haystack.getColumns(),
+                              needles.getColumns(),
+                              haystack.getQuantity(),
+                              true,   // find_first_greater
+                              false,  // nulls_appear_before_values
+                              true) );  // use_haystack_length_for_not_found
 
     std::cout << "multisearch indices\n";
     print_gdf_column(indexes.get_gdf_column());
@@ -402,7 +411,6 @@ std::vector<NodeColumns> partitionData(const Context& context,
     auto nodes = context.getAllNodes();
 
     // generate NodeColumns
-    gdf_size_type table_column_size = table[0].size();
     std::vector<NodeColumns> array_node_columns;
     for (std::size_t i = 0; i < nodes.size(); ++i) {
         gdf_size_type position = table_column_size;
@@ -418,12 +426,6 @@ std::vector<NodeColumns> partitionData(const Context& context,
             length = indexes_host[i] - position;
         }
 
-        // index not found in the node.
-        if (position == table_column_size) {
-            array_node_columns.emplace_back(*nodes[i], std::vector<gdf_column_cpp>{});
-            continue;
-        }
-
         std::vector<gdf_column_cpp> columns;
         for (std::size_t k = 0; k < table.size(); ++k) {
             columns.emplace_back(table[k].slice(position, length));
@@ -431,9 +433,6 @@ std::vector<NodeColumns> partitionData(const Context& context,
 
         array_node_columns.emplace_back(*nodes[i], std::move(columns));
     }
-
-    // erase input gdf_column_cpp
-    table.clear();
 
     return array_node_columns;
 }
@@ -463,16 +462,15 @@ void sortedMerger(std::vector<NodeColumns>& columns, std::vector<int8_t>& sortOr
   gdf_column_cpp sortByColIndices;
 	sortByColIndices.create_gdf_column(GDF_INT32, sortColIndices.size(), sortColIndices.data(), get_width_dtype(GDF_INT32), "");
 
-  auto it = std::find_if(columns.begin(), columns.end(), [](auto& e){ return !e.getColumnsRef().empty(); });
-  std::vector<gdf_column_cpp> leftCols = it->getColumns();
+  std::vector<gdf_column_cpp> leftCols = columns[0].getColumns();
   std::vector<gdf_column*> rawLeftCols(leftCols.size());
   std::transform(leftCols.begin(), leftCols.end(), rawLeftCols.begin(), [&](gdf_column_cpp& el) {
     return el.get_gdf_column();
   });
 
-  for(size_t i = std::distance(columns.begin(), it); i < columns.size(); i++)
+  for(size_t i = 1; i < columns.size(); i++)
   {
-    if (columns[i].getColumnsRef().empty()) {
+    if (columns[i].getColumnsRef()[0].size() == 0) {
       continue;
     }
 
@@ -682,9 +680,10 @@ void groupByMerger(std::vector<NodeColumns>& groups, const std::vector<int>& gro
   for(size_t i = 0; i < groups.size(); i++)
   {
     auto& columns = groups[i].getColumnsRef();
-    if (columns.empty()) {
+    if (columns[0].size() == 0) {
       continue;
     }
+
     outputRowSize += columns[0].size();
 
     assert(columns.size() == totalConcatsOperations);
@@ -908,7 +907,7 @@ void aggregationsMerger(std::vector<NodeColumns>& aggregations, const std::vecto
   for(size_t i = 0; i < aggregations.size(); i++)
   {
     auto& columns = aggregations[i].getColumnsRef();
-    if (columns.empty()) {
+    if (columns[0].size() == 0) {
       continue;
     }
     outputRowSize += columns[0].size();
@@ -1016,11 +1015,20 @@ std::vector<NodeColumns> generateJoinPartitions(const Context& context,
                                                 std::vector<gdf_column_cpp>& table,
                                                 std::vector<int>& columnIndices) {
     assert(table.size() != 0);
-    assert(table[0].size() != 0);
 
     // Table data
     gdf_size_type input_column_quantity = table.size();
     gdf_size_type input_column_size = table[0].size();
+    
+    if (input_column_size == 0) {
+        std::vector<NodeColumns> result;
+        auto nodes = context.getAllNodes();
+        for (gdf_size_type k = 0; k < nodes.size(); ++k) {
+            std::vector<gdf_column_cpp> columns = table;
+            result.emplace_back(*nodes[k], std::move(columns));
+        }
+        return result;
+    }
 
     // Create input wrapper
     ral::utilities::TableWrapper input_table_wrapper(table);

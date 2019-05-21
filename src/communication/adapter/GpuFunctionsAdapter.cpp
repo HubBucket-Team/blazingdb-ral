@@ -8,12 +8,16 @@ namespace adapter {
 
     void GpuFunctionsAdapter::copyGpuToCpu(std::size_t& binary_pointer, std::string& result, gdf_column_cpp& column)
     {
+        if (column.size() == 0) {
+            return;
+        }
+        
         std::size_t data_size = getDataCapacity(column.get_gdf_column());
-        cudaMemcpy(&result[binary_pointer], column.get_gdf_column()->data, data_size, cudaMemcpyDeviceToHost);
+        cudaMemcpy(&result[binary_pointer], column.data(), data_size, cudaMemcpyDeviceToHost);
         binary_pointer += data_size;
 
         std::size_t valid_size = getValidCapacity(column.get_gdf_column());
-        cudaMemcpy(&result[binary_pointer], column.get_gdf_column()->valid, valid_size, cudaMemcpyDeviceToHost);
+        cudaMemcpy(&result[binary_pointer], column.valid(), valid_size, cudaMemcpyDeviceToHost);
         binary_pointer += valid_size;
     }
 

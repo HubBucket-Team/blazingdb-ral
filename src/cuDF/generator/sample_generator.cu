@@ -13,8 +13,9 @@ gdf_error generate_sample(std::vector<gdf_column_cpp>& data_frame,
     if (data_frame.size() == 0) {
         return GDF_DATASET_EMPTY;
     }
+    
     if (num_samples <= 0) {
-        sampled_data.clear();
+        sampled_data = data_frame;
         return GDF_SUCCESS;
     }
 

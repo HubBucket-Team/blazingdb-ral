@@ -147,38 +147,28 @@ void data_loader::load_data(std::vector<gdf_column_cpp> & columns, std::vector<b
 		columns.resize(num_columns);
 		for(size_t column_index = 0; column_index < num_columns; column_index++){
 			//allocate space for the output
-			gdf_column_cpp column;
+			auto& column = columns[column_index];
 			column.create_gdf_column(columns_per_file[0][column_index].dtype(),
-					total_row_count,
-					nullptr,
-					ral::io::get_width_dtype(columns_per_file[0][column_index].dtype()),
-					columns_per_file[0][column_index].name());
-			columns[column_index] = column;
+															total_row_count,
+															nullptr,
+															ral::io::get_width_dtype(columns_per_file[0][column_index].dtype()),
+															columns_per_file[0][column_index].name());
 
-			//collect the columns into an array for the concat function
-			gdf_column * columns_to_concat[num_files];
-			for(size_t file_index = 0; file_index < num_files; file_index++){
-				columns_to_concat[column_index] = columns_per_file[file_index][column_index].get_gdf_column();
-			}
+			std::vector<gdf_column*> columns_to_concat(num_files);
+			std::transform(columns_per_file.begin(), columns_per_file.end(),
+										columns_to_concat.begin(),
+										[column_index](auto& table){ return table[column_index].get_gdf_column(); });
 
-			gdf_error err = gdf_column_concat(column.get_gdf_column(),
-					columns_to_concat,
-					num_files);
+			CUDF_CALL( gdf_column_concat(column.get_gdf_column(),
+																	columns_to_concat.data(),
+																	columns_to_concat.size()) );
 
 			//make the column that was parsed from the file go out of scope to get freed
 			for(size_t file_index = 0; file_index < num_files; file_index++){
 				columns_per_file[file_index][column_index] = dummy_column;
 			}
-
-			if(err != GDF_SUCCESS){
-				columns.resize(0);
-				//TODO: do something better than this, we should proably be throwing errors and handling them up the stack
-				std::cout<<"Error when trying to concatenate columns"<<std::endl;
-			}
 		}
-
 	}
-
 }
 
 } /* namespace io */

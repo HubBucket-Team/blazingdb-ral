@@ -84,49 +84,20 @@ gdf_dtype get_next_biggest_type(gdf_dtype type){
 
 
 // TODO all these return types need to be revisited later. Right now we have issues with some aggregators that only support returning the same input type. Also pygdf does not currently support unsigned types (for example count should return and unsigned type)
-gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregation, std::size_t group_size){
+gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregation){
 	if(aggregation == GDF_COUNT){
-		//return GDF_UINT64;
-		//TODO felipe percy noboa see upgrade to uints
 		return GDF_INT64;
 	}else if(aggregation == GDF_SUM){
-		return input_type;
-		if (group_size == 0) {
-			return input_type;
-		}
-
 		//we can assume it is numeric based on the oepration
-		//here we are in an interseting situation
-		//it can grow larger than the input type, to be safe we should enlarge to the greatest signed or unsigned representation
-		if(is_type_float(input_type)){
-			return input_type;
-		}
-
-		//TODO felipe percy noboa see upgrade to uints
-		//if(is_type_signed(input_type)){
-		return GDF_INT64;
-		//}
-		//else{
-		//	return GDF_UINT64;
-		//}
+		//to be safe we should enlarge to the greatest integer or float representation
+		return is_type_float(input_type) ? GDF_FLOAT64 : GDF_INT64;		
 	}else if(aggregation == GDF_MIN){
 		return input_type;
 	}else if(aggregation == GDF_MAX){
 		return input_type;
 	}else if(aggregation == GDF_AVG){
 		return GDF_FLOAT64;
-	}else if(aggregation == GDF_COUNT){
-
-		//return GDF_UINT64;
-		//TODO felipe percy noboa see upgrade to uints
-
-
-		return GDF_INT64;
 	}else if(aggregation == GDF_COUNT_DISTINCT){
-
-		//return GDF_UINT64;
-		//TODO felipe percy noboa see upgrade to uints
-
 		return GDF_INT64;
 	}	
 	else{
@@ -136,42 +107,7 @@ gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregat
 }
 
 size_t get_width_dtype(gdf_dtype type){
-	if(type == GDF_INT8){
-		return 1;
-	}else if(type == GDF_INT16){
-		return 2;
-	}else if(type == GDF_INT32){
-		return 4;
-	}else if(type == GDF_INT64){
-		return 8;
-		//}
-		//TODO felipe percy noboa see upgrade to uints
-		//	else if(type == GDF_UINT8){
-		//		return 1;
-		//	}else if(type == GDF_UINT16){
-		//		return 2;
-		//	}else if(type == GDF_UINT32){
-		//		return 4;
-		//	}else if(type == GDF_UINT64){
-		//		return 8;
-	}else if(type == GDF_FLOAT32)
-	{
-		return 4;
-	}else if(type == GDF_FLOAT64){
-		return 8;
-	}else if(type == GDF_DATE32){
-		return 4;
-	}else if(type == GDF_DATE64){
-		return 8;
-	}else if(type == GDF_TIMESTAMP){
-		return 8;
-	}else if(type == GDF_CATEGORY){
-		return 0;
-	}else if(type == GDF_STRING){
-		return 0;
-	}else if(type == GDF_STRING_CATEGORY){
-		return 4;
-	}
+	return gdf_dtype_size(type);	
 }
 
 bool is_exponential_operator(gdf_binary_operator operation){

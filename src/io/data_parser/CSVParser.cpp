@@ -231,6 +231,16 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		columns.push_back(c);
 	}
 
+
+	for(auto column : columns){
+		 if (column.get_gdf_column()->dtype == GDF_STRING){
+			 NVStrings* strs = static_cast<NVStrings*>(column.get_gdf_column()->data);
+			 NVCategory* category = NVCategory::create_from_strings(*strs);
+			 column.get_gdf_column()->data = nullptr;
+			 column.create_gdf_column(category, column.size(), column.name());
+		 }
+	}
+
 	delete []args.dtype;
 	args.dtype = nullptr;
 	delete []args.names;

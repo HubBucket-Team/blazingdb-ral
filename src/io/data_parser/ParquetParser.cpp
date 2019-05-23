@@ -71,10 +71,19 @@ void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	std::vector<std::size_t> row_group_ind(num_row_groups); // check, include all row groups
     std::iota(row_group_ind.begin(), row_group_ind.end(), 0);
 
-    std::vector<gdf_column *> columns_out;
 
 	// TODO: Fix this error handling
-	error = gdf::parquet::read_parquet_by_ids(file, row_group_ind, column_indices_mapped_to_parquet, columns_out);
+	error = gdf::parquet::read_parquet_by_ids(file, row_group_ind, column_indices_mapped_to_parquet, columns);
+
+	for(auto column : columns){
+		 if (column.get_gdf_column()->dtype == GDF_STRING){
+			 NVStrings* strs = static_cast<NVStrings*>(column.get_gdf_column()->data);
+			 NVCategory* category = NVCategory::create_from_strings(*strs);
+			 column.get_gdf_column()->data = nullptr;
+			 column.create_gdf_column(category, column.size(), column.name());
+		 }
+	}
+
 	if (error != GDF_SUCCESS) {
 		throw std::runtime_error("In parquet_parser::parse: error in gdf::parquet::read_parquet_by_ids");
 	}

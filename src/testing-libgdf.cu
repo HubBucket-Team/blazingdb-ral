@@ -49,6 +49,7 @@ using namespace blazingdb::protocol;
 
 #include "CalciteExpressionParsing.h"
 #include "io/data_parser/CSVParser.h"
+#include "io/data_parser/GDFParser.h"
 #include "io/data_parser/ParquetParser.h"
 
 #include "io/data_provider/UriDataProvider.h"
@@ -490,8 +491,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
         load_files(&parser, uris, table_cpp);
       } else { //blazingdb::protocol::io::FileSchemaType_GDF
         // TODO Felipe loading gdf stuff
-        auto gdf_params = table_info.gdf;
-        //ral::io::gdf_parser parser(csv_params.delimiter, csv_params.line_terminator, csv_params.skip_rows, csv_params.names, types);
+        ral::io::gdf_parser parser(table_info.gdf);
         //load(&parser, uris, table_cpp);
       }
       input_tables.push_back(table_cpp);

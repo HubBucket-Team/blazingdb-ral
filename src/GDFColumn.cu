@@ -98,7 +98,7 @@ gdf_column_cpp gdf_column_cpp::clone(std::string name)  // TODO clone needs to r
     if (column->valid != nullptr) {
         cuDF::Allocator::allocate((void**)&valid_dev, allocated_size_valid);
     }
-
+    print_gdf_column(this->column);
     CheckCudaErrors(cudaMemcpy(data_dev, this->column->data, this->allocated_size_data, cudaMemcpyDeviceToDevice));
 	// print_gdf_column(this->get_gdf_column());
     if (this->column->valid != nullptr) {

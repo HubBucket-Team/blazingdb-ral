@@ -75,6 +75,10 @@ class gdf_column_cpp
 	gdf_error compact();
 	void update_null_count();
 
+    void detach() const {
+		GDFRefCounter::getInstance()->deregister_column(this->get_gdf_column());
+	}
+
 public:
     std::size_t get_valid_size() const;
 

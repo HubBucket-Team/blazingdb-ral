@@ -73,3 +73,5 @@ build_local/
 RAL\.log
 
 RAL\.1\.log
+
+*.log

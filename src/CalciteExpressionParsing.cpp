@@ -84,13 +84,17 @@ gdf_dtype get_next_biggest_type(gdf_dtype type){
 
 
 // TODO all these return types need to be revisited later. Right now we have issues with some aggregators that only support returning the same input type. Also pygdf does not currently support unsigned types (for example count should return and unsigned type)
-gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregation){
+gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregation, bool have_groupby){
 	if(aggregation == GDF_COUNT){
 		return GDF_INT64;
 	}else if(aggregation == GDF_SUM){
+		if (have_groupby)
+			return input_type; // current group by function can only handle this
+		else {
 		//we can assume it is numeric based on the oepration
 		//to be safe we should enlarge to the greatest integer or float representation
-		return is_type_float(input_type) ? GDF_FLOAT64 : GDF_INT64;		
+			return is_type_float(input_type) ? GDF_FLOAT64 : GDF_INT64;		
+		}
 	}else if(aggregation == GDF_MIN){
 		return input_type;
 	}else if(aggregation == GDF_MAX){

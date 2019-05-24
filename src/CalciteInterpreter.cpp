@@ -671,7 +671,7 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 	std::vector<gdf_dtype> aggregation_input_types;
 
 	size_t size = input.get_column(0).size();
-	size_t aggregation_size = group_columns_indices.size() == 0 ? 1 : size; //if you have no groups you will output onlu one row
+	size_t aggregation_size = group_columns_indices.size()==0 ? 1 : size; //if you have no groups you will output onlu one row
 
 	for(int i = 0; i < aggregation_types.size(); i++){
 		if(contains_evaluation(aggregation_input_expressions[i])){
@@ -715,7 +715,8 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 			aggregation_input = input.get_column(get_index(expression));
 		}
 
-		gdf_dtype output_type = get_aggregation_output_type(aggregation_input.dtype(),aggregation_types[i]);
+		bool have_groupby = group_columns_indices.size() > 0;
+		gdf_dtype output_type = get_aggregation_output_type(aggregation_input.dtype(),aggregation_types[i], have_groupby);
 
 		gdf_column_cpp output_column;
 		std::string output_column_name;
@@ -726,7 +727,7 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 			output_column_name = aggregation_column_assigned_aliases[i];
 
 		// if we do have a group by, lets initialize the output column here, otherwise we will initalize it with the gdf_scalar output by the reduction
-		if (group_columns_indices.size() > 0){
+		if (have_groupby){
 			output_column.create_gdf_column(output_type,aggregation_size,nullptr,get_width_dtype(output_type), output_column_name);
 		}
 
@@ -736,7 +737,7 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 		ctxt.flag_sort_result = 1;
 		switch(aggregation_types[i]){
 		case GDF_SUM:
-			if (group_columns_indices.size() == 0) {
+			if (!have_groupby) {
 				if (aggregation_input.get_gdf_column()->size != 0) {
 					gdf_scalar reduction_out = cudf::reduction(aggregation_input.get_gdf_column(), GDF_REDUCTION_SUM, output_type);
 					output_column.create_gdf_column(reduction_out, output_column_name);
@@ -754,7 +755,7 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 			}
 			break;
 		case GDF_MIN:
-			if(group_columns_indices.size() == 0){
+			if(!have_groupby){
                 if (aggregation_input.get_gdf_column()->size != 0) {
 					gdf_scalar reduction_out = cudf::reduction(aggregation_input.get_gdf_column(), GDF_REDUCTION_MIN, output_type);
 					output_column.create_gdf_column(reduction_out, output_column_name);
@@ -771,7 +772,7 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 			}
 			break;
 		case GDF_MAX:
-			if(group_columns_indices.size() == 0){
+			if(!have_groupby){
                 if (aggregation_input.get_gdf_column()->size != 0) {
                     gdf_scalar reduction_out = cudf::reduction(aggregation_input.get_gdf_column(), GDF_REDUCTION_MAX, output_type);
 					output_column.create_gdf_column(reduction_out, output_column_name);
@@ -788,9 +789,9 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 			}
 			break;
 		case GDF_AVG:
-            if(group_columns_indices.size() == 0){
+            if(!have_groupby){
                 if (aggregation_input.get_gdf_column()->size != 0 && (aggregation_input.get_gdf_column()->size != aggregation_input.get_gdf_column()->null_count)) {
-					gdf_dtype sum_output_type = get_aggregation_output_type(aggregation_input.dtype(),GDF_SUM);
+					gdf_dtype sum_output_type = get_aggregation_output_type(aggregation_input.dtype(),GDF_SUM, have_groupby);
 					gdf_scalar avg_sum_scalar = cudf::reduction(aggregation_input.get_gdf_column(), GDF_REDUCTION_SUM, sum_output_type);
 					long avg_count = aggregation_input.get_gdf_column()->size - aggregation_input.get_gdf_column()->null_count;
 
@@ -820,7 +821,7 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 			}
 			break;
 		case GDF_COUNT:
-			if(group_columns_indices.size() == 0){
+			if(!have_groupby){
 
 				gdf_scalar reduction_out;
 				reduction_out.dtype = GDF_INT64;
@@ -835,7 +836,7 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 			}
 			break;
 		case GDF_COUNT_DISTINCT:
-			if(group_columns_indices.size() == 0){
+			if(!have_groupby){
 
                 gdf_scalar reduction_out;
 				reduction_out.dtype = GDF_INT64;

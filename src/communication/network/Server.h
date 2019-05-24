@@ -11,6 +11,7 @@ namespace network {
     namespace {
         using CommServer = blazingdb::communication::network::Server;
         using ContextToken = blazingdb::communication::ContextToken;
+        using MessageTokenType = blazingdb::communication::messages::MessageToken::TokenType;
     }
 
     class Server {
@@ -32,7 +33,7 @@ namespace network {
         void registerContext(const ContextToken& context_token);
 
     public:
-        std::shared_ptr<Message> getMessage(const ContextToken& token_value);
+        std::shared_ptr<Message> getMessage(const ContextToken& token_value, const MessageTokenType& messageToken);
 
     private:
         Server(Server&&) = delete;

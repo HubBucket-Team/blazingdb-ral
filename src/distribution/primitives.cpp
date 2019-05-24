@@ -138,36 +138,6 @@ void sendSamplesToMaster(const Context& context, std::vector<gdf_column_cpp>&& s
     }
 }
 
-std::vector<NodeColumns> collectPartition(const Context& context) {
-    // Alias
-    using ColumnDataMessage = ral::communication::messages::ColumnDataMessage;
-
-    // Get the numbers of rals in the query
-    auto number_rals = context.getAllNodes().size() - 1;
-
-    // Create return value
-    std::vector<NodeColumns> node_columns;
-
-    // Get message from the server
-    const auto& context_token = context.getContextToken();
-    auto& server = ral::communication::network::Server::getInstance();
-    while (0 < number_rals) {
-        auto message = server.getMessage(context_token);
-        number_rals--;
-
-        if (message->getMessageTokenValue() != ColumnDataMessage::getMessageID()) {
-            throw createMessageMismatchException(__FUNCTION__,
-                                                 ColumnDataMessage::getMessageID(),
-                                                 message->getMessageTokenValue());
-        }
-
-        auto column_message = std::static_pointer_cast<ColumnDataMessage>(message);
-        node_columns.emplace_back(message->getSenderNode(),
-                                  std::move(column_message->getColumns()));
-    }
-    return node_columns;
-}
-
 std::vector<NodeSamples> collectSamples(const Context& context) {
   using ral::communication::network::Server;
   using ral::communication::messages::SampleToNodeMasterMessage;
@@ -176,7 +146,7 @@ std::vector<NodeSamples> collectSamples(const Context& context) {
   auto& contextToken = context.getContextToken();
   auto size = context.getWorkerNodes().size();
   for (int k = 0; k < size; ++k) {
-    auto message = Server::getInstance().getMessage(contextToken);
+    auto message = Server::getInstance().getMessage(contextToken, SampleToNodeMasterMessage::getMessageID());
 
     if (message->getMessageTokenValue() != SampleToNodeMasterMessage::getMessageID()) {
       throw createMessageMismatchException(__FUNCTION__,
@@ -310,9 +280,9 @@ void distributePartitionPlan(const Context& context, std::vector<gdf_column_cpp>
   using ral::communication::CommunicationData;
   using ral::communication::messages::Factory;
 
-  auto message = Factory::createColumnDataMessage(context.getContextToken(),
-                                                  CommunicationData::getInstance().getSelfNode(),
-                                                  pivots);
+  auto message = Factory::createPartitionPivotsMessage(context.getContextToken(),
+                                                      CommunicationData::getInstance().getSelfNode(),
+                                                      pivots);
   auto workers = context.getWorkerNodes();
   for(auto& workerNode : workers)
   {
@@ -322,22 +292,18 @@ void distributePartitionPlan(const Context& context, std::vector<gdf_column_cpp>
 
 std::vector<gdf_column_cpp> getPartitionPlan(const Context& context){
   using ral::communication::network::Server;
-  using ral::communication::messages::ColumnDataMessage;
+  using ral::communication::messages::PartitionPivotsMessage;
 
-  auto message = Server::getInstance().getMessage(context.getContextToken());
+  auto message = Server::getInstance().getMessage(context.getContextToken(), PartitionPivotsMessage::getMessageID());
 
-  if (message->getMessageTokenValue() != ColumnDataMessage::getMessageID()) {
+  if (message->getMessageTokenValue() != PartitionPivotsMessage::getMessageID()) {
     throw createMessageMismatchException(__FUNCTION__,
-                                         ColumnDataMessage::getMessageID(),
+                                         PartitionPivotsMessage::getMessageID(),
                                          message->getMessageTokenValue());
   }
 
-  auto concreteMessage = std::static_pointer_cast<ColumnDataMessage>(message);
-  // auto& columns = concreteMessage->getColumnsRef();
-  // std::cout << "getPartitionPlan\n";
-  // for (auto& col : columns) {
-  //   print_gdf_column(col.get_gdf_column());
-  // }
+  auto concreteMessage = std::static_pointer_cast<PartitionPivotsMessage>(message);
+
   return std::move(concreteMessage->getColumns());
 }
 
@@ -347,11 +313,11 @@ std::vector<NodeColumns> partitionData(const Context& context,
                                        std::vector<gdf_column_cpp>& pivots) {
     // verify input
     if (pivots.size() == 0) {
-        throw ral::exception::BaseRalException("The pivots array is empty");
+        throw std::runtime_error("The pivots array is empty");
     }
 
     if (pivots.size() != searchColIndices.size()) {
-        throw ral::exception::BaseRalException("The pivots and searchColIndices vectors don't have the same size");
+        throw std::runtime_error("The pivots and searchColIndices vectors don't have the same size");
     }
 
     auto& pivot = pivots[0];
@@ -361,14 +327,14 @@ std::vector<NodeColumns> partitionData(const Context& context,
         // verify the size of the pivots.
         for (std::size_t k = 1; k < pivots.size(); ++k) {
             if (size != pivots[k].size()) {
-                throw ral::exception::BaseRalException("The pivots don't have the same size");
+                throw std::runtime_error("The pivots don't have the same size");
             }
         }
 
         // verify the size in pivots and nodes
         auto nodes = context.getAllNodes();
         if (nodes.size() != (size + 1)) {
-            throw ral::exception::BaseRalException("The size of the nodes needs to be the same as the size of the pivots plus one");
+            throw std::runtime_error("The size of the nodes needs to be the same as the size of the pivots plus one");
         }
     }
 
@@ -407,14 +373,9 @@ std::vector<NodeColumns> partitionData(const Context& context,
     std::vector<gdf_size_type> indexes_host(indexes.size(), 0);
     gdf_size_type total_bytes = ral::traits::get_data_size_in_bytes(indexes.get_gdf_column());
 
-    auto cuda_error = cudaMemcpy(indexes_host.data(), indexes.data(), total_bytes, cudaMemcpyDeviceToHost);
-    if (cuda_error != cudaSuccess) {
-        // TODO: improve exception functionality
-        throw ral::exception::BaseRalException("cannot copy from GPU to CPU");
-    }
+    CheckCudaErrors( cudaMemcpy(indexes_host.data(), indexes.data(), total_bytes, cudaMemcpyDeviceToHost) );
 
-    // TODO: maybe unnecessary step due to the pivots are already sorted.
-    // std::sort(indexes_host.begin(), indexes_host.end());
+    std::sort(indexes_host.begin(), indexes_host.end());
 
     // get nodes
     auto nodes = context.getAllNodes();
@@ -462,6 +423,35 @@ void distributePartitions(const Context& context, std::vector<NodeColumns>& part
                                                     std::move(nodeColumn.getColumns()));
     Client::send(nodeColumn.getNode(), message);
   }
+}
+
+std::vector<NodeColumns> collectPartitions(const Context& context) {
+    using ral::communication::network::Server;
+    using ral::communication::messages::ColumnDataMessage;
+
+    // Get the numbers of rals in the query
+    auto number_rals = context.getAllNodes().size() - 1;
+
+    // Create return value
+    std::vector<NodeColumns> node_columns;
+
+    // Get message from the server
+    const auto& context_token = context.getContextToken();
+    while (0 < number_rals) {
+        auto message = Server::getInstance().getMessage(context_token, ColumnDataMessage::getMessageID());
+        number_rals--;
+
+        if (message->getMessageTokenValue() != ColumnDataMessage::getMessageID()) {
+            throw createMessageMismatchException(__FUNCTION__,
+                                                 ColumnDataMessage::getMessageID(),
+                                                 message->getMessageTokenValue());
+        }
+
+        auto column_message = std::static_pointer_cast<ColumnDataMessage>(message);
+        node_columns.emplace_back(message->getSenderNode(),
+                                  std::move(column_message->getColumns()));
+    }
+    return node_columns;
 }
 
 void sortedMerger(std::vector<NodeColumns>& columns, std::vector<int8_t>& sortOrderTypes, std::vector<int>& sortColIndices, blazing_frame& output) {
@@ -709,6 +699,14 @@ void groupByMerger(std::vector<NodeColumns>& groups, const std::vector<int>& gro
     }
   }
 
+  if (outputRowSize == 0)
+  {
+    output.clear();
+    std::vector<gdf_column_cpp> output_table = groups[0].getColumnsRef();
+    output.add_table(std::move(output_table));
+    return;
+  }
+
   std::vector<gdf_column_cpp> concatGroups(totalConcatsOperations);
   for(size_t i = 0; i < concatGroups.size(); i++)
   {
@@ -935,6 +933,14 @@ void aggregationsMerger(std::vector<NodeColumns>& aggregations, const std::vecto
     }
   }
 
+  if (outputRowSize == 0)
+  {
+    output.clear();
+    std::vector<gdf_column_cpp> output_table = aggregations[0].getColumnsRef();
+    output.add_table(std::move(output_table));
+    return;
+  }
+  
   std::vector<gdf_column_cpp> concatAggregations(totalConcatsOperations);
   for(size_t i = 0; i < concatAggregations.size(); i++)
   {
@@ -1060,20 +1066,14 @@ std::vector<NodeColumns> generateJoinPartitions(const Context& context,
     ral::utilities::TableWrapper output_table_wrapper(output_columns);
 
     // Execute operation
-    auto error = gdf_hash_partition(input_table_wrapper.getQuantity(),
-                                    input_table_wrapper.getColumns(),
-                                    columnIndices.data(),
-                                    columnIndices.size(),
-                                    number_nodes,
-                                    output_table_wrapper.getColumns(),
-                                    partition_offset.data(),
-                                    gdf_hash_func::GDF_HASH_MURMUR3);
-    if (error != GDF_SUCCESS) {
-        throw ral::exception::BaseRalException("ERROR | " +
-                                               std::string(__FUNCTION__) +
-                                               " | gdf_hash_partition | " +
-                                               std::to_string(error));
-    }
+    CUDF_CALL( gdf_hash_partition(input_table_wrapper.getQuantity(),
+                                  input_table_wrapper.getColumns(),
+                                  columnIndices.data(),
+                                  columnIndices.size(),
+                                  number_nodes,
+                                  output_table_wrapper.getColumns(),
+                                  partition_offset.data(),
+                                  gdf_hash_func::GDF_HASH_MURMUR3) );
 
     // Erase input table
     table.clear();

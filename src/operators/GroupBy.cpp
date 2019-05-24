@@ -190,7 +190,7 @@ void distributed_groupby_without_aggregations(const Context& queryContext, blazi
 
 	ral::distribution::distributePartitions(queryContext, partitions);
 
-	std::vector<ral::distribution::NodeColumns> partitionsToMerge = ral::distribution::collectPartition(queryContext);
+	std::vector<ral::distribution::NodeColumns> partitionsToMerge = ral::distribution::collectPartitions(queryContext);
 	auto it = std::find_if(partitions.begin(), partitions.end(), [&](ral::distribution::NodeColumns& el) {
 			return el.getNode() == CommunicationData::getInstance().getSelfNode();
 		});
@@ -467,7 +467,7 @@ void distributed_aggregations_with_groupby(const Context& queryContext, blazing_
 
 	ral::distribution::distributePartitions(queryContext, partitions);
 
-	std::vector<ral::distribution::NodeColumns> partitionsToMerge = ral::distribution::collectPartition(queryContext);
+	std::vector<ral::distribution::NodeColumns> partitionsToMerge = ral::distribution::collectPartitions(queryContext);
 	auto it = std::find_if(partitions.begin(), partitions.end(), [&](ral::distribution::NodeColumns& el) {
 			return el.getNode() == CommunicationData::getInstance().getSelfNode();
 		});
@@ -487,7 +487,7 @@ void distributed_aggregations_without_groupby(const Context& queryContext, blazi
 																																		aggregation_column_assigned_aliases);
 
 	if (queryContext.isMasterNode(CommunicationData::getInstance().getSelfNode())) {
-		std::vector<ral::distribution::NodeColumns> partitionsToMerge = ral::distribution::collectPartition(queryContext);
+		std::vector<ral::distribution::NodeColumns> partitionsToMerge = ral::distribution::collectPartitions(queryContext);
 		partitionsToMerge.emplace_back(CommunicationData::getInstance().getSelfNode(), std::move(aggregatedTable));
 
 		std::vector<int> groupColumnIndices(group_column_indices.size());

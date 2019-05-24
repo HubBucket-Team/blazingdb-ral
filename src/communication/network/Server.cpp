@@ -37,8 +37,8 @@ namespace network {
         comm_server->registerContext(context_token);
     }
 
-    std::shared_ptr<Server::Message> Server::getMessage(const ContextToken& token_value) {
-        return comm_server->getMessage(token_value.getIntToken());
+    std::shared_ptr<Server::Message> Server::getMessage(const ContextToken& token_value, const MessageTokenType& messageToken) {
+        return comm_server->getMessage(token_value.getIntToken(), messageToken);
     }
 
     void Server::setEndPoints() {

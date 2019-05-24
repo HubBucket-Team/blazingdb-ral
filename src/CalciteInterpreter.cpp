@@ -132,24 +132,6 @@ bool contains_evaluation(std::string expression){
 	return (cleaned_expression.find("(") != std::string::npos);
 }
 
-void create_null_value_gdf_column(int64_t output_value,
-                                       gdf_dtype output_type,
-                                       std::size_t output_size,
-                                       std::string&& output_name,
-                                       gdf_column_cpp& output_column,
-                                       std::vector<gdf_column_cpp>& output_vector) {
-    output_column.create_gdf_column(output_type,
-                                    output_size,
-                                    &output_value,
-                                    get_width_dtype(output_type),
-                                    output_name);
-
-    int invalid = 0;
-    CheckCudaErrors(cudaMemcpy(output_column.valid(), &invalid, 1, cudaMemcpyHostToDevice));
-
-    output_vector.pop_back();
-    output_vector.emplace_back(output_column);
-}
 
 project_plan_params parse_project_plan(blazing_frame& input, std::string query_part) {
 
@@ -744,11 +726,9 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 			output_column_name = aggregation_column_assigned_aliases[i];
 
 		// if we do have a group by, lets initialize the output column here, otherwise we will initalize it with the gdf_scalar output by the reduction
-		if (group_columns_indices.size() == 0){
+		if (group_columns_indices.size() > 0){
 			output_column.create_gdf_column(output_type,aggregation_size,nullptr,get_width_dtype(output_type), output_column_name);
 		}
-
-		output_columns_aggregations.push_back(output_column);
 
 		gdf_context ctxt;
 		ctxt.flag_distinct = aggregation_types[i] == GDF_COUNT_DISTINCT ? true : false;
@@ -762,12 +742,10 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 					output_column.create_gdf_column(reduction_out, output_column_name);
 				}
 				else {
-					create_null_value_gdf_column(0,
-							output_type,
-							aggregation_size,
-							aggregator_to_string(aggregation_types[i]),
-							output_column,
-							output_columns_aggregations);
+					gdf_scalar null_value;
+					null_value.is_valid = false;
+					null_value.dtype = output_type;
+					output_column.create_gdf_column(null_value, output_column_name);					
 				}
 			}else{
 				CUDF_CALL( gdf_group_by_sum(group_columns_indices.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
@@ -782,12 +760,10 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 					output_column.create_gdf_column(reduction_out, output_column_name);
                 }
                 else {
-                    create_null_value_gdf_column(0,
-                                                output_type,
-                                                aggregation_size,
-                                                aggregator_to_string(aggregation_types[i]),
-                                                output_column,
-                                                output_columns_aggregations);
+                    gdf_scalar null_value;
+					null_value.is_valid = false;
+					null_value.dtype = output_type;
+					output_column.create_gdf_column(null_value, output_column_name);
                 }
 			}else{
 				CUDF_CALL( gdf_group_by_min(group_columns_indices.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
@@ -801,12 +777,10 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 					output_column.create_gdf_column(reduction_out, output_column_name);
                 }
                 else {
-                     create_null_value_gdf_column(0,
-                                                output_type,
-                                                aggregation_size,
-                                                aggregator_to_string(aggregation_types[i]),
-                                                output_column,
-                                                output_columns_aggregations);
+                    gdf_scalar null_value;
+					null_value.is_valid = false;
+					null_value.dtype = output_type;
+					output_column.create_gdf_column(null_value, output_column_name);	
                 }
 			}else{
 				CUDF_CALL( gdf_group_by_max(group_columns_indices.size(),group_by_columns_ptr.data(),aggregation_input.get_gdf_column(),
@@ -815,7 +789,7 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 			break;
 		case GDF_AVG:
             if(group_columns_indices.size() == 0){
-                if (aggregation_input.get_gdf_column()->size != 0 || (aggregation_input.get_gdf_column()->size == aggregation_input.get_gdf_column()->null_count)) {
+                if (aggregation_input.get_gdf_column()->size != 0 && (aggregation_input.get_gdf_column()->size != aggregation_input.get_gdf_column()->null_count)) {
 					gdf_dtype sum_output_type = get_aggregation_output_type(aggregation_input.dtype(),GDF_SUM);
 					gdf_scalar avg_sum_scalar = cudf::reduction(aggregation_input.get_gdf_column(), GDF_REDUCTION_SUM, sum_output_type);
 					long avg_count = aggregation_input.get_gdf_column()->size - aggregation_input.get_gdf_column()->null_count;
@@ -834,12 +808,10 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 					output_column.create_gdf_column(avg_scalar, output_column_name);
                 }
                 else {
-                    create_null_value_gdf_column(0,
-                                                output_type,
-                                                aggregation_size,
-                                                aggregator_to_string(aggregation_types[i]),
-                                                output_column,
-                                                output_columns_aggregations);
+                    gdf_scalar null_value;
+					null_value.is_valid = false;
+					null_value.dtype = output_type;
+					output_column.create_gdf_column(null_value, output_column_name);	
                 }
             }
 			else{
@@ -877,6 +849,8 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 			}
 			break;
 		}
+
+		output_columns_aggregations.push_back(output_column);
 
 		//so that subsequent iterations won't be too large
 		aggregation_size = output_column.size();
@@ -1013,6 +987,8 @@ void process_filter(blazing_frame & input, std::string query_part){
 	Library::Logging::Logger().logInfo("-> Filter sub block 5 took " + std::to_string(timer.getDuration()) + " ms");
 
 	timer.reset();
+	stencil.get_gdf_column()->dtype = GDF_BOOL8; // apply_boolean_mask expects the stencil to be a GDF_BOOL8 which for our purposes the way we are using the GDF_INT8 is the same as GDF_BOOL8
+
 	gdf_column temp_idx = cudf::apply_boolean_mask( *(index_col.get_gdf_column()), *(stencil.get_gdf_column()));
 	gdf_column * temp_idx_ptr = new gdf_column;
 	*temp_idx_ptr = temp_idx;

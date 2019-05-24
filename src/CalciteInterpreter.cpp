@@ -449,6 +449,7 @@ std::string get_named_expression(std::string query_part, std::string expression_
 
 
 blazing_frame process_join(blazing_frame input, std::string query_part){
+	const std::string INNER_JOIN = "inner";
 	static CodeTimer timer;
 	timer.reset();
 
@@ -494,7 +495,17 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 		CUDF_CALL( get_column_byte_width(input.get_column(column_index).get_gdf_column(), &column_width) );
 
 		//TODO de donde saco el nombre de la columna aqui???
-		output.create_gdf_column(input.get_column(column_index).dtype(),left_indices.size(),nullptr,column_width, input.get_column(column_index).name());
+		if(join_type == INNER_JOIN){
+			if (input.get_column(column_index).valid())
+				output.create_gdf_column(input.get_column(column_index).dtype(),left_indices.size(),nullptr,column_width, input.get_column(column_index).name());
+			else
+				output.create_gdf_column(input.get_column(column_index).dtype(),left_indices.size(),nullptr,nullptr,column_width, input.get_column(column_index).name());
+		} else {
+			if (!input.get_column(column_index).valid())
+				input.get_column(column_index).allocate_set_valid();
+
+			output.create_gdf_column(input.get_column(column_index).dtype(),left_indices.size(),nullptr,column_width, input.get_column(column_index).name());
+		}
 
 		if(column_index < first_table_end_index)
 		{
@@ -640,13 +651,15 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 		ctxt.flag_null_sort_behavior = GDF_NULL_AS_LARGEST; //  Nulls are are treated as largest
 		ctxt.flag_groupby_include_nulls = 1; // Nulls are treated as values in group by keys where NULL == NULL (SQL style)
 
+		cudf::table group_by_data_in_table(data_cols_in);
 		cudf::table group_by_columns_out_table;
 		rmm::device_vector<gdf_index_type> indexes_out;
-		std::tie(group_by_columns_out_table, indexes_out) = gdf_group_by_without_aggregations(group_by_columns_out_table, 
+		std::tie(group_by_columns_out_table, indexes_out) = gdf_group_by_without_aggregations(group_by_data_in_table, 
 																num_group_columns, group_columns_indices.data(), &ctxt);
 
 		std::vector<gdf_column_cpp> output_columns_group(group_by_columns_out_table.num_columns());
 		for(int i = 0; i < output_columns_group.size(); i++){
+			group_by_columns_out_table.get_column(i)->col_name = nullptr; // need to do this because gdf_group_by_without_aggregations is not setting the name properly
 			output_columns_group[i].create_gdf_column(group_by_columns_out_table.get_column(i));
 		}
 		gdf_column index_col;
@@ -655,7 +668,10 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 		for(int i = 0; i < num_group_columns; i++){
 			auto& input_col = input.get_column(i);
 			gdf_column_cpp temp_output;
-			temp_output.create_gdf_column(input_col.dtype(), index_col.size, nullptr, get_width_dtype(input_col.dtype()), input_col.name());
+			if (input_col.valid())
+				temp_output.create_gdf_column(input_col.dtype(), index_col.size, nullptr, get_width_dtype(input_col.dtype()), input_col.name());
+			else
+				temp_output.create_gdf_column(input_col.dtype(), index_col.size, nullptr, nullptr, get_width_dtype(input_col.dtype()), input_col.name());
 
 			materialize_column(output_columns_group[i].get_gdf_column(),
 												temp_output.get_gdf_column(),
@@ -945,7 +961,10 @@ void process_sort(blazing_frame & input, std::string query_part){
 	for(int i = 0; i < input.get_width();i++){
 		auto& input_col = input.get_column(i);
 		gdf_column_cpp temp_output;
-		temp_output.create_gdf_column(input_col.dtype(), input_col.size(), nullptr, get_width_dtype(input_col.dtype()), input_col.name());
+		if (input_col.valid())
+			temp_output.create_gdf_column(input_col.dtype(), input_col.size(), nullptr, get_width_dtype(input_col.dtype()), input_col.name());
+		else
+			temp_output.create_gdf_column(input_col.dtype(), input_col.size(), nullptr, nullptr, get_width_dtype(input_col.dtype()), input_col.name());
 
 		materialize_column(
 				input_col.get_gdf_column(),
@@ -1002,7 +1021,10 @@ void process_filter(blazing_frame & input, std::string query_part){
 	
 	for(int i = 0; i < input.get_width();i++){
 		gdf_column_cpp materialize_temp;
-		materialize_temp.create_gdf_column(input.get_column(i).dtype(),temp_idx_col.size(),nullptr,get_width_dtype(input.get_column(i).dtype()), input.get_column(i).name());
+		if (input.get_column(i).valid())
+			materialize_temp.create_gdf_column(input.get_column(i).dtype(),temp_idx_col.size(),nullptr,get_width_dtype(input.get_column(i).dtype()), input.get_column(i).name());
+		else
+			materialize_temp.create_gdf_column(input.get_column(i).dtype(),temp_idx_col.size(),nullptr,nullptr,get_width_dtype(input.get_column(i).dtype()), input.get_column(i).name());
 
 		materialize_column(
 				input.get_column(i).get_gdf_column(),

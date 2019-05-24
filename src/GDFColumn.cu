@@ -303,6 +303,8 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     }
 
     gdf_column_view(this->column, (void *) data, valid_device, num_values, type);
+    this->column->dtype_info.category = nullptr;
+    
     this->set_name(column_name);
     if(input_data != nullptr){
         CheckCudaErrors(cudaMemcpy(data, input_data, num_values * width_per_value, cudaMemcpyHostToDevice));

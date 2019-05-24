@@ -611,50 +611,96 @@ auto  interpreterServices(const blazingdb::protocol::Buffer &requestPayloadBuffe
 int main(int argc, const char *argv[])
 {
 
+    std::cout << "Usage: " << argv[0]
+            << " <RAL_ID>"
+                " <ORCHESTRATOR_[IP|HOSTNAME]> <ORCHESTRATOR_PROTOCOL_TCP_PORT> <ORCHESTRATOR_COMMUNICATION_TCP_PORT>"
+                " <RAL_[IP|HOSTNAME]> <RAL_PROTOCOL_TCP_PORT> <RAL_COMMUNICATION_TCP_PORT>" << std::endl;
+
+    if (argc != 8) {
+        std::cout << "FATAL: Invalid number of arguments" << std::endl;
+        return EXIT_FAILURE;
+    }
 
   // #ifndef VERBOSE
   // std::cout.rdbuf(nullptr); // substitute internal std::cout buffer with
   // #endif // VERBOSE
 
-
     std::cout << "RAL Engine starting" << std::endl;
 
-    std::string identifier {"1"};
-    if (argc == 2) {
-        identifier = std::string(argv[1]);
-    }
-    if (argc > 1 && argc != 6) {
-      std::cout << "Usage: " << argv[0]
-                << " <RAL_ID>"
-                   " <ORCHESTRATOR_[IP|HOSTNAME]> <ORCHESTRATOR_PORT>"
-                   " <RAL_[IP|HOSTNAME]> <RAL_PORT>\n";
-      return 1;
+    const std::string ralId = std::string(argv[1]);
+    const std::string orchestratorHost = std::string(argv[2]);
+
+    const int orchestratorProtocolPort = ConnectionUtils::parsePort(argv[3]);
+
+    if (orchestratorProtocolPort == -1) {
+        std::cout << "FATAL: Invalid Orchestrator protocol TCP port " + std::string(argv[3]) << std::endl;
+        return EXIT_FAILURE;
     }
 
-    if (argc == 6) {
-      identifier = std::string(argv[1]);
-      auto& communicationData = ral::communication::CommunicationData::getInstance();
-      communicationData.initialize(std::atoi(argv[1]), argv[2], std::atoi(argv[3]), argv[4], std::atoi(argv[5]));
-      try {
+    const int orchestratorCommunicationPort = ConnectionUtils::parsePort(argv[4]);
+
+    if (orchestratorProtocolPort == -1) {
+        std::cout << "FATAL: Invalid Orchestrator communication TCP port " + std::string(argv[4]) << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    const std::string ralHost = std::string(argv[5]);
+
+    const int ralProtocolPort = ConnectionUtils::parsePort(argv[6]);
+
+    if (orchestratorProtocolPort == -1) {
+        std::cout << "FATAL: Invalid RAL protocol TCP port " + std::string(argv[6]) << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    const int ralCommunicationPort = ConnectionUtils::parsePort(argv[7]);
+
+    if (orchestratorProtocolPort == -1) {
+        std::cout << "FATAL: Invalid RAL communication TCP port " + std::string(argv[7]) << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    auto& communicationData = ral::communication::CommunicationData::getInstance();
+
+    communicationData.initialize(
+        std::atoi(ralId.c_str()),
+        orchestratorHost,
+        orchestratorCommunicationPort,
+        ralHost,
+        ralCommunicationPort);
+
+    try {
         auto nodeDataMesssage = ral::communication::messages::Factory::createNodeDataMessage(communicationData.getSelfNode());
         ral::communication::network::Client::sendNodeData(communicationData.getOrchestratorIp(),
                                                           communicationData.getOrchestratorPort(),
                                                           nodeDataMesssage);
-        ral::communication::network::Server::start(std::atoi(argv[5]));
-      } catch (std::exception &e) {
+
+        ral::communication::network::Server::start(ralCommunicationPort);
+    } catch (std::exception &e) {
         std::cerr << e.what() << "\n";
-        return 1;
-      }
+        return EXIT_FAILURE;
     }
 
     auto& config = ral::config::BlazingConfig::getInstance();
 
-    config.setLogName("RAL." + identifier + ".log")
-          .setSocketPath("/tmp/ral." + identifier + ".socket");
 
-    std::cout << "Log Name: " << config.getLogName() << std::endl;
+#ifdef USE_UNIX_SOCKETS
+
+    config.setLogName("RAL." + ralId + ".log")
+          .setSocketPath("/tmp/ral." + ralId + ".socket");
+
     std::cout << "Socket Name: " << config.getSocketPath() << std::endl;
 
+#else
+
+    config.setLogName("RAL." + ralId + ".log")
+          .setSocketPath(ralId + ":" + std::to_string(ralProtocolPort));
+
+    std::cout << "Socket Name: " << config.getSocketPath() << std::endl;
+
+#endif
+
+    std::cout << "Log Name: " << config.getLogName() << std::endl;
 
     FreeMemory::Initialize();
 
@@ -673,16 +719,9 @@ int main(int argc, const char *argv[])
 
 #else
 
-  const int ral_tcp_port_protocol = ConnectionUtils::parsePort(argv[5]);
-
-  if (ral_tcp_port_protocol == -1) {
-    std::cout << "FATAL: Invalid RAL TCP port " + ral_tcp_port_protocol << std::endl;
-    return EXIT_FAILURE;
-  }
-
   ConnectionAddress connectionAddress;
-  connectionAddress.tcp_host = argv[4];
-  connectionAddress.tcp_port = ral_tcp_port_protocol;
+  connectionAddress.tcp_host = ralHost;
+  connectionAddress.tcp_port = ralProtocolPort;
 
   blazingdb::protocol::TCPConnection connection(connectionAddress);
 

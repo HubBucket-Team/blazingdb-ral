@@ -133,36 +133,6 @@ void sendSamplesToMaster(const Context& context, std::vector<gdf_column_cpp>&& s
     Client::send(master_node, message);
 }
 
-std::vector<NodeColumns> collectPartition(const Context& context) {
-    // Alias
-    using ColumnDataMessage = ral::communication::messages::ColumnDataMessage;
-
-    // Get the numbers of rals in the query
-    auto number_rals = context.getAllNodes().size() - 1;
-
-    // Create return value
-    std::vector<NodeColumns> node_columns;
-
-    // Get message from the server
-    const auto& context_token = context.getContextToken();
-    auto& server = ral::communication::network::Server::getInstance();
-    while (0 < number_rals) {
-        auto message = server.getMessage(context_token);
-        number_rals--;
-
-        if (message->getMessageTokenValue() != ColumnDataMessage::getMessageID()) {
-            throw createMessageMismatchException(__FUNCTION__,
-                                                 ColumnDataMessage::getMessageID(),
-                                                 message->getMessageTokenValue());
-        }
-
-        auto column_message = std::static_pointer_cast<ColumnDataMessage>(message);
-        node_columns.emplace_back(message->getSenderNode(),
-                                  std::move(column_message->getColumns()));
-    }
-    return node_columns;
-}
-
 std::vector<NodeSamples> collectSamples(const Context& context) {
   using ral::communication::network::Server;
   using ral::communication::messages::SampleToNodeMasterMessage;
@@ -171,7 +141,7 @@ std::vector<NodeSamples> collectSamples(const Context& context) {
   auto& contextToken = context.getContextToken();
   auto size = context.getWorkerNodes().size();
   for (int k = 0; k < size; ++k) {
-    auto message = Server::getInstance().getMessage(contextToken);
+    auto message = Server::getInstance().getMessage(contextToken, SampleToNodeMasterMessage::getMessageID());
 
     if (message->getMessageTokenValue() != SampleToNodeMasterMessage::getMessageID()) {
       throw createMessageMismatchException(__FUNCTION__,
@@ -305,9 +275,9 @@ void distributePartitionPlan(const Context& context, std::vector<gdf_column_cpp>
   using ral::communication::CommunicationData;
   using ral::communication::messages::Factory;
 
-  auto message = Factory::createColumnDataMessage(context.getContextToken(),
-                                                  CommunicationData::getInstance().getSelfNode(),
-                                                  pivots);
+  auto message = Factory::createPartitionPivotsMessage(context.getContextToken(),
+                                                      CommunicationData::getInstance().getSelfNode(),
+                                                      pivots);
   auto workers = context.getWorkerNodes();
   for(auto& workerNode : workers)
   {
@@ -317,17 +287,17 @@ void distributePartitionPlan(const Context& context, std::vector<gdf_column_cpp>
 
 std::vector<gdf_column_cpp> getPartitionPlan(const Context& context){
   using ral::communication::network::Server;
-  using ral::communication::messages::ColumnDataMessage;
+  using ral::communication::messages::PartitionPivotsMessage;
 
-  auto message = Server::getInstance().getMessage(context.getContextToken());
+  auto message = Server::getInstance().getMessage(context.getContextToken(), PartitionPivotsMessage::getMessageID());
 
-  if (message->getMessageTokenValue() != ColumnDataMessage::getMessageID()) {
+  if (message->getMessageTokenValue() != PartitionPivotsMessage::getMessageID()) {
     throw createMessageMismatchException(__FUNCTION__,
-                                         ColumnDataMessage::getMessageID(),
+                                         PartitionPivotsMessage::getMessageID(),
                                          message->getMessageTokenValue());
   }
 
-  auto concreteMessage = std::static_pointer_cast<ColumnDataMessage>(message);
+  auto concreteMessage = std::static_pointer_cast<PartitionPivotsMessage>(message);
 
   return std::move(concreteMessage->getColumns());
 }
@@ -448,6 +418,35 @@ void distributePartitions(const Context& context, std::vector<NodeColumns>& part
                                                     std::move(nodeColumn.getColumns()));
     Client::send(nodeColumn.getNode(), message);
   }
+}
+
+std::vector<NodeColumns> collectPartitions(const Context& context) {
+    using ral::communication::network::Server;
+    using ral::communication::messages::ColumnDataMessage;
+
+    // Get the numbers of rals in the query
+    auto number_rals = context.getAllNodes().size() - 1;
+
+    // Create return value
+    std::vector<NodeColumns> node_columns;
+
+    // Get message from the server
+    const auto& context_token = context.getContextToken();
+    while (0 < number_rals) {
+        auto message = Server::getInstance().getMessage(context_token, ColumnDataMessage::getMessageID());
+        number_rals--;
+
+        if (message->getMessageTokenValue() != ColumnDataMessage::getMessageID()) {
+            throw createMessageMismatchException(__FUNCTION__,
+                                                 ColumnDataMessage::getMessageID(),
+                                                 message->getMessageTokenValue());
+        }
+
+        auto column_message = std::static_pointer_cast<ColumnDataMessage>(message);
+        node_columns.emplace_back(message->getSenderNode(),
+                                  std::move(column_message->getColumns()));
+    }
+    return node_columns;
 }
 
 void sortedMerger(std::vector<NodeColumns>& columns, std::vector<int8_t>& sortOrderTypes, std::vector<int>& sortColIndices, blazing_frame& output) {

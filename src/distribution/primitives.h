@@ -48,7 +48,6 @@ using Context = blazingdb::communication::Context;
 
 void sendSamplesToMaster(const Context& context, std::vector<gdf_column_cpp>&& samples, std::size_t total_row_size);
 
-std::vector<NodeColumns> collectPartition(const Context& context);
 
 std::vector<NodeSamples> collectSamples(const Context& context);
 
@@ -84,6 +83,8 @@ std::vector<NodeColumns> partitionData(const Context& context,
                                        std::vector<gdf_column_cpp>& pivots);
 
 void distributePartitions(const Context& context, std::vector<NodeColumns>& partitions);
+
+std::vector<NodeColumns> collectPartitions(const Context& context);
 
 void sortedMerger(std::vector<NodeColumns>& columns, std::vector<int8_t>& sortOrderTypes, std::vector<int>& sortColIndices, blazing_frame& output);
 

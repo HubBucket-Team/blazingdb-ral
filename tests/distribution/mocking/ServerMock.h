@@ -10,10 +10,12 @@ using blazingdb::communication::messages::Message;
 } // namespace
 
 struct ServerMock {
-    static ServerMock& getInstance() {
-        static ServerMock mock;
-        return mock;
-    }
+  using MessageTokenType = blazingdb::communication::messages::MessageToken::TokenType;
 
-    MOCK_METHOD1(getMessage, std::shared_ptr<Message>(const ContextToken&));
+  static ServerMock& getInstance(){
+    static ServerMock mock;
+    return mock;
+  }
+
+  MOCK_METHOD2(getMessage, std::shared_ptr<Message>(const ContextToken&, const MessageTokenType& messageToken));
 };

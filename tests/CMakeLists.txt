@@ -68,6 +68,7 @@ add_subdirectory(groupbywoagg)
 add_subdirectory(interpreter)
 add_subdirectory(utils)
 add_subdirectory(resultset-repository)
+add_subdirectory(stress_distribution)
 
 
 message(STATUS "******** Tests are ready ********")

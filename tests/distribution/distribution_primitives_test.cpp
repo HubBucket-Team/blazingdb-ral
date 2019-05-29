@@ -92,7 +92,7 @@ struct DistributionPrimitivesTest : public ::testing::Test {
     }
 
     std::shared_ptr<Context> context_;
-    std::shared_ptr<Node> master_node_;
+    std::shared_ptr<Node> /*  */master_node_;
 
     const std::string self_ip_{"192.168.0.10"};
     const unsigned short self_port_{7897};
@@ -103,7 +103,7 @@ struct DistributionPrimitivesTest : public ::testing::Test {
 TEST_F(DistributionPrimitivesTest, sendSamplesToMasterTest) {
     // Create data - gdf_column_cpp
     std::vector<gdf_column_cpp> test_columns;
-
+/*  */
     // Get data for validation
     using ral::communication::messages::SampleToNodeMasterMessage;
     const auto& message_token = SampleToNodeMasterMessage::getMessageID();
@@ -133,7 +133,7 @@ TEST_F(DistributionPrimitivesTest, collectPartitionTest) {
     auto message = MessageFactory::createColumnDataMessage(context_token, *self_node_, test_columns);
 
     // Verify test
-    EXPECT_CALL(ServerMock::getInstance(), getMessage(ContextTokenEqual(ByRef(context_token))))
+    EXPECT_CALL(ServerMock::getInstance(), getMessage(ContextTokenEqual(ByRef(context_token)), ral::communication::messages::ColumnDataMessage::getMessageID()))
                .Times(context_->getAllNodes().size() - 1)
                .WillRepeatedly(::testing::Return(message));
 
@@ -154,7 +154,7 @@ TEST_F(DistributionPrimitivesTest, collectPartitionExceptionTest) {
     auto message = MessageFactory::createSampleToNodeMaster(context_token, *self_node_, 10, test_columns);
 
     // Verify test
-    EXPECT_CALL(ServerMock::getInstance(), getMessage(ContextTokenEqual(ByRef(context_token))))
+    EXPECT_CALL(ServerMock::getInstance(), getMessage(ContextTokenEqual(ByRef(context_token)), ral::communication::messages::SampleToNodeMasterMessage::getMessageID()))
                 .Times(1)
                 .WillOnce(::testing::Return(message));
 
@@ -177,7 +177,7 @@ TEST_F(DistributionPrimitivesTest, collectSamplesTest) {
     auto message = MessageFactory::createSampleToNodeMaster(context_token, *self_node_, total_row_size, test_columns);
 
     // Verify test
-    EXPECT_CALL(ServerMock::getInstance(), getMessage(_))
+    EXPECT_CALL(ServerMock::getInstance(), getMessage(_, ral::communication::messages::SampleToNodeMasterMessage::getMessageID()))
                 .Times(context_->getAllNodes().size() - 1)
                 .WillRepeatedly(::testing::Return(message));
 
@@ -198,7 +198,7 @@ TEST_F(DistributionPrimitivesTest, collectSamplesExceptionTest) {
     auto message = MessageFactory::createColumnDataMessage(context_token, *self_node_, test_columns);
 
     // Verify test
-    EXPECT_CALL(ServerMock::getInstance(), getMessage(_))
+    EXPECT_CALL(ServerMock::getInstance(), getMessage(_, ral::communication::messages::ColumnDataMessage::getMessageID()))
                 .Times(1)
                 .WillOnce(::testing::Return(message));
 
@@ -242,7 +242,7 @@ TEST_F(DistributionPrimitivesTest, getPartitionPlanTest) {
     auto message = MessageFactory::createColumnDataMessage(context_token, *self_node_, test_columns);
 
     // Verify test
-    EXPECT_CALL(ServerMock::getInstance(), getMessage(ContextTokenEqual(ByRef(context_token))))
+    EXPECT_CALL(ServerMock::getInstance(), getMessage(ContextTokenEqual(ByRef(context_token)), ral::communication::messages::ColumnDataMessage::getMessageID()))
                 .Times(1)
                 .WillOnce(::testing::Return(message));
 
@@ -263,7 +263,7 @@ TEST_F(DistributionPrimitivesTest, getPartitionPlanExceptionTest) {
     auto message = MessageFactory::createSampleToNodeMaster(context_token, *self_node_, 1000, test_columns);
 
     // Verify test
-    EXPECT_CALL(ServerMock::getInstance(), getMessage(ContextTokenEqual(ByRef(context_token))))
+    EXPECT_CALL(ServerMock::getInstance(), getMessage(ContextTokenEqual(ByRef(context_token)), ral::communication::messages::SampleToNodeMasterMessage::getMessageID()))
                 .Times(1)
                 .WillOnce(::testing::Return(message));
 

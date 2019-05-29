@@ -75,3 +75,5 @@ RAL\.log
 RAL\.1\.log
 
 *.log
+
+cmake-build-debug/

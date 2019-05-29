@@ -118,16 +118,15 @@ TEST_F(EvaluateQueryTest, TEST_01) {
           "join main.nation as n2 on n1.n_nationkey = n2.n_nationkey + 6 where "
           "n1.n_nationkey < 10 order by n1key",
       .logicalPlan =
-          "LogicalSort(sort0=[$0], dir0=[ASC])\n  "
-          "LogicalProject(n1key=[$0], n2key=[$4], EXPR$2=[+($0, $4)])\n    "
-          "LogicalFilter(condition=[<($0, 10)])\n      "
-          "LogicalProject(n_nationkey=[$0], n_name=[$1], n_regionkey=[$2], "
-          "n_comment=[$3], n_nationkey0=[$4], n_name0=[$5], n_regionkey0=[$6], "
-          "n_comment0=[$7])\n        LogicalJoin(condition=[=($0, $8)], "
-          "joinType=[full])\n          EnumerableTableScan(table=[[main, "
-          "nation]])\n          LogicalProject(n_nationkey=[$0], n_name=[$1], "
-          "n_regionkey=[$2], n_comment=[$3], $f4=[+($0, 6)])\n            "
-          "EnumerableTableScan(table=[[main, nation]])",
+          "LogicalSort(sort0=[$0], dir0=[ASC])\n"
+          "  LogicalProject(n1key=[$0], n2key=[$1], EXPR$2=[+($0, $1)])\n"
+          "    LogicalJoin(condition=[=($0, $2)], joinType=[left])\n"
+          "      LogicalProject(n_nationkey=[$0])\n"
+          "        LogicalFilter(condition=[<($0, 10)])\n"
+          "          EnumerableTableScan(table=[[main, nation]])\n"
+          "      LogicalProject(n_nationkey=[$0], $f4=[$4])\n"
+          "        LogicalProject(n_nationkey=[$0], n_name=[$1], n_regionkey=[$2], n_comment=[$3], $f4=[+($0, 6)])\n"
+          "          EnumerableTableScan(table=[[main, nation]])",          
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.nation",

@@ -310,7 +310,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
       rows =  result.result_frame.get_columns()[0][0].size();
 
 
-      for(int i = 0; i < result.result_frame.get_columns()[0].size(); ++i) {
+      for(std::size_t i = 0; i < result.result_frame.get_columns()[0].size(); ++i) {
         fieldNames.push_back(result.result_frame.get_columns()[0][i].name());
         columnTokens.push_back(result.result_frame.get_columns()[0][i].get_column_token());
 
@@ -329,17 +329,25 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
           dtype_info = gdf_dto::gdf_dtype_extra_info {
                 .time_unit = (gdf_dto::gdf_time_unit)0,
             };
-
-          col = ::gdf_dto::gdf_column {
+          // before
+          /*  col = ::gdf_dto::gdf_column {
               .data = data,
               .valid = valid,
-              .size = result.result_frame.get_columns()[0][i].size(),
+              .size = static_cast<gdf_size_type>(result.result_frame.get_columns()[0][i].size()),//.get_gdf_column()->data  ` 
               .dtype = (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype(), // GDF_STRING
-              .null_count = result.result_frame.get_columns()[0][i].null_count(),
+              .null_count = static_cast<gdf_size_type>(result.result_frame.get_columns()[0][i].null_count()),
               .dtype_info = dtype_info,
               // custrings data
               .custrings_data = libgdf::ConvertIpcByteArray(ipc)
-            };
+          };
+          */
+          col.data = data;
+          col.valid = valid;
+          col.size = result.result_frame.get_columns()[0][i].size();
+          col.dtype =  (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype();
+          col.dtype_info = dtype_info;
+          // custrings data
+          col.custrings_data = libgdf::ConvertIpcByteArray(ipc);
 
         }else{
           dtype_info = gdf_dto::gdf_dtype_extra_info {
@@ -348,8 +356,9 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
 
           data = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->data);
           valid = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->valid);
-
-          col = ::gdf_dto::gdf_column {
+        
+        // before
+        /*  col = ::gdf_dto::gdf_column {
               .data = data,
               .valid = valid,
               .size = result.result_frame.get_columns()[0][i].size(),
@@ -357,6 +366,14 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
               .null_count = result.result_frame.get_columns()[0][i].null_count(),
               .dtype_info = dtype_info
           };
+        */
+          col.data = data;
+          col.valid = valid;
+          col.size = result.result_frame.get_columns()[0][i].size();
+          col.dtype =  (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype();
+          col.null_count = result.result_frame.get_columns()[0][i].null_count();
+          col.dtype_info = dtype_info;
+
         }
 
         values.push_back(col);

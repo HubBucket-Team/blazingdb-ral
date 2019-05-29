@@ -195,6 +195,7 @@ protected:
 #undef WHEN
 
         std::cout << "ERROR: Bad parquet column type\n";
+        return GDF_UNSUPPORTED_DTYPE; 
     }
 
     template <class T>
@@ -273,7 +274,7 @@ protected:
         int numRowGroups = file_metadata->num_row_groups();
 
         std::vector<std::size_t> row_group_indices;
-        for (std::size_t index = 0; index < numRowGroups; index++){
+        for (int index = 0; index < numRowGroups; index++){
             row_group_indices.push_back(index);
         }
 
@@ -308,7 +309,7 @@ protected:
 
         for (int rowGroupIndex = 0; rowGroupIndex < numRowGroups; rowGroupIndex++) {
             auto groupReader = file_reader->RowGroup(rowGroupIndex);
-            for (int column_reader_index = 0; column_reader_index < num_columns; column_reader_index++) {
+            for (std::size_t column_reader_index = 0; column_reader_index < num_columns; column_reader_index++) {
                 auto columnIndex = column_indices[column_reader_index];
                 const parquet::ColumnDescriptor *column = schema->Column(columnIndex);
                 parquet::Type::type type = column->physical_type();

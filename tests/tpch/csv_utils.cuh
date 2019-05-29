@@ -122,9 +122,7 @@ BlazingFrame ToBlazingFrame(std::vector<std::string> filePaths, std::vector<std:
   BlazingFrame frame;
   for(size_t index = 0; index < filePaths.size(); index++) {
     auto file_path = filePaths[index];
-    gdf_error error = GDF_SUCCESS;
   
-
     std::vector<const char*> columnNamesPointers;
     std::transform(columnNames[index].begin(), columnNames[index].end(), std::back_inserter(columnNamesPointers),
                    [](std::string &s)  { return s.c_str(); });
@@ -145,7 +143,7 @@ BlazingFrame ToBlazingFrame(std::vector<std::string> filePaths, std::vector<std:
 	args.header = -1;
 	args.nrows = -1;
 
-      error = read_csv(&args);
+      gdf_error error = read_csv(&args);
       assert(error == GDF_SUCCESS);
 
       std::cout << "CSV output" << std::endl;

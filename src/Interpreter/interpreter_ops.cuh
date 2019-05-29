@@ -155,29 +155,23 @@ int64_t extract_day_op_32(int64_t unixDate){
 
 static int64_t scale_to_64_bit_return_bytes(gdf_scalar input){
 	gdf_dtype cur_type = input.dtype;
-	int64_t data;
-	if(cur_type == GDF_INT8){
-		data = input.data.si08;
-	}else if(cur_type == GDF_INT16){
-		data = input.data.si16;
-	}else if(cur_type == GDF_INT32 || cur_type == GDF_STRING_CATEGORY){
-		data = input.data.si32;
-	}else if(cur_type == GDF_DATE32){
-		data = input.data.dt32;
-	}else if(cur_type == GDF_INT64 ){
-		data = input.data.si64;
-	}else if(cur_type == GDF_DATE64){
-		data = input.data.dt64;
-	} else if(cur_type == GDF_TIMESTAMP){
-		data = input.data.tmst;
-	}else if(cur_type == GDF_FLOAT32){
-		//convert to double first
-		double temp_data = input.data.fp32;
-		data =  *((int64_t *) &temp_data);
-	}else if(cur_type == GDF_FLOAT64){
-		data =  *((int64_t *) &input.data.fp64);
+	
+	int64_t data_return;
+	if(cur_type == GDF_INT8) data_return = input.data.si08;
+	else if(cur_type == GDF_INT16) data_return = input.data.si16;
+	else if(cur_type == GDF_INT32 || cur_type == GDF_STRING_CATEGORY) data_return = input.data.si32;
+	else if(cur_type == GDF_INT64) data_return = input.data.si64;
+	else if(cur_type == GDF_DATE32) data_return = input.data.dt32;
+	else if(cur_type == GDF_DATE64) data_return = input.data.dt64;
+	else if(cur_type == GDF_TIMESTAMP) data_return = input.data.tmst;
+	else if(cur_type == GDF_FLOAT32) data_return =  static_cast<int64_t>(input.data.fp32); //*((int64_t *) &temp_data);
+	else if(cur_type == GDF_FLOAT64) data_return = static_cast<int64_t>(input.data.fp64);  //*((int64_t *) &input.data.fp64);
+	else {
+		std::cout << "Type of data not found." << std::endl;
+		data_return = 0;
 	}
-	return data;
+
+	return data_return;
 }
 
 static __device__ __host__ __forceinline__
@@ -1043,7 +1037,7 @@ public:
 		std::vector<gdf_size_type> host_null_counts(num_columns);
 
 
-		for(int i = 0; i < num_columns; i++){
+		for(std::size_t i = 0; i < num_columns; i++){
 			host_data_ptrs[i] = columns[i]->data;
 			host_valid_ptrs[i] = (temp_gdf_valid_type *) columns[i]->valid;
 			host_null_counts[i] = columns[i]->null_count;
@@ -1094,7 +1088,7 @@ public:
 			column_index_type right_index = right_input_positions_vec[cur_operation];
 			column_index_type output_index = output_positions_vec[cur_operation];
 
-			if( left_index < columns.size() && left_index >= 0){
+			if( left_index < static_cast<column_index_type>(columns.size()) && left_index >= 0){
 				left_input_types_vec[cur_operation] = columns[left_index]->dtype;
 			}else{
 				if(left_index < 0 ){
@@ -1119,7 +1113,7 @@ public:
 
 			}
 
-			if( right_index < columns.size() && right_index >= 0){
+			if( right_index < static_cast<column_index_type>(columns.size()) && right_index >= 0){
 				right_input_types_vec[cur_operation] = columns[right_index]->dtype;
 			}else{
 				if(right_index < 0 ){
@@ -1181,7 +1175,7 @@ public:
 		}
 
 		std::vector<gdf_dtype> input_column_types_vec(num_columns);
-		for(int column_index = 0; column_index < columns.size(); column_index++){
+		for(std::size_t column_index = 0; column_index < columns.size(); column_index++){
 			input_column_types_vec[column_index] = columns[column_index]->dtype;
 			//		std::cout<<"type was "<<input_column_types_vec[column_index]<<std::endl;
 		}

@@ -668,7 +668,8 @@ int main(int argc, const char *argv[])
         orchestratorHost,
         orchestratorCommunicationPort,
         ralHost,
-        ralCommunicationPort);
+        ralCommunicationPort,
+        ralProtocolPort);
 
     try {
         auto nodeDataMesssage = ral::communication::messages::Factory::createNodeDataMessage(communicationData.getSelfNode());

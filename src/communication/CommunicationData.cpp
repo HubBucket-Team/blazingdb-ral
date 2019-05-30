@@ -18,7 +18,7 @@ void CommunicationData::initialize(int unixSocketId,
                                    int16_t selfRalCommunicationPort,
                                    int16_t selfRalProtocolPort) {
   orchestratorIp = orchIp;
-  orchestratorPort = orchPort;
+  orchestratorPort = orchCommunicationPort;
   selfNode = Node::make(unixSocketId, selfRalIp, selfRalCommunicationPort, selfRalProtocolPort);
 }
 

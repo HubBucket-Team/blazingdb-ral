@@ -130,7 +130,7 @@ void distributed_sort(const Context& queryContext, blazing_frame& input, std::ve
 
 	ral::distribution::distributePartitions(queryContext, partitions);
 
-	std::vector<ral::distribution::NodeColumns> partitionsToMerge = ral::distribution::collectPartition(queryContext);
+	std::vector<ral::distribution::NodeColumns> partitionsToMerge = ral::distribution::collectPartitions(queryContext);
 	auto it = std::find_if(partitions.begin(), partitions.end(), [&](ral::distribution::NodeColumns& el) {
 			return el.getNode() == CommunicationData::getInstance().getSelfNode();
 		});

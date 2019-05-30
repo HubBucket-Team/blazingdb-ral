@@ -47,7 +47,7 @@ public:
         thrust::transform(thrust::counting_iterator<T>(0),
                           thrust::counting_iterator<T>(size),
                           data.begin(),
-                          UniformRandomGenerator<T>(min_value, max_value, time(NULL)));
+                          UniformRandomGenerator<T>(min_value, max_value, 1));
 
         std::vector<T> result(size);
         thrust::copy(data.begin(), data.end(), result.begin());

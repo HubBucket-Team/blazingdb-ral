@@ -176,7 +176,7 @@ blazing_frame DistributedJoinOperator::operator()(blazing_frame& frame, const st
 
 std::vector<gdf_column_cpp> DistributedJoinOperator::process_distribution_table(std::vector<gdf_column_cpp>& table, std::vector<int>& columnIndices) {
     auto future_node_columns = std::async(std::launch::async,
-                                          ral::distribution::collectPartition,
+                                          ral::distribution::collectPartitions,
                                           std::ref(*context_));
 
     auto local_node_columns = ral::distribution::generateJoinPartitions(*context_, table, columnIndices);
@@ -252,12 +252,9 @@ std::vector<gdf_column_cpp> DistributedJoinOperator::concat_columns(std::vector<
         gdf_column_cpp output = ral::utilities::create_column(size, dtype);
 
         // Perform concatenation
-        auto error = gdf_column_concat(output.get_gdf_column(),
-                                       columns_wrapper.data(),
-                                       columns_wrapper.size());
-        if (error != GDF_SUCCESS) {
-            throw ral::exception::BaseRalException("distributed join, cannot concat columns");
-        }
+        CUDF_CALL( gdf_column_concat(output.get_gdf_column(),
+                                    columns_wrapper.data(),
+                                    columns_wrapper.size()) );
 
         result.emplace_back(output);
     }

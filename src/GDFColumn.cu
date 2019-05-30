@@ -430,16 +430,19 @@ gdf_column_cpp gdf_column_cpp::slice(gdf_size_type data_position, gdf_size_type 
     gdf_column_cpp result;
     result.column = new gdf_column;
 
-    // allocate & copy
-    allocate_gpu_memory(&result, data_length, column->dtype);
-    copy_in_gpu_memory(&result, this, data_position, data_length, column->dtype);
+    result.gdf_column_view(result.column, nullptr, nullptr, data_length, column->dtype);
 
+    if (data_length > 0) {
+        // allocate & copy
+        allocate_gpu_memory(&result, data_length, column->dtype);
+        copy_in_gpu_memory(&result, this, data_position, data_length, column->dtype);
+    }
+    
     // update cudf column
     update_null_count(result.column);
-    result.column->dtype = column->dtype;
-    result.column->dtype_info = column->dtype_info;
 
     // update ral column
+    result.column->dtype_info = column->dtype_info;
     result.set_name(column_name);
     result.is_ipc_column = false;
     result.column_token = column_token;

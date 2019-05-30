@@ -138,7 +138,7 @@ TEST_F(DistributionPrimitivesTest, collectPartitionTest) {
                .WillRepeatedly(::testing::Return(message));
 
     // Execute Test
-    ral::distribution::collectPartition(*context_);
+    ral::distribution::collectPartitions(*context_);
 }
 
 
@@ -160,7 +160,7 @@ TEST_F(DistributionPrimitivesTest, collectPartitionExceptionTest) {
 
     // Execute Test
     using ral::distribution::MessageMismatchException;
-    ASSERT_THROW(ral::distribution::collectPartition(*context_), MessageMismatchException);
+    ASSERT_THROW(ral::distribution::collectPartitions(*context_), MessageMismatchException);
 }
 
 

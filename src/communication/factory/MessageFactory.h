@@ -53,6 +53,22 @@ struct Factory {
                                                             const Node& sender_node,
                                                             const std::vector<gdf_column_cpp>& columns);
 
+    static std::shared_ptr<Message> createPartitionPivotsMessage(const ContextToken& context_token,
+                                                                const Node& sender_node,
+                                                                std::vector<gdf_column_cpp>&& columns);
+
+    static std::shared_ptr<Message> createPartitionPivotsMessage(const ContextToken& context_token,
+                                                                const Node& sender_node,
+                                                                const std::vector<gdf_column_cpp>& columns);
+
+    static std::shared_ptr<Message> createPartitionPivotsMessage(std::shared_ptr<ContextToken>&& context_token,
+                                                                const Node& sender_node,
+                                                                std::vector<gdf_column_cpp>&& columns);
+
+    static std::shared_ptr<Message> createPartitionPivotsMessage(std::shared_ptr<ContextToken>&& context_token,
+                                                                const Node& sender_node,
+                                                                const std::vector<gdf_column_cpp>& columns);
+
 
     static std::shared_ptr<Message> createNodeDataMessage(const Node& selfNode);
 
@@ -78,19 +94,6 @@ struct Factory {
 
     // deprecated
     static DataPivot createDataPivot(const Node& node, const std::string& min_range, const std::string& max_range);
-
-    // deprecated
-    static std::shared_ptr<Message> createPartitionPivotsMessage(const ContextToken& context_token,
-                                                                 std::vector<DataPivot>&& pivots);
-    // deprecated
-    static std::shared_ptr<Message> createPartitionPivotsMessage(const ContextToken& context_token,
-                                                                 const std::vector<DataPivot>& pivots);
-    // deprecated
-    static std::shared_ptr<Message> createPartitionPivotsMessage(std::shared_ptr<ContextToken>&& context_toke,
-                                                                 std::vector<DataPivot>&& pivots);
-    // deprecated
-    static std::shared_ptr<Message> createPartitionPivotsMessage(std::shared_ptr<ContextToken>&& context_toke,
-                                                                 const std::vector<DataPivot>& pivots);
 };
 
 } // namespace messages

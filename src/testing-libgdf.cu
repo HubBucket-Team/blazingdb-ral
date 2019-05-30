@@ -394,12 +394,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 
   }
 
-//	std::vector<ral::io::data_loader > & input_loaders,
-//	std::vector<ral::io::Schema> & schemas,
-//	std::vector<std::string> table_names,
-	std::string logicalPlan,
-	std::vector<gdf_column_cpp> & outputs
-  // ExecutePlan
+
   std::cout << "accessToken: " << accessToken << std::endl;
   std::cout << "query: " << requestPayload.statement << std::endl;
   std::cout << "tableGroup: " << requestPayload.tableGroup.name << std::endl;

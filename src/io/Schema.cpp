@@ -80,6 +80,15 @@ size_t Schema::get_num_row_groups(size_t file_index) const{
 	return this->num_row_groups[file_index];
 }
 
+blazingdb::protocol::TableSchemaSTL Schema::getTransport(){
+	blazingdb::protocol::TableSchemaSTL transport_schema;
+
+	transport_schema.names = this->names;
+	transport_schema.calciteToFileIndicies = this->calcite_to_file_indices;
+	transport_schema.types = this->types;
+	transport_schema.numRowGroups = this->num_row_groups;
+
+}
 void Schema::add_column(gdf_column_cpp column,size_t file_index){
 	this->names.push_back(column.name());
 	this->types.push_back(column.dtype());

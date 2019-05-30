@@ -50,6 +50,8 @@ public:
 	inline bool operator==(const Schema& rhs) const{
 		return (this->names == rhs.names) && (this->types == rhs.types);
 	}
+
+	blazingdb::protocol::TableSchemaSTL getTransport();
 	inline bool operator!=( const Schema& rhs){ return !(*this == rhs); }
 private:
 	std::vector<std::string> names;

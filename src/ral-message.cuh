@@ -15,6 +15,13 @@
 
 namespace libgdf {
 
+static std::basic_string<int8_t> ConvertIpcByteArray (nvstrings_ipc_transfer ipc_data) {
+  std::basic_string<int8_t> bytes;
+  bytes.resize(sizeof(nvstrings_ipc_transfer));
+  memcpy((void*)bytes.data(), (int8_t*)(&ipc_data), sizeof(nvstrings_ipc_transfer));
+  return bytes;
+}
+
 static std::basic_string<int8_t> ConvertCudaIpcMemHandler (cudaIpcMemHandle_t ipc_memhandle) {
   std::basic_string<int8_t> bytes;
   bytes.resize(sizeof(cudaIpcMemHandle_t));
@@ -79,33 +86,29 @@ std::tuple<std::vector<std::vector<gdf_column_cpp>>,
         if((::gdf_dtype)column.dtype == GDF_STRING){
 
           nvstrings_ipc_transfer ipc;  // NOTE: IPC handles will be closed when nvstrings_ipc_transfer goes out of scope
-          ipc.hstrs = ConvertByteArray(column.custrings_views); // cudaIpcMemHandle_t
-          ipc.count = column.custrings_viewscount; // unsigned int
-          ipc.hmem = ConvertByteArray(column.custrings_membuffer); // cudaIpcMemHandle_t
-          ipc.size = column.custrings_membuffersize; // size_t
-          ipc.base_address = reinterpret_cast<char*>(column.custrings_baseptr); // char*
+          memcpy(&ipc,column.custrings_data.data(),sizeof(nvstrings_ipc_transfer));
 
           NVStrings* strs = NVStrings::create_from_ipc(ipc);
           NVCategory* category = NVCategory::create_from_strings(*strs);
           NVStrings::destroy(strs);
 
           col.create_gdf_column(category, column.size, column_name);
-        }
-        else {
+
+        } else {
+          if ((::gdf_dtype)column.dtype == GDF_STRING_CATEGORY) 
+            std::cout<<"WARNING: incoming data is a GDF_STRING_CATEGORY"<<std::endl;
+
           // col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),(gdf_valid_type*)libgdf::CudaIpcMemHandlerFrom(column.valid),column.size,column_name);
-          col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),nullptr,column.size,column_name);
-          handles.push_back(col.data());
+          void * dataHandle = libgdf::CudaIpcMemHandlerFrom(column.data);
+          void * validHandle = libgdf::CudaIpcMemHandlerFrom(column.valid);
+          col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,dataHandle,
+                                          static_cast<gdf_valid_type*>(validHandle), column.size, column.null_count, column_name);
+          handles.push_back(dataHandle);
+          if (validHandle != nullptr){
+            handles.push_back(validHandle);
+          }
         }
 
-        if(col.valid() == nullptr){
-          //TODO: we can remove this when libgdf properly
-          //implements all algorithsm with valid == nullptr support
-          //it crashes somethings like group by
-          col.allocate_set_valid();
-
-        }else{
-          handles.push_back(col.valid());
-        }
       }else{
         col = result_set_repository::get_instance().get_column(accessToken, table.columnTokens[column_index]);
       }

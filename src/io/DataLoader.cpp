@@ -46,7 +46,7 @@ size_t get_width_dtype(gdf_dtype type){
 	}
 }
 
-data_loader::data_loader(data_parser * _parser, data_provider * _data_provider): provider(_data_provider), parser(_parser)  {
+data_loader::data_loader(std::shared_ptr<data_parser> _parser, std::shared_ptr<data_provider> _data_provider): provider(_data_provider), parser(_parser)  {
 
 }
 

@@ -49,7 +49,7 @@ class gdf_column_cpp
 
 	gdf_column_cpp();
 	void create_gdf_column(gdf_column * column);
-	void create_gdf_column_for_ipc(gdf_dtype type, void * col_data,gdf_valid_type * valid_data,size_t size,std::string column_name);
+	void create_gdf_column_for_ipc(gdf_dtype type, void * col_data,gdf_valid_type * valid_data, gdf_size_type num_values, gdf_size_type null_count, std::string column_name);
 
 	gdf_column_cpp(const gdf_column_cpp& col);
 
@@ -61,7 +61,9 @@ class gdf_column_cpp
 
 	gdf_column* get_gdf_column();
 
-	void create_gdf_column(NVCategory* category, size_t num_values,std::string column_name);
+	void create_gdf_column(NVCategory* category, size_t num_values, std::string column_name);
+	
+	void create_gdf_column(NVStrings* strings, size_t num_values, std::string column_name);
 
 	void create_gdf_column(gdf_dtype type, size_t num_values, void * input_data, size_t width_per_value, const std::string &column_name = "");
 

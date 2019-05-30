@@ -30,6 +30,7 @@ public:
 
 private:
 	blazingdb::message::io::FileSystemBlazingTableSchema table_schema;
+	std::vector<void *> handles;
 };
 
 } /* namespace io */

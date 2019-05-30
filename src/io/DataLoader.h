@@ -17,6 +17,11 @@
 #include <memory>
 #include "Schema.h"
 
+#include <nvstrings/NVCategory.h>
+#include <nvstrings/NVStrings.h>
+#include <nvstrings/ipc_transfer.h>
+#include <memory>
+
 namespace ral {
 namespace io {
 /**
@@ -26,7 +31,7 @@ namespace io {
 
 class data_loader {
 public:
-	data_loader(data_parser  * parser, data_provider * provider);
+	data_loader(std::shared_ptr<data_parser>  parser, std::shared_ptr<data_provider > provider);
 	virtual ~data_loader();
 
 	/**
@@ -34,17 +39,19 @@ public:
 	 * @param columns a vector to receive our output should be of size 0 when it is coming in and it will be allocated by this function
 	 * @param include_column the different files we can read from can have more columns than we actual want to read, this lest us filter some of them out
 	 */
+
 	void load_data(std::vector<gdf_column_cpp> & columns, const std::vector<size_t> & column_indices, const Schema & schema);
 	void get_schema(Schema & schema);
+
 private:
 	/**
 	 * DataProviders are able to serve up one or more arrow::io::RandomAccessFile objects
 	 */
-	data_provider * provider;
+	std::shared_ptr<data_provider> provider;
 	/**
 	 * parsers are able to parse arrow::io::RandomAccessFile objects of a specific file type and convert them into gdf_column_cpp
 	 */
-	data_parser * parser;
+	std::shared_ptr<data_parser> parser;
 };
 
 

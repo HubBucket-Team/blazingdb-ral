@@ -62,10 +62,6 @@ using namespace blazingdb::protocol;
 
 #include "CodeTimer.h"
 
-#include <nvstrings/NVCategory.h>
-#include <nvstrings/NVStrings.h>
-#include <nvstrings/ipc_transfer.h>
-
 const Path FS_NAMESPACES_FILE("/tmp/file_system.bin");
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);
@@ -134,144 +130,6 @@ static result_pair  deregisterFileSystem(uint64_t accessToken, Buffer&& buffer) 
   return std::make_pair(Status_Success, response.getBufferData());
 }
 
-
-query_token_t loadParquetAndInsertToResultRepository(std::string path, connection_id_t connection, bool schema_only) {
-	std::cout<<"loadParquet\n";
-
-	query_token_t token = result_set_repository::get_instance().register_query(connection); //register the query so we can receive result requests for it
-  Path  csvFile(path);
-	Uri directory(csvFile.getParentPath().toString());
-  const bool existsParquetDir = BlazingContext::getInstance()->getFileSystemManager()->exists(directory);
-	const bool isS3Dir = (directory.getFileSystemType() == FileSystemType::S3);
-	if ((existsParquetDir == false) && (isS3Dir == false)) {
-    auto error = "parquet table folder doesn't exists: " + directory.toString(false);
-    throw std::runtime_error{error};
-  }
-
-	std::thread t = std::thread([=]{
-		std::vector<Uri> uris(1);
-		uris[0] = Uri(path);
-
-		auto provider = ral::io::uri_data_provider(uris);
-		auto parser = ral::io::parquet_parser();
-	  ral::io::data_loader loader(&parser, &provider);
-
-	  try
-	  {
-	    CodeTimer blazing_timer;
-	    std::vector<gdf_column_cpp> columns;
-	    ral::io::Schema schema;
-	    loader.get_schema(schema);
-	    loader.load_data(columns, {},schema);
-
-      blazing_frame output_frame;
-      output_frame.add_table(columns);
-
-      double duration = blazing_timer.getDuration();
-
-      result_set_repository::get_instance().update_token(token, output_frame, duration);
-    } catch(const std::exception& e) {
-      std::cerr << e.what() << '\n';
-      result_set_repository::get_instance().update_token(token, blazing_frame{}, 0.0, e.what());
-    }
-	});
-	t.detach();
-	return token;
-}
-
-static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
-
-  blazingdb::message::io::LoadParquetFileRequestMessage message(buffer.data());
-
-  uint64_t resultToken = 0L;
-  try {
-    // @todo, what about other parameters
-    bool schema_only = true;
-    resultToken = loadParquetAndInsertToResultRepository(message.fileSchema()->path, accessToken, schema_only);
-
-  } catch (const std::exception& e) {
-     std::cerr << e.what() << std::endl;
-     ResponseErrorMessage errorMessage{ std::string{e.what()} };
-     return std::make_pair(Status_Error, errorMessage.getBufferData());
-  }
-  interpreter::NodeConnectionDTO nodeInfo {
-      .port = global_port,
-      .path = "/tmp/ral.socket",
-      .type = NodeConnectionType {NodeConnectionType_TCP}
-  };
-  interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
-  return std::make_pair(Status_Success, responsePayload.getBufferData());
-}
-
-query_token_t loadCsvAndInsertToResultRepository(std::string path, std::vector<std::string> names, std::vector<gdf_dtype> dtypes, std::string delimiter, std::string line_terminator, 
-  int skip_rows, connection_id_t connection, bool schema_only) {
-	std::cout<<"loadCsv\n";
-
-	query_token_t token = result_set_repository::get_instance().register_query(connection); //register the query so we can receive result requests for it
-  Path  csvFile(path);
-	Uri directory(csvFile.getParentPath().toString());
-  const bool existsParquetDir = BlazingContext::getInstance()->getFileSystemManager()->exists(directory);
-	const bool isS3Dir = (directory.getFileSystemType() == FileSystemType::S3);
-	if ((existsParquetDir == false) && (isS3Dir == false)) {
-    auto error = "csv table folder doesn't exists: " + directory.toString(false);
-    throw std::runtime_error{error};
-  }
-	std::thread t = std::thread([=]{
-		std::vector<Uri> uris(1);
-		uris[0] = Uri(path);
-
-		auto provider = ral::io::uri_data_provider(uris);
-		auto parser = ral::io::csv_parser(delimiter, line_terminator, skip_rows, names, dtypes);
-	  ral::io::data_loader loader(&parser, &provider);
-
-    try
-    {
-      CodeTimer blazing_timer;
-      std::vector<gdf_column_cpp> columns;
-	    ral::io::Schema schema;
-	    loader.get_schema(schema);
-	    loader.load_data(columns, {},schema);
-
-      blazing_frame output_frame;
-      output_frame.add_table(columns);
-
-      double duration = blazing_timer.getDuration();
-      
-      result_set_repository::get_instance().update_token(token, output_frame, duration);
-    } catch (const std::exception& e){
-      std::cerr << e.what() << '\n';
-      result_set_repository::get_instance().update_token(token, blazing_frame{}, 0.0, e.what());
-    }
-	});
-	t.detach();
-	return token;
-}
-
-static result_pair loadCsvSchema(uint64_t accessToken, Buffer&& buffer) {
-  blazingdb::message::io::LoadCsvFileRequestMessage message(buffer.data());
-
-  std::vector<gdf_dtype> types;
-  auto schema = message.fileSchema();
-  for(auto val : schema->dtypes)
-    types.push_back( (gdf_dtype) val );
-
-  uint64_t resultToken = 0L;
-  try {
-    bool schema_only = true;
-    resultToken = loadCsvAndInsertToResultRepository(schema->path, schema->names, types, schema->delimiter, schema->line_terminator, schema->skip_rows, accessToken, schema_only);
-  } catch (const std::exception& e) {
-     std::cerr << e.what() << std::endl;
-     ResponseErrorMessage errorMessage{ std::string{e.what()} };
-     return std::make_pair(Status_Error, errorMessage.getBufferData());
-  }
-  interpreter::NodeConnectionDTO nodeInfo {
-      .port = global_port,
-      .path = "/tmp/ral.socket",
-      .type = NodeConnectionType {NodeConnectionType_TCP}
-  };
-  interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
-  return std::make_pair(Status_Success, responsePayload.getBufferData());
-}
 
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);
@@ -347,11 +205,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
               .null_count = result.result_frame.get_columns()[0][i].null_count(),
               .dtype_info = dtype_info,
               // custrings data
-              .custrings_views = ipc.count > 0 ? libgdf::ConvertCudaIpcMemHandler(ipc.hstrs) : std::basic_string<int8_t>(),
-              .custrings_viewscount = ipc.count,
-              .custrings_membuffer = ipc.count > 0 ? libgdf::ConvertCudaIpcMemHandler(ipc.hmem) : std::basic_string<int8_t>(),
-              .custrings_membuffersize = ipc.size,
-              .custrings_baseptr = reinterpret_cast<unsigned long>(ipc.base_address)
+              .custrings_data = libgdf::ConvertIpcByteArray(ipc)
             };
 
         }else{
@@ -443,16 +297,108 @@ static result_pair freeResultService(uint64_t accessToken, Buffer&& requestPaylo
 
 
 void load_files(ral::io::data_parser * parser, const std::vector<Uri>& uris, std::vector<gdf_column_cpp>& out_columns) {
-	auto provider = ral::io::uri_data_provider(uris);
+  auto provider = ral::io::uri_data_provider(uris);
   ral::io::data_loader loader( parser,&provider);
   ral::io::Schema schema;
   loader.get_schema(schema);
   loader.load_data(out_columns, {},schema);
+
+}
+
+
+
+static result_pair parseSchemaService(uint64_t accessToken, Buffer&& requestPayloadBuffer) {
+	blazingdb::message::io::DDLCreateTableRequestMessage requestPayload(requestPayloadBuffer.data());
+
+	std::shared_ptr<ral::io::data_parser> parser;
+	if(requestPayload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
+		parser = std::make_shared<ral::io::parquet_parser>();
+
+	}else if(requestPayload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_PARQUET){
+		parser =  std::make_shared<ral::io::csv_parser>(
+				requestPayload.csvDelimiter,
+  				requestPayload.csvLineTerminator,
+  				requestPayload.csvSkipRows,
+				{}, {});
+	}else{
+		//indicate error here
+		//this shoudl be done in the orchestrator
+	}
+
+	 std::vector<Uri> uris;
+	 for (auto file_path : requestPayload.files) {
+	     uris.push_back(Uri{file_path});
+	 }
+
+	auto provider = std::make_shared<ral::io::uri_data_provider>(uris);
+	auto loader = std::make_shared<ral::io::data_loader>( parser,provider);
+	ral::io::Schema schema;
+	loader->get_schema(schema);
+
+
+	blazingdb::protocol::TableSchemaSTL transport_schema = schema.getTransport();
+
+	if(requestPayload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
+		transport_schema.delimiter = requestPayload.delimiter;
+		transport_schema.skipRows = requestPayload.skipRows;
+		transport_schema.lineTerminator = requestPayload.lineTerminator;
+	}
+	transport_schema.files = requestPayload.files;
+
+	blazingdb::protocol::interpreter::CreateTableResponseMessage(transport_schema);
+	return std::make_pair(Status_Success, responsePayload.getBufferData());
 }
 
 static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& requestPayloadBuffer) {
   blazingdb::message::io::FileSystemDMLRequestMessage requestPayload(requestPayloadBuffer.data());
 
+  //make dataloaders
+	std::vector<ral::io::data_loader > & input_loaders;
+	std::vector<ral::io::Schema> & schemas;
+	std::vector<std::string> table_names;
+  for(auto table : requestPayload.tableGroup.tables){
+	  ral::io::Schema schema(table.tableSchema);
+	std::shared_ptr<ral::io::data_parser> parser;
+	  if(table.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
+	  		parser = std::make_shared<ral::io::parquet_parser>();
+
+	  	}else if(table.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_PARQUET){
+	  		parser =  std::make_shared<ral::io::csv_parser>(
+	  				table.tableSchema.csvDelimiter,
+	  				table.tableSchema.csvLineTerminator,
+	  				table.tableSchema.csvSkipRows,
+	  				{}, {});
+	  	}else{
+	  		parser = std::make_shared<ral::io::gdf_parser>(table);
+	  	}
+
+
+	  std::shared_ptr<ral::io::data_provider> provider;
+	  std::vector<Uri> uris;
+	  	 for (auto file_path : table.files) {
+	  	     uris.push_back(Uri{file_path});
+	  	 }
+
+
+
+	  if(table.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV ||
+			  table.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_PARQUET){
+		  	 provider = std::make_shared<ral::io::uri_data_provider>(uris);
+	  }else{
+		  provider = std::make_shared<ral::io::dummy_data_provider>();
+	  }
+	  	auto loader = std::make_shared<ral::io::data_loader>( parser,provider);
+	  	input_loaders.push_back(loader);
+	  	schemas.push_back(schema);
+	  	table_names.push_back(table.name);
+
+  }
+
+//	std::vector<ral::io::data_loader > & input_loaders,
+//	std::vector<ral::io::Schema> & schemas,
+//	std::vector<std::string> table_names,
+	std::string logicalPlan,
+	std::vector<gdf_column_cpp> & outputs
   // ExecutePlan
   std::cout << "accessToken: " << accessToken << std::endl;
   std::cout << "query: " << requestPayload.statement << std::endl;
@@ -465,96 +411,16 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
   
   uint64_t resultToken = 0L;
   try {
-    // Read files
-    std::vector<std::vector<gdf_column_cpp>> input_tables;
-    std::vector<std::string> table_names;
-    std::vector<std::vector<std::string>> all_column_names;
-    for(size_t i = 0; i < requestPayload.tableGroup.tables.size(); i++) {
-      auto table_info = requestPayload.tableGroup.tables[i];
-      std::cout << "\n SchemaType: " << table_info.schemaType << std::endl;
-      std::vector<gdf_column_cpp> table_cpp;
-      if (table_info.schemaType ==  blazingdb::protocol::io::FileSchemaType_PARQUET) {
-        std::vector<Uri> uris;
-        for (auto file_path : table_info.files) {
-          uris.push_back(Uri{file_path});
-        }
-        ral::io::parquet_parser parser;
-        load_files(&parser, uris, table_cpp);
-      } else if (table_info.schemaType ==  blazingdb::protocol::io::FileSchemaType_CSV) {
-        std::vector<Uri> uris = { Uri{table_info.files[0]} }; //@todo, concat many files in one single table
-        auto csv_params = table_info.csv;
-        std::vector<gdf_dtype> types;
-        for(auto val : csv_params.dtypes) {
-          types.push_back( (gdf_dtype) val );
-        }
-        ral::io::csv_parser parser(csv_params.delimiter, csv_params.line_terminator, csv_params.skip_rows, csv_params.names, types);
-        load_files(&parser, uris, table_cpp);
-      } else { //blazingdb::protocol::io::FileSchemaType_GDF
-        // TODO Felipe loading gdf stuff
-        ral::io::gdf_parser parser(table_info.gdf);
-        //load(&parser, uris, table_cpp);
-      }
-      input_tables.push_back(table_cpp);
-      table_names.push_back(table_info.name);
-      all_column_names.push_back(table_info.columnNames);
-    }
 
-    // parse all columns to convert any NVStrings to NVCategory
-    for (int i = 0; i < input_tables.size(); i++){
-      for (int j = 0; j < input_tables[i].size(); j++){
-        if (input_tables[i][j].get_gdf_column()->dtype == GDF_STRING){
-          NVStrings* strs = static_cast<NVStrings*>(input_tables[i][j].get_gdf_column()->data);
-          NVCategory* category = NVCategory::create_from_strings(*strs);
-          input_tables[i][j].get_gdf_column()->data = nullptr;
-          input_tables[i][j].create_gdf_column(category, input_tables[i][j].size(), input_tables[i][j].name());
-        }
-      }
-    }
 
     // Execute query
-    resultToken = evaluate_query(input_tables, table_names, all_column_names, requestPayload.statement, accessToken, {} );
+    resultToken = evaluate_query(input_loaders, schemas, table_names, requestPayload.statement, accessToken );
   } catch (const std::exception& e) {
      std::cerr << e.what() << std::endl;
      ResponseErrorMessage errorMessage{ std::string{e.what()} };
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
 
-  interpreter::NodeConnectionDTO nodeInfo {
-      .port = global_port,
-      .path = "/tmp/ral.socket",
-      .type = NodeConnectionType {NodeConnectionType_TCP}
-  };
-  interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
-  return std::make_pair(Status_Success, responsePayload.getBufferData());
-}
-
-static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayloadBuffer)   {
-  interpreter::ExecutePlanRequestMessage requestPayload(requestPayloadBuffer.data());
-
-  // ExecutePlan
-  std::cout << "accessToken: " << accessToken << std::endl;
-  std::cout << "query: " << requestPayload.getLogicalPlan() << std::endl;
-  std::cout << "tableGroup: " << requestPayload.getTableGroup().name << std::endl;
- 	std::cout << "tables: " << requestPayload.getTableGroup().tables.size() << std::endl;
-  std::cout << "tableSize: " << requestPayload.getTableGroup().tables.size() << std::endl;
-	std::cout << "FirstColumnSize: "
-			<< requestPayload.getTableGroup().tables[0].columns[0].size
-			<< std::endl;
-  std::cout << "resultToken: " << requestPayload.getTableGroup().tables[0].resultToken << std::endl;
-  //Library::Logging::Logger().logInfo("query:\n" + requestPayload.getLogicalPlan());
-
-  std::vector<void *> handles;
-	uint64_t resultToken = 0L;
-  try {
-    std::tuple<std::vector<std::vector<gdf_column_cpp>>, std::vector<std::string>, std::vector<std::vector<std::string>>> request = libgdf::toBlazingDataframe(accessToken, requestPayload.getTableGroup(),handles);
-
-    resultToken = evaluate_query(std::get<0>(request), std::get<1>(request), std::get<2>(request),
-                                        requestPayload.getLogicalPlan(), accessToken, handles);
-  } catch (const std::exception& e) {
-     std::cerr << e.what() << std::endl;
-     ResponseErrorMessage errorMessage{ std::string{e.what()} };
-     return std::make_pair(Status_Error, errorMessage.getBufferData());
-  }
   interpreter::NodeConnectionDTO nodeInfo {
       .port = global_port,
       .path = "/tmp/ral.socket",
@@ -608,7 +474,6 @@ int main(int argc, const char *argv[])
   blazingdb::protocol::UnixSocketConnection connection("/tmp/ral.socket");
   blazingdb::protocol::Server server(connection);
 
-  services.insert(std::make_pair(interpreter::MessageType_ExecutePlan, &executePlanService));
   services.insert(std::make_pair(interpreter::MessageType_ExecutePlanFileSystem, &executeFileSystemPlanService));
 
   services.insert(std::make_pair(interpreter::MessageType_CloseConnection, &closeConnectionService));
@@ -616,9 +481,6 @@ int main(int argc, const char *argv[])
   services.insert(std::make_pair(interpreter::MessageType_FreeResult, &freeResultService));
   services.insert(std::make_pair(interpreter::MessageType_RegisterFileSystem, &registerFileSystem));
   services.insert(std::make_pair(interpreter::MessageType_DeregisterFileSystem, &deregisterFileSystem));
-
-  services.insert(std::make_pair(interpreter::MessageType_LoadCsvSchema, &loadCsvSchema));
-  services.insert(std::make_pair(interpreter::MessageType_LoadParquetSchema, &loadParquetSchema));
 
   services.insert(std::make_pair(9, &freeMemoryCallback));
 

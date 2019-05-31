@@ -714,7 +714,8 @@ int main(int argc, const char *argv[])
 
 #ifdef USE_UNIX_SOCKETS
 
-  blazingdb::protocol::UnixSocketConnection connection(config.getSocketPath());
+  connectionAddress.unix_socket_path = config.getSocketPath();
+  blazingdb::protocol::UnixSocketConnection connection(connectionAddress);
 
 #else
 

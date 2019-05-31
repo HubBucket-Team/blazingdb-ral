@@ -195,11 +195,25 @@ static result_pair loadParquetSchema(uint64_t accessToken, Buffer&& buffer) {
      ResponseErrorMessage errorMessage{ std::string{e.what()} };
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
+  
+  #ifdef USE_UNIX_SOCKETS
+
+  interpreter::NodeConnectionDTO nodeInfo {
+      .port = -1,
+      .path = ral::config::BlazingConfig::getInstance().getSocketPath(),
+      .type = NodeConnectionType {NodeConnectionType_TCP}
+  };
+
+  #else
+
   interpreter::NodeConnectionDTO nodeInfo {
       .port = connectionAddress.tcp_port,
       .path = ral::config::BlazingConfig::getInstance().getSocketPath(),
       .type = NodeConnectionType {NodeConnectionType_TCP}
   };
+
+  #endif
+  
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
   return std::make_pair(Status_Success, responsePayload.getBufferData());
 }
@@ -538,11 +552,24 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
 
+  #ifdef USE_UNIX_SOCKETS
+
+  interpreter::NodeConnectionDTO nodeInfo {
+      .port = -1,
+      .path = ral::config::BlazingConfig::getInstance().getSocketPath(),
+      .type = NodeConnectionType {NodeConnectionType_TCP}
+  };
+
+  #else
+
   interpreter::NodeConnectionDTO nodeInfo {
       .port = connectionAddress.tcp_port,
       .path = ral::config::BlazingConfig::getInstance().getSocketPath(),
       .type = NodeConnectionType {NodeConnectionType_TCP}
   };
+
+  #endif
+
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
   return std::make_pair(Status_Success, responsePayload.getBufferData());
 }
@@ -580,11 +607,25 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
      ResponseErrorMessage errorMessage{ std::string{e.what()} };
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
+  
+  #ifdef USE_UNIX_SOCKETS
+
+  interpreter::NodeConnectionDTO nodeInfo {
+      .port = -1,
+      .path = ral::config::BlazingConfig::getInstance().getSocketPath(),
+      .type = NodeConnectionType {NodeConnectionType_TCP}
+  };
+
+  #else
+
   interpreter::NodeConnectionDTO nodeInfo {
       .port = connectionAddress.tcp_port,
       .path = ral::config::BlazingConfig::getInstance().getSocketPath(),
       .type = NodeConnectionType {NodeConnectionType_TCP}
   };
+
+  #endif
+
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
   return std::make_pair(Status_Success, responsePayload.getBufferData());
 }

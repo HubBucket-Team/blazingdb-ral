@@ -66,10 +66,6 @@ using namespace blazingdb::protocol;
 #include "communication/network/Server.h"
 #include <blazingdb/communication/Context.h>
 
-#include <nvstrings/NVCategory.h>
-#include <nvstrings/NVStrings.h>
-#include <nvstrings/ipc_transfer.h>
-
 const Path FS_NAMESPACES_FILE("/tmp/file_system.bin");
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);
@@ -163,7 +159,7 @@ query_token_t loadParquetAndInsertToResultRepository(std::string path, connectio
 	  
 	    CodeTimer blazing_timer;
 	    std::vector<gdf_column_cpp> columns;
-	    loader.load_data(columns, {});
+	    loader.load_data(columns, {}, false);
 
       blazing_frame output_frame;
       output_frame.add_table(columns);
@@ -248,7 +244,7 @@ query_token_t loadCsvAndInsertToResultRepository(std::string path, std::vector<s
 
 
       std::vector<gdf_column_cpp> columns;
-      loader.load_data(columns, {});
+      loader.load_data(columns, {}, false);
 
       blazing_frame output_frame;
       output_frame.add_table(columns);
@@ -379,11 +375,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
               .null_count = result.result_frame.get_columns()[0][i].null_count(),
               .dtype_info = dtype_info,
               // custrings data
-              .custrings_views = ipc.count > 0 ? libgdf::ConvertCudaIpcMemHandler(ipc.hstrs) : std::basic_string<int8_t>(),
-              .custrings_viewscount = ipc.count,
-              .custrings_membuffer = ipc.count > 0 ? libgdf::ConvertCudaIpcMemHandler(ipc.hmem) : std::basic_string<int8_t>(),
-              .custrings_membuffersize = ipc.size,
-              .custrings_baseptr = reinterpret_cast<unsigned long>(ipc.base_address)
+              .custrings_data = libgdf::ConvertIpcByteArray(ipc)
             };
 
         }else{
@@ -477,7 +469,7 @@ static result_pair freeResultService(uint64_t accessToken, Buffer&& requestPaylo
 void load_files(ral::io::data_parser * parser, const std::vector<Uri>& uris, std::vector<gdf_column_cpp>& out_columns) {
 	auto provider = ral::io::uri_data_provider(uris);
   ral::io::data_loader loader( parser,&provider);
-  loader.load_data(out_columns, {});
+  loader.load_data(out_columns, {}, true);
 }
 
 static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& requestPayloadBuffer) {

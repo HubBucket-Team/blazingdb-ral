@@ -707,27 +707,16 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 
 		index_col.get_gdf_column()->size = index_col_num_rows;
 
-
-		//find the widest possible column
-		int widest_column = 0;
-		for(int i = 0; i < input.get_width();i++){
-			int cur_width;
-			get_column_byte_width(input.get_column(i).get_gdf_column(), &cur_width);
-			if(cur_width > widest_column){
-				widest_column = cur_width;
-			}
-		}
-
-		gdf_column_cpp temp_output;
-		temp_output.create_gdf_column(input.get_column(0).dtype(),index_col.size(),nullptr,widest_column, "");
 		for(int i = 0; i < num_group_columns; i++){
-			temp_output.set_dtype(output_columns_group[i].dtype());
+			auto& input_col = input.get_column(i);
+			gdf_column_cpp temp_output;
+			temp_output.create_gdf_column(input_col.dtype(), index_col.size(), nullptr, get_width_dtype(input_col.dtype()), input_col.name());
 
 			materialize_column(group_by_columns_ptr_out[i],
-					temp_output.get_gdf_column(),
-					index_col.get_gdf_column());
+												temp_output.get_gdf_column(),
+												index_col.get_gdf_column());
 			
-			input.set_column(i,temp_output.clone(input.get_column(i).name()));
+			input.set_column(i, temp_output);
 		}
 
 		return; // since this is group by without aggregations, we dont need to do the rest
@@ -1011,53 +1000,21 @@ void process_sort(blazing_frame & input, std::string query_part){
 	Library::Logging::Logger().logInfo("-> Sort sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
 
 	timer.reset();
-	//find the widest possible column
-	int widest_column = 0;
-	for(int i = 0; i < input.get_width();i++){
-		int cur_width;
-		get_column_byte_width(input.get_column(i).get_gdf_column(), &cur_width);
-		if(cur_width > widest_column){
-			widest_column = cur_width;
-		}
-	}
 
-	gdf_column_cpp temp_output;
-	//TODO de donde saco el nombre de la columna aqui???
-	temp_output.create_gdf_column(input.get_column(0).dtype(),input.get_column(0).size(),nullptr,widest_column, "");
 	//now we need to materialize
 	//i dont think we can do that in place since we are writing and reading out of order
 	for(int i = 0; i < input.get_width();i++){
-		temp_output.set_dtype(input.get_column(i).dtype());
+		auto& input_col = input.get_column(i);
+		gdf_column_cpp temp_output;
+		temp_output.create_gdf_column(input_col.dtype(), input_col.size(), nullptr, get_width_dtype(input_col.dtype()), input_col.name());
 
 		materialize_column(
-				input.get_column(i).get_gdf_column(),
+				input_col.get_gdf_column(),
 				temp_output.get_gdf_column(),
 				index_col.get_gdf_column()
 		);
 
-		input.set_column(i,temp_output.clone(input.get_column(i).name()));
-
-		/*gdf_column_cpp empty;
-
-		int width;
-		get_column_byte_width(input.get_column(i).get_gdf_column(), &width);
-
-		//TODO de donde saco el nombre de la columna aqui???
-		empty.create_gdf_column(input.get_column(i).dtype(),0,nullptr,width, "");
-
-		//copy output back to dat aframe
-
-		gdf_column_cpp new_output;
-		if(input.get_column(i).is_ipc()){
-			//TODO de donde saco el nombre de la columna aqui???
-			new_output.create_gdf_column(input.get_column(i).dtype(), input.get_column(i).size(),nullptr,get_width_dtype(input.get_column(i).dtype()), "");
-			input.set_column(i,new_output);
-		}else{
-			new_output = input.get_column(i);
-		}
-		err = gpu_concat(temp_output.get_gdf_column(), empty.get_gdf_column(), new_output.get_gdf_column());
-
-		//free_gdf_column(&empty);*/
+		input.set_column(i, temp_output);
 	}
 	Library::Logging::Logger().logInfo("-> Sort sub block 3 took " + std::to_string(timer.getDuration()) + " ms");
 }
@@ -1368,7 +1325,14 @@ query_token_t evaluate_query(
 
 		//@todo: hablar con felipe sobre cudaIpcCloseMemHandle
 		for(int i = 0; i < handles.size(); i++){
-			cudaIpcCloseMemHandle(handles[i]);
+			if (handles[i]){
+				cudaError_t error = cudaIpcCloseMemHandle(handles[i]);
+				if (error != cudaSuccess){
+					std::cout<<"Closing handle failed with error: "<<error<<std::endl;
+				}
+			} else {
+				std::cout<<"Closing handle failed because the handle was null"<<std::endl;
+			}
 		}
 	});
 

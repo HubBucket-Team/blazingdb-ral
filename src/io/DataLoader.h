@@ -17,6 +17,10 @@
 #include <arrow/io/interfaces.h>
 #include <memory>
 
+#include <nvstrings/NVCategory.h>
+#include <nvstrings/NVStrings.h>
+#include <nvstrings/ipc_transfer.h>
+
 namespace ral {
 namespace io {
 /**
@@ -34,7 +38,7 @@ public:
 	 * @param columns a vector to receive our output should be of size 0 when it is coming in and it will be allocated by this function
 	 * @param include_column the different files we can read from can have more columns than we actual want to read, this lest us filter some of them out
 	 */
-	void load_data(std::vector<gdf_column_cpp> & columns, std::vector<bool> include_column);
+	void load_data(std::vector<gdf_column_cpp> & columns, std::vector<bool> include_column, bool mapStringToStringCategory);
 private:
 	/**
 	 * DataProviders are able to serve up one or more arrow::io::RandomAccessFile objects
@@ -84,6 +88,8 @@ size_t get_width_dtype(gdf_dtype type){
 		return 0;
 	}else if(type == GDF_STRING){
 		return 0;
+	}else if(type == GDF_STRING_CATEGORY){
+		return 4;
 	}
 }
 
@@ -97,7 +103,7 @@ data_loader::~data_loader() {
 }
 
 
-void data_loader::load_data(std::vector<gdf_column_cpp> & columns, std::vector<bool> include_column){
+void data_loader::load_data(std::vector<gdf_column_cpp> & columns, std::vector<bool> include_column, bool mapStringToStringCategory){
 
 	std::vector<std::vector<gdf_column_cpp> > columns_per_file; //stores all of the columns parsed from each file
 	//iterates through files and parses them into columns
@@ -110,6 +116,20 @@ void data_loader::load_data(std::vector<gdf_column_cpp> & columns, std::vector<b
 		if(file != nullptr){
 			parser->parse(file,converted_data,include_column);
 
+			if (mapStringToStringCategory)
+			{
+				// convert any NVStrings to NVCategory
+				std::for_each(converted_data.begin(), converted_data.end(), [] (auto& col) {
+					if (col.dtype() == GDF_STRING){
+						NVStrings* strs = static_cast<NVStrings*>(col.data());
+						NVCategory* category = NVCategory::create_from_strings(*strs);
+						gdf_column_cpp tempCol;
+						tempCol.create_gdf_column(category, col.size(), col.name());
+						col = tempCol;
+					}
+				});
+			}
+			
 			columns_per_file.push_back(converted_data);
 		}else{
 			std::cout<<"Was unable to open "<<user_readable_file_handle<<std::endl;
@@ -149,11 +169,12 @@ void data_loader::load_data(std::vector<gdf_column_cpp> & columns, std::vector<b
 			//allocate space for the output
 			auto& column = columns[column_index];
 			column.create_gdf_column(columns_per_file[0][column_index].dtype(),
-															total_row_count,
-															nullptr,
-															ral::io::get_width_dtype(columns_per_file[0][column_index].dtype()),
-															columns_per_file[0][column_index].name());
+					total_row_count,
+					nullptr,
+					ral::io::get_width_dtype(columns_per_file[0][column_index].dtype()),
+					columns_per_file[0][column_index].name());
 
+			//collect the columns into an array for the concat function
 			std::vector<gdf_column*> columns_to_concat(num_files);
 			std::transform(columns_per_file.begin(), columns_per_file.end(),
 										columns_to_concat.begin(),

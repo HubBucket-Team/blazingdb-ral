@@ -742,8 +742,9 @@ int main(int argc, const char *argv[])
 
 #else
 
+    // NOTE IMPORTANT PERCY aqui es que pyblazing se entera que este es el ip del RAL en el _send de pyblazing
     config.setLogName("RAL." + ralId + ".log")
-          .setSocketPath(ralId + ":" + std::to_string(ralProtocolPort));
+          .setSocketPath(ralHost);
 
     std::cout << "Socket Name: " << config.getSocketPath() << std::endl;
 

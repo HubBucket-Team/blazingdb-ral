@@ -167,7 +167,7 @@ static int64_t scale_to_64_bit_return_bytes(gdf_scalar input){
 	else if(cur_type == GDF_FLOAT32) data_return =  static_cast<int64_t>(input.data.fp32); //*((int64_t *) &temp_data);
 	else if(cur_type == GDF_FLOAT64) data_return = static_cast<int64_t>(input.data.fp64);  //*((int64_t *) &input.data.fp64);
 	else {
-		std::cout << "Type of data not found." << std::endl;
+		std::cout << "ERROR: data type not found" << std::endl;
 		data_return = 0;
 	}
 

@@ -90,7 +90,7 @@ size_t get_width_dtype(gdf_dtype type){
 	}else if(type == GDF_STRING_CATEGORY){
 		return 4;
 	}else {
-		std::cout << "Type of data not found." << std::endl;
+		std::cout << "ERROR: data type not found" << std::endl;
 		return 0; 
 	}
 }

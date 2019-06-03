@@ -47,19 +47,19 @@ public:
 	gdf_column_cpp & get_column(int column_index){
 
 		if (column_index < 0) {
-			std::cout << "index get off range." << std::endl;
- 			return columns[0][0];
+			std::cout << "ERROR: negative index in get_column" << std::endl;
+			return columns[0][0];
 		}
 
 		int cur_count = 0;
 		for (std::size_t i = 0; i < columns.size(); i++){
-			if ( column_index < cur_count + static_cast<int>(columns[i].size()) ){ // cast to int columns
+			if ( column_index < cur_count + static_cast<int>(columns[i].size()) ){
 				return columns[i][column_index - cur_count];
 			}
 			cur_count += columns[i].size();
 		}
 
-		std::cout << "index get off range." << std::endl;
+		std::cout << "ERROR: index in get_column is out of range" << std::endl;
 		return columns[columns.size() - 1][cur_count - 1];
 	}
 

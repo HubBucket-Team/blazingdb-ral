@@ -112,8 +112,6 @@ inline int RleDecoder::GetBatch(T *values, int batch_size) {
 
     std::vector<uint32_t>                       rleRuns;
     std::vector<uint64_t>                       rleValues;
-    int                                         numRle;
-    int                                         numBitpacked;
     std::vector<std::pair<uint32_t, uint32_t> > bitpackset;
     std::vector<int> unpack32InputOffsets, unpack32InputRunLengths,
       unpack32OutputOffsets;
@@ -181,8 +179,6 @@ inline int RleDecoder::GetBatchWithDict(const T *dictionary,
 
     std::vector<uint32_t> rleRuns;
     std::vector<uint64_t> rleValues;
-    int                   numRle;
-    int                   numBitpacked;
     std::vector<int>      unpack32InputOffsets, unpack32InputRunLengths,
       unpack32OutputOffsets;
     std::vector<int> remainderInputOffsets, remainderBitOffsets,
@@ -194,7 +190,6 @@ inline int RleDecoder::GetBatchWithDict(const T *dictionary,
                                         static_cast<int>(repeat_count_));
             rleRuns.push_back(repeat_batch);
             rleValues.push_back(current_value_);
-            numRle++;
 
             repeat_count_ -= repeat_batch;
             values_read += repeat_batch;
@@ -208,7 +203,6 @@ inline int RleDecoder::GetBatchWithDict(const T *dictionary,
             literal_batch = std::min(literal_batch, buffer_size);
             rleRuns.push_back(literal_batch);
             rleValues.push_back(0);
-            numBitpacked++;
             bit_reader_.SetGpuBatchMetadata(bit_width_,
                                             &indices[0],
                                             literal_batch,

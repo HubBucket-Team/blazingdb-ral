@@ -106,10 +106,10 @@ public:
     stream << std::string(total_width, '-') << "\n";
 
     // Now print the rows of the VTable
-    for (int i = 0; i < _num_rows(); i++) {
+    for (size_t i = 0; i < _num_rows(); i++) {
       stream << "|";
 
-      for (int j = 0; j < size(); j++) {
+      for (size_t j = 0; j < size(); j++) {
         stream << std::string(cell_padding, ' ') << std::setw(column_sizes_[j])
                << columns_[j]->get_as_str(i) << std::string(cell_padding, ' ')
                << "|";

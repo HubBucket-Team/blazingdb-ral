@@ -155,14 +155,13 @@ void gdf_column_cpp::resize(size_t new_size){
 }
 //TODO: needs to be implemented for efficiency though not strictly necessary
 gdf_error gdf_column_cpp::compact(){
-    if( this->allocated_size_valid != gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(this->size()))){
+    if( this->allocated_size_valid != static_cast<std::size_t>(gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(this->size()))) ){
     	//compact valid allcoation
-
     }
 
     int byte_width;
     get_column_byte_width(this->get_gdf_column(),&byte_width);
-    if(this->allocated_size_data != (this->size() * byte_width)){
+    if( this->allocated_size_data != (this->size() * static_cast<std::size_t>(byte_width)) ){
     	//compact data allocation
     }
     return GDF_SUCCESS;

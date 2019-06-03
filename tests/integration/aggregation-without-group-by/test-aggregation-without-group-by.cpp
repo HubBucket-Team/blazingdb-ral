@@ -44,17 +44,20 @@ struct EvaluateQueryTest : public ::testing::Test {
     reference_solution.print(std::cout);
 
     for (size_t index = 0; index < reference_solution.size(); index++) {
-      const auto& reference_column = reference_solution[index];
-      const auto& computed_column = computed_solution[index];
+        const auto& reference_column = reference_solution[index];
+        const auto& computed_column = computed_solution[index];
 
-      auto valid = ((int)computed_column.getValids()[0] & 1);
-      EXPECT_TRUE(valid == valid_result[index]);
+        int valid = 1;
+        if (computed_column.getValids().size() > 0)
+            valid = ((int)computed_column.getValids()[0] & 1);
 
-      if (valid_result[index]) {
-          auto com_val = (int64_t)computed_column[index];
-          auto ref_val = (int64_t)reference_column[index];
-          EXPECT_TRUE(ref_val == com_val);
-      }
+        EXPECT_TRUE(valid == valid_result[index]);
+
+        if (valid_result[index]) {
+            auto com_val = (int64_t)computed_column[index];
+            auto ref_val = (int64_t)reference_column[index];
+            EXPECT_TRUE(ref_val == com_val);
+        }
     }
   }
 };

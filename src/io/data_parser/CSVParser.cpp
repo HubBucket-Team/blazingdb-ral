@@ -45,7 +45,8 @@ void init_default_csv_args(csv_read_arg & args){
 }
 
 void copy_non_data_csv_args(csv_read_arg & args, csv_read_arg & new_args){
-	new_args.num_cols		= args.num_cols;
+	new_args.num_names		= args.num_names;
+	new_args.num_dtype		= args.num_dtype;
     new_args.names			= args.names;
     new_args.dtype			= args.dtype;
     new_args.delimiter		= args.delimiter;
@@ -181,14 +182,15 @@ csv_parser::csv_parser(const std::string & delimiter,
 	init_default_csv_args(args);
 
 	args.names = new const char *[num_columns];
+	args.num_names = num_columns;
 	args.dtype = new const char *[num_columns]; //because dynamically allocating metadata is fun
+	args.num_dtype = num_columns;
 	for(int column_index = 0; column_index < num_columns; column_index++){
 		this->dtype_strings[column_index] = convert_dtype_to_string(dtypes[column_index]);
 		args.dtype[column_index] = this->dtype_strings[column_index].c_str();
 		args.names[column_index] = this->column_names[column_index].c_str();
 	}
 
-	args.num_cols		= num_columns; 
 	args.delimiter 		= delimiter[0];
 	args.lineterminator = line_terminator[0];
 }

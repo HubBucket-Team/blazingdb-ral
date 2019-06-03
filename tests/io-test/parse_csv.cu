@@ -38,7 +38,7 @@ protected:
 				cudaMemcpyDeviceToHost);
 
 		ASSERT_TRUE(out_col.size() > 0);
-		for (std::size_t i = 0; i < out_col.size(); i++) {
+		for (gdf_size_type i = 0; i < out_col.size(); i++) {
 			ASSERT_TRUE(host_output[i] == device_output[i]);
 		}
 	}

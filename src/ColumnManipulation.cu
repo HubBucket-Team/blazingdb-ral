@@ -18,6 +18,7 @@
 
 #include "Utils.cuh"
 #include "string/nvcategory_util.hpp"
+#include "bitmask.hpp"
 
 
 const size_t NUM_ELEMENTS_PER_THREAD_GATHER_BITS = 32;

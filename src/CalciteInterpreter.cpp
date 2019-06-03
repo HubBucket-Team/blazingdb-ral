@@ -1010,6 +1010,7 @@ void process_filter(blazing_frame & input, std::string query_part){
 	stencil.get_gdf_column()->dtype = GDF_BOOL8; // apply_boolean_mask expects the stencil to be a GDF_BOOL8 which for our purposes the way we are using the GDF_INT8 is the same as GDF_BOOL8
 
 	gdf_column temp_idx = cudf::apply_boolean_mask( *(index_col.get_gdf_column()), *(stencil.get_gdf_column()));
+	temp_idx.col_name = nullptr;
 	gdf_column * temp_idx_ptr = new gdf_column;
 	*temp_idx_ptr = temp_idx;
 	gdf_column_cpp temp_idx_col;

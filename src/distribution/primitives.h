@@ -90,7 +90,7 @@ void sortedMerger(std::vector<NodeColumns>& columns, std::vector<int8_t>& sortOr
 
 std::vector<gdf_column_cpp> generatePartitionPlansGroupBy(const Context& context, std::vector<NodeSamples>& samples);
 
-void groupByMerger(std::vector<NodeColumns>& groups, const std::vector<int>& groupColIndices, blazing_frame& output);
+void groupByWithoutAggregationsMerger(std::vector<NodeColumns>& groups, const std::vector<int>& groupColIndices, blazing_frame& output);
 
 void aggregationsMerger(std::vector<NodeColumns>& aggregations, const std::vector<int>& groupColIndices, const std::vector<gdf_agg_op>& aggregationTypes, blazing_frame& output);
 

@@ -98,31 +98,6 @@ std::string extract_table_name(std::string query_part){
 
 }
 
-/*void create_output_and_evaluate(size_t size, gdf_column * output, gdf_column * temp){
-	int width;
-	get_column_byte_width(output, &width);
-	create_gdf_column(output,output->dtype,size,nullptr,width);
-	create_gdf_column(temp,GDF_INT64,size,nullptr,8);
-
-
-	gdf_error err = evaluate_expression(
-			input,
-			get_expression(query_part),
-			&output,
-			&temp);
-
-}*/
-
-std::string get_condition_expression(std::string query_part){
-	return get_named_expression(query_part,"condition");
-}
-
-bool contains_evaluation(std::string expression){
-	std::string cleaned_expression = clean_project_expression(expression);
-	return (cleaned_expression.find("(") != std::string::npos);
-}
-
-
 project_plan_params parse_project_plan(blazing_frame& input, std::string query_part) {
 
 	gdf_error err = GDF_SUCCESS;
@@ -440,67 +415,7 @@ std::string get_condition_expression(std::string query_part){
     return get_named_expression(query_part,"condition");
 }
 
-void create_null_value_gdf_column(int64_t output_value,
-                                       gdf_dtype output_type,
-                                       std::size_t output_size,
-                                       std::string&& output_name,
-                                       gdf_column_cpp& output_column,
-                                       std::vector<gdf_column_cpp>& output_vector) {
-    output_column.create_gdf_column(output_type,
-                                    output_size,
-                                    &output_value,
-                                    get_width_dtype(output_type),
-                                    output_name);
 
-    int invalid = 0;
-    CheckCudaErrors(cudaMemcpy(output_column.valid(), &invalid, 1, cudaMemcpyHostToDevice));
-
-    output_vector.pop_back();
-    output_vector.emplace_back(output_column);
-}
-
-void perform_avg(gdf_column* column_output, gdf_column* column_input) {
-    gdf_column_cpp column_avg;
-    uint64_t avg_sum = 0;
-    uint64_t avg_count = column_input->size - column_input->null_count;
-    {
-        auto dtype = column_input->dtype;
-        auto dtype_size = get_width_dtype(dtype);
-        column_avg.create_gdf_column(dtype, 1, nullptr, dtype_size);
-
-        unsigned int reduction_temp_size = gdf_reduction_get_intermediate_output_size();
-        gdf_column_cpp temp;
-        temp.create_gdf_column(dtype,reduction_temp_size,nullptr,dtype_size, "");
-        CUDF_CALL( gdf_sum(column_input, temp.get_gdf_column()->data, reduction_temp_size) );
-        CheckCudaErrors(cudaMemcpy(&avg_sum, temp.get_gdf_column()->data, dtype_size, cudaMemcpyDeviceToHost));
-    }
-    {
-        auto dtype = column_output->dtype;
-        auto dtype_size = get_width_dtype(dtype);
-        if (Ral::Traits::is_dtype_float32(dtype)) {
-            float result = (float) avg_sum / (float) avg_count;
-            CheckCudaErrors(cudaMemcpy(column_output->data, &result, dtype_size, cudaMemcpyHostToDevice));
-        }
-        else if (Ral::Traits::is_dtype_float64(dtype)) {
-            double result = (double) avg_sum / (double) avg_count;
-            CheckCudaErrors(cudaMemcpy(column_output->data, &result, dtype_size, cudaMemcpyHostToDevice));
-        }
-        else if (Ral::Traits::is_dtype_integer(dtype)) {
-            if (Ral::Traits::is_dtype_signed(dtype)) {
-                int64_t result = (int64_t) avg_sum / (int64_t) avg_count;
-                CheckCudaErrors(cudaMemcpy(column_output->data, &result, dtype_size, cudaMemcpyHostToDevice));
-            }
-            //TODO felipe percy noboa see upgrade to uints
-//            else if (Ral::Traits::is_dtype_unsigned(dtype)) {
-//                uint64_t result = (uint64_t) avg_sum / (uint64_t) avg_count;
-//                CheckCudaErrors(cudaMemcpy(column_output->data, &result, dtype_size, cudaMemcpyHostToDevice));
-//            }
-        }
-        else {
-            throw std::runtime_error{"In perform_avg function: unsupported dtype"};
-        }
-    }
-}
 
 blazing_frame process_join(blazing_frame input, std::string query_part){
 	const std::string INNER_JOIN = "inner";

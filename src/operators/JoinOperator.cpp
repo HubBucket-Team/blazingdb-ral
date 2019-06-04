@@ -19,6 +19,8 @@ using blazingdb::communication::Node;
 using blazingdb::communication::Context;
 } // namespace
 
+const std::string INNER_JOIN = "inner";
+
 namespace ral {
 namespace operators {
 
@@ -32,7 +34,7 @@ public:
 protected:
     void evaluate_join(blazing_frame& input, const std::string& query_part);
 
-    void materialize_column(blazing_frame& input);
+    void materialize_column(blazing_frame& input, bool is_inner_join);
 
 protected:
     const Context* context_;
@@ -95,7 +97,7 @@ void JoinOperator::evaluate_join(blazing_frame& input, const std::string& query)
 }
 
 
-void JoinOperator::materialize_column(blazing_frame& input) {
+void JoinOperator::materialize_column(blazing_frame& input, bool is_inner_join) {
     std::vector<gdf_column_cpp> new_columns(input.get_size_columns());
     size_t first_table_end_index = input.get_size_column();
     int column_width;
@@ -104,8 +106,17 @@ void JoinOperator::materialize_column(blazing_frame& input) {
 
         CUDF_CALL( get_column_byte_width(input.get_column(column_index).get_gdf_column(), &column_width) );
 
-        //TODO de donde saco el nombre de la columna aqui???
-        output.create_gdf_column(input.get_column(column_index).dtype(),left_indices_.size(),nullptr,column_width, input.get_column(column_index).name());
+        if(is_inner_join){
+			if (input.get_column(column_index).valid())
+				output.create_gdf_column(input.get_column(column_index).dtype(),left_indices_.size(),nullptr,column_width, input.get_column(column_index).name());
+			else
+				output.create_gdf_column(input.get_column(column_index).dtype(),left_indices_.size(),nullptr,nullptr,column_width, input.get_column(column_index).name());
+		} else {
+			if (!input.get_column(column_index).valid())
+				input.get_column(column_index).allocate_set_valid();
+
+			output.create_gdf_column(input.get_column(column_index).dtype(),left_indices_.size(),nullptr,column_width, input.get_column(column_index).name());
+		}
 
         if(column_index < first_table_end_index)
         {
@@ -143,7 +154,8 @@ blazing_frame LocalJoinOperator::operator()(blazing_frame& input, const std::str
 
     // Materialize columns
     timer_.reset();
-    materialize_column(input);
+    bool is_inner_join = get_named_expression(query, "joinType") == INNER_JOIN;
+    materialize_column(input, is_inner_join);
     Library::Logging::Logger().logInfo("-> Join sub block 2 took " + std::to_string(timer_.getDuration()) + " ms");
 
     return input;
@@ -167,7 +179,8 @@ blazing_frame DistributedJoinOperator::operator()(blazing_frame& frame, const st
 
     // Materialize columns
     timer_.reset();
-    materialize_column(distributed_frame);
+    bool is_inner_join = get_named_expression(query, "joinType") == INNER_JOIN;
+    materialize_column(distributed_frame, is_inner_join);
     Library::Logging::Logger().logInfo("-> Join sub block 2 took " + std::to_string(timer_.getDuration()) + " ms");
 
     // Done

@@ -11,13 +11,18 @@
 #include "utilities/TableWrapper.h"
 #include "CalciteExpressionParsing.h"
 #include "ColumnManipulation.cuh"
-#include <copying.hpp>
 #include <types.hpp>
 #include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <memory>
 #include <iostream>
+#include "groupby.hpp"
+#include "table.hpp"
+#include "reduction.hpp"
+#include "operators/GroupBy.h"
+#include "copying.hpp"
+#include <thrust/sort.h>
 
 namespace ral {
 namespace distribution {
@@ -363,14 +368,13 @@ std::vector<NodeColumns> partitionData(const Context& context,
     std::cout << "multisearch indices\n";
     print_gdf_column(indexes.get_gdf_column());
 
-    // TODO: split functionality, must be changed for the cudf function.
-    // apply split
-    std::vector<gdf_size_type> indexes_host(indexes.size(), 0);
-    gdf_size_type total_bytes = ral::traits::get_data_size_in_bytes(indexes.get_gdf_column());
+    thrust::sort(static_cast<int32_t*>(indexes.data()), static_cast<int32_t*>(indexes.data()) + indexes.size());
 
-    CheckCudaErrors( cudaMemcpy(indexes_host.data(), indexes.data(), total_bytes, cudaMemcpyDeviceToHost) );
 
-    std::sort(indexes_host.begin(), indexes_host.end());
+    std::vector<std::vector<gdf_column*>> split_table(table.size()); // this will be [colInd][splitInd]
+    for (std::size_t k = 0; k < table.size(); ++k) {
+      split_table[k] = cudf::split(*(table[k].get_gdf_column()), static_cast<int32_t*>(indexes.data()), indexes.size());
+    }
 
     // get nodes
     auto nodes = context.getAllNodes();
@@ -378,27 +382,14 @@ std::vector<NodeColumns> partitionData(const Context& context,
     // generate NodeColumns
     std::vector<NodeColumns> array_node_columns;
     for (std::size_t i = 0; i < nodes.size(); ++i) {
-        gdf_size_type position = table_column_size;
-        if (i == 0) {
-            position = 0;
-        }
-        else if (i <= indexes_host.size()) {
-            position = indexes_host[i - 1];
-        }
-
-        gdf_size_type length = table_column_size - position;
-        if (i < indexes_host.size()) {
-            length = indexes_host[i] - position;
-        }
-
-        std::vector<gdf_column_cpp> columns;
+        std::vector<gdf_column_cpp> columns(table.size());
         for (std::size_t k = 0; k < table.size(); ++k) {
-            columns.emplace_back(table[k].slice(position, length));
+            columns[k].create_gdf_column(split_table[k][i]);
+            columns[k].set_name(table[k].name());
         }
 
         array_node_columns.emplace_back(*nodes[i], std::move(columns));
     }
-
     return array_node_columns;
 }
 
@@ -534,55 +525,64 @@ std::vector<gdf_column_cpp> generatePartitionPlansGroupBy(const Context& context
       print_gdf_column(p.get_gdf_column());
   }
 
-  // Get uniques
-  std::vector<gdf_column*> rawConcatSamples(concatSamples.size());
-  std::vector<gdf_column_cpp> tempGroupedSamples(concatSamples.size());
-  std::vector<gdf_column*> rawTempGroupedSamples(concatSamples.size());
-  for(size_t i = 0; i < concatSamples.size(); i++)
-  {
-    rawConcatSamples[i] = concatSamples[i].get_gdf_column();
-    tempGroupedSamples[i].create_gdf_column(concatSamples[i].dtype(),
-																				concatSamples[i].size(),
-																				nullptr,
-																				get_width_dtype(concatSamples[i].dtype()),
-																				concatSamples[i].name());
-    rawTempGroupedSamples[i] = tempGroupedSamples[i].get_gdf_column();
-  }
+  // // Get uniques
+  // std::vector<gdf_column*> rawConcatSamples(concatSamples.size());
+  // std::vector<gdf_column_cpp> tempGroupedSamples(concatSamples.size());
+  // std::vector<gdf_column*> rawTempGroupedSamples(concatSamples.size());
+  // for(size_t i = 0; i < concatSamples.size(); i++)
+  // {
+  //   rawConcatSamples[i] = concatSamples[i].get_gdf_column();
+  //   tempGroupedSamples[i].create_gdf_column(concatSamples[i].dtype(),
+	// 																			concatSamples[i].size(),
+	// 																			nullptr,
+	// 																			get_width_dtype(concatSamples[i].dtype()),
+	// 																			concatSamples[i].name());
+  //   rawTempGroupedSamples[i] = tempGroupedSamples[i].get_gdf_column();
+  // }
 
-	gdf_column_cpp groupedIndexCol;
-  groupedIndexCol.create_gdf_column(GDF_INT32, outputRowSize, nullptr, get_width_dtype(GDF_INT32), "");
+	// gdf_column_cpp groupedIndexCol;
+  // groupedIndexCol.create_gdf_column(GDF_INT32, outputRowSize, nullptr, get_width_dtype(GDF_INT32), "");
 
-  gdf_size_type indexColNumRows = 0;
+  // gdf_size_type indexColNumRows = 0;
 
-  gdf_context ctxt;
-  ctxt.flag_null_sort_behavior = GDF_NULL_AS_LARGEST; //  Nulls are are treated as largest
-  ctxt.flag_groupby_include_nulls = 1; // Nulls are treated as values in group by keys where NULL == NULL (SQL style)
+  // gdf_context ctxt;
+  // ctxt.flag_null_sort_behavior = GDF_NULL_AS_LARGEST; //  Nulls are are treated as largest
+  // ctxt.flag_groupby_include_nulls = 1; // Nulls are treated as values in group by keys where NULL == NULL (SQL style)
 
-  std::vector<int> groupColumnIndices(concatSamples.size());
-  std::iota(groupColumnIndices.begin(), groupColumnIndices.end(), 0);
+  // std::vector<int> groupColumnIndices(concatSamples.size());
+  // std::iota(groupColumnIndices.begin(), groupColumnIndices.end(), 0);
 
-  CUDF_CALL( gdf_group_by_without_aggregations(rawConcatSamples.size(),
-                                              rawConcatSamples.data(),
-                                              groupColumnIndices.size(),
-                                              groupColumnIndices.data(),
-                                              rawTempGroupedSamples.data(),
-                                              (gdf_size_type*)(groupedIndexCol.get_gdf_column()->data),
-                                              &indexColNumRows,
-                                              &ctxt));
-  groupedIndexCol.resize(indexColNumRows);
+  // CUDF_CALL( gdf_group_by_without_aggregations(rawConcatSamples.size(),
+  //                                             rawConcatSamples.data(),
+  //                                             groupColumnIndices.size(),
+  //                                             groupColumnIndices.data(),
+  //                                             rawTempGroupedSamples.data(),
+  //                                             (gdf_size_type*)(groupedIndexCol.get_gdf_column()->data),
+  //                                             &indexColNumRows,
+  //                                             &ctxt));
+  // groupedIndexCol.resize(indexColNumRows);
 
-  std::vector<gdf_column_cpp> groupedSamples(concatSamples.size());
-  for(size_t i = 0; i < groupedSamples.size(); i++){
-    groupedSamples[i].create_gdf_column(concatSamples[i].dtype(),
-																				groupedIndexCol.size(),
-																				nullptr,
-																				get_width_dtype(concatSamples[i].dtype()),
-																				concatSamples[i].name());
-    materialize_column(rawTempGroupedSamples[i],
-                      groupedSamples[i].get_gdf_column(),
-                      groupedIndexCol.get_gdf_column());
-    groupedSamples[i].update_null_count();
-  }
+  // std::vector<gdf_column_cpp> groupedSamples(concatSamples.size());
+  // for(size_t i = 0; i < groupedSamples.size(); i++){
+  //   groupedSamples[i].create_gdf_column(concatSamples[i].dtype(),
+	// 																			groupedIndexCol.size(),
+	// 																			nullptr,
+	// 																			get_width_dtype(concatSamples[i].dtype()),
+	// 																			concatSamples[i].name());
+  //   materialize_column(rawTempGroupedSamples[i],
+  //                     groupedSamples[i].get_gdf_column(),
+  //                     groupedIndexCol.get_gdf_column());
+  //   groupedSamples[i].update_null_count();
+  // }
+
+/*****/
+
+    std::vector<int> groupColumnIndices(concatSamples.size());
+    std::iota(groupColumnIndices.begin(), groupColumnIndices.end(), 0);
+    std::vector<gdf_column_cpp> groupedSamples = ral::operators::groupby_without_aggregations(concatSamples, groupColumnIndices); 
+    size_t number_of_groups = groupedSamples[0].size();
+
+/****/
 
   std::cout << "After Group\n";
   for(auto& p : groupedSamples)
@@ -598,8 +598,8 @@ std::vector<gdf_column_cpp> generatePartitionPlansGroupBy(const Context& context
   }
 
   gdf_column_cpp sortedIndexCol;
-	sortedIndexCol.create_gdf_column(GDF_INT32, groupedIndexCol.size(), nullptr, get_width_dtype(GDF_INT32), "");
-
+  sortedIndexCol.create_gdf_column(GDF_INT32, number_of_groups, nullptr, get_width_dtype(GDF_INT32), "");
+	
 	gdf_context gdfContext;
 	gdfContext.flag_null_sort_behavior = GDF_NULL_AS_LARGEST; // Nulls are are treated as largest
 
@@ -666,7 +666,7 @@ std::vector<gdf_column_cpp> generatePartitionPlansGroupBy(const Context& context
   return pivots;
 }
 
-void groupByMerger(std::vector<NodeColumns>& groups, const std::vector<int>& groupColIndices, blazing_frame& output){
+void groupByWithoutAggregationsMerger(std::vector<NodeColumns>& groups, const std::vector<int>& groupColIndices, blazing_frame& output){
   // Concat
   size_t totalConcatsOperations = groupColIndices.size();
   int outputRowSize = 0;
@@ -712,52 +712,59 @@ void groupByMerger(std::vector<NodeColumns>& groups, const std::vector<int>& gro
   }
 
   // Do groupBy
-  size_t nCols = concatGroups.size();
+  // size_t nCols = concatGroups.size();
 
-  std::vector<gdf_column*> rawCols(nCols);
-  std::vector<gdf_column_cpp> outputColumns(nCols);
-  std::vector<gdf_column*> rawOutputColumns(nCols);
-  for(size_t i = 0; i < nCols; i++){
-    rawCols[i] = concatGroups[i].get_gdf_column();
-    outputColumns[i].create_gdf_column(concatGroups[i].dtype(),
-																			outputRowSize,
-																			nullptr,
-																			get_width_dtype(concatGroups[i].dtype()),
-																			concatGroups[i].name());
-    rawOutputColumns[i] = outputColumns[i].get_gdf_column();
-  }
+  // std::vector<gdf_column*> rawCols(nCols);
+  // std::vector<gdf_column_cpp> outputColumns(nCols);
+  // std::vector<gdf_column*> rawOutputColumns(nCols);
+  // for(size_t i = 0; i < nCols; i++){
+  //   rawCols[i] = concatGroups[i].get_gdf_column();
+  //   outputColumns[i].create_gdf_column(concatGroups[i].dtype(),
+	// 																		outputRowSize,
+	// 																		nullptr,
+	// 																		get_width_dtype(concatGroups[i].dtype()),
+	// 																		concatGroups[i].name());
+  //   rawOutputColumns[i] = outputColumns[i].get_gdf_column();
+  // }
 
-	gdf_column_cpp indexCol;
-  indexCol.create_gdf_column(GDF_INT32, outputRowSize, nullptr, get_width_dtype(GDF_INT32), "");
+	// gdf_column_cpp indexCol;
+  // indexCol.create_gdf_column(GDF_INT32, outputRowSize, nullptr, get_width_dtype(GDF_INT32), "");
 
-  gdf_size_type indexColNumRows = 0;
+  // gdf_size_type indexColNumRows = 0;
 
-  gdf_context ctxt;
-  ctxt.flag_null_sort_behavior = GDF_NULL_AS_LARGEST; //  Nulls are are treated as largest
-  ctxt.flag_groupby_include_nulls = 1; // Nulls are treated as values in group by keys where NULL == NULL (SQL style)
+  // gdf_context ctxt;
+  // ctxt.flag_null_sort_behavior = GDF_NULL_AS_LARGEST; //  Nulls are are treated as largest
+  // ctxt.flag_groupby_include_nulls = 1; // Nulls are treated as values in group by keys where NULL == NULL (SQL style)
 
-  CUDF_CALL( gdf_group_by_without_aggregations(rawCols.size(),
-                                              rawCols.data(),
-                                              groupColIndices.size(),
-                                              groupColIndices.data(),
-                                              rawOutputColumns.data(),
-                                              (gdf_size_type*)(indexCol.get_gdf_column()->data),
-                                              &indexColNumRows,
-                                              &ctxt));
-  indexCol.resize(indexColNumRows);
+  // CUDF_CALL( gdf_group_by_without_aggregations(rawCols.size(),
+  //                                             rawCols.data(),
+  //                                             groupColIndices.size(),
+  //                                             groupColIndices.data(),
+  //                                             rawOutputColumns.data(),
+  //                                             (gdf_size_type*)(indexCol.get_gdf_column()->data),
+  //                                             &indexColNumRows,
+  //                                             &ctxt));
+  // indexCol.resize(indexColNumRows);
 
-  std::vector<gdf_column_cpp> groupedOutput(nCols);
-  for(size_t i = 0; i < nCols; i++){
-    groupedOutput[i].create_gdf_column(concatGroups[i].dtype(),
-																				indexCol.size(),
-																				nullptr,
-																				get_width_dtype(concatGroups[i].dtype()),
-																				concatGroups[i].name());
-    materialize_column(rawOutputColumns[i],
-                      groupedOutput[i].get_gdf_column(),
-                      indexCol.get_gdf_column());
-    groupedOutput[i].update_null_count();
-  }
+  // std::vector<gdf_column_cpp> groupedOutput(nCols);
+  // for(size_t i = 0; i < nCols; i++){
+  //   groupedOutput[i].create_gdf_column(concatGroups[i].dtype(),
+	// 																			indexCol.size(),
+	// 																			nullptr,
+	// 																			get_width_dtype(concatGroups[i].dtype()),
+	// 																			concatGroups[i].name());
+  //   materialize_column(rawOutputColumns[i],
+  //                     groupedOutput[i].get_gdf_column(),
+  //                     indexCol.get_gdf_column());
+  //   groupedOutput[i].update_null_count();
+  // }
+
+  /**************/
+  std::vector<gdf_column_cpp> groupedOutput = ral::operators::groupby_without_aggregations(concatGroups, groupColIndices);    
+
+  /**************/
+
+
 
   std::cout << "After Merge\n";
   for(auto& p : groupedOutput)
@@ -770,6 +777,7 @@ void groupByMerger(std::vector<NodeColumns>& groups, const std::vector<int>& gro
 }
 
 namespace {
+  // TODO DUPLICATE IN GROUP BY
 void aggregations_with_groupby(gdf_agg_op agg_op, std::vector<gdf_column*>& group_by_columns_ptr, gdf_column_cpp& aggregation_input, std::vector<gdf_column*>& group_by_columns_ptr_out, gdf_column_cpp& output_column){
 	gdf_context ctxt;
 	ctxt.flag_distinct = (agg_op == GDF_COUNT_DISTINCT);
@@ -834,66 +842,82 @@ void aggregations_with_groupby(gdf_agg_op agg_op, std::vector<gdf_column*>& grou
 		}
 }
 
-void aggregations_without_groupby(gdf_agg_op agg_op, gdf_column_cpp& aggregation_input, gdf_column_cpp& output_column){
+// TODO DUPLICATE IN GROUP BY
+gdf_reduction_op gdf_agg_op_to_gdf_reduction_op(gdf_agg_op agg_op){
+	switch(agg_op){
+		case GDF_SUM:
+			return GDF_REDUCTION_SUM;
+		case GDF_MIN:
+			return GDF_REDUCTION_MIN;
+		case GDF_MAX:
+			return GDF_REDUCTION_MAX; 
+		default:
+			std::cout<<"ERROR:	Unexpected gdf_agg_op"<<std::endl;
+			return GDF_REDUCTION_SUM;
+	}
+}
+
+// TODO DUPLICATE IN GROUP BY
+void aggregations_without_groupby(gdf_agg_op agg_op, gdf_column_cpp& aggregation_input, gdf_column_cpp& output_column, gdf_dtype output_type, std::string output_column_name){
 	gdf_column_cpp temp;
 	switch(agg_op){
 		case GDF_SUM:
-			if (aggregation_input.size() == 0) {
-				// Set output_column data to invalid
-				CheckCudaErrors(cudaMemset(output_column.valid(), (gdf_valid_type)0, output_column.get_valid_size()));
-				output_column.update_null_count();
-				break;
-			}
-			temp.create_gdf_column(output_column.dtype(), gdf_reduction_get_intermediate_output_size(), nullptr, get_width_dtype(output_column.dtype()), "");
-			CUDF_CALL(gdf_sum(aggregation_input.get_gdf_column(), temp.data(), temp.size()));
-			CheckCudaErrors(cudaMemcpy(output_column.data(), temp.data(), 1 * get_width_dtype(output_column.dtype()), cudaMemcpyDeviceToDevice));
-			break;
 		case GDF_MIN:
-			if (aggregation_input.size() == 0) {
-				// Set output_column data to invalid
-				CheckCudaErrors(cudaMemset(output_column.valid(), (gdf_valid_type)0, output_column.get_valid_size()));
-				output_column.update_null_count();
-				break;
-			}
-			temp.create_gdf_column(output_column.dtype(), gdf_reduction_get_intermediate_output_size(), nullptr, get_width_dtype(output_column.dtype()), "");
-			CUDF_CALL(gdf_min(aggregation_input.get_gdf_column(), temp.data(), temp.size()));
-			CheckCudaErrors(cudaMemcpy(output_column.data(), temp.data(), 1 * get_width_dtype(output_column.dtype()), cudaMemcpyDeviceToDevice));
-			break;
 		case GDF_MAX:
 			if (aggregation_input.size() == 0) {
 				// Set output_column data to invalid
-				CheckCudaErrors(cudaMemset(output_column.valid(), (gdf_valid_type)0, output_column.get_valid_size()));
-				output_column.update_null_count();
+				gdf_scalar null_value;
+				null_value.is_valid = false;
+				null_value.dtype = output_type;
+				output_column.create_gdf_column(null_value, output_column_name);	
+				break;
+			} else {
+				gdf_reduction_op reduction_op = gdf_agg_op_to_gdf_reduction_op(agg_op);
+				gdf_scalar reduction_out = cudf::reduction(aggregation_input.get_gdf_column(), reduction_op, output_type);
+				output_column.create_gdf_column(reduction_out, output_column_name);
 				break;
 			}
-			temp.create_gdf_column(output_column.dtype(), gdf_reduction_get_intermediate_output_size(), nullptr, get_width_dtype(output_column.dtype()), "");
-			CUDF_CALL(gdf_max(aggregation_input.get_gdf_column(), temp.data(), temp.size()));
-			CheckCudaErrors(cudaMemcpy(output_column.data(), temp.data(), 1 * get_width_dtype(output_column.dtype()), cudaMemcpyDeviceToDevice));
-			break;
-		// case GDF_AVG:
-		// 	if (aggregation_input.size() == 0) {
-		// 		// Set output_column data to invalid
-		// 		CheckCudaErrors(cudaMemset(output_column.valid(), (gdf_valid_type)0, output_column.get_valid_size()));
-		// 		output_column.update_null_count();
-		// 		break;
-		// 	}
-		// 	perform_avg(output_column.get_gdf_column(), aggregation_input.get_gdf_column());
-		// 	break;
+		case GDF_AVG:
+			if (aggregation_input.size() == 0 || (aggregation_input.size() == aggregation_input.null_count())) {
+				// Set output_column data to invalid
+				gdf_scalar null_value;
+				null_value.is_valid = false;
+				null_value.dtype = output_type;
+				output_column.create_gdf_column(null_value, output_column_name);	
+				break;
+			} else {
+				gdf_dtype sum_output_type = get_aggregation_output_type(aggregation_input.dtype(),GDF_SUM, false);
+				gdf_scalar avg_sum_scalar = cudf::reduction(aggregation_input.get_gdf_column(), GDF_REDUCTION_SUM, sum_output_type);
+				long avg_count = aggregation_input.get_gdf_column()->size - aggregation_input.get_gdf_column()->null_count;
+
+				assert(output_type == GDF_FLOAT64);
+				assert(sum_output_type == GDF_INT64 || sum_output_type == GDF_FLOAT64);
+				
+				gdf_scalar avg_scalar;
+				avg_scalar.dtype = GDF_FLOAT64;
+				avg_scalar.is_valid = true;
+				if (avg_sum_scalar.dtype == GDF_INT64)
+					avg_scalar.data.fp64 = (double)avg_sum_scalar.data.si64/(double)avg_count;
+				else
+					avg_scalar.data.fp64 = (double)avg_sum_scalar.data.fp64/(double)avg_count;
+
+				output_column.create_gdf_column(avg_scalar, output_column_name);
+				break;
+			}			
 		case GDF_COUNT:
 		{
-			// output dtype is GDF_UINT64
-			// defined in 'get_aggregation_output_type' function.
-			uint64_t result = aggregation_input.size() - aggregation_input.null_count();
-			CheckCudaErrors(cudaMemcpy(output_column.data(), &result, sizeof(uint64_t), cudaMemcpyHostToDevice));
+			gdf_scalar reduction_out;
+			reduction_out.dtype = GDF_INT64;
+			reduction_out.is_valid = true;
+			reduction_out.data.si64 = aggregation_input.get_gdf_column()->size - aggregation_input.get_gdf_column()->null_count;   
+			
+			output_column.create_gdf_column(reduction_out, output_column_name);
 			break;
 		}
 		case GDF_COUNT_DISTINCT:
 		{
-			// output dtype is GDF_UINT64
-			// defined in 'get_aggregation_output_type' function.
-			uint64_t result = aggregation_input.size() - aggregation_input.null_count();
-			CheckCudaErrors(cudaMemcpy(output_column.data(), &result, sizeof(uint64_t), cudaMemcpyHostToDevice));
-			break;
+			// TODO not currently supported
+			std::cout<<"ERROR: COUNT DISTINCT currently not supported without a group by"<<std::endl;
 		}
 	}
 }
@@ -958,20 +982,25 @@ void aggregationsMerger(std::vector<NodeColumns>& aggregations, const std::vecto
 		rawGroupedColumns[i] = groupedColumns[i].get_gdf_column();
 	}
 
+  // when we are merging COUNT aggregations, we want to SUM them, not use COUNT
+  std::vector<gdf_agg_op> modAggregationTypes(aggregationTypes.size());
+  for(size_t i = 0; i < aggregationTypes.size(); i++){
+    modAggregationTypes[i] = aggregationTypes[i] == GDF_COUNT ? GDF_SUM : aggregationTypes[i];
+  }
+
 	// If we have no groups you will output only one row
 	size_t aggregation_size = (groupColIndices.size() == 0 ? 1 : outputRowSize);
 
-	std::vector<gdf_column_cpp> aggregatedColumns(aggregationTypes.size());
-	for(size_t i = 0; i < aggregationTypes.size(); i++){
+	std::vector<gdf_column_cpp> aggregatedColumns(modAggregationTypes.size());
+	for(size_t i = 0; i < modAggregationTypes.size(); i++){
     // Use "groupColIndices.size() + i" because concatAggregations has the same layout as std::vector<NodeColumns>& aggregations
 		gdf_column_cpp& aggregationInput = concatAggregations[groupColIndices.size() + i];
 
-		aggregatedColumns[i].create_gdf_column(aggregationInput.dtype(), aggregation_size, nullptr, get_width_dtype(aggregationInput.dtype()), aggregationInput.name());
-
 		if (groupColIndices.size() == 0) {
-			aggregations_without_groupby(aggregationTypes[i], aggregationInput, aggregatedColumns[i]);
+			aggregations_without_groupby(modAggregationTypes[i], aggregationInput, aggregatedColumns[i], aggregationInput.dtype(), aggregationInput.name());
 		}else{
-			aggregations_with_groupby(aggregationTypes[i],
+      aggregatedColumns[i].create_gdf_column(aggregationInput.dtype(), aggregation_size, nullptr, get_width_dtype(aggregationInput.dtype()), aggregationInput.name());
+			aggregations_with_groupby(modAggregationTypes[i],
 																rawGroupByColumns,
 																aggregationInput,
 																rawGroupedColumns,
@@ -1066,31 +1095,30 @@ std::vector<NodeColumns> generateJoinPartitions(const Context& context,
     // Erase input table
     table.clear();
 
-    // Get all nodes
-    auto nodes = context.getAllNodes();
-
-    // Create output - NodeColumns
-    std::vector<NodeColumns> result;
-
-    // Populate output - NodeColumns
-    for (gdf_size_type k = 0; k < number_nodes; ++k) {
-        // Calculate indices
-        gdf_size_type init = partition_offset[k];
-        gdf_size_type length = input_column_size - init;
-        if (k < (gdf_size_type)(partition_offset.size() - 1)) {
-            length = partition_offset[k + 1] - init;
-        }
-
-        // Populate data
-        std::vector<gdf_column_cpp> columns;
-        for (gdf_size_type i = 0; i < (gdf_size_type) output_columns.size(); ++i) {
-            columns.emplace_back(output_columns[i].slice(init, length));
-        }
-        result.emplace_back(*nodes[k], std::move(columns));
+    // lets get the split indices. These are all the partition_offset, except for the first since its just 0
+    rmm::device_vector<gdf_index_type> indexes(number_nodes);
+    CheckCudaErrors( cudaMemcpy(indexes.data().get(), partition_offset.data() + 1, partition_offset.data() + number_nodes, cudaMemcpyHostToDevice) );
+    
+    std::vector<std::vector<gdf_column*>> split_table(table.size()); // this will be [colInd][splitInd]
+    for (std::size_t k = 0; k < table.size(); ++k) {
+      split_table[k] = cudf::split(*(table[k].get_gdf_column()), static_cast<int32_t*>(indexes.get_gdf_column().data), indexes.size());
     }
 
-    // Done
-    return result;
+    // get nodes
+    auto nodes = context.getAllNodes();
+
+    // generate NodeColumns
+    std::vector<NodeColumns> array_node_columns;
+    for (std::size_t i = 0; i < nodes.size(); ++i) {
+        std::vector<gdf_column_cpp> columns(output_columns.size());
+        for (std::size_t k = 0; k < output_columns.size(); ++k) {
+            columns[k].create_gdf_column(split_table[k][j]);
+            columns[k].set_name(output_columns[k].name());
+        }
+
+        array_node_columns.emplace_back(*nodes[i], std::move(columns));
+    }
+    return array_node_columns;
 }
 
 } // namespace distribution

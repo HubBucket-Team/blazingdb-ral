@@ -1,4 +1,5 @@
 #include "distribution/primitives.h"
+#include "distribution/primitives_util.cuh"
 #include "cuDF/generator/sample_generator.h"
 #include "communication/network/Server.h"
 #include "communication/network/Client.h"
@@ -22,7 +23,7 @@
 #include "reduction.hpp"
 #include "operators/GroupBy.h"
 #include "copying.hpp"
-#include <thrust/sort.h>
+
 
 namespace ral {
 namespace distribution {
@@ -322,6 +323,7 @@ std::vector<NodeColumns> split_data_into_NodeColumns(const Context& context, con
     for (std::size_t i = 0; i < nodes.size(); ++i) {
         std::vector<gdf_column_cpp> columns(table.size());
         for (std::size_t k = 0; k < table.size(); ++k) {
+          split_table[k][i]->col_name = nullptr;
             columns[k].create_gdf_column(split_table[k][i]);
             columns[k].set_name(table[k].name());
         }
@@ -393,8 +395,8 @@ std::vector<NodeColumns> partitionData(const Context& context,
     std::cout << "multisearch indices\n";
     print_gdf_column(indexes.get_gdf_column());
 
-    thrust::sort(static_cast<gdf_index_type*>(indexes.data()), static_cast<gdf_index_type*>(indexes.data()) + indexes.size());
-
+    sort_indices(indexes);
+    
     return split_data_into_NodeColumns(context, table, indexes);    
 }
 

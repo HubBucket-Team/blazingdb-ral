@@ -84,22 +84,18 @@ void result_set_repository::update_token(query_token_t token, blazing_frame fram
 
 			//TODO the gather_and_remap here is for example in the case of sorting where the order of the indexes changes
 			//we must figure out a way to avoid this when is no needed
-			NVCategory* new_category = static_cast<NVCategory *> (frame.get_column(i).dtype_info().category)->gather_and_remap( static_cast<int *>(frame.get_column(i).data()), frame.get_column(i).size());
-			NVStrings * new_strings = new_category->to_strings();
-			NVCategory::destroy(new_category);
-
-			gdf_column * new_gdf_column = new gdf_column;
-			new_gdf_column->size = frame.get_column(i).size();
-			new_gdf_column->null_count = 0;
-			new_gdf_column->valid = nullptr;
-			new_gdf_column->data = (void * ) new_strings;
-			new_gdf_column->dtype = GDF_STRING;
-			new_gdf_column->col_name = const_cast<char*>(frame.get_column(i).name().c_str());
+			NVStrings * new_strings = nullptr;
+			if (frame.get_column(i).size() > 0){
+				NVCategory* new_category = static_cast<NVCategory *> (frame.get_column(i).dtype_info().category)->gather_and_remap( static_cast<int *>(frame.get_column(i).data()), frame.get_column(i).size());
+				new_strings = new_category->to_strings();
+				NVCategory::destroy(new_category);
+			}
 
 			gdf_column_cpp string_column;
-			string_column.create_gdf_column(new_gdf_column);
+			string_column.create_gdf_column(new_strings, frame.get_column(i).size(), frame.get_column(i).name());
 			
-			frame.set_column(i,string_column);			
+			frame.set_column(i, string_column);	
+
 			GDFRefCounter::getInstance()->deregister_column(frame.get_column(i).get_gdf_column());
 		}else{
 			GDFRefCounter::getInstance()->deregister_column(frame.get_column(i).get_gdf_column());
@@ -246,7 +242,7 @@ gdf_column_cpp result_set_repository::get_column(connection_id_t connection, col
 	if(this->precalculated_columns[columnToken].dtype() == GDF_STRING){
 		gdf_column_cpp temp_column; //allocar convertir a NVCategory
 		NVStrings * strings = static_cast<NVStrings *>(this->precalculated_columns[columnToken].data());
-		NVCategory * category = NVCategory::create_from_strings(*strings);
+		NVCategory * category = strings ? NVCategory::create_from_strings(*strings) : NVCategory::create_from_array(nullptr, 0);
 		temp_column.create_gdf_column(category, this->precalculated_columns[columnToken].size(),this->precalculated_columns[columnToken].name());
 		return temp_column;
 	}else{

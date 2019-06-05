@@ -307,6 +307,31 @@ std::vector<gdf_column_cpp> getPartitionPlan(const Context& context){
   return std::move(concreteMessage->getColumns());
 }
 
+std::vector<NodeColumns> split_data_into_NodeColumns(const Context& context, const std::vector<gdf_column_cpp>& table, const gdf_column_cpp & indexes){
+
+  std::vector<std::vector<gdf_column*>> split_table(table.size()); // this will be [colInd][splitInd]
+    for (std::size_t k = 0; k < table.size(); ++k) {
+      split_table[k] = cudf::split(*(table[k].get_gdf_column()), static_cast<gdf_index_type*>(indexes.data()), indexes.size());
+    }
+
+    // get nodes
+    auto nodes = context.getAllNodes();
+
+    // generate NodeColumns
+    std::vector<NodeColumns> array_node_columns;
+    for (std::size_t i = 0; i < nodes.size(); ++i) {
+        std::vector<gdf_column_cpp> columns(table.size());
+        for (std::size_t k = 0; k < table.size(); ++k) {
+            columns[k].create_gdf_column(split_table[k][i]);
+            columns[k].set_name(table[k].name());
+        }
+
+        array_node_columns.emplace_back(*nodes[i], std::move(columns));
+    }
+    return array_node_columns;
+}
+
+
 std::vector<NodeColumns> partitionData(const Context& context,
                                        std::vector<gdf_column_cpp>& table,
                                        std::vector<int>& searchColIndices,
@@ -368,29 +393,9 @@ std::vector<NodeColumns> partitionData(const Context& context,
     std::cout << "multisearch indices\n";
     print_gdf_column(indexes.get_gdf_column());
 
-    thrust::sort(static_cast<int32_t*>(indexes.data()), static_cast<int32_t*>(indexes.data()) + indexes.size());
+    thrust::sort(static_cast<gdf_index_type*>(indexes.data()), static_cast<gdf_index_type*>(indexes.data()) + indexes.size());
 
-
-    std::vector<std::vector<gdf_column*>> split_table(table.size()); // this will be [colInd][splitInd]
-    for (std::size_t k = 0; k < table.size(); ++k) {
-      split_table[k] = cudf::split(*(table[k].get_gdf_column()), static_cast<int32_t*>(indexes.data()), indexes.size());
-    }
-
-    // get nodes
-    auto nodes = context.getAllNodes();
-
-    // generate NodeColumns
-    std::vector<NodeColumns> array_node_columns;
-    for (std::size_t i = 0; i < nodes.size(); ++i) {
-        std::vector<gdf_column_cpp> columns(table.size());
-        for (std::size_t k = 0; k < table.size(); ++k) {
-            columns[k].create_gdf_column(split_table[k][i]);
-            columns[k].set_name(table[k].name());
-        }
-
-        array_node_columns.emplace_back(*nodes[i], std::move(columns));
-    }
-    return array_node_columns;
+    return split_data_into_NodeColumns(context, table, indexes);    
 }
 
 void distributePartitions(const Context& context, std::vector<NodeColumns>& partitions){
@@ -1096,29 +1101,10 @@ std::vector<NodeColumns> generateJoinPartitions(const Context& context,
     table.clear();
 
     // lets get the split indices. These are all the partition_offset, except for the first since its just 0
-    rmm::device_vector<gdf_index_type> indexes(number_nodes);
-    CheckCudaErrors( cudaMemcpy(indexes.data().get(), partition_offset.data() + 1, partition_offset.data() + number_nodes, cudaMemcpyHostToDevice) );
+    gdf_column_cpp indexes;
+    indexes.create_gdf_column(GDF_INT32, number_nodes - 1, partition_offset.data() + 1, nullptr, get_width_dtype(GDF_INT32), "");
     
-    std::vector<std::vector<gdf_column*>> split_table(table.size()); // this will be [colInd][splitInd]
-    for (std::size_t k = 0; k < table.size(); ++k) {
-      split_table[k] = cudf::split(*(table[k].get_gdf_column()), static_cast<int32_t*>(indexes.get_gdf_column().data), indexes.size());
-    }
-
-    // get nodes
-    auto nodes = context.getAllNodes();
-
-    // generate NodeColumns
-    std::vector<NodeColumns> array_node_columns;
-    for (std::size_t i = 0; i < nodes.size(); ++i) {
-        std::vector<gdf_column_cpp> columns(output_columns.size());
-        for (std::size_t k = 0; k < output_columns.size(); ++k) {
-            columns[k].create_gdf_column(split_table[k][j]);
-            columns[k].set_name(output_columns[k].name());
-        }
-
-        array_node_columns.emplace_back(*nodes[i], std::move(columns));
-    }
-    return array_node_columns;
+    return split_data_into_NodeColumns(context, output_columns, indexes);
 }
 
 } // namespace distribution

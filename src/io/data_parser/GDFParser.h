@@ -42,7 +42,7 @@ public:
 ;
 
 private:
-	blazingdb::message::io::FileSystemBlazingTableSchema table_schema;
+	blazingdb::message::io::FileSystemBlazingTableSchema * table_schema;
 	std::vector<void *> handles;
 	uint64_t access_token;
 };

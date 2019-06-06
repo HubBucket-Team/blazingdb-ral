@@ -5,8 +5,8 @@
  *      Author: felipe
  */
 
-#ifndef SCHEMA_H_
-#define SCHEMA_H_
+#ifndef BLAZING_RAL_SCHEMA_H_
+#define BLAZING_RAL_SCHEMA_H_
 
 
 #include <vector>
@@ -67,4 +67,4 @@ private:
 } /* namespace io */
 } /* namespace ral */
 
-#endif /* SCHEMA_H_ */
+#endif /* BLAZING_RAL_SCHEMA_H_ */

@@ -9,6 +9,7 @@
 #include "ral-message.cuh"
 #include <blazingdb/protocol/message/utils.h>
 #include <blazingdb/protocol/message/interpreter/gdf_dto.h>
+#include <blazingdb/protocol/message/io/file_system.h>
 
 namespace ral {
 namespace io {
@@ -17,7 +18,9 @@ namespace io {
 
 gdf_parser::gdf_parser(blazingdb::message::io::FileSystemBlazingTableSchema * table_schema, uint64_t accessToken) : access_token(accessToken) {
 	// TODO Auto-generated constructor stub
-	this->table_schema = *table_schema;
+	this->table_schema = table_schema;
+
+	// WSM TODO table_schema news to be newed up and copy in the properties
 }
 
 gdf_parser::~gdf_parser() {
@@ -42,12 +45,12 @@ void gdf_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		size_t file_index){
 
 
-	for(auto column : this->table_schema.gdf.columns) {
+	for(auto column : this->table_schema->gdf.columns) {
 
 		gdf_column_cpp col;
 		size_t column_index = 0;
 
-		if (this->table_schema.gdf.columnTokens[column_index] == 0){
+		if (this->table_schema->gdf.columnTokens[column_index] == 0){
 			//const std::string column_name = table.columnNames.at(column_index);
 			const std::string column_name = "";
 
@@ -78,7 +81,7 @@ void gdf_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 				handles.push_back(col.valid());
 			}
 		}else{
-			col = result_set_repository::get_instance().get_column(this->access_token, this->table_schema.gdf.columnTokens[column_index]);
+			col = result_set_repository::get_instance().get_column(this->access_token, this->table_schema->gdf.columnTokens[column_index]);
 		}
 
 		columns.push_back(col);
@@ -94,13 +97,13 @@ void gdf_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAcces
 	std::vector<std::string> names;
 	std::vector<gdf_dtype> types;
 
-	std::for_each(this->table_schema.gdf.columns.begin(),this->table_schema.gdf.columns.end(),
+	std::for_each(this->table_schema->gdf.columns.begin(),this->table_schema->gdf.columns.end(),
 			[&types](gdf_dto::gdf_column column)
 			{
 		types.push_back((gdf_dtype) column.dtype);
 			});
 
-	names = this->table_schema.tableSchema.names;
+	names = this->table_schema->tableSchema.names;
 	ral::io::Schema temp_schema(names,types);
 	schema = temp_schema;
 	//generate schema from message here

@@ -52,8 +52,9 @@ using namespace blazingdb::protocol;
 #include "io/data_parser/CSVParser.h"
 #include "io/data_parser/GDFParser.h"
 #include "io/data_parser/ParquetParser.h"
-
+#include "io/data_provider/DummyProvider.h"
 #include "io/data_provider/UriDataProvider.h"
+
 #include "io/data_parser/DataParser.h"
 #include "io/data_provider/DataProvider.h"
 #include "io/DataLoader.h"
@@ -325,7 +326,7 @@ gdf_dtype convert_string_dtype(std::string str){
 	}else if(str == "GDF_STRING_CATEGORY"){
 		return GDF_STRING_CATEGORY;
 	}else{
-		return GDF_INVALID;
+		return GDF_invalid;
 	}
 }
 
@@ -401,13 +402,13 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 	  				table.tableSchema.csvSkipRows,
 	  				table.tableSchema.names, types);
 	  	}else{
-	  		parser = std::make_shared<ral::io::gdf_parser>(table);
+	  		parser = std::make_shared<ral::io::gdf_parser>(table,accessToken);
 	  	}
 
 
 	  std::shared_ptr<ral::io::data_provider> provider;
 	  std::vector<Uri> uris;
-	  	 for (auto file_path : schema.files) {
+	  	 for (auto file_path : table.tableSchema.files) {
 	  	     uris.push_back(Uri{file_path});
 	  	 }
 
@@ -419,7 +420,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 	  }else{
 		  provider = std::make_shared<ral::io::dummy_data_provider>();
 	  }
-	  	auto loader = std::make_shared<ral::io::data_loader>( parser,provider);
+	  ral::io::data_loader loader( parser,provider);
 	  	input_loaders.push_back(loader);
 	  	schemas.push_back(schema);
 	  	table_names.push_back(table.name);
@@ -432,9 +433,9 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
   std::cout << "tableGroup: " << requestPayload.tableGroup.name << std::endl;
  	std::cout << "tables: " << requestPayload.tableGroup.tables.size() << std::endl;
   std::cout << "tableSize: " << requestPayload.tableGroup.tables.size() << std::endl;
-	std::cout << "FirstColumn File: "
-			<< requestPayload.tableGroup.tables[0].files[0]
-			<< std::endl;
+	//std::cout << "FirstColumn File: "
+	//		<< requestPayload.tableGroup.tables[0].files[0]
+	//		<< std::endl;
   
   uint64_t resultToken = 0L;
   try {
@@ -502,7 +503,7 @@ int main(int argc, const char *argv[])
   blazingdb::protocol::Server server(connection);
 
   services.insert(std::make_pair(interpreter::MessageType_ExecutePlanFileSystem, &executeFileSystemPlanService));
-
+  services.insert(std::make_pair(orchestrator:: MessageType_DDL_CREATE_TABLE, &parseSchemaService));
   services.insert(std::make_pair(interpreter::MessageType_CloseConnection, &closeConnectionService));
   services.insert(std::make_pair(interpreter::MessageType_GetResult, &getResultService));
   services.insert(std::make_pair(interpreter::MessageType_FreeResult, &freeResultService));

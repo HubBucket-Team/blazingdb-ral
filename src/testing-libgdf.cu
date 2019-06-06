@@ -420,7 +420,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 	  				table.tableSchema.csvSkipRows,
 	  				table.tableSchema.names, types);
 	  	}else{
-	  		parser = std::make_shared<ral::io::gdf_parser>(table,accessToken);
+	  		parser = std::make_shared<ral::io::gdf_parser>(&table,accessToken);
 	  	}
 
 
@@ -521,7 +521,7 @@ int main(int argc, const char *argv[])
   blazingdb::protocol::Server server(connection);
 
   services.insert(std::make_pair(interpreter::MessageType_ExecutePlanFileSystem, &executeFileSystemPlanService));
-  services.insert(std::make_pair(orchestrator:: MessageType_DDL_CREATE_TABLE, &parseSchemaService));
+  services.insert(std::make_pair(orchestrator::MessageType_DDL_CREATE_TABLE, &parseSchemaService));
   services.insert(std::make_pair(interpreter::MessageType_CloseConnection, &closeConnectionService));
   services.insert(std::make_pair(interpreter::MessageType_GetResult, &getResultService));
   services.insert(std::make_pair(interpreter::MessageType_FreeResult, &freeResultService));

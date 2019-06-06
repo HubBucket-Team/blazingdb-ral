@@ -57,37 +57,38 @@ TYPED_TEST(JoinTest, SimpleTest)
  
   using VTableBuilder = typename TypeParam::multi_column_t;
   using DataTuple = typename VTableBuilder::DataTuple;
-  
-  // gdf::library::Table table = 
-  //     VTableBuilder {
-  //       .name = "emps",
-  //       .headers = {"Id", "Weight", "Age", "Name"},
-  //       .rows = {
-  //         DataTuple{'a', 180.2, 40, 100L},
-  //         DataTuple{'b', 175.3, 38, 200L},
-  //         DataTuple{'c', 140.3, 27, 300L},
-  //       },
-  //     }
-  //     .Build();
+  /*
+   gdf::library::Table table = 
+       VTableBuilder {
+         .name = "emps",
+         .headers = {"Id", "Weight", "Age", "Name"},
+         .rows = {
+           DataTuple{'a', 180.2, 40, 100L},
+           DataTuple{'b', 175.3, 38, 200L},
+           DataTuple{'c', 140.3, 27, 300L},
+         },
+       }
+       .Build();
 
-  // table.print(std::cout);
+   table.print(std::cout);
 
-  // std::string query = "\
-  // LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$5=[+($0, $4)])\n\
-  //   LogicalJoin(condition=[=($3, $0)], joinType=[inner])\n\
-  //     EnumerableTableScan(table=[[hr, emps]])\n\
-  //     EnumerableTableScan(table=[[hr, joiner]])";
+   std::string query = "
+   LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$5=[+($0, $4)])\n
+     LogicalJoin(condition=[=($3, $0)], joinType=[inner])\n
+       EnumerableTableScan(table=[[hr, emps]])\n
+       EnumerableTableScan(table=[[hr, joiner]])";
 
-	// 	gdf_error err = evaluate_query(this->input_tables, this->table_names, this->column_names,
-	// 			query, this->outputs);
+	 	gdf_error err = evaluate_query(this->input_tables, this->table_names, this->column_names,
+	 			query, this->outputs);
 
-  // std::vector<result_type> reference_result = this->compute_reference_solution(true);
-  // std::vector<result_type> gdf_result = this->compute_gdf_result(true);
+   std::vector<result_type> reference_result = this->compute_reference_solution(true);
+   std::vector<result_type> gdf_result = this->compute_gdf_result(true);
 
-  // ASSERT_EQ(reference_result.size(), gdf_result.size()) << "Size of gdf result does not match reference result\n";
+   ASSERT_EQ(reference_result.size(), gdf_result.size()) << "Size of gdf result does not match reference result\n";
 
-  // // Compare the GDF and reference solutions
-  // for(size_t i = 0; i < reference_result.size(); ++i){
-  //   EXPECT_EQ(reference_result[i], gdf_result[i]);
-  // }
+   // Compare the GDF and reference solutions
+   for(size_t i = 0; i < reference_result.size(); ++i){
+     EXPECT_EQ(reference_result[i], gdf_result[i]);
+   }
+  */
 }

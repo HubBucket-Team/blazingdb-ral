@@ -380,15 +380,16 @@ TEST_F(EvaluateQueryTest, TEST_NULL_BINARY) {
 TEST_F(EvaluateQueryTest, TEST_NULL_OUTER_JOIN) {
   auto input = InputTestItem{
       .query =
-          "SELECT n.n_nationkey, n.n_regionkey, n.n_nationkey + n.n_regionkey  from main.nation AS n INNER JOIN main.region AS r ON n.n_regionkey = r.r_regionkey and n.n_nationkey < 10",
+          "SELECT n.n_nationkey, n.n_regionkey, n.n_nationkey + n.n_regionkey  from main.nation AS n INNER JOIN main.region AS r ON n.n_regionkey = r.r_regionkey and n.n_nationkey < 10 order by n.n_nationkey",
       .logicalPlan =
-    		  "LogicalProject(n_nationkey=[$0], r_regionkey=[$1], EXPR$2=[+($0, $1)])\n"
-    		  "  LogicalJoin(condition=[=($0, $1)], joinType=[left])\n"
-    		  "    LogicalProject(n_nationkey=[$0])\n"
-    		  "      LogicalFilter(condition=[<($0, 10)])\n"
-    		  "        EnumerableTableScan(table=[[main, nation]])\n"
-    		  "    LogicalProject(r_regionkey=[$0])\n"
-    		  "      EnumerableTableScan(table=[[main, region]])\n",
+              "LogicalSort(sort0=[$0], dir0=[ASC])\n  "
+    		  "  LogicalProject(n_nationkey=[$0], r_regionkey=[$1], EXPR$2=[+($0, $1)])\n"
+    		  "    LogicalJoin(condition=[=($0, $1)], joinType=[left])\n"
+    		  "      LogicalProject(n_nationkey=[$0])\n"
+    		  "        LogicalFilter(condition=[<($0, 10)])\n"
+    		  "          EnumerableTableScan(table=[[main, nation]])\n"
+    		  "      LogicalProject(r_regionkey=[$0])\n"
+    		  "        EnumerableTableScan(table=[[main, region]])\n",
       .filePaths = {"/tmp/nation.psv","/tmp/region.psv"},
       .tableNames = {"main.nation", "main.region"},
       .columnNames = {{"n_nationkey", "n_name","n_regionkey", "n_comment"},{"r_regionkey","r_name","r_comment"}},
@@ -464,13 +465,14 @@ TEST_F(EvaluateQueryTest, TEST_NULL_OUTER_JOIN_2) {
         TEST_F(EvaluateQueryTest, TEST_NULL_TRANSFORM_AGGREGATIONS) {
           auto input = InputTestItem{
               .query =
-                  "select count(c_custkey) + sum(c_acctbal) + avg(c_acctbal), min(c_custkey) - max(c_nationkey), c_nationkey * 2 as key from main.customer where  c_nationkey * 2 < 40 group by  c_nationkey * 2",
+                  "select count(c_custkey) + sum(c_acctbal) + avg(c_acctbal), min(c_custkey) - max(c_nationkey), c_nationkey * 2 as key from main.customer where  c_nationkey * 2 < 40 group by  c_nationkey * 2 order by key",
               .logicalPlan =
-            		  "LogicalProject(EXPR$0=[+(+($1, $2), $3)], EXPR$1=[-($4, $5)], key=[$0])\n"
-            		  "  LogicalAggregate(group=[{0}], agg#0=[COUNT($1)], agg#1=[SUM($2)], agg#2=[AVG($2)], agg#3=[MIN($1)], agg#4=[MAX($3)])\n"
-            		  "    LogicalProject(key=[*($3, 2)], c_custkey=[$0], c_acctbal=[$5], c_nationkey=[+($3, 0)])\n"
-            		  "      LogicalFilter(condition=[<(*($3, 2), 40)])\n"
-            		  "        EnumerableTableScan(table=[[main, customer]])",
+                      "LogicalSort(sort0=[$2], dir0=[ASC])\n  "
+            		  "  LogicalProject(EXPR$0=[+(+($1, $2), $3)], EXPR$1=[-($4, $5)], key=[$0])\n"
+            		  "    LogicalAggregate(group=[{0}], agg#0=[COUNT($1)], agg#1=[SUM($2)], agg#2=[AVG($2)], agg#3=[MIN($1)], agg#4=[MAX($3)])\n"
+            		  "      LogicalProject(key=[*($3, 2)], c_custkey=[$0], c_acctbal=[$5], c_nationkey=[$3])\n"
+            		  "        LogicalFilter(condition=[<(*($3, 2), 40)])\n"
+            		  "          EnumerableTableScan(table=[[main, customer]])",
             	      .filePaths = {"/tmp/customer.psv"},
             	      .tableNames = {"main.customer"},
             	      .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",

@@ -15,7 +15,7 @@
 #include "gdf_wrapper/gdf_wrapper.cuh"
 #include "cuDF/Allocator.h"
 #include "cuio/parquet/util/bit_util.cuh"
-
+#include "bitmask.hpp"
 #include "FreeMemory.h"
 
 gdf_column_cpp::gdf_column_cpp()
@@ -155,14 +155,13 @@ void gdf_column_cpp::resize(size_t new_size){
 }
 //TODO: needs to be implemented for efficiency though not strictly necessary
 gdf_error gdf_column_cpp::compact(){
-    if( this->allocated_size_valid != gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(this->size()))){
+    if( this->allocated_size_valid != static_cast<std::size_t>(gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(this->size()))) ){
     	//compact valid allcoation
-
     }
 
     int byte_width;
     get_column_byte_width(this->get_gdf_column(),&byte_width);
-    if(this->allocated_size_data != (this->size() * byte_width)){
+    if( this->allocated_size_data != (this->size() * static_cast<std::size_t>(byte_width)) ){
     	//compact data allocation
     }
     return GDF_SUCCESS;
@@ -303,6 +302,8 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     }
 
     gdf_column_view(this->column, (void *) data, valid_device, num_values, type);
+    this->column->dtype_info.category = nullptr;
+    
     this->set_name(column_name);
     if(input_data != nullptr){
         CheckCudaErrors(cudaMemcpy(data, input_data, num_values * width_per_value, cudaMemcpyHostToDevice));
@@ -375,6 +376,63 @@ void gdf_column_cpp::create_gdf_column(gdf_column * column){
     if (column->col_name)
     	this->set_name(std::string(column->col_name));
 
+    GDFRefCounter::getInstance()->register_column(this->column);
+}
+
+void gdf_column_cpp::create_gdf_column(const gdf_scalar & scalar, const std::string &column_name){
+    assert(scalar.dtype != GDF_invalid);
+    decrement_counter(column);
+
+    this->column = new gdf_column;
+
+    gdf_dtype type = scalar.dtype;
+
+    //TODO: this is kind of bad its a chicken and egg situation with column_view requiring a pointer to device and allocate_valid
+    //needing to not require numvalues so it can be called rom outside
+    this->get_gdf_column()->size = 1;
+    char * data;
+    this->is_ipc_column = false;
+    this->column_token = 0;
+    size_t width_per_value = gdf_dtype_size(type);
+
+    this->allocated_size_data = width_per_value; 
+
+    cuDF::Allocator::allocate((void**)&data, allocated_size_data);
+
+    gdf_valid_type * valid_device = nullptr;
+    if(!scalar.is_valid){
+        valid_device = allocate_valid();
+        CheckCudaErrors(cudaMemset(valid_device, 0, this->allocated_size_valid));
+         this->get_gdf_column()->null_count = 1;
+    } else {
+        this->allocated_size_valid = 0;
+        this->get_gdf_column()->null_count = 0;
+    }
+
+    gdf_column_view(this->column, (void *) data, valid_device, 1, type);
+    this->set_name(column_name);
+    if(scalar.is_valid){
+        if(type == GDF_INT8){
+            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.si08), width_per_value, cudaMemcpyHostToDevice));            
+        }else if(type == GDF_INT16){
+            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.si16), width_per_value, cudaMemcpyHostToDevice));            
+        }else if(type == GDF_INT32){
+            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.si32), width_per_value, cudaMemcpyHostToDevice));            
+        }else if(type == GDF_DATE32){
+            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.dt32), width_per_value, cudaMemcpyHostToDevice));            
+        }else if(type == GDF_INT64 ){
+            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.si64), width_per_value, cudaMemcpyHostToDevice));            
+        }else if(type == GDF_DATE64){
+            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.dt64), width_per_value, cudaMemcpyHostToDevice));            
+        } else if(type == GDF_TIMESTAMP){
+            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.tmst), width_per_value, cudaMemcpyHostToDevice));            
+        }else if(type == GDF_FLOAT32){
+            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.fp32), width_per_value, cudaMemcpyHostToDevice));            
+        }else if(type == GDF_FLOAT64){
+            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.fp64), width_per_value, cudaMemcpyHostToDevice));            
+        }        
+    }
+    
     GDFRefCounter::getInstance()->register_column(this->column);
 }
 /*

@@ -771,8 +771,6 @@ gdf_error read_schema(std::vector<std::shared_ptr<::arrow::io::RandomAccessFile>
     return error;
 }
 
-extern "C" {
-
 gdf_error
 read_parquet(const char *const        filename,
              const char *const *const columns,
@@ -809,7 +807,6 @@ read_parquet(const char *const        filename,
     *out_gdf_columns_length = column_indices.size();
 
     return status;
-}
 }
 
 END_NAMESPACE_GDF_PARQUET

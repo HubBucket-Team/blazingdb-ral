@@ -47,11 +47,12 @@ void init_default_csv_args(csv_read_arg & args){
 }
 
 void copy_non_data_csv_args(csv_read_arg & args, csv_read_arg & new_args){
-	new_args.num_cols		= args.num_cols;
-	new_args.names			= args.names;
-	new_args.dtype			= args.dtype;
-	new_args.delimiter		= args.delimiter;
-	new_args.lineterminator = args.lineterminator;
+	new_args.num_names		= args.num_names;
+	new_args.num_dtype		= args.num_dtype;
+    new_args.names			= args.names;
+    new_args.dtype			= args.dtype;
+    new_args.delimiter		= args.delimiter;
+    new_args.lineterminator = args.lineterminator;
 	new_args.skip_blank_lines = args.skip_blank_lines;
 	new_args.header 		= args.header;
 	new_args.nrows 			= args.nrows;
@@ -157,6 +158,7 @@ csv_parser::csv_parser(std::string delimiter,
 		std::vector<gdf_dtype> dtypes) {
 
 	init_default_csv_args(args);
+
 	args.delimiter 		= delimiter[0];
 	args.lineterminator = line_terminator[0];
 	this->column_names = names;
@@ -186,19 +188,20 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 
 	csv_read_arg raw_args{};
 
-	args.num_cols = schema.get_names().size();
+	args.num_names = schema.get_names().size();
 	if(this->column_names.size() > 0){
-		args.names = new const char *[args.num_cols];
-		for(int column_index = 0; column_index < args.num_cols; column_index++){
+		args.names = new const char *[args.num_names];
+		for(int column_index = 0; column_index < args.num_names; column_index++){
 			args.names[column_index] = this->column_names[column_index].c_str();
 		}
 	}else{
 		args.names = nullptr;
 	}
 
+	args.num_dtype = schema.get_names().size();
 	if(this->dtype_strings.size() > 0){
-		args.dtype = new const char *[args.num_cols]; //because dynamically allocating metadata is fun
-		for(int column_index = 0; column_index < args.num_cols; column_index++){
+		args.dtype = new const char *[args.num_dtype]; //because dynamically allocating metadata is fun
+		for(int column_index = 0; column_index < args.num_dtype; column_index++){
 
 			args.dtype[column_index] = this->dtype_strings[column_index].c_str();
 		}

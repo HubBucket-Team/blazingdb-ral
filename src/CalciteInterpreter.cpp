@@ -1250,8 +1250,8 @@ blazing_frame evaluate_split_query(
 }
 
 blazing_frame evaluate_split_query(
-		std::vector<ral::io::data_loader > & input_loaders,
-		std::vector<ral::io::Schema> & schemas,
+		std::vector<ral::io::data_loader > input_loaders,
+		std::vector<ral::io::Schema> schemas,
 		std::vector<std::string> table_names,
 		std::vector<std::string> query, int call_depth = 0){
 	assert(input_loaders.size() == table_names.size());
@@ -1493,8 +1493,8 @@ gdf_error evaluate_query(
 }
 
 query_token_t evaluate_query(
-		std::vector<ral::io::data_loader > & input_loaders,
-		std::vector<ral::io::Schema> & schemas,
+		std::vector<ral::io::data_loader > input_loaders,
+		std::vector<ral::io::Schema> schemas,
 		std::vector<std::string> table_names,
 		std::string logicalPlan,
 		connection_id_t connection){
@@ -1531,17 +1531,7 @@ query_token_t evaluate_query(
 			result_set_repository::get_instance().update_token(token, blazing_frame{}, 0.0, e.what());
 		}
 
-		//@todo: hablar con felipe sobre cudaIpcCloseMemHandle
-		for(int i = 0; i < handles.size(); i++){
-			if (handles[i]){
-				cudaError_t error = cudaIpcCloseMemHandle(handles[i]);
-				if (error != cudaSuccess){
-					std::cout<<"Closing handle failed with error: "<<error<<std::endl;
-				}
-			} else {
-				std::cout<<"Closing handle failed because the handle was null"<<std::endl;
-			}
-		}
+
 	});
 
 	//@todo: hablar con felipe sobre detach

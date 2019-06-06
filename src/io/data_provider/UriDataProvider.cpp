@@ -15,7 +15,7 @@ namespace ral {
 namespace io {
 
 uri_data_provider::uri_data_provider(std::vector<Uri> uris)
-	: data_provider(),  file_uris(uris), opened_files({}), current_file(0), errors({}) {
+	: data_provider(),  file_uris(uris), opened_files({}), current_file(0), errors({}), directory_uris({}), directory_current_file(0) {
 	// thanks to c++11 we no longer have anything interesting to do here :)
 
 }
@@ -31,16 +31,19 @@ uri_data_provider::~uri_data_provider() {
 }
 
 std::string uri_data_provider::get_current_user_readable_file_handle(){
-	return this->file_uris[this->current_file].toString();
+	if(directory_uris.size() == 0 ){
+		return this->file_uris[this->current_file].toString();
+	}else{
+		return this->directory_uris[this->directory_current_file].toString();
+	}
+
 }
 
 bool uri_data_provider::has_next(){
 	return this->current_file < this->file_uris.size();
 }
 
-size_t uri_data_provider::get_file_index(){
-	return this->current_file;
-}
+
 
 std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > uri_data_provider::get_all(){
 	std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > file_handles;
@@ -56,14 +59,47 @@ std::shared_ptr<arrow::io::RandomAccessFile> uri_data_provider::get_next(){
 	// TODO: Take a look at this later, just calling this function to ensure
 	// the uri is in a valid state otherwise throw an exception
 	// because openReadable doens't  validate it and just return a nullptr
-	auto fileStatus = BlazingContext::getInstance()->getFileSystemManager()->getFileStatus(this->file_uris[this->current_file]);
+	if(directory_uris.size() > 0 ){
+		auto fileStatus = BlazingContext::getInstance()->getFileSystemManager()->getFileStatus(this->directory_uris[this->directory_current_file]);
 
-	std::shared_ptr<arrow::io::RandomAccessFile> file =
-			BlazingContext::getInstance()->getFileSystemManager()->openReadable(
-					this->file_uris[this->current_file]);
-	this->current_file++;
-	this->opened_files.push_back(file);
-	return file;
+		std::shared_ptr<arrow::io::RandomAccessFile> file =
+					BlazingContext::getInstance()->getFileSystemManager()->openReadable(
+							this->directory_uris[this->directory_current_file]);
+
+		this->opened_files.push_back(file);
+
+		this->directory_current_file++;
+		if(this->directory_current_file > directory_uris.size()){
+			this->directory_uris = {};
+			this->current_file++;
+		}
+
+		return file;
+	}else{
+
+		auto fileStatus = BlazingContext::getInstance()->getFileSystemManager()->getFileStatus(this->file_uris[this->current_file]);
+
+
+		std::shared_ptr<arrow::io::RandomAccessFile> file =
+				BlazingContext::getInstance()->getFileSystemManager()->openReadable(
+						this->file_uris[this->current_file]);
+
+
+		fileStatus = BlazingContext::getInstance()->getFileSystemManager()->getFileStatus(this->file_uris[this->current_file]);
+		if(fileStatus.isDirectory()){
+			this->directory_uris = BlazingContext::getInstance()->getFileSystemManager()->list(this->file_uris[this->current_file]);
+			this->directory_current_file = 0;
+			return get_next();
+
+		}else{
+			this->current_file++;
+		}
+		this->opened_files.push_back(file);
+
+		return file;
+
+	}
+
 }
 
 std::shared_ptr<arrow::io::RandomAccessFile> uri_data_provider::get_first(){

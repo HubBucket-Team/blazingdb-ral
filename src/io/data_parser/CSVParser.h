@@ -20,11 +20,11 @@ namespace io {
 
 class csv_parser: public data_parser {
 public:
-	csv_parser(const std::string & delimiter,
-			const std::string & line_terminator,
+	csv_parser(std::string  delimiter,
+			 std::string  line_terminator,
 			int skip_rows,
-			const std::vector<std::string> & names,
-			const std::vector<gdf_dtype> & dtypes);
+			 std::vector<std::string>  names,
+			std::vector<gdf_dtype>  dtypes);
 	csv_parser(csv_read_arg	args);
 
 	virtual ~csv_parser();

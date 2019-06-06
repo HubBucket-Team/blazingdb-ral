@@ -34,7 +34,7 @@ public:
 	virtual std::shared_ptr<arrow::io::RandomAccessFile> get_first() = 0;
 	virtual std::vector<std::string> get_errors() = 0;
 	virtual std::string get_current_user_readable_file_handle() = 0;
-	virtual size_t get_file_index() = 0;
+
 	virtual std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > get_all() = 0;
 private:
 

@@ -49,6 +49,13 @@ gdf_error evaluate_query(
 		std::string logicalPlan,
 		std::vector<gdf_column_cpp> & outputs);
 
+query_token_t evaluate_query(
+		std::vector<ral::io::data_loader > input_loaders,
+		std::vector<ral::io::Schema> schemas,
+		std::vector<std::string> table_names,
+		std::string logicalPlan,
+		connection_id_t connection);
+
 std::string get_named_expression(std::string query_part, std::string expression_name);
 
 void execute_project_plan(blazing_frame & input, std::string query_part);

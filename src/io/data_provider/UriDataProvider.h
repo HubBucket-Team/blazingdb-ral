@@ -76,6 +76,8 @@ private:
 	 */
 	std::vector<std::string> errors;
 
+	std::vector<Uri> directory_uris;
+	size_t directory_current_file;
 
 };
 

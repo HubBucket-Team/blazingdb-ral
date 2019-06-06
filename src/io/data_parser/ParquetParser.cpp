@@ -71,9 +71,12 @@ void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	std::vector<std::size_t> row_group_ind(num_row_groups); // check, include all row groups
     std::iota(row_group_ind.begin(), row_group_ind.end(), 0);
 
-
+    std::vector<gdf_column *> columns_ptr(columns.size());
+    for(int i = 0; i < columns.size(); i++){
+    	columns_ptr[i] = columns[i].get_gdf_column();
+    }
 	// TODO: Fix this error handling
-	error = gdf::parquet::read_parquet_by_ids(file, row_group_ind, column_indices_mapped_to_parquet, columns);
+	error = gdf::parquet::read_parquet_by_ids(file, row_group_ind, column_indices_mapped_to_parquet, columns_ptr);
 
 	for(auto column : columns){
 		 if (column.get_gdf_column()->dtype == GDF_STRING){

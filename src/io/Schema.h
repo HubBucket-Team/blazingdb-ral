@@ -13,6 +13,8 @@
 #include <string>
 #include <cudf.h>
 #include "../GDFColumn.cuh"
+#include <blazingdb/protocol/message/utils.h>
+
 
 namespace ral {
 namespace io {

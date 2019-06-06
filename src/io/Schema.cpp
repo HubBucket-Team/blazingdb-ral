@@ -84,8 +84,11 @@ blazingdb::protocol::TableSchemaSTL Schema::getTransport(){
 	blazingdb::protocol::TableSchemaSTL transport_schema;
 
 	transport_schema.names = this->names;
-	transport_schema.calciteToFileIndicies = this->calcite_to_file_indices;
-	transport_schema.types = this->types;
+	transport_schema.calciteToFileIndices = this->calcite_to_file_indices;
+	for(int i = 0; i < this->types.size(); i++){
+		transport_schema.types.push_back(this->types[i]);
+	}
+
 	transport_schema.numRowGroups = this->num_row_groups;
 
 }

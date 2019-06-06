@@ -150,11 +150,11 @@ gdf_error read_csv_arrow(csv_read_arg *args, std::shared_ptr<arrow::io::RandomAc
 }
 
 
-csv_parser::csv_parser(const std::string & delimiter,
-		const std::string & line_terminator,
+csv_parser::csv_parser(std::string delimiter,
+		 std::string line_terminator,
 		int skip_rows,
-		const std::vector<std::string> & names,
-		const std::vector<gdf_dtype> & dtypes) {
+		std::vector<std::string> names,
+		std::vector<gdf_dtype> dtypes) {
 
 	init_default_csv_args(args);
 	args.delimiter 		= delimiter[0];

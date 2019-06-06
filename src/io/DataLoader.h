@@ -32,6 +32,9 @@ namespace io {
 class data_loader {
 public:
 	data_loader(std::shared_ptr<data_parser>  parser, std::shared_ptr<data_provider > provider);
+	data_loader() : provider(nullptr), parser(nullptr){
+
+	}
 	virtual ~data_loader();
 
 	/**

@@ -29,6 +29,7 @@ std::string convert_dtype_to_string(const gdf_dtype & dtype);
 class Schema {
 public:
 	Schema();
+	Schema(blazingdb::protocol::TableSchemaSTL schema);
 	Schema(	std::vector<std::string> names,
 			std::vector<size_t> calcite_to_file_indices,
 			std::vector<gdf_dtype> types,

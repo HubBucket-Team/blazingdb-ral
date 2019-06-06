@@ -315,6 +315,37 @@ static result_pair freeResultService(uint64_t accessToken, Buffer&& requestPaylo
 }
 
 
+//TODO: we need to have a centralized place where this can be done
+//perhaps a utility in protocol, add bool8 after update
+gdf_dtype convert_string_dtype(std::string str){
+	if(str == "GDF_INT8"){
+		return GDF_INT8;
+	}else if(str == "GDF_INT16"){
+		return GDF_INT16;
+	}else if(str == "GDF_INT32"){
+		return GDF_INT32;
+	}else if(str == "GDF_INT64"){
+		return GDF_INT64;
+	}else if(str == "GDF_FLOAT32"){
+		return GDF_FLOAT32;
+	}else if(str == "GDF_FLOAT64"){
+		return GDF_FLOAT64;
+	}else if(str == "GDF_DATE32"){
+		return GDF_DATE32;
+	}else if(str == "GDF_DATE64"){
+		return GDF_DATE64;
+	}else if(str == "GDF_TIMESTAMP"){
+		return GDF_TIMESTAMP;
+	}else if(str == "GDF_CATEGORY"){
+		return GDF_CATEGORY;
+	}else if(str == "GDF_STRING"){
+		return GDF_STRING;
+	}else if(str == "GDF_STRING_CATEGORY"){
+		return GDF_STRING_CATEGORY;
+	}else{
+		return GDF_INVALID;
+	}
+}
 
 
 static result_pair parseSchemaService(uint64_t accessToken, Buffer&& requestPayloadBuffer) {
@@ -325,11 +356,15 @@ static result_pair parseSchemaService(uint64_t accessToken, Buffer&& requestPayl
 		parser = std::make_shared<ral::io::parquet_parser>();
 
 	}else if(requestPayload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
+		std::vector<gdf_dtype> types;
+		for(auto val : requestPayload.columnTypes){
+			types.push_back(convert_string_dtype(val));
+		}
 		parser =  std::make_shared<ral::io::csv_parser>(
 				requestPayload.csvDelimiter,
   				requestPayload.csvLineTerminator,
   				(int) requestPayload.csvSkipRows,
-				std::vector<std::string>(), std::vector<gdf_dtype>());
+  				requestPayload.columnNames, types);
 	}else{
 		//indicate error here
 		//this shoudl be done in the orchestrator
@@ -363,8 +398,8 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
   blazingdb::message::io::FileSystemDMLRequestMessage requestPayload(requestPayloadBuffer.data());
 
   //make dataloaders
-	std::vector<ral::io::data_loader > & input_loaders;
-	std::vector<ral::io::Schema> & schemas;
+	std::vector<ral::io::data_loader > input_loaders;
+	std::vector<ral::io::Schema> schemas;
 	std::vector<std::string> table_names;
   for(auto table : requestPayload.tableGroup.tables){
 	  ral::io::Schema schema(table.tableSchema);
@@ -373,11 +408,16 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 	  		parser = std::make_shared<ral::io::parquet_parser>();
 
 	  	}else if(table.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
+	  		std::vector<gdf_dtype> types;
+			for(auto val : table.tableSchema.types){
+				types.push_back((gdf_dtype) val);
+			}
+
 	  		parser =  std::make_shared<ral::io::csv_parser>(
 	  				table.tableSchema.csvDelimiter,
 	  				table.tableSchema.csvLineTerminator,
 	  				table.tableSchema.csvSkipRows,
-	  				{}, {});
+	  				table.tableSchema.names, types);
 	  	}else{
 	  		parser = std::make_shared<ral::io::gdf_parser>(table);
 	  	}

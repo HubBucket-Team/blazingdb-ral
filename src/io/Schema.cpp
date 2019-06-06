@@ -48,6 +48,18 @@ Schema::Schema() : names({}),calcite_to_file_indices({}), types({}), num_row_gro
 
 }
 
+Schema::Schema(blazingdb::protocol::TableSchemaSTL schema){
+	this->calcite_to_file_indices = schema.calciteToFileIndices;
+	this->names = schema.names;
+	this->types.resize(schema.types.size());
+	for(int i = 0; i < schema.types.size(); i++){
+		this->types[i] = (gdf_dtype) schema.types[i];
+	}
+	this->num_row_groups = schema.numRowGroups;
+
+}
+
+
 Schema::~Schema() {
 	// TODO Auto-generated destructor stub
 }

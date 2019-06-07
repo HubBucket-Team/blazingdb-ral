@@ -19,7 +19,7 @@
 #include "gdf_wrapper/gdf_wrapper.cuh"
 
 #include "Interpreter/interpreter_cpp.h"
-
+#include "string/nvcategory_util.hpp"
 
 
 typedef struct {

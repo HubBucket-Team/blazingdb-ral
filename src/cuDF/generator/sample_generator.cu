@@ -3,6 +3,7 @@
 #include "CalciteExpressionParsing.h"
 #include <copying.hpp>
 #include <types.hpp>
+#include "table.hpp"
 
 namespace cudf {
 namespace generator {

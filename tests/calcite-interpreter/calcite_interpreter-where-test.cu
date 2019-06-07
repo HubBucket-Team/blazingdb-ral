@@ -55,7 +55,7 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 
   void TearDown(){
 
-		for(int i = 0; i < outputs.size(); i++){
+		for(std::size_t  i = 0; i < outputs.size(); i++){
 
 			// Releasing allocated memory, here we are responsible for that
 			//TODO percy rommel: move to integration/end-to-end test
@@ -72,7 +72,7 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 		device_output = new int32_t[num_output_values];
 		cudaMemcpy(device_output, out_col.data(), num_output_values * sizeof(int32_t), cudaMemcpyDeviceToHost);
 
-		for(int i = 0; i < num_output_values; i++){
+		for(std::size_t i = 0; i < num_output_values; i++){
 			EXPECT_TRUE(host_output[i] == device_output[i]);
 		}
 	}
@@ -111,7 +111,7 @@ LogicalProject(y=[$1])\n\
 
 		int cur = 0;
 		int32_t * host_output = new int32_t[num_values];
-		for(int i = 0; i < num_values; i++){
+		for(std::size_t  i = 0; i < num_values; i++){
 			if(input2[i] > 5){
 				host_output[cur] = input2[i];
 				cur++;
@@ -137,7 +137,7 @@ LogicalProject(z=[$2])\n\
 
 		int cur = 0;
 		int32_t * host_output = new int32_t[num_values];
-		for(int i = 0; i < num_values; i++){
+		for(std::size_t i = 0; i < num_values; i++){
 			if(input1[i] == input2[i]){
 				host_output[cur] = input3[i];
 				cur++;
@@ -163,7 +163,7 @@ LogicalProject(z=[$2])\n\
 		EXPECT_TRUE(outputs.size() == 1);
 
 		int32_t * host_output = new int32_t[num_values];
-		for(int i = 0; i < num_values; i++){
+		for(std::size_t i = 0; i < num_values; i++){
 			host_output[i] = input3[i];
 		}
 
@@ -186,7 +186,7 @@ LogicalProject(y=[$1])\n\
 
 		int cur = 0;
 		int32_t * host_output = new int32_t[num_values];
-		for(int i = 0; i < num_values; i++){
+		for(std::size_t i = 0; i < num_values; i++){
 			if((input2[i]) % 5 == 0){
 				host_output[cur] = input2[i];
 				cur++;
@@ -212,7 +212,7 @@ LogicalProject(z=[$2])\n\
 
 		int cur = 0;
 		int32_t * host_output = new int32_t[num_values];
-		for(int i = 0; i < num_values; i++){
+		for(std::size_t i = 0; i < num_values; i++){
 			if(input1[i] == input2[i] && input1[i] > 4){
 				host_output[cur] = input3[i];
 				cur++;
@@ -238,7 +238,7 @@ LogicalProject(x=[$0])\n\
 
 		int cur = 0;
 		int32_t * host_output = new int32_t[num_values];
-		for(int i = 0; i < num_values; i++){
+		for(std::size_t i = 0; i < num_values; i++){
 			if(input1[i] != 1){
 				host_output[cur] = input1[i];
 				cur++;
@@ -268,7 +268,7 @@ LogicalProject(x=[$0], y=[$1], z=[$2])\n\
 		int32_t * host_output2 = new int32_t[num_values];
 		int32_t * host_output3 = new int32_t[num_values];
 
-		for(int i = 0; i < num_values; i++){
+		for(std::size_t i = 0; i < num_values; i++){
 			if(input1[i] == input3[i] && 4 >= input2[i]){
 				host_output1[cur] = input1[i];
 				host_output2[cur] = input2[i];
@@ -301,7 +301,7 @@ LogicalProject(x=[$0], z=[$2])\n\
 		int32_t * host_output1 = new int32_t[num_values];
 		int32_t * host_output2 = new int32_t[num_values];
 
-		for(int i = 0; i < num_values; i++){
+		for(std::size_t i = 0; i < num_values; i++){
 			if(input1[i] == 1 && 4 >= input2[i]){
 				host_output1[cur] = input1[i];
 				host_output2[cur] = input3[i];

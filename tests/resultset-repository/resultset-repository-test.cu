@@ -62,7 +62,7 @@ TEST_F(ResultSetRepositoryTest, string_resulset_test) {
       char_array[i] = "test!";
     }
 
-    char * name = "some_name";
+    char* name = (char*)"some_name";
     NVStrings * string = NVStrings::create_from_array(char_array,num_strings);
     gdf_column * col_struct = new gdf_column;
     col_struct->dtype = GDF_STRING;

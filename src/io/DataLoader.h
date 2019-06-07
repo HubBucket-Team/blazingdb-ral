@@ -73,8 +73,7 @@ size_t get_width_dtype(gdf_dtype type){
 //		return 4;
 //	}else if(type == GDF_UINT64){
 //		return 8;
-	}else if(type == GDF_FLOAT32)
-	{
+	}else if(type == GDF_FLOAT32){
 		return 4;
 	}else if(type == GDF_FLOAT64){
 		return 8;
@@ -90,6 +89,9 @@ size_t get_width_dtype(gdf_dtype type){
 		return 0;
 	}else if(type == GDF_STRING_CATEGORY){
 		return 4;
+	}else {
+		std::cout << "ERROR: data type not found" << std::endl;
+		return 0; 
 	}
 }
 

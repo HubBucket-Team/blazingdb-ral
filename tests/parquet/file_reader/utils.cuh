@@ -306,8 +306,7 @@ template <typename LeftValueType, typename RightValueType>
 void
 check_column_for_comparison_operation(gdf_column *            lhs,
                                       gdf_column *            rhs,
-                                      gdf_column *            output,
-                                      gdf_comparison_operator gdf_operator) {
+                                      gdf_column *            output) {
     {
         auto lhs_valid    = get_gdf_valid_from_device(lhs);
         auto rhs_valid    = get_gdf_valid_from_device(rhs);

@@ -101,7 +101,7 @@ Column::~Column() {}
 
 //TODO: this is slow as shit
 void convert_bools_to_valids(gdf_valid_type * valid_ptr, const std::vector<short> & input){
-  for(gdf_size_type row_index=0; row_index < input.size(); row_index++){
+  for(std::size_t row_index=0; row_index < input.size(); row_index++){
     if(input[row_index]){
       gdf::util::turn_bit_on(valid_ptr, row_index);
     } else {

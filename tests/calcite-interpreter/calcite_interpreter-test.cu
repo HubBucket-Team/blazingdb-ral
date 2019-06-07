@@ -39,7 +39,7 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 		input2 = new char[num_values];
 		input3 = new char[num_values];
 
-		for(int i = 0; i < num_values; i++){
+		for(std::size_t i = 0; i < num_values; i++){
 			if(i % 2 == 0){
 				input1[i] = 1;
 			}else{
@@ -64,7 +64,7 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 
 	void TearDown(){
 
-		for(int i = 0; i < outputs.size(); i++){
+		for(std::size_t i = 0; i < outputs.size(); i++){
 			print_column<int8_t>(outputs[i].get_gdf_column());
 
 			// Releasing allocated memory, here we are responsible for that
@@ -199,7 +199,7 @@ LogicalProject(EXPR$0=[+($0, $1)], z=[$2])\n\
 	}
 }
 
-/*TEST_F(calcite_interpreter_TEST, processing_project5) {
+TEST_F(calcite_interpreter_TEST, processing_project5) {
 
 	{   //select z from hr.emps where x = y
 		std::string query = "\
@@ -238,7 +238,7 @@ LogicalProject(S=[-($0, $1)])\n\
 		EXPECT_TRUE(outputs.size() == 1);
 
 		char * host_output = new char[num_values];
-		for(int i = 0; i < num_values; i++){
+		for(std::size_t i = 0; i < num_values; i++){
 			host_output[i] = input1[i] - input2[i];
 		}
 
@@ -364,7 +364,7 @@ TEST_F(calcite_interpreter_TEST, processing_sort) {
 		EXPECT_TRUE(err == GDF_SUCCESS);
 		EXPECT_TRUE(outputs.size() == 2);
 
-		for(int i = 0; i < outputs.size(); i++){
+		for(std::size_t i = 0; i < outputs.size(); i++){
 			print_column<int8_t>(outputs[i].get_gdf_column());
 		}
 

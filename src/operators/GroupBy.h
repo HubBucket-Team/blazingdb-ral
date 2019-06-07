@@ -17,6 +17,8 @@ bool is_aggregate(std::string query_part);
 
 void process_aggregate(blazing_frame& input, std::string query_part, const Context* queryContext);
 
+std::vector<gdf_column_cpp> groupby_without_aggregations(const std::vector<gdf_column_cpp> & input, const std::vector<int>& group_column_indices);
+
 }  // namespace operators
 }  // namespace ral
 

@@ -190,7 +190,7 @@ ColumnReader<DataType>::ReadNewPage() {
             continue;
         }
     }
-    return true;
+    //return true;
 }
 
 static inline bool
@@ -646,7 +646,7 @@ ColumnReader<DataType>::ToGdfColumn(const gdf_column &   column,
         last_valid_byte = 0;
 
         int left_bits_length  = (offset + values_to_read) % 8;
-        int right_bits_length = 8 - left_bits_length;
+        //int right_bits_length = 8 - left_bits_length;
 
         thrust::host_vector<int16_t> h_def_levels(left_bits_length);
         cudaMemcpy(h_def_levels.data(),
@@ -674,7 +674,7 @@ ColumnReader<DataType>::ToGdfColumn(const gdf_column &   column,
                                     const std::ptrdiff_t offset,
                                     std::mutex *         mutex /* = nullptr*/) {
     if (!HasNext()) { return 0; }
-    std::int64_t values_to_read = num_buffered_values_ - num_decoded_values_;
+    //std::int64_t values_to_read = num_buffered_values_ - num_decoded_values_;
 
     thrust::device_vector<int16_t> d_def_levels(row_group_size);  //this size is work group size
     std::int16_t *d_definition_levels =
@@ -697,9 +697,8 @@ ColumnReader<DataType>::ToGdfColumn(const gdf_column &   column,
     if (!HasNext()) { return 0; }
     using c_type = typename DataType::c_type;
 
-    c_type *const values = static_cast<c_type *const>(column.data) + offset;
-    std::uint8_t *const d_valid_bits =
-      static_cast<std::uint8_t *const>(column.valid) + (offset / 8);
+    c_type* const values = static_cast<c_type*>(column.data) + offset;
+    std::uint8_t* const d_valid_bits = static_cast<std::uint8_t*>(column.valid) + (offset / 8);
 
     static std::int64_t levels_read = 0;
     static std::int64_t values_read = 0;

@@ -14,6 +14,9 @@
 #include "GDFColumn.cuh"
 #include "LogicalFilter.h"
 #include "Traits/RuntimeTraits.h"
+#include "groupby.hpp"
+#include "table.hpp"
+#include "reduction.hpp"
 
 namespace ral {
 namespace operators {
@@ -44,111 +47,109 @@ std::vector<int> get_group_columns(std::string query_part){
 	return group_column_indices;
 }
 
-void perform_avg(gdf_column* column_output, gdf_column* column_input){
-	uint64_t avg_sum = 0;
-	gdf_dtype dtype;
-	size_t dtype_size;
+std::vector<gdf_column_cpp> groupby_without_aggregations(const std::vector<gdf_column_cpp> & input, const std::vector<int>& group_column_indices){
 
-	// Step 1
-	dtype = column_input->dtype;
-	dtype_size = get_width_dtype(dtype);
-
-	gdf_column_cpp column_avg;
-	column_avg.create_gdf_column(dtype, 1, nullptr, dtype_size);
-
-	gdf_column_cpp temp;
-	temp.create_gdf_column(dtype, gdf_reduction_get_intermediate_output_size(), nullptr, dtype_size, "");
-
-	CUDF_CALL( gdf_sum(column_input, temp.get_gdf_column()->data, temp.size()) );
-	CheckCudaErrors(cudaMemcpy(&avg_sum, temp.get_gdf_column()->data, dtype_size, cudaMemcpyDeviceToHost));
-
-	// Step 2
-	uint64_t avg_count = column_input->size - column_input->null_count;
-
-	dtype = column_output->dtype;
-	dtype_size = get_width_dtype(dtype);
-
-	if (Ral::Traits::is_dtype_float32(dtype)) {
-		float result = (float) avg_sum / (float) avg_count;
-		CheckCudaErrors(cudaMemcpy(column_output->data, &result, dtype_size, cudaMemcpyHostToDevice));
+	gdf_size_type num_group_columns = group_column_indices.size();
+	std::vector<gdf_column*> data_cols_in(input.size());
+	for(int i = 0; i < input.size(); i++){
+		data_cols_in[i] = input[i].get_gdf_column();
 	}
-	else if (Ral::Traits::is_dtype_float64(dtype)) {
-		double result = (double) avg_sum / (double) avg_count;
-		CheckCudaErrors(cudaMemcpy(column_output->data, &result, dtype_size, cudaMemcpyHostToDevice));
+
+	gdf_context ctxt;
+	ctxt.flag_null_sort_behavior = GDF_NULL_AS_LARGEST; //  Nulls are are treated as largest
+	ctxt.flag_groupby_include_nulls = 1; // Nulls are treated as values in group by keys where NULL == NULL (SQL style)
+
+	cudf::table group_by_data_in_table(data_cols_in);
+	cudf::table group_by_columns_out_table;
+	rmm::device_vector<gdf_index_type> indexes_out;
+	std::tie(group_by_columns_out_table, indexes_out) = gdf_group_by_without_aggregations(group_by_data_in_table, 
+															num_group_columns, group_column_indices.data(), &ctxt);
+
+	std::vector<gdf_column_cpp> output_columns_group(group_by_columns_out_table.num_columns());
+	for(int i = 0; i < output_columns_group.size(); i++){
+		group_by_columns_out_table.get_column(i)->col_name = nullptr; // need to do this because gdf_group_by_without_aggregations is not setting the name properly
+		output_columns_group[i].create_gdf_column(group_by_columns_out_table.get_column(i));
 	}
-	else if (Ral::Traits::is_dtype_integer(dtype)) {
-		if (Ral::Traits::is_dtype_signed(dtype)) {
-			int64_t result = (int64_t) avg_sum / (int64_t) avg_count;
-			CheckCudaErrors(cudaMemcpy(column_output->data, &result, dtype_size, cudaMemcpyHostToDevice));
-		}
-		// TODO: felipe percy noboa see upgrade to uints
-		// else if (Ral::Traits::is_dtype_unsigned(dtype)) {
-		//     uint64_t result = (uint64_t) avg_sum / (uint64_t) avg_count;
-		//     CheckCudaErrors(cudaMemcpy(column_output->data, &result, dtype_size, cudaMemcpyHostToDevice));
-		// }
+	gdf_column index_col;
+	gdf_column_view(&index_col, static_cast<void*>(indexes_out.data().get()), nullptr,indexes_out.size(), GDF_INT32);
+
+	std::vector<gdf_column_cpp> grouped_output(num_group_columns);
+	for(int i = 0; i < num_group_columns; i++){
+		if (input[i].valid())
+			grouped_output[i].create_gdf_column(input[i].dtype(), index_col.size, nullptr, get_width_dtype(input[i].dtype()), input[i].name());
+		else
+			grouped_output[i].create_gdf_column(input[i].dtype(), index_col.size, nullptr, nullptr, get_width_dtype(input[i].dtype()), input[i].name());
+
+		materialize_column(output_columns_group[i].get_gdf_column(),
+											grouped_output[i].get_gdf_column(),
+											&index_col);
 	}
-	else {
-		throw std::runtime_error{"In perform_avg function: unsupported dtype"};
-	}
-}
-
-std::vector<gdf_column_cpp> groupby_without_aggregations(blazing_frame& input, std::vector<int>& group_column_indices){
-	size_t nCols = input.get_size_column(0);
-  size_t nRows = input.get_column(0).size();
-
-  std::vector<gdf_column*> raw_cols(nCols);
-  std::vector<gdf_column_cpp> output_columns(nCols);
-  std::vector<gdf_column*> raw_output_columns(nCols);
-  for(size_t i = 0; i < nCols; i++){
-    raw_cols[i] = input.get_column(i).get_gdf_column();
-    output_columns[i].create_gdf_column(input.get_column(i).dtype(),
-																				nRows,
-																				nullptr,
-																				get_width_dtype(input.get_column(i).dtype()),
-																				input.get_column(i).name());
-    raw_output_columns[i] = output_columns[i].get_gdf_column();
-  }
-
-	gdf_column_cpp index_col;
-  index_col.create_gdf_column(GDF_INT32, nRows, nullptr, get_width_dtype(GDF_INT32), "");
-
-  gdf_size_type index_col_num_rows = 0;
-
-  gdf_context ctxt;
-  ctxt.flag_null_sort_behavior = GDF_NULL_AS_LARGEST; //  Nulls are are treated as largest
-  ctxt.flag_groupby_include_nulls = 1; // Nulls are treated as values in group by keys where NULL == NULL (SQL style)
-
-  CUDF_CALL( gdf_group_by_without_aggregations(raw_cols.size(),
-                                              raw_cols.data(),
-                                              group_column_indices.size(),
-                                              group_column_indices.data(),
-                                              raw_output_columns.data(),
-                                              (gdf_size_type*)(index_col.get_gdf_column()->data),
-                                              &index_col_num_rows,
-                                              &ctxt));
-  index_col.resize(index_col_num_rows);
-
-  std::vector<gdf_column_cpp> grouped_output(nCols);
-  for(size_t i = 0; i < nCols; i++){
-    grouped_output[i].create_gdf_column(input.get_column(i).dtype(),
-																				index_col.size(),
-																				nullptr,
-																				get_width_dtype(input.get_column(i).dtype()),
-																				input.get_column(i).name());
-    materialize_column(raw_output_columns[i],
-                      grouped_output[i].get_gdf_column(),
-                      index_col.get_gdf_column());
-    grouped_output[i].update_null_count();
-  }
-
 	return grouped_output;
 }
 
-void single_node_groupby_without_aggregations(blazing_frame& input, std::vector<int>& group_column_indices){
-	std::vector<gdf_column_cpp> grouped_table = groupby_without_aggregations(input, group_column_indices);
+/*******************************************************************************/
 
-  input.clear();
-  input.add_table(grouped_table);
+// 	size_t nCols = input.get_size_column(0);
+//   size_t nRows = input.get_column(0).size();
+
+//   std::vector<gdf_column*> raw_cols(nCols);
+//   std::vector<gdf_column_cpp> output_columns(nCols);
+//   std::vector<gdf_column*> raw_output_columns(nCols);
+//   for(size_t i = 0; i < nCols; i++){
+//     raw_cols[i] = input.get_column(i).get_gdf_column();
+//     output_columns[i].create_gdf_column(input.get_column(i).dtype(),
+// 																				nRows,
+// 																				nullptr,
+// 																				get_width_dtype(input.get_column(i).dtype()),
+// 																				input.get_column(i).name());
+//     raw_output_columns[i] = output_columns[i].get_gdf_column();
+//   }
+
+// 	gdf_column_cpp index_col;
+//   index_col.create_gdf_column(GDF_INT32, nRows, nullptr, get_width_dtype(GDF_INT32), "");
+
+//   gdf_size_type index_col_num_rows = 0;
+
+//   gdf_context ctxt;
+//   ctxt.flag_null_sort_behavior = GDF_NULL_AS_LARGEST; //  Nulls are are treated as largest
+//   ctxt.flag_groupby_include_nulls = 1; // Nulls are treated as values in group by keys where NULL == NULL (SQL style)
+
+//   CUDF_CALL( gdf_group_by_without_aggregations(raw_cols.size(),
+//                                               raw_cols.data(),
+//                                               group_column_indices.size(),
+//                                               group_column_indices.data(),
+//                                               raw_output_columns.data(),
+//                                               (gdf_size_type*)(index_col.get_gdf_column()->data),
+//                                               &index_col_num_rows,
+//                                               &ctxt));
+//   index_col.resize(index_col_num_rows);
+
+//   std::vector<gdf_column_cpp> grouped_output(nCols);
+//   for(size_t i = 0; i < nCols; i++){
+//     grouped_output[i].create_gdf_column(input.get_column(i).dtype(),
+// 																				index_col.size(),
+// 																				nullptr,
+// 																				get_width_dtype(input.get_column(i).dtype()),
+// 																				input.get_column(i).name());
+//     materialize_column(raw_output_columns[i],
+//                       grouped_output[i].get_gdf_column(),
+//                       index_col.get_gdf_column());
+//     grouped_output[i].update_null_count();
+//   }
+
+// 	return grouped_output;
+
+
+void single_node_groupby_without_aggregations(blazing_frame& input, std::vector<int>& group_column_indices){
+
+	std::vector<gdf_column_cpp> data_cols_in(input.get_width());
+	for(int i = 0; i < input.get_width(); i++){
+		data_cols_in[i] = input.get_column(i);
+	}
+	std::vector<gdf_column_cpp> grouped_table = groupby_without_aggregations(data_cols_in, group_column_indices);
+
+	input.clear();
+	input.add_table(grouped_table);
 }
 
 void distributed_groupby_without_aggregations(const Context& queryContext, blazing_frame& input, std::vector<int>& group_column_indices){
@@ -158,6 +159,10 @@ void distributed_groupby_without_aggregations(const Context& queryContext, blazi
 	for(size_t i = 0; i < group_column_indices.size(); i++){
 		group_columns[i] = input.get_column(group_column_indices[i]);
 	}
+	std::vector<gdf_column_cpp> data_cols_in(input.get_width());
+	for(int i = 0; i < input.get_width(); i++){
+		data_cols_in[i] = input.get_column(i);
+	}
 
 	size_t rowSize = input.get_column(0).size();
 
@@ -165,7 +170,7 @@ void distributed_groupby_without_aggregations(const Context& queryContext, blazi
 
 	auto groupByTask = std::async(std::launch::async,
 																groupby_without_aggregations,
-																std::ref(input),
+																std::ref(data_cols_in),
 																std::ref(group_column_indices));
 
 	std::vector<gdf_column_cpp> partitionPlan;
@@ -197,7 +202,7 @@ void distributed_groupby_without_aggregations(const Context& queryContext, blazi
 	// Could "it" iterator be partitions.end()?
 	partitionsToMerge.push_back(std::move(*it));
 
-	ral::distribution::groupByMerger(partitionsToMerge, group_column_indices, input);
+	ral::distribution::groupByWithoutAggregationsMerger(partitionsToMerge, group_column_indices, input);
 }
 
 void aggregations_with_groupby(gdf_agg_op agg_op, std::vector<gdf_column*>& group_by_columns_ptr, gdf_column_cpp& aggregation_input, std::vector<gdf_column*>& group_by_columns_ptr_out, gdf_column_cpp& output_column){
@@ -264,66 +269,81 @@ void aggregations_with_groupby(gdf_agg_op agg_op, std::vector<gdf_column*>& grou
 		}
 }
 
-void aggregations_without_groupby(gdf_agg_op agg_op, gdf_column_cpp& aggregation_input, gdf_column_cpp& output_column){
+gdf_reduction_op gdf_agg_op_to_gdf_reduction_op(gdf_agg_op agg_op){
+	switch(agg_op){
+		case GDF_SUM:
+			return GDF_REDUCTION_SUM;
+		case GDF_MIN:
+			return GDF_REDUCTION_MIN;
+		case GDF_MAX:
+			return GDF_REDUCTION_MAX; 
+		default:
+			std::cout<<"ERROR:	Unexpected gdf_agg_op"<<std::endl;
+			return GDF_REDUCTION_SUM;
+	}
+}
+
+void aggregations_without_groupby(gdf_agg_op agg_op, gdf_column_cpp& aggregation_input, gdf_column_cpp& output_column, gdf_dtype output_type, std::string output_column_name){
+	
 	gdf_column_cpp temp;
 	switch(agg_op){
 		case GDF_SUM:
-			if (aggregation_input.size() == 0) {
-				// Set output_column data to invalid
-				CheckCudaErrors(cudaMemset(output_column.valid(), (gdf_valid_type)0, output_column.get_valid_size()));
-				output_column.update_null_count();
-				break;
-			}
-			temp.create_gdf_column(output_column.dtype(), gdf_reduction_get_intermediate_output_size(), nullptr, get_width_dtype(output_column.dtype()), "");
-			CUDF_CALL(gdf_sum(aggregation_input.get_gdf_column(), temp.data(), temp.size()));
-			CheckCudaErrors(cudaMemcpy(output_column.data(), temp.data(), 1 * get_width_dtype(output_column.dtype()), cudaMemcpyDeviceToDevice));
-			break;
 		case GDF_MIN:
-			if (aggregation_input.size() == 0) {
-				// Set output_column data to invalid
-				CheckCudaErrors(cudaMemset(output_column.valid(), (gdf_valid_type)0, output_column.get_valid_size()));
-				output_column.update_null_count();
-				break;
-			}
-			temp.create_gdf_column(output_column.dtype(), gdf_reduction_get_intermediate_output_size(), nullptr, get_width_dtype(output_column.dtype()), "");
-			CUDF_CALL(gdf_min(aggregation_input.get_gdf_column(), temp.data(), temp.size()));
-			CheckCudaErrors(cudaMemcpy(output_column.data(), temp.data(), 1 * get_width_dtype(output_column.dtype()), cudaMemcpyDeviceToDevice));
-			break;
 		case GDF_MAX:
 			if (aggregation_input.size() == 0) {
 				// Set output_column data to invalid
-				CheckCudaErrors(cudaMemset(output_column.valid(), (gdf_valid_type)0, output_column.get_valid_size()));
-				output_column.update_null_count();
+				gdf_scalar null_value;
+				null_value.is_valid = false;
+				null_value.dtype = output_type;
+				output_column.create_gdf_column(null_value, output_column_name);	
+				break;
+			} else {
+				gdf_reduction_op reduction_op = gdf_agg_op_to_gdf_reduction_op(agg_op);
+				gdf_scalar reduction_out = cudf::reduction(aggregation_input.get_gdf_column(), reduction_op, output_type);
+				output_column.create_gdf_column(reduction_out, output_column_name);
 				break;
 			}
-			temp.create_gdf_column(output_column.dtype(), gdf_reduction_get_intermediate_output_size(), nullptr, get_width_dtype(output_column.dtype()), "");
-			CUDF_CALL(gdf_max(aggregation_input.get_gdf_column(), temp.data(), temp.size()));
-			CheckCudaErrors(cudaMemcpy(output_column.data(), temp.data(), 1 * get_width_dtype(output_column.dtype()), cudaMemcpyDeviceToDevice));
-			break;
 		case GDF_AVG:
-			if (aggregation_input.size() == 0) {
+			if (aggregation_input.size() == 0 || (aggregation_input.size() == aggregation_input.null_count())) {
 				// Set output_column data to invalid
-				CheckCudaErrors(cudaMemset(output_column.valid(), (gdf_valid_type)0, output_column.get_valid_size()));
-				output_column.update_null_count();
+				gdf_scalar null_value;
+				null_value.is_valid = false;
+				null_value.dtype = output_type;
+				output_column.create_gdf_column(null_value, output_column_name);	
 				break;
-			}
-			perform_avg(output_column.get_gdf_column(), aggregation_input.get_gdf_column());
-			break;
+			} else {
+				gdf_dtype sum_output_type = get_aggregation_output_type(aggregation_input.dtype(),GDF_SUM, false);
+				gdf_scalar avg_sum_scalar = cudf::reduction(aggregation_input.get_gdf_column(), GDF_REDUCTION_SUM, sum_output_type);
+				long avg_count = aggregation_input.get_gdf_column()->size - aggregation_input.get_gdf_column()->null_count;
+
+				assert(output_type == GDF_FLOAT64);
+				assert(sum_output_type == GDF_INT64 || sum_output_type == GDF_FLOAT64);
+				
+				gdf_scalar avg_scalar;
+				avg_scalar.dtype = GDF_FLOAT64;
+				avg_scalar.is_valid = true;
+				if (avg_sum_scalar.dtype == GDF_INT64)
+					avg_scalar.data.fp64 = (double)avg_sum_scalar.data.si64/(double)avg_count;
+				else
+					avg_scalar.data.fp64 = (double)avg_sum_scalar.data.fp64/(double)avg_count;
+
+				output_column.create_gdf_column(avg_scalar, output_column_name);
+				break;
+			}			
 		case GDF_COUNT:
 		{
-			// output dtype is GDF_UINT64
-			// defined in 'get_aggregation_output_type' function.
-			uint64_t result = aggregation_input.size() - aggregation_input.null_count();
-			CheckCudaErrors(cudaMemcpy(output_column.data(), &result, sizeof(uint64_t), cudaMemcpyHostToDevice));
+			gdf_scalar reduction_out;
+			reduction_out.dtype = GDF_INT64;
+			reduction_out.is_valid = true;
+			reduction_out.data.si64 = aggregation_input.get_gdf_column()->size - aggregation_input.get_gdf_column()->null_count;   
+			
+			output_column.create_gdf_column(reduction_out, output_column_name);
 			break;
 		}
 		case GDF_COUNT_DISTINCT:
 		{
-			// output dtype is GDF_UINT64
-			// defined in 'get_aggregation_output_type' function.
-			uint64_t result = aggregation_input.size() - aggregation_input.null_count();
-			CheckCudaErrors(cudaMemcpy(output_column.data(), &result, sizeof(uint64_t), cudaMemcpyHostToDevice));
-			break;
+			// TODO not currently supported
+			std::cout<<"ERROR: COUNT DISTINCT currently not supported without a group by"<<std::endl;
 		}
 	}
 }
@@ -363,17 +383,17 @@ std::vector<gdf_column_cpp> compute_aggregations(blazing_frame& input, std::vect
 			aggregation_input = input.get_column(get_index(expression));
 		}
 
-		gdf_dtype output_type = get_aggregation_output_type(aggregation_input.dtype(), aggregation_types[i], group_column_indices.size());
+		gdf_dtype output_type = get_aggregation_output_type(aggregation_input.dtype(), aggregation_types[i], group_column_indices.size() != 0);
 
 		// if the aggregation was given an alias lets use it, otherwise we'll name it based on the aggregation and input
 		std::string output_column_name = (aggregation_column_assigned_aliases[i] == ""
 																			? (aggregator_to_string(aggregation_types[i]) + "(" + aggregation_input.name() + ")")
 																			: aggregation_column_assigned_aliases[i]);
-		output_columns_aggregations[i].create_gdf_column(output_type, aggregation_size, nullptr, get_width_dtype(output_type), output_column_name);
-
+		
 		if (group_column_indices.size() == 0) {
-			aggregations_without_groupby(aggregation_types[i], aggregation_input, output_columns_aggregations[i]);
+			aggregations_without_groupby(aggregation_types[i], aggregation_input, output_columns_aggregations[i], output_type, output_column_name);
 		}else{
+			output_columns_aggregations[i].create_gdf_column(output_type, aggregation_size, nullptr, get_width_dtype(output_type), output_column_name);
 			aggregations_with_groupby(aggregation_types[i],
 																group_by_columns_ptr,
 																aggregation_input,
@@ -518,9 +538,9 @@ void process_aggregate(blazing_frame& input, std::string query_part, const Conte
 	// Get groups
 	auto rangeStart = query_part.find("(");
 	auto rangeEnd = query_part.rfind(")") - rangeStart - 1;
-  std::string combined_expression = query_part.substr(rangeStart + 1, rangeEnd - 1);
+	std::string combined_expression = query_part.substr(rangeStart + 1, rangeEnd - 1);
 
-  std::vector<int> group_column_indices = get_group_columns(combined_expression);
+	std::vector<int> group_column_indices = get_group_columns(combined_expression);
 
 	// Get aggregations
 	std::vector<gdf_agg_op> aggregation_types;
@@ -544,22 +564,21 @@ void process_aggregate(blazing_frame& input, std::string query_part, const Conte
 	}
 
 	if (aggregation_types.size() == 0) {
-   	if (!queryContext || queryContext->getTotalNodes() <= 1) {
-      single_node_groupby_without_aggregations(input, group_column_indices);
-    }else{
-      distributed_groupby_without_aggregations(*queryContext, input, group_column_indices);
-    }
-	}else{
 		if (!queryContext || queryContext->getTotalNodes() <= 1) {
-      single_node_aggregations(input, group_column_indices, aggregation_types, aggregation_input_expressions, aggregation_column_assigned_aliases);
-    }else{
-			if (group_column_indices.size() == 0) {
-				distributed_aggregations_without_groupby(*queryContext, input, group_column_indices, aggregation_types, aggregation_input_expressions, aggregation_column_assigned_aliases);
-			}
-			else {
-	      distributed_aggregations_with_groupby(*queryContext, input, group_column_indices, aggregation_types, aggregation_input_expressions, aggregation_column_assigned_aliases);
-			}
-    }
+			single_node_groupby_without_aggregations(input, group_column_indices);
+		} else{
+			distributed_groupby_without_aggregations(*queryContext, input, group_column_indices);
+		}
+	} else{
+		if (!queryContext || queryContext->getTotalNodes() <= 1) {
+				single_node_aggregations(input, group_column_indices, aggregation_types, aggregation_input_expressions, aggregation_column_assigned_aliases);
+		} else {
+				if (group_column_indices.size() == 0) {
+					distributed_aggregations_without_groupby(*queryContext, input, group_column_indices, aggregation_types, aggregation_input_expressions, aggregation_column_assigned_aliases);
+				} else {
+					distributed_aggregations_with_groupby(*queryContext, input, group_column_indices, aggregation_types, aggregation_input_expressions, aggregation_column_assigned_aliases);
+				}
+		}
 	}
 }
 

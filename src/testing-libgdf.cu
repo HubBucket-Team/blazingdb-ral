@@ -425,7 +425,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 	  				table.tableSchema.csvSkipRows,
 	  				table.tableSchema.names, types);
 	  	}else{
-	  		parser = std::make_shared<ral::io::gdf_parser>(&table,accessToken);
+	  		parser = std::make_shared<ral::io::gdf_parser>(table,accessToken);
 	  	}
 
 

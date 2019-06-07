@@ -7,16 +7,9 @@
 #include <vector>
 #include <memory>
 #include "arrow/io/interfaces.h"
+#include <blazingdb/protocol/message/io/file_system.h>
 #include "GDFColumn.cuh"
 #include "cudf.h"
-
-namespace blazingdb{
- namespace message{
-  namespace io {
-  	  class FileSystemBlazingTableSchema;
-  }
- }
-}
 
 
 namespace ral {
@@ -24,7 +17,7 @@ namespace io {
 
 class gdf_parser: public data_parser {
 public:
-	gdf_parser(blazingdb::message::io::FileSystemBlazingTableSchema * table_schema, uint64_t accessToken);
+	gdf_parser(blazingdb::message::io::FileSystemBlazingTableSchema table_schema, uint64_t accessToken);
 
 	virtual ~gdf_parser();
 
@@ -42,7 +35,7 @@ public:
 ;
 
 private:
-	blazingdb::message::io::FileSystemBlazingTableSchema * table_schema;
+	blazingdb::message::io::FileSystemBlazingTableSchema table_schema;
 	std::vector<void *> handles;
 	uint64_t access_token;
 };

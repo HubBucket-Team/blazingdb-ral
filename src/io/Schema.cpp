@@ -6,8 +6,6 @@
  */
 
 #include "Schema.h"
-#include <blazingdb/protocol/message/interpreter/utils.h>
-
 
 namespace ral {
 namespace io {
@@ -50,14 +48,14 @@ Schema::Schema() : names({}),calcite_to_file_indices({}), types({}), num_row_gro
 
 }
 
-Schema::Schema(blazingdb::protocol::TableSchemaSTL * schema){
-	this->calcite_to_file_indices = schema->calciteToFileIndices;
-	this->names = schema->names;
-	this->types.resize(schema->types.size());
-	for(int i = 0; i < schema->types.size(); i++){
-		this->types[i] = (gdf_dtype) schema->types[i];
+Schema::Schema(blazingdb::protocol::TableSchemaSTL schema){
+	this->calcite_to_file_indices = schema.calciteToFileIndices;
+	this->names = schema.names;
+	this->types.resize(schema.types.size());
+	for(int i = 0; i < schema.types.size(); i++){
+		this->types[i] = (gdf_dtype) schema.types[i];
 	}
-	this->num_row_groups = schema->numRowGroups;
+	this->num_row_groups = schema.numRowGroups;
 
 }
 
@@ -83,14 +81,6 @@ std::string Schema::get_type(size_t schema_index) const{
 	return convert_dtype_to_string(this->types[schema_index]);
 }
 
-std::vector<int> Schema::get_types_as_ints() {
-	std::vector<int> int_types;
-	for(int i = 0; i < this->types.size(); i++){
-		int_types.push_back(this->types[i]);
-	}
-	return int_types;
-}
-
 size_t Schema::get_file_index(size_t schema_index) const{
 	if(this->calcite_to_file_indices.size() == 0){
 		return schema_index;
@@ -98,30 +88,22 @@ size_t Schema::get_file_index(size_t schema_index) const{
 	return this->calcite_to_file_indices[schema_index];
 }
 
-std::vector<size_t> Schema::get_file_indices() const {
-	return this->calcite_to_file_indices;
-}
-
 size_t Schema::get_num_row_groups(size_t file_index) const{
 	return this->num_row_groups[file_index];
 }
 
-std::vector<size_t> Schema::get_num_row_groups() const{
-	return this->num_row_groups;
+blazingdb::protocol::TableSchemaSTL Schema::getTransport(){
+	blazingdb::protocol::TableSchemaSTL transport_schema;
+
+	transport_schema.names = this->names;
+	transport_schema.calciteToFileIndices = this->calcite_to_file_indices;
+	for(int i = 0; i < this->types.size(); i++){
+		transport_schema.types.push_back(this->types[i]);
+	}
+
+	transport_schema.numRowGroups = this->num_row_groups;
+
 }
-
-// blazingdb::protocol::TableSchemaSTL Schema::getTransport(){
-// 	blazingdb::protocol::TableSchemaSTL transport_schema;
-
-// 	transport_schema.names = this->names;
-// 	transport_schema.calciteToFileIndices = this->calcite_to_file_indices;
-// 	for(int i = 0; i < this->types.size(); i++){
-// 		transport_schema.types.push_back(this->types[i]);
-// 	}
-
-// 	transport_schema.numRowGroups = this->num_row_groups;
-
-// }
 void Schema::add_column(gdf_column_cpp column,size_t file_index){
 	this->names.push_back(column.name());
 	this->types.push_back(column.dtype());

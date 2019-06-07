@@ -382,12 +382,7 @@ static result_pair parseSchemaService(uint64_t accessToken, Buffer&& requestPayl
 	loader->get_schema(schema);
 
 
-	// blazingdb::protocol::TableSchemaSTL transport_schema = schema.getTransport();
-  blazingdb::protocol::TableSchemaSTL transport_schema;
-	transport_schema.names = schema.get_names();
-	transport_schema.calciteToFileIndices = schema.get_file_indices();
-	transport_schema.types = schema.get_types_as_ints();
-	transport_schema.numRowGroups = schema.get_num_row_groups();
+	blazingdb::protocol::TableSchemaSTL transport_schema = schema.getTransport();
 
 	if(requestPayload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
 		transport_schema.csvDelimiter = requestPayload.csvDelimiter;
@@ -408,7 +403,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 	std::vector<ral::io::Schema> schemas;
 	std::vector<std::string> table_names;
   for(auto table : requestPayload.tableGroup.tables){
-	  ral::io::Schema schema(&(table.tableSchema));
+	  ral::io::Schema schema(table.tableSchema);
 	std::shared_ptr<ral::io::data_parser> parser;
 	  if(table.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_PARQUET){
 	  		parser = std::make_shared<ral::io::parquet_parser>();

@@ -4,8 +4,6 @@
 
 #include <cuda_runtime.h>
 
-#include <blazingdb/protocol/message/messages.h>
-#include <blazingdb/protocol/message/interpreter/messages.h>
 #include "Utils.cuh"
 #include "ResultSetRepository.h"
 #include "DataFrame.h"

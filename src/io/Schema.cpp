@@ -6,7 +6,8 @@
  */
 
 #include "Schema.h"
-#include <blazingdb/protocol/message/utils.h>
+#include <blazingdb/protocol/message/interpreter/utils.h>
+
 
 namespace ral {
 namespace io {

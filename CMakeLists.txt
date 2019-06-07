@@ -129,11 +129,10 @@ target_link_libraries(testing-libgdf_lib
 )
 
 set(SRC_FILES_APP
-    ${SRC_FILES}
     ${CMAKE_SOURCE_DIR}/src/testing-libgdf.cu)
 
 add_executable(testing-libgdf ${SRC_FILES_APP})
-target_link_libraries(testing-libgdf testing-libgdf_lib)
+target_link_libraries(testing-libgdf testing-libgdf_lib ${BLAZINGDB_PROTOCOL_STATIC_LIB})
 
 # Tests
 if(BUILD_TESTING)

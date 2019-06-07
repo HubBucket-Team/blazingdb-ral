@@ -7,7 +7,7 @@
 
 #include "GDFParser.h"
 #include "ral-message.cuh"
-#include <blazingdb/protocol/message/utils.h>
+#include <blazingdb/protocol/message/interpreter/utils.h>
 #include <blazingdb/protocol/message/interpreter/gdf_dto.h>
 #include <blazingdb/protocol/message/io/file_system.h>
 

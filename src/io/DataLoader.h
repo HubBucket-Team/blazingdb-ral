@@ -15,7 +15,6 @@
 #include "data_provider/DataProvider.h"
 #include <arrow/io/interfaces.h>
 #include <memory>
-#include "Schema.h"
 
 #include <nvstrings/NVCategory.h>
 #include <nvstrings/NVStrings.h>

@@ -102,7 +102,7 @@ blazingdb::protocol::TableSchemaSTL Schema::getTransport(){
 	}
 
 	transport_schema.numRowGroups = this->num_row_groups;
-
+	return transport_schema;
 }
 void Schema::add_column(gdf_column_cpp column,size_t file_index){
 	this->names.push_back(column.name());

@@ -44,6 +44,11 @@ void init_default_csv_args(csv_read_arg & args){
 	// args.prefix
 	args.nrows = -1;
 	args.header = -1;
+	args.use_cols_int = nullptr;
+	args.use_cols_int_len = 0;
+	args.use_cols_char = nullptr;     
+  	args.use_cols_char_len = 0;
+
 }
 
 void copy_non_data_csv_args(csv_read_arg & args, csv_read_arg & new_args){
@@ -70,6 +75,10 @@ void copy_non_data_csv_args(csv_read_arg & args, csv_read_arg & new_args){
 	new_args.compression 	= args.compression;
 	new_args.keep_default_na = args.keep_default_na;
 	new_args.na_filter		= args.na_filter;
+	new_args.use_cols_int = args.use_cols_int;
+	new_args.use_cols_int_len = args.use_cols_int_len;
+	new_args.use_cols_char = args.use_cols_char;     
+  	new_args.use_cols_char_len = args.use_cols_char_len;
 
 }
 
@@ -252,6 +261,29 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 
 void csv_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files, ral::io::Schema & schema)  {
 	csv_read_arg raw_args{};
+
+	args.num_names = this->column_names.size();
+	if(this->column_names.size() > 0){
+		args.names = new const char *[args.num_names];
+		for(int column_index = 0; column_index < args.num_names; column_index++){
+			args.names[column_index] = this->column_names[column_index].c_str();
+		}
+	}else{
+		args.names = nullptr;
+	}
+
+	args.num_dtype = this->dtype_strings.size();
+	if(this->dtype_strings.size() > 0){
+		args.dtype = new const char *[args.num_dtype]; //because dynamically allocating metadata is fun
+		for(int column_index = 0; column_index < args.num_dtype; column_index++){
+
+			args.dtype[column_index] = this->dtype_strings[column_index].c_str();
+		}
+
+	}else{
+		args.dtype = nullptr;
+	}
+
 	copy_non_data_csv_args(args, raw_args);
 
 	std::shared_ptr< arrow::Buffer > buffer;

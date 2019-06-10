@@ -454,7 +454,10 @@ std::string get_named_expression(std::string query_part, std::string expression_
 	if(query_part.find(expression_name + "=[") == query_part.npos){
 		return ""; //expression not found
 	}
-	int start_position =( query_part.find(expression_name + "=["))+ 2 + expression_name.length();
+	int start_position =( query_part.find(expression_name + "=[["))+ 3 + expression_name.length();
+	if (start_position == query_part.npos){
+		start_position =( query_part.find(expression_name + "=["))+ 2 + expression_name.length();
+	}
 	int end_position = (query_part.find("]",start_position));
 	return query_part.substr(start_position,end_position - start_position);
 }
@@ -1060,6 +1063,10 @@ size_t get_table_index(std::vector<std::string> table_names, std::string table_n
 
 	for (auto tb : table_names) {
 		std::cout << tb << "\n";
+	}
+
+	if (StringUtil::beginsWith(table_name, "main.")){
+		table_name = table_name.substr(5);
 	}
 
 	auto it = std::find(table_names.begin(), table_names.end(), table_name);

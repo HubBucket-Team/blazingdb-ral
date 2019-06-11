@@ -15,6 +15,8 @@
 #include <iostream>
 #include "../Utils.cuh"
 
+#include <algorithm>
+
 #define checkError(error, txt)  if ( error != GDF_SUCCESS) { std::cerr << "ERROR:  " << error <<  "  in "  << txt << std::endl;  return error; }
 
 namespace ral {
@@ -237,10 +239,18 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	//	std::cout << "args.num_rows_out " <<raw_args.num_rows_out << std::endl;
 	assert(raw_args.num_cols_out > 0);
 
+	columns.resize(raw_args.num_cols_out);
+
+	//column_indices may be requested in a specific order (not necessarily sorted), but read_csv will output the columns in the sorted order, so we need to put them back into the order we want
+	std::vector<size_t> idx(column_indices.size());
+	std::iota(idx.begin(), idx.end(), 0);
+
+	// sort indexes based on comparing values in column_indices
+	std::sort(idx.begin(), idx.end(),
+       [&column_indices](size_t i1, size_t i2) {return column_indices[i1] < column_indices[i2];});
+
 	for(size_t i = 0; i < raw_args.num_cols_out; i++ ){
-		gdf_column_cpp c;
-		c.create_gdf_column(raw_args.data[i]);
-		columns.push_back(c);
+		columns[idx[i]].create_gdf_column(raw_args.data[i]);
 	}
 
 

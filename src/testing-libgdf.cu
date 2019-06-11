@@ -661,10 +661,10 @@ int main(int argc, const char *argv[])
 
     std::cout << "Usage: " << argv[0]
             << " <RAL_ID>"
-                " <ORCHESTRATOR_[IP|HOSTNAME]> <ORCHESTRATOR_PROTOCOL_TCP_PORT> <ORCHESTRATOR_COMMUNICATION_TCP_PORT>"
-                " <RAL_[IP|HOSTNAME]> <RAL_PROTOCOL_TCP_PORT> <RAL_COMMUNICATION_TCP_PORT>" << std::endl;
+                " <ORCHESTRATOR_HTTP_COMMUNICATION_[IP|HOSTNAME]> <ORCHESTRATOR_HTTP_COMMUNICATION_PORT>"
+                " <RAL_HTTP_COMMUNICATION_[IP|HOSTNAME]> <RAL_HTTP_COMMUNICATION_PORT> <RAL_TCP_PROTOCOL_PORT>" << std::endl;
 
-    if (argc != 8) {
+    if (argc != 7) {
         std::cout << "FATAL: Invalid number of arguments" << std::endl;
         return EXIT_FAILURE;
     }
@@ -678,36 +678,29 @@ int main(int argc, const char *argv[])
     const std::string ralId = std::string(argv[1]);
     const std::string orchestratorHost = std::string(argv[2]);
 
-    const int orchestratorProtocolPort = ConnectionUtils::parsePort(argv[3]);
+    const int orchestratorCommunicationPort = ConnectionUtils::parsePort(argv[3]);
 
-    if (orchestratorProtocolPort == -1) {
-        std::cout << "FATAL: Invalid Orchestrator protocol TCP port " + std::string(argv[3]) << std::endl;
+    if (orchestratorCommunicationPort == -1) {
+        std::cout << "FATAL: Invalid Orchestrator HTTP communication port " + std::string(argv[3]) << std::endl;
         return EXIT_FAILURE;
     }
+    
+    const std::string ralHost = std::string(argv[4]);
 
-    const int orchestratorCommunicationPort = ConnectionUtils::parsePort(argv[4]);
+    const int ralCommunicationPort = ConnectionUtils::parsePort(argv[5]);
 
-    if (orchestratorProtocolPort == -1) {
-        std::cout << "FATAL: Invalid Orchestrator communication TCP port " + std::string(argv[4]) << std::endl;
+    if (ralCommunicationPort == -1) {
+        std::cout << "FATAL: Invalid RAL HTTP communication port " + std::string(argv[5]) << std::endl;
         return EXIT_FAILURE;
     }
-
-    const std::string ralHost = std::string(argv[5]);
 
     const int ralProtocolPort = ConnectionUtils::parsePort(argv[6]);
 
-    if (orchestratorProtocolPort == -1) {
-        std::cout << "FATAL: Invalid RAL protocol TCP port " + std::string(argv[6]) << std::endl;
+    if (ralProtocolPort == -1) {
+        std::cout << "FATAL: Invalid RAL TCP protocol port " + std::string(argv[6]) << std::endl;
         return EXIT_FAILURE;
     }
-
-    const int ralCommunicationPort = ConnectionUtils::parsePort(argv[7]);
-
-    if (orchestratorProtocolPort == -1) {
-        std::cout << "FATAL: Invalid RAL communication TCP port " + std::string(argv[7]) << std::endl;
-        return EXIT_FAILURE;
-    }
-
+    
     auto& communicationData = ral::communication::CommunicationData::getInstance();
 
     communicationData.initialize(
@@ -717,6 +710,12 @@ int main(int argc, const char *argv[])
         ralHost,
         ralCommunicationPort,
         ralProtocolPort);
+
+    std::cout << "RAL ID: " << ralId << std::endl;
+    std::cout << "Orchestrator HTTP communication host: " << orchestratorHost << std::endl;
+    std::cout << "Orchestrator HTTP communication port: " << orchestratorCommunicationPort << std::endl;
+    std::cout << "RAL HTTP communication host: " << ralHost << std::endl;
+    std::cout << "RAL HTTP communication port: " << ralCommunicationPort << std::endl;
 
     try {
         auto nodeDataMesssage = ral::communication::messages::Factory::createNodeDataMessage(communicationData.getSelfNode());
@@ -767,14 +766,14 @@ int main(int argc, const char *argv[])
 
 #else
 
-  connectionAddress.tcp_host = ralHost;
+  connectionAddress.tcp_host = "127.0.0.1"; // NOTE always use localhost for protocol server
   connectionAddress.tcp_port = ralProtocolPort;
 
-  blazingdb::protocol::TCPConnection connection(connectionAddress);
-
+  std::cout << "RAL TCP protocol port: " << connectionAddress.tcp_port << std::endl;
+  
 #endif
 
-  blazingdb::protocol::Server server(connection);
+  blazingdb::protocol::Server server(connectionAddress.tcp_port);
 
   services.insert(std::make_pair(interpreter::MessageType_ExecutePlan, &executePlanService));
   services.insert(std::make_pair(interpreter::MessageType_ExecutePlanFileSystem, &executeFileSystemPlanService));

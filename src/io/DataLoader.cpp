@@ -92,10 +92,14 @@ void data_loader::load_data(std::vector<gdf_column_cpp> & columns, const std::ve
 		}
 	}
 
-	size_t num_files = columns_per_file.size();
-	size_t num_columns = columns_per_file[0].size();
+	size_t num_columns, num_files = columns_per_file.size();
+
+	if(num_files>0)
+		num_columns = columns_per_file[0].size();
 
 	if(num_files == 0 || num_columns == 0){ 	//we got no data
+
+		parser->parse(nullptr,columns,schema,column_indices,file_index);
 		return ;
 	}
 

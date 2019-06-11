@@ -43,20 +43,17 @@ void gdf_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		std::vector<size_t> column_indices,
 		size_t file_index){
 
-
-	for(auto column : this->table_schema.gdf.columns) {
-
+	for(auto column_index : column_indices) {
+		auto & column = this->table_schema.gdf.columns[column_index];
 		gdf_column_cpp col;
-		size_t column_index = 0;
 
 		if (this->table_schema.gdf.columnTokens[column_index] == 0){
-			//const std::string column_name = table.columnNames.at(column_index);
-			const std::string column_name = "";
+			const std::string column_name = schema.get_names()[column_index];
 
 			if( ((gdf_dtype) column.dtype) == GDF_STRING){
 
-		          nvstrings_ipc_transfer ipc;  // NOTE: IPC handles will be closed when nvstrings_ipc_transfer goes out of scope
-		          memcpy(&ipc,column.custrings_data.data(),sizeof(nvstrings_ipc_transfer));
+				nvstrings_ipc_transfer ipc;  // NOTE: IPC handles will be closed when nvstrings_ipc_transfer goes out of scope
+				memcpy(&ipc,column.custrings_data.data(),sizeof(nvstrings_ipc_transfer));
 
 				NVStrings* strs = NVStrings::create_from_ipc(ipc);
 				NVCategory* category = NVCategory::create_from_strings(*strs);
@@ -85,7 +82,6 @@ void gdf_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		}
 
 		columns.push_back(col);
-
 		++column_index;
 	}
 

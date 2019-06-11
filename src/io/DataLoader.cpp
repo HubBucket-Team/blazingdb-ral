@@ -67,13 +67,7 @@ void data_loader::load_data(std::vector<gdf_column_cpp> & columns, const std::ve
 		//a file handle that we can use in case errors occur to tell the user which file had parsing issues
 		std::string user_readable_file_handle = this->provider->get_current_user_readable_file_handle();
 		std::shared_ptr<arrow::io::RandomAccessFile> file = this->provider->get_next();
-/**
- * std::shared_ptr<arrow::io::RandomAccessFile> file,
-				std::vector<gdf_column_cpp> & columns,
-				Schema schema,
-				std::vector<size_t> column_indices,
-				size_t file_index
- */
+
 		if(file != nullptr){
 			parser->parse(file,converted_data,schema,column_indices,file_index);
 
@@ -130,7 +124,7 @@ void data_loader::load_data(std::vector<gdf_column_cpp> & columns, const std::ve
 			//collect the columns into an array for the concat function
 			gdf_column * columns_to_concat[num_files];
 			for(size_t file_index = 0; file_index < num_files; file_index++){
-				columns_to_concat[column_index] = columns_per_file[file_index][column_index].get_gdf_column();
+				columns_to_concat[file_index] = columns_per_file[file_index][column_index].get_gdf_column();
 			}
 
 			gdf_error err = gdf_column_concat(column.get_gdf_column(),

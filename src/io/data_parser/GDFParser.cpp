@@ -65,19 +65,20 @@ void gdf_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 				col.create_gdf_column(category, column.size, column_name);
 			}
 			else {
-				// col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),(gdf_valid_type*)libgdf::CudaIpcMemHandlerFrom(column.valid),column.size,column_name);
-				col.create_gdf_column_for_ipc((gdf_dtype)column.dtype,libgdf::CudaIpcMemHandlerFrom(column.data),(gdf_valid_type *) libgdf::CudaIpcMemHandlerFrom(column.valid),column.size,column.null_count,column_name);
-				handles.push_back(col.data());
-			}
+				void * dataHandle = libgdf::CudaIpcMemHandlerFrom(column.data);
+				void * validHandle = libgdf::CudaIpcMemHandlerFrom(column.valid);
 
-			if(col.valid() == nullptr){
-				//TODO: we can remove this when libgdf properly
-				//implements all algorithsm with valid == nullptr support
-				//it crashes somethings like group by
-				col.allocate_set_valid();
+				col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,dataHandle, static_cast<gdf_valid_type*>(validHandle), column.size, column.null_count, column_name);
+				handles.push_back(dataHandle);
 
-			}else{
-				handles.push_back(col.valid());
+				if(validHandle == nullptr){
+					//TODO: we can remove this when libgdf properly
+					//implements all algorithsm with valid == nullptr support
+					//it crashes somethings like group by
+					col.allocate_set_valid();
+				}else{
+					handles.push_back(validHandle);
+				}
 			}
 		}else{
 			col = result_set_repository::get_instance().get_column(this->access_token, this->table_schema.gdf.columnTokens[column_index]);

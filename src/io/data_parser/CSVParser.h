@@ -44,6 +44,7 @@ private:
 	csv_read_arg args;
 	std::vector<std::string> column_names;
 	std::vector<std::string> dtype_strings; //this is only because we have to convert for args and dont want to have to remember to free up all the junk later
+	std::map<std::string, gdf_column_cpp> loaded_columns;
 };
 
 } /* namespace io */

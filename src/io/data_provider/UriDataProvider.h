@@ -31,6 +31,10 @@ public:
 	 */
 	bool has_next();
 	/**
+	 *  Resets current_file to 0 
+	 */
+	void reset();
+	/**
 	 * gets a randomaccessfile to the uri at file_uris[current_file] and advances current_file by 1
 	 */
 	std::shared_ptr<arrow::io::RandomAccessFile> get_next();

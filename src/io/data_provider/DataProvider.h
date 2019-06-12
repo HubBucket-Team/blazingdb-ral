@@ -24,6 +24,12 @@ public:
 	 * tells us if this provider can generate more arrow::io::RandomAccessFile instances
 	 */
 	virtual bool has_next() = 0;
+
+	/**
+	 *  Resets file read count to 0 for file based DataProvider
+	 */
+	virtual void reset() = 0;
+
 	/**
 	 * gets us the next arrow::io::RandomAccessFile
 	 */

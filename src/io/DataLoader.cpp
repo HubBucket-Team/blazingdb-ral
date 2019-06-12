@@ -86,6 +86,8 @@ void data_loader::load_data(std::vector<gdf_column_cpp> & columns, const std::ve
 		}
 	}
 
+	this->provider->reset();
+
 	size_t num_columns, num_files = columns_per_file.size();
 
 	if(num_files>0)

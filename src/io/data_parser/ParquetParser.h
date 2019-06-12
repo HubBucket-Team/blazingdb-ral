@@ -30,6 +30,10 @@ public:
 	void parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files,
 			Schema & schema);
 
+
+private:
+	std::map<std::string, gdf_column_cpp> loaded_columns;
+
 };
 
 } /* namespace io */

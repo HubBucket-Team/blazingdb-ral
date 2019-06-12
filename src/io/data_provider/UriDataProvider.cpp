@@ -43,7 +43,10 @@ bool uri_data_provider::has_next(){
 	return this->current_file < this->file_uris.size();
 }
 
-
+void uri_data_provider::reset() {
+	this->current_file = 0;
+	this->directory_current_file = 0;
+}
 
 std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > uri_data_provider::get_all(){
 	std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > file_handles;

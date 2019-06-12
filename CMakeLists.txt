@@ -61,10 +61,6 @@ include_directories(
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/cuDF)
 get_directory_property(cudf_adapter_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/cuDF DEFINITION source_files)
 
-## ParquetReader source files
-add_subdirectory(${CMAKE_SOURCE_DIR}/src/cuio/parquet)
-get_directory_property(parquet_reader_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/cuio/parquet DEFINITION source_files)
-
 ## Target source files
 set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
               ${CMAKE_SOURCE_DIR}/src/FreeMemory.cpp
@@ -89,8 +85,7 @@ set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
               ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
               ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
               ${cudf_adapter_source_files}
-              ${binary_operation_source_files}
-              ${parquet_reader_source_files})
+              ${binary_operation_source_files})
 
 add_library(testing-libgdf_lib ${SRC_FILES})
 

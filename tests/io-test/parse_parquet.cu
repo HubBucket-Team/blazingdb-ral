@@ -19,8 +19,6 @@
 
 #include <GDFColumn.cuh>
 
-#include <cuio/parquet/api.h>
-
 #include <arrow/io/file.h>
 #include <arrow/util/logging.h>
 

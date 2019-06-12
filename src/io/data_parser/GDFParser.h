@@ -38,6 +38,7 @@ private:
 	blazingdb::message::io::FileSystemBlazingTableSchema table_schema;
 	std::vector<void *> handles;
 	uint64_t access_token;
+	std::map<std::string, gdf_column_cpp> loaded_columns;
 };
 
 } /* namespace io */

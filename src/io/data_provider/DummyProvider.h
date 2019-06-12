@@ -32,6 +32,10 @@ public:
 		return false;
 	}
 
+	void reset(){
+		// does nothing
+	}
+
 	std::shared_ptr<arrow::io::RandomAccessFile> get_next(){
 		return nullptr;
 	}

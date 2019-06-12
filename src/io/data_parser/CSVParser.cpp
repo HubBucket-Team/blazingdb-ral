@@ -190,89 +190,118 @@ csv_parser::~csv_parser() {
 
 //schema is not really necessary yet here, but we want it to maintain compatibility
 void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
-		std::vector<gdf_column_cpp> & columns,
+		std::vector<gdf_column_cpp> & columns_out,
 		const Schema & schema,
-		std::vector<size_t> column_indices,
+		std::vector<size_t> column_indices_requested,
 		size_t file_index){
 
-	// TODO this function needs to be revisited. the cudf csv reader now supports actually selecting what columns you want
+	if (column_indices_requested.size() == 0){ // including all columns by default
+		column_indices_requested.resize(schema.get_num_columns());
+		std::iota(column_indices_requested.begin(), column_indices_requested.end(), 0);
+	}
+	
+	// Lets see if we have already loaded columns before and if so, lets adjust the column_indices
+	std::vector<size_t> column_indices;
+	for(auto column_index : column_indices_requested){
+		const std::string column_name = schema.get_name(column_index);
+		auto iter = loaded_columns.find(column_name);
+		if (iter == loaded_columns.end()){ // we have not already parsed this column before
+			column_indices.push_back(column_index);
+		} 
+	}
 
-	csv_read_arg raw_args{};
+	std::vector<gdf_column_cpp> columns;
+	if (column_indices.size() > 0){
 
-	args.num_names = schema.get_names().size();
-	if(this->column_names.size() > 0){
-		args.names = new const char *[args.num_names];
-		for(int column_index = 0; column_index < args.num_names; column_index++){
-			args.names[column_index] = this->column_names[column_index].c_str();
+		csv_read_arg raw_args{};
+
+		args.num_names = schema.get_names().size();
+		if(this->column_names.size() > 0){
+			args.names = new const char *[args.num_names];
+			for(int i = 0; i < args.num_names; i++){
+				args.names[i] = this->column_names[i].c_str();
+			}
+		}else{
+			args.names = nullptr;
 		}
-	}else{
-		args.names = nullptr;
-	}
 
-	args.num_dtype = schema.get_names().size();
-	if(this->dtype_strings.size() > 0){
-		args.dtype = new const char *[args.num_dtype]; //because dynamically allocating metadata is fun
-		for(int column_index = 0; column_index < args.num_dtype; column_index++){
+		args.num_dtype = schema.get_names().size();
+		if(this->dtype_strings.size() > 0){
+			args.dtype = new const char *[args.num_dtype]; //because dynamically allocating metadata is fun
+			for(int i = 0; i < args.num_dtype; i++){
 
-			args.dtype[column_index] = this->dtype_strings[column_index].c_str();
+				args.dtype[i] = this->dtype_strings[i].c_str();
+			}
+
+		}else{
+			args.dtype = nullptr;
 		}
 
-	}else{
-		args.dtype = nullptr;
-	}
-
-	if (column_indices.size() == 0){ // including all columns by default
-		column_indices.resize(schema.get_num_columns());
-		std::iota(column_indices.begin(), column_indices.end(), 0);
-	}
-
-
-	std::vector<int> column_indices_int(column_indices.size());
-	for(int i = 0; i < column_indices.size(); i++){
-		column_indices_int[i] = column_indices[i];
-	}
-
-	if(column_indices.size() > 0){
+		// convert column indices into use_col_int
+		std::vector<int> column_indices_int(column_indices.size());
+		for(int i = 0; i < column_indices.size(); i++){
+			column_indices_int[i] = column_indices[i];
+		}
 		args.use_cols_int = column_indices_int.data();
 		args.use_cols_int_len = column_indices_int.size();
+		
+
+		copy_non_data_csv_args(args, raw_args);
+
+		CUDF_CALL(read_csv_arrow(&raw_args,file));
+
+		//	std::cout << "args.num_cols_out " << raw_args.num_cols_out << std::endl;
+		//	std::cout << "args.num_rows_out " <<raw_args.num_rows_out << std::endl;
+		assert(raw_args.num_cols_out > 0);
+		
+		
+		//column_indices may be requested in a specific order (not necessarily sorted), but read_csv will output the columns in the sorted order, so we need to put them back into the order we want
+		std::vector<size_t> idx(column_indices.size());
+		std::iota(idx.begin(), idx.end(), 0);
+		// sort indexes based on comparing values in column_indices
+		std::sort(idx.begin(), idx.end(),
+		[&column_indices](size_t i1, size_t i2) {return column_indices[i1] < column_indices[i2];});
+
+		std::vector<gdf_column_cpp> tmp_columns(raw_args.num_cols_out);
+		for(size_t i = 0; i < raw_args.num_cols_out; i++ ){
+			tmp_columns[idx[i]].create_gdf_column(raw_args.data[i]);
+		}
+
+		columns.resize(raw_args.num_cols_out);
+		for(size_t i = 0; i < columns.size(); i++){
+			if (tmp_columns[i].get_gdf_column()->dtype == GDF_STRING){
+				NVStrings* strs = static_cast<NVStrings*>(tmp_columns[i].get_gdf_column()->data);
+				NVCategory* category = NVCategory::create_from_strings(*strs);
+				columns[i].create_gdf_column(category, tmp_columns[i].size(), tmp_columns[i].name());
+			} else {
+				columns[i] = tmp_columns[i];
+			}
+		}
+
+		delete []args.dtype;
+		args.dtype = nullptr;
+		delete []args.names;
+		args.names = nullptr;
 	}
-
-	copy_non_data_csv_args(args, raw_args);
-
-	CUDF_CALL(read_csv_arrow(&raw_args,file));
-
-	//	std::cout << "args.num_cols_out " << raw_args.num_cols_out << std::endl;
-	//	std::cout << "args.num_rows_out " <<raw_args.num_rows_out << std::endl;
-	assert(raw_args.num_cols_out > 0);
-
-	columns.resize(raw_args.num_cols_out);
-
-	//column_indices may be requested in a specific order (not necessarily sorted), but read_csv will output the columns in the sorted order, so we need to put them back into the order we want
-	std::vector<size_t> idx(column_indices.size());
-	std::iota(idx.begin(), idx.end(), 0);
-
-	// sort indexes based on comparing values in column_indices
-	std::sort(idx.begin(), idx.end(),
-       [&column_indices](size_t i1, size_t i2) {return column_indices[i1] < column_indices[i2];});
-
-	for(size_t i = 0; i < raw_args.num_cols_out; i++ ){
-		columns[idx[i]].create_gdf_column(raw_args.data[i]);
+	
+	
+	// Lets see if we had already loaded columns before and if so lets put them in out columns_out
+	// If we had not already loaded them, lets add them to the set of loaded columns
+	int newly_parsed_col_idx = 0;
+	for(auto column_index : column_indices_requested){
+		const std::string column_name = schema.get_name(column_index);
+		auto iter = loaded_columns.find(column_name);
+		if (iter == loaded_columns.end()){ // we have not already parsed this column before, which means we must have just parsed it
+			if (column_name != columns[newly_parsed_col_idx].name()){
+				std::cout<<"ERROR: logic error when trying to use already loaded columns in CSVParser"<<std::endl;
+			}
+			columns_out.push_back(columns[newly_parsed_col_idx]);
+			loaded_columns[columns[newly_parsed_col_idx].name()] = columns[newly_parsed_col_idx];
+			newly_parsed_col_idx++;			
+		} else {
+			columns_out.push_back(loaded_columns[column_name]);
+		}
 	}
-
-
-	for(auto column : columns){
-		 if (column.get_gdf_column()->dtype == GDF_STRING){
-			 NVStrings* strs = static_cast<NVStrings*>(column.get_gdf_column()->data);
-			 NVCategory* category = NVCategory::create_from_strings(*strs);
-			 column.get_gdf_column()->data = nullptr;
-			 column.create_gdf_column(category, column.size(), column.name());
-		 }
-	}
-
-	delete []args.dtype;
-	args.dtype = nullptr;
-	delete []args.names;
-	args.names = nullptr;
 }
 
 void csv_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files, ral::io::Schema & schema)  {

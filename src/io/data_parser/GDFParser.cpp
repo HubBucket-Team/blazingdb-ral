@@ -49,44 +49,52 @@ void gdf_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	}
 
 	for(auto column_index : column_indices) {
-		auto & column = this->table_schema.gdf.columns[column_index];
-		gdf_column_cpp col;
 
-		if (this->table_schema.gdf.columnTokens[column_index] == 0){
-			const std::string column_name = schema.get_names()[column_index];
+		const std::string column_name = schema.get_name(column_index);
+		auto iter = loaded_columns.find(column_name);
+		if (iter != loaded_columns.end()){ // we have already parsed this column before
+			columns.push_back(loaded_columns[column_name]);
+		} else {
+			auto & column = this->table_schema.gdf.columns[column_index];
+			gdf_column_cpp col;
 
-			if( ((gdf_dtype) column.dtype) == GDF_STRING){
+			if (this->table_schema.gdf.columnTokens[column_index] == 0){
+				
 
-				nvstrings_ipc_transfer ipc;  // NOTE: IPC handles will be closed when nvstrings_ipc_transfer goes out of scope
-				memcpy(&ipc,column.custrings_data.data(),sizeof(nvstrings_ipc_transfer));
+				if( ((gdf_dtype) column.dtype) == GDF_STRING){
 
-				NVStrings* strs = NVStrings::create_from_ipc(ipc);
-				NVCategory* category = NVCategory::create_from_strings(*strs);
-				NVStrings::destroy(strs);
+					nvstrings_ipc_transfer ipc;  // NOTE: IPC handles will be closed when nvstrings_ipc_transfer goes out of scope
+					memcpy(&ipc,column.custrings_data.data(),sizeof(nvstrings_ipc_transfer));
 
-				col.create_gdf_column(category, column.size, column_name);
-			}
-			else {
-				void * dataHandle = libgdf::CudaIpcMemHandlerFrom(column.data);
-				void * validHandle = libgdf::CudaIpcMemHandlerFrom(column.valid);
+					NVStrings* strs = NVStrings::create_from_ipc(ipc);
+					NVCategory* category = NVCategory::create_from_strings(*strs);
+					NVStrings::destroy(strs);
 
-				col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,dataHandle, static_cast<gdf_valid_type*>(validHandle), column.size, column.null_count, column_name);
-				handles.push_back(dataHandle);
-
-				if(validHandle == nullptr){
-					//TODO: we can remove this when libgdf properly
-					//implements all algorithsm with valid == nullptr support
-					//it crashes somethings like group by
-					col.allocate_set_valid();
-				}else{
-					handles.push_back(validHandle);
+					col.create_gdf_column(category, column.size, column_name);
 				}
-			}
-		}else{
-			col = result_set_repository::get_instance().get_column(this->access_token, this->table_schema.gdf.columnTokens[column_index]);
-		}
+				else {
+					void * dataHandle = libgdf::CudaIpcMemHandlerFrom(column.data);
+					void * validHandle = libgdf::CudaIpcMemHandlerFrom(column.valid);
 
-		columns.push_back(col);
+					col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,dataHandle, static_cast<gdf_valid_type*>(validHandle), column.size, column.null_count, column_name);
+					handles.push_back(dataHandle);
+
+					if(validHandle == nullptr){
+						//TODO: we can remove this when libgdf properly
+						//implements all algorithsm with valid == nullptr support
+						//it crashes somethings like group by
+						col.allocate_set_valid();
+					}else{
+						handles.push_back(validHandle);
+					}
+				}
+			}else{
+				col = result_set_repository::get_instance().get_column(this->access_token, this->table_schema.gdf.columnTokens[column_index]);
+			}
+
+			columns.push_back(col);
+			loaded_columns[col.name()] = col;
+		}
 	}
 
 	//call to blazing frame here

@@ -45,20 +45,6 @@ void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		std::vector<size_t> column_indices,
 		size_t file_index){
 
-	gdf_error error;
-	size_t num_row_groups = schema.get_num_row_groups(file_index);
-	size_t num_cols = schema.get_names().size();
-	std::vector< std::string> column_names = schema.get_names();
-
-	
-	std::vector<std::size_t> row_group_ind(num_row_groups); // check, include all row groups
-    std::iota(row_group_ind.begin(), row_group_ind.end(), 0);
-
-    std::vector<gdf_column *> columns_ptr(columns.size());
-    for(int i = 0; i < columns.size(); i++){
-    	columns_ptr[i] = columns[i].get_gdf_column();
-    }
-
 	// CHANGES
 	pq_read_arg pq_args;
 
@@ -72,16 +58,24 @@ void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	pq_args.use_cols = new const char*[column_indices.size()];
 	
 	for (size_t column_i = 0; column_i < column_indices.size(); column_i++) {
-		pq_args.use_cols[column_i] = schema.get_name(column_indices[column_i]).c_str();
+		std::string col_name = schema.get_name(column_indices[column_i]);
+		col_name.push_back(0);
+		pq_args.use_cols[column_i] = new char[col_name.size()+1];
+		std::memcpy((void *) pq_args.use_cols[column_i], col_name.c_str(), col_name.size());
 	}
-
 	
 	gdf_error error_;
 	try {
 		// Call the new read parquet
 		error_ = read_parquet_arrow(&pq_args, file);
 	} catch (...) {
+		for (size_t column_i = 0; column_i < column_indices.size(); column_i++) {
+			delete [] pq_args.use_cols[column_i];
+		}
 		delete [] pq_args.use_cols;
+	}
+	for (size_t column_i = 0; column_i < column_indices.size(); column_i++) {
+		delete [] pq_args.use_cols[column_i];
 	}
 	delete [] pq_args.use_cols;
 
@@ -89,23 +83,21 @@ void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		throw std::runtime_error("In parquet_parser::parse: error in read_parquet_arrow");
 	}
 
-	columns.resize(pq_args.num_cols_out);
-	for (int i = 0; i < pq_args.num_cols_out; i++){
-		columns[i].create_gdf_column(pq_args.data[i]);
+	std::vector<gdf_column_cpp> tmp_columns(pq_args.num_cols_out);
+	for(size_t i = 0; i < pq_args.num_cols_out; i++ ){
+		tmp_columns[i].create_gdf_column(pq_args.data[i]);
 	}
 
-	// // Is it necessary?
-	// for(auto column : columns){
-	// 	 if (column.get_gdf_column()->dtype == GDF_STRING){
-	// 		 NVStrings* strs = static_cast<NVStrings*>(column.get_gdf_column()->data);
-	// 		 NVCategory* category = NVCategory::create_from_strings(*strs);
-	// 		 column.get_gdf_column()->data = nullptr;
-	// 		 column.create_gdf_column(category, column.size(), column.name());
-	// 	 }
-	// }
-
-	
-	
+	columns.resize(pq_args.num_cols_out);
+	for(size_t i = 0; i < columns.size(); i++){
+		 if (tmp_columns[i].get_gdf_column()->dtype == GDF_STRING){
+			 NVStrings* strs = static_cast<NVStrings*>(tmp_columns[i].get_gdf_column()->data);
+			 NVCategory* category = NVCategory::create_from_strings(*strs);
+			 columns[i].create_gdf_column(category, tmp_columns[i].size(), tmp_columns[i].name());
+		 } else {
+			 columns[i] = tmp_columns[i];
+		 }
+	}
 }
 
 void parquet_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files, ral::io::Schema & schema)  {

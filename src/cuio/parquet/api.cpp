@@ -769,7 +769,7 @@ gdf_error read_schema(std::vector<std::shared_ptr<::arrow::io::RandomAccessFile>
 	schema_out = ral::io::Schema(column_names,column_indices,dtypes,num_row_groups);
 
 
-    return error;
+    return GDF_SUCCESS;
 }
 
 gdf_error

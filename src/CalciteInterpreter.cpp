@@ -455,7 +455,7 @@ std::string get_named_expression(std::string query_part, std::string expression_
 		return ""; //expression not found
 	}
 	int start_position =( query_part.find(expression_name + "=[["))+ 3 + expression_name.length();
-	if (start_position == query_part.npos){
+	if (query_part.find(expression_name + "=[[") == query_part.npos){
 		start_position =( query_part.find(expression_name + "=["))+ 2 + expression_name.length();
 	}
 	int end_position = (query_part.find("]",start_position));

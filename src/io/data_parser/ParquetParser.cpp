@@ -9,24 +9,9 @@
 #include "cudf/io_functions.hpp"
 #include <blazingdb/io/Util/StringUtil.h>
 
-// #include <cuio/parquet/api.h>
-
 #include <arrow/io/file.h>
-// #include <arrow/util/logging.h>
-
-// #include <boost/filesystem.hpp>
-
-// #include <parquet/column_writer.h>
-// #include <parquet/file_writer.h>
-// #include <parquet/properties.h>
-// #include <parquet/schema.h>
-// #include <parquet/types.h>
-
-
 #include <parquet/file_reader.h>
-// #include <parquet/reader.h>
 #include <parquet/schema.h>
-
 
 #include <GDFColumn.cuh>
 #include <GDFCounter.cuh>

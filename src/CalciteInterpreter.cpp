@@ -120,21 +120,6 @@ std::string extract_table_name(std::string query_part){
 
 }
 
-/*void create_output_and_evaluate(size_t size, gdf_column * output, gdf_column * temp){
-	int width;
-	get_column_byte_width(output, &width);
-	create_gdf_column(output,output->dtype,size,nullptr,width);
-	create_gdf_column(temp,GDF_INT64,size,nullptr,8);
-
-
-	gdf_error err = evaluate_expression(
-			input,
-			get_expression(query_part),
-			&output,
-			&temp);
-
-}*/
-
 std::string get_condition_expression(std::string query_part){
 	return get_named_expression(query_part,"condition");
 }
@@ -143,7 +128,6 @@ bool contains_evaluation(std::string expression){
 	std::string cleaned_expression = clean_project_expression(expression);
 	return (cleaned_expression.find("(") != std::string::npos);
 }
-
 
 project_plan_params parse_project_plan(blazing_frame& input, std::string query_part) {
 

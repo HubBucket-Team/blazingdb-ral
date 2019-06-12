@@ -14,7 +14,6 @@
 #include "GDFColumn.cuh"
 #include "gdf_wrapper/gdf_wrapper.cuh"
 #include "cuDF/Allocator.h"
-// #include "cuio/parquet/util/bit_util.cuh"
 #include "bitmask.hpp"
 #include "FreeMemory.h"
 

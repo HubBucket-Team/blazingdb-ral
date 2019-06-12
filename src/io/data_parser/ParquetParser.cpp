@@ -37,6 +37,11 @@ void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		std::vector<size_t> column_indices,
 		size_t file_index){
 
+	if (column_indices.size() == 0){ // including all columns by default
+		column_indices.resize(schema.get_num_columns());
+		std::iota(column_indices.begin(), column_indices.end(), 0);
+	}
+
 	// CHANGES
 	pq_read_arg pq_args;
 

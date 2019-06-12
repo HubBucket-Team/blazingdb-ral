@@ -47,6 +47,8 @@ public:
 	size_t get_file_index(size_t schema_index) const;
 	size_t get_num_row_groups(size_t file_index) const;
 
+	size_t get_num_columns() const;
+
 	void add_column(gdf_column_cpp column,size_t file_index);
 	void add_column(std::string name, gdf_dtype type,size_t file_index);
 

@@ -92,6 +92,10 @@ size_t Schema::get_num_row_groups(size_t file_index) const{
 	return this->num_row_groups[file_index];
 }
 
+size_t Schema::get_num_columns() const {
+	return this->names.size();
+}
+
 blazingdb::protocol::TableSchemaSTL Schema::getTransport(){
 	blazingdb::protocol::TableSchemaSTL transport_schema;
 

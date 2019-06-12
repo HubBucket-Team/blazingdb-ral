@@ -221,6 +221,12 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		args.dtype = nullptr;
 	}
 
+	if (column_indices.size() == 0){ // including all columns by default
+		column_indices.resize(schema.get_num_columns());
+		std::iota(column_indices.begin(), column_indices.end(), 0);
+	}
+
+
 	std::vector<int> column_indices_int(column_indices.size());
 	for(int i = 0; i < column_indices.size(); i++){
 		column_indices_int[i] = column_indices[i];

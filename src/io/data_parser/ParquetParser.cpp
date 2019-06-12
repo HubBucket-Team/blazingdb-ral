@@ -7,6 +7,7 @@
 
 #include "ParquetParser.h"
 #include "cudf/io_functions.hpp"
+#include <blazingdb/io/Util/StringUtil.h>
 
 // #include <cuio/parquet/api.h>
 
@@ -23,7 +24,7 @@
 
 
 #include <parquet/file_reader.h>
-#include <parquet/reader.h>
+// #include <parquet/reader.h>
 #include <parquet/schema.h>
 
 
@@ -159,7 +160,7 @@ constexpr std::pair<gdf_dtype, gdf_dtype_extra_info> to_dtype(
   return std::make_pair(GDF_invalid, gdf_dtype_extra_info{TIME_UNIT_NONE});
 }
 
-void parquet_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files, ral::io::Schema & schema)  {
+void parquet_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files, ral::io::Schema & schema_out)  {
 
 	// gdf_error error = gdf::parquet::read_schema(files, schema);
 	std::vector<std::string> column_names;
@@ -170,7 +171,7 @@ void parquet_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomA
 	std::shared_ptr<parquet::FileMetaData> file_metadata = parquet_reader->metadata();
 	int total_columns = file_metadata->num_columns();
 	num_row_groups[0] = file_metadata->num_row_groups();
-	parquet::SchemaDescriptor * schema = file_metadata->schema();
+	const parquet::SchemaDescriptor * schema = file_metadata->schema();
 	for(int i = 0; i < total_columns; i++){
 		const parquet::ColumnDescriptor * column = schema->Column(i);
 		column_names.push_back(StringUtil::toLower(column->name()));
@@ -182,7 +183,7 @@ void parquet_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomA
 	for(int file_index = 1; file_index < files.size(); file_index++){
 		parquet_reader = parquet::ParquetFileReader::Open(files[file_index]);
 		file_metadata = parquet_reader->metadata();
-		schema = file_metadata->schema();
+		const parquet::SchemaDescriptor * schema = file_metadata->schema();
 		num_row_groups[file_index] = file_metadata->num_row_groups();
 		parquet_reader->Close();
 	}

@@ -725,10 +725,9 @@ gdf_error read_schema(std::vector<std::shared_ptr<::arrow::io::RandomAccessFile>
 	num_row_groups[0] = file_metadata->num_row_groups();
 
 
-    std::vector<std::size_t> column_indices;
-    for (size_t index = 0; index < file_metadata->num_columns(); index++)
-        column_indices.push_back(index);
-
+    std::vector<std::size_t> column_indices(file_metadata->num_columns());
+    std::iota(column_indices.begin(), column_indices.end(), 0);
+    
 	const std::vector<const ::parquet::ColumnDescriptor *> column_descriptors =
 			_ColumnDescriptorsFrom(parquet_reader, column_indices);
 
@@ -751,9 +750,11 @@ gdf_error read_schema(std::vector<std::shared_ptr<::arrow::io::RandomAccessFile>
 		if (column_descriptors[columnIndex])
 		{
 			column_names.push_back(column->name());
-			dtypes.push_back(_DTypeFrom(column_descriptors[columnIndex]));
-			column_indices.push_back(columnIndex);
-		}
+			dtypes.push_back(_DTypeFrom(column_descriptors[columnIndex]));			
+		} else {
+            column_names.push_back(column->name());
+			dtypes.push_back(GDF_STRING);			
+        }
 
 	}
 	// }
@@ -768,7 +769,7 @@ gdf_error read_schema(std::vector<std::shared_ptr<::arrow::io::RandomAccessFile>
 	schema_out = ral::io::Schema(column_names,column_indices,dtypes,num_row_groups);
 
 
-    return error;
+    return GDF_SUCCESS;
 }
 
 gdf_error

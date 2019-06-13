@@ -61,17 +61,16 @@ include_directories(
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/cuDF)
 get_directory_property(cudf_adapter_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/cuDF DEFINITION source_files)
 
-## ParquetReader source files
-add_subdirectory(${CMAKE_SOURCE_DIR}/src/cuio/parquet)
-get_directory_property(parquet_reader_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/cuio/parquet DEFINITION source_files)
-
 ## Target source files
 set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
               ${CMAKE_SOURCE_DIR}/src/FreeMemory.cpp
+              ${CMAKE_SOURCE_DIR}/src/io/Schema.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_parser/ParquetParser.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_parser/CSVParser.cpp
+              ${CMAKE_SOURCE_DIR}/src/io/data_parser/GDFParser.cpp 
               ${CMAKE_CURRENT_SOURCE_DIR}/src/Config/Config.cpp
               ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
+              ${CMAKE_SOURCE_DIR}/src/io/DataLoader.cpp
               ${CMAKE_SOURCE_DIR}/src/Interpreter/interpreter_cpp.cu
               ${CMAKE_SOURCE_DIR}/src/CalciteInterpreter.cpp
               ${CMAKE_SOURCE_DIR}/src/ColumnManipulation.cu
@@ -86,8 +85,7 @@ set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
               ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
               ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
               ${cudf_adapter_source_files}
-              ${binary_operation_source_files}
-              ${parquet_reader_source_files})
+              ${binary_operation_source_files})
 
 add_library(testing-libgdf_lib ${SRC_FILES})
 
@@ -125,9 +123,11 @@ target_link_libraries(testing-libgdf_lib
     Boost::regex
 )
 
-set(SRC_FILES_APP ${CMAKE_SOURCE_DIR}/src/testing-libgdf.cu)
+set(SRC_FILES_APP
+    ${CMAKE_SOURCE_DIR}/src/testing-libgdf.cu)
+
 add_executable(testing-libgdf ${SRC_FILES_APP})
-target_link_libraries(testing-libgdf testing-libgdf_lib)
+target_link_libraries(testing-libgdf testing-libgdf_lib ${BLAZINGDB_PROTOCOL_STATIC_LIB})
 
 # Tests
 if(BUILD_TESTING)

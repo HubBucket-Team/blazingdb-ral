@@ -14,7 +14,6 @@
 #include "GDFColumn.cuh"
 #include "gdf_wrapper/gdf_wrapper.cuh"
 #include "cuDF/Allocator.h"
-#include "cuio/parquet/util/bit_util.cuh"
 #include "bitmask.hpp"
 #include "FreeMemory.h"
 
@@ -155,7 +154,7 @@ void gdf_column_cpp::resize(size_t new_size){
 }
 //TODO: needs to be implemented for efficiency though not strictly necessary
 gdf_error gdf_column_cpp::compact(){
-    if( this->allocated_size_valid != static_cast<std::size_t>(gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(this->size()))) ){
+    if( this->allocated_size_valid != static_cast<std::size_t>(gdf_valid_allocation_size(this->size()) )){
     	//compact valid allcoation
     }
 
@@ -186,7 +185,7 @@ void gdf_column_cpp::allocate_set_valid(){
 gdf_valid_type * gdf_column_cpp::allocate_valid(){
 	size_t num_values = this->size();
     gdf_valid_type * valid_device;
-	this->allocated_size_valid = gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(num_values)); //so allocations are supposed to be 64byte aligned
+	this->allocated_size_valid = gdf_valid_allocation_size(num_values); //so allocations are supposed to be 64byte aligned
 
     cuDF::Allocator::allocate((void**)&valid_device, allocated_size_valid);
 
@@ -215,7 +214,7 @@ void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,g
     if (valid_data == nullptr){
         this->allocate_set_valid();
     } else {
-        this->allocated_size_valid = gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(num_values));
+        this->allocated_size_valid = gdf_valid_allocation_size(num_values);
     }
     
     is_ipc_column = true;
@@ -367,7 +366,7 @@ void gdf_column_cpp::create_gdf_column(gdf_column * column){
         this->allocated_size_data = 0; // TODO: do we care? what should be put there?
     }
 	if(column->valid != nullptr){
-        this->allocated_size_valid = gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(column->size)); //so allocations are supposed to be 64byte aligned
+        this->allocated_size_valid = gdf_valid_allocation_size(column->size); //so allocations are supposed to be 64byte aligned
 	} else {
         this->allocated_size_valid = 0;
     }

@@ -239,14 +239,9 @@ struct NVCategoryTest : public ::testing::Test {
 	}
 
 	void TearDown(){
-
-		for(size_t i = 0; i < outputs.size(); i++){
-			print_column<int8_t>(outputs[i].get_gdf_column());
-
-			// Releasing allocated memory, here we are responsible for that
-			//TODO percy rommel: move to integration/end-to-end test
-			//GDFRefCounter::getInstance()->free_if_deregistered(outputs[i].get_gdf_column());
-		}
+		// Releasing allocated memory, here we are responsible for that
+		//TODO percy rommel: move to integration/end-to-end test
+		//GDFRefCounter::getInstance()->free_if_deregistered(outputs[i].get_gdf_column());
 	}
 
 	template<typename T>

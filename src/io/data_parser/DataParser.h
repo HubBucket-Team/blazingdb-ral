@@ -12,6 +12,7 @@
 #include <memory>
 #include "arrow/io/interfaces.h"
 #include "GDFColumn.cuh"
+#include "../Schema.h"
 
 namespace ral {
 namespace io {
@@ -26,17 +27,23 @@ public:
 	 */
 	virtual void parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 			std::vector<gdf_column_cpp> & columns,
-			std::vector<bool> include_column) = 0;
+			const Schema & schema,
+			std::vector<size_t> column_indices,
+			size_t file_index) = 0;
 
-	virtual void parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
-			std::vector<gdf_column_cpp> & columns) = 0;
 
-	virtual void parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> file,
-			std::vector<gdf_column_cpp> & columns) = 0;
+	virtual void parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files,
+			ral::io::Schema & schema) = 0;
 
 };
 
 } /* namespace io */
 } /* namespace ral */
 
+class DataParser {
+public:
+	DataParser();
+	virtual ~DataParser();
+};
 #endif /* DATAPARSER_H_ */
+

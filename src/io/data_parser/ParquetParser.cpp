@@ -201,10 +201,21 @@ void parquet_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomA
 		num_row_groups[file_index] = file_metadata->num_row_groups();
 		parquet_reader->Close();
 	}
+	
 
-	std::vector<std::size_t> column_indices(total_columns);
+	// we currently dont support GDF_DATE32 for parquet so lets filter those out
+	std::vector<std::string> column_names_out;
+	std::vector<gdf_dtype> dtypes_out;
+	for (size_t i = 0; i < column_names.size(); i++){
+		if (dtypes[i] != GDF_DATE32){
+			column_names_out.push_back(column_names[i]);
+			dtypes_out.push_back(dtypes[i]);
+		}
+	}
+	std::vector<std::size_t> column_indices(column_names_out.size());
     std::iota(column_indices.begin(), column_indices.end(), 0);
-	schema_out = ral::io::Schema(column_names,column_indices,dtypes,num_row_groups);
+
+	schema_out = ral::io::Schema(column_names_out,column_indices,dtypes_out,num_row_groups);
 }
 
 } /* namespace io */

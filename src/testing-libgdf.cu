@@ -165,7 +165,6 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
     // get result from repository using accessToken and resultToken
     result_set_t result = result_set_repository::get_instance().get_result(accessToken, request.getResultToken());
 
-    
     std::string status = "Error";
     std::string errorMsg = result.errorMsg;
     std::vector<std::string> fieldNames;
@@ -177,7 +176,6 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
       status = "OK";
       //TODO ojo el result siempre es una sola tabla por eso indice 0
       rows =  result.result_frame.get_columns()[0][0].size();
-
 
       for(std::size_t i = 0; i < result.result_frame.get_columns()[0].size(); ++i) {
         fieldNames.push_back(result.result_frame.get_columns()[0][i].name());
@@ -234,28 +232,6 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
       .time = result.duration,
       .rows = rows
     };
-
-  //  // todo: remove hardcode by creating the resulset vector
-  //  gdf_column_cpp column = result.get_columns()[0][0];
-  //	std::cout<<"getResultService\n";
-  //  print_gdf_column(column.get_gdf_column());
-  //  std::cout<<"end:getResultService\n";
-  //
-  //  auto data = libgdf::BuildCudaIpcMemHandler(column.get_gdf_column()->data);
-  //  auto valid = libgdf::BuildCudaIpcMemHandler(column.get_gdf_column()->valid);
-  //
-  //  std::vector<::gdf_dto::gdf_column> values = {
-  //    ::gdf_dto::gdf_column {
-  //        .data = data,
-  //        .valid = valid,
-  //        .size = column.size(),
-  //        .dtype = (gdf_dto::gdf_dtype)column.dtype(),
-  //        .null_count = column.null_count(),
-  //        .dtype_info = gdf_dto::gdf_dtype_extra_info {
-  //          .time_unit = (gdf_dto::gdf_time_unit)0,
-  //        }
-  //    }
-  //  };
 
     interpreter::GetResultResponseMessage responsePayload(metadata, fieldNames, columnTokens, values);
     return std::make_pair(Status_Success, responsePayload.getBufferData());

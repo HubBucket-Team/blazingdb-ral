@@ -235,28 +235,6 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
       .rows = rows
     };
 
-  //  // todo: remove hardcode by creating the resulset vector
-  //  gdf_column_cpp column = result.get_columns()[0][0];
-  //	std::cout<<"getResultService\n";
-  //  print_gdf_column(column.get_gdf_column());
-  //  std::cout<<"end:getResultService\n";
-  //
-  //  auto data = libgdf::BuildCudaIpcMemHandler(column.get_gdf_column()->data);
-  //  auto valid = libgdf::BuildCudaIpcMemHandler(column.get_gdf_column()->valid);
-  //
-  //  std::vector<::gdf_dto::gdf_column> values = {
-  //    ::gdf_dto::gdf_column {
-  //        .data = data,
-  //        .valid = valid,
-  //        .size = column.size(),
-  //        .dtype = (gdf_dto::gdf_dtype)column.dtype(),
-  //        .null_count = column.null_count(),
-  //        .dtype_info = gdf_dto::gdf_dtype_extra_info {
-  //          .time_unit = (gdf_dto::gdf_time_unit)0,
-  //        }
-  //    }
-  //  };
-
     interpreter::GetResultResponseMessage responsePayload(metadata, fieldNames, columnTokens, values);
     return std::make_pair(Status_Success, responsePayload.getBufferData());
 

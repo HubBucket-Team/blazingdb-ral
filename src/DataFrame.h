@@ -136,7 +136,7 @@ public:
 		{
 			std::cout<<"Table: "<<table_index<<"\n";
 			for(std::size_t column_index = 0; column_index < columns[table_index].size(); column_index++)
-				print_column<int32_t>(columns[table_index][column_index].get_gdf_column());
+				print_gdf_column(columns[table_index][column_index].get_gdf_column());
 		}
 	}
 

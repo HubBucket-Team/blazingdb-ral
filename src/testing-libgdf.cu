@@ -165,7 +165,6 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
     // get result from repository using accessToken and resultToken
     result_set_t result = result_set_repository::get_instance().get_result(accessToken, request.getResultToken());
 
-    
     std::string status = "Error";
     std::string errorMsg = result.errorMsg;
     std::vector<std::string> fieldNames;
@@ -177,7 +176,6 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
       status = "OK";
       //TODO ojo el result siempre es una sola tabla por eso indice 0
       rows =  result.result_frame.get_columns()[0][0].size();
-
 
       for(std::size_t i = 0; i < result.result_frame.get_columns()[0].size(); ++i) {
         fieldNames.push_back(result.result_frame.get_columns()[0][i].name());

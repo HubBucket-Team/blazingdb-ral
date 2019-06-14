@@ -27,6 +27,7 @@
 
 #include <blazingdb/protocol/api.h>
 #include <blazingdb/protocol/message/messages.h>
+#include <blazingdb/protocol/message/orchestrator/messages.h>
 #include <blazingdb/protocol/message/interpreter/messages.h>
 #include <blazingdb/protocol/message/io/file_system.h>
 #include "ral-message.cuh"
@@ -49,9 +50,11 @@ using namespace blazingdb::protocol;
 
 #include "CalciteExpressionParsing.h"
 #include "io/data_parser/CSVParser.h"
+#include "io/data_parser/GDFParser.h"
 #include "io/data_parser/ParquetParser.h"
-
+#include "io/data_provider/DummyProvider.h"
 #include "io/data_provider/UriDataProvider.h"
+
 #include "io/data_parser/DataParser.h"
 #include "io/data_provider/DataProvider.h"
 #include "io/DataLoader.h"
@@ -135,6 +138,7 @@ static result_pair  deregisterFileSystem(uint64_t accessToken, Buffer&& buffer) 
 }
 
 
+<<<<<<< HEAD
 query_token_t loadParquetAndInsertToResultRepository(std::string path, connection_id_t connection, bool schema_only) {
 	std::cout<<"loadParquet\n";
 
@@ -275,6 +279,8 @@ static result_pair loadCsvSchema(uint64_t accessToken, Buffer&& buffer) {
   return std::make_pair(Status_Success, responsePayload.getBufferData());
 }
 
+=======
+>>>>>>> develop
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);
 
@@ -307,7 +313,10 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
     // get result from repository using accessToken and resultToken
     result_set_t result = result_set_repository::get_instance().get_result(accessToken, request.getResultToken());
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> develop
     std::string status = "Error";
     std::string errorMsg = result.errorMsg;
     std::vector<std::string> fieldNames;
@@ -319,7 +328,6 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
       status = "OK";
       //TODO ojo el result siempre es una sola tabla por eso indice 0
       rows =  result.result_frame.get_columns()[0][0].size();
-
 
       for(std::size_t i = 0; i < result.result_frame.get_columns()[0].size(); ++i) {
         fieldNames.push_back(result.result_frame.get_columns()[0][i].name());
@@ -340,18 +348,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
           dtype_info = gdf_dto::gdf_dtype_extra_info {
                 .time_unit = (gdf_dto::gdf_time_unit)0,
             };
-          // before
-          /*  col = ::gdf_dto::gdf_column {
-              .data = data,
-              .valid = valid,
-              .size = static_cast<gdf_size_type>(result.result_frame.get_columns()[0][i].size()),//.get_gdf_column()->data  ` 
-              .dtype = (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype(), // GDF_STRING
-              .null_count = static_cast<gdf_size_type>(result.result_frame.get_columns()[0][i].null_count()),
-              .dtype_info = dtype_info,
-              // custrings data
-              .custrings_data = libgdf::ConvertIpcByteArray(ipc)
-          };
-          */
+
           col.data = data;
           col.valid = valid;
           col.size = result.result_frame.get_columns()[0][i].size();
@@ -369,23 +366,12 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
           data = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->data);
           valid = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->valid);
         
-        // before
-        /*  col = ::gdf_dto::gdf_column {
-              .data = data,
-              .valid = valid,
-              .size = result.result_frame.get_columns()[0][i].size(),
-              .dtype = (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype(), 
-              .null_count = result.result_frame.get_columns()[0][i].null_count(),
-              .dtype_info = dtype_info
-          };
-        */
           col.data = data;
           col.valid = valid;
           col.size = result.result_frame.get_columns()[0][i].size();
           col.dtype =  (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype();
           col.null_count = result.result_frame.get_columns()[0][i].null_count();
           col.dtype_info = dtype_info;
-
         }
 
         values.push_back(col);
@@ -398,28 +384,6 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
       .time = result.duration,
       .rows = rows
     };
-
-  //  // todo: remove hardcode by creating the resulset vector
-  //  gdf_column_cpp column = result.get_columns()[0][0];
-  //	std::cout<<"getResultService\n";
-  //  print_gdf_column(column.get_gdf_column());
-  //  std::cout<<"end:getResultService\n";
-  //
-  //  auto data = libgdf::BuildCudaIpcMemHandler(column.get_gdf_column()->data);
-  //  auto valid = libgdf::BuildCudaIpcMemHandler(column.get_gdf_column()->valid);
-  //
-  //  std::vector<::gdf_dto::gdf_column> values = {
-  //    ::gdf_dto::gdf_column {
-  //        .data = data,
-  //        .valid = valid,
-  //        .size = column.size(),
-  //        .dtype = (gdf_dto::gdf_dtype)column.dtype(),
-  //        .null_count = column.null_count(),
-  //        .dtype_info = gdf_dto::gdf_dtype_extra_info {
-  //          .time_unit = (gdf_dto::gdf_time_unit)0,
-  //        }
-  //    }
-  //  };
 
     interpreter::GetResultResponseMessage responsePayload(metadata, fieldNames, columnTokens, values);
     return std::make_pair(Status_Success, responsePayload.getBufferData());
@@ -458,17 +422,138 @@ static result_pair freeResultService(uint64_t accessToken, Buffer&& requestPaylo
 }
 
 
-void load_files(ral::io::data_parser * parser, const std::vector<Uri>& uris, std::vector<gdf_column_cpp>& out_columns) {
-	auto provider = ral::io::uri_data_provider(uris);
-  ral::io::data_loader loader( parser,&provider);
-  loader.load_data(out_columns, {}, true);
+//TODO: we need to have a centralized place where this can be done
+//perhaps a utility in protocol, add bool8 after update
+gdf_dtype convert_string_dtype(std::string str){
+	if(str == "GDF_INT8"){
+		return GDF_INT8;
+	}else if(str == "GDF_INT16"){
+		return GDF_INT16;
+	}else if(str == "GDF_INT32"){
+		return GDF_INT32;
+	}else if(str == "GDF_INT64"){
+		return GDF_INT64;
+	}else if(str == "GDF_FLOAT32"){
+		return GDF_FLOAT32;
+	}else if(str == "GDF_FLOAT64"){
+		return GDF_FLOAT64;
+	}else if(str == "GDF_DATE32"){
+		return GDF_DATE32;
+	}else if(str == "GDF_DATE64"){
+		return GDF_DATE64;
+	}else if(str == "GDF_TIMESTAMP"){
+		return GDF_TIMESTAMP;
+	}else if(str == "GDF_CATEGORY"){
+		return GDF_CATEGORY;
+	}else if(str == "GDF_STRING"){
+		return GDF_STRING;
+	}else if(str == "GDF_STRING_CATEGORY"){
+		return GDF_STRING_CATEGORY;
+	}else{
+		return GDF_invalid;
+	}
+}
+
+
+static result_pair parseSchemaService(uint64_t accessToken, Buffer&& requestPayloadBuffer) {
+	blazingdb::protocol::orchestrator::DDLCreateTableRequestMessage requestPayload(requestPayloadBuffer.data());
+
+	std::shared_ptr<ral::io::data_parser> parser;
+	if(requestPayload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_PARQUET){
+		parser = std::make_shared<ral::io::parquet_parser>();
+
+	}else if(requestPayload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
+		std::vector<gdf_dtype> types;
+		for(auto val : requestPayload.columnTypes){
+			types.push_back(convert_string_dtype(val));
+		}
+		parser =  std::make_shared<ral::io::csv_parser>(
+				requestPayload.csvDelimiter,
+  				requestPayload.csvLineTerminator,
+  				(int) requestPayload.csvSkipRows,
+  				requestPayload.columnNames, types);
+	}else{
+		//indicate error here
+		//this shoudl be done in the orchestrator
+	}
+
+	 std::vector<Uri> uris;
+	 for (auto file_path : requestPayload.files) {
+	     uris.push_back(Uri{file_path});
+	 }
+
+	auto provider = std::make_shared<ral::io::uri_data_provider>(uris);
+	auto loader = std::make_shared<ral::io::data_loader>( parser,provider);
+	ral::io::Schema schema;
+	loader->get_schema(schema);
+
+
+	blazingdb::protocol::TableSchemaSTL transport_schema = schema.getTransport();
+
+	if(requestPayload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
+		transport_schema.csvDelimiter = requestPayload.csvDelimiter;
+		transport_schema.csvSkipRows = requestPayload.csvSkipRows;
+		transport_schema.csvLineTerminator = requestPayload.csvLineTerminator;
+	}
+	transport_schema.files = requestPayload.files;
+
+	blazingdb::protocol::interpreter::CreateTableResponseMessage responsePayload(transport_schema);
+	return std::make_pair(Status_Success, responsePayload.getBufferData());
 }
 
 static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& requestPayloadBuffer) {
   blazingdb::message::io::FileSystemDMLRequestMessage requestPayload(requestPayloadBuffer.data());
 
-  // ExecutePlan
+  //make dataloaders
+	std::vector<ral::io::data_loader > input_loaders;
+	std::vector<ral::io::Schema> schemas;
+	std::vector<std::string> table_names;
+  for(auto table : requestPayload.tableGroup.tables){
+	  ral::io::Schema schema(table.tableSchema);
+	std::shared_ptr<ral::io::data_parser> parser;
+	  if(table.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_PARQUET){
+	  		parser = std::make_shared<ral::io::parquet_parser>();
+
+	  	}else if(table.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
+	  		std::vector<gdf_dtype> types;
+			for(auto val : table.tableSchema.types){
+				types.push_back((gdf_dtype) val);
+			}
+
+	  		parser =  std::make_shared<ral::io::csv_parser>(
+	  				table.tableSchema.csvDelimiter,
+	  				table.tableSchema.csvLineTerminator,
+	  				table.tableSchema.csvSkipRows,
+	  				table.tableSchema.names, types);
+	  	}else{
+	  		parser = std::make_shared<ral::io::gdf_parser>(table,accessToken);
+	  	}
+
+
+	  std::shared_ptr<ral::io::data_provider> provider;
+	  std::vector<Uri> uris;
+	  	 for (auto file_path : table.tableSchema.files) {
+	  	     uris.push_back(Uri{file_path});
+	  	 }
+
+
+
+	  if(table.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV ||
+			  table.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_PARQUET){
+		  	 provider = std::make_shared<ral::io::uri_data_provider>(uris);
+	  }else{
+		  provider = std::make_shared<ral::io::dummy_data_provider>();
+	  }
+	  ral::io::data_loader loader( parser,provider);
+	  	input_loaders.push_back(loader);
+	  	schemas.push_back(schema);
+	  	table_names.push_back(table.name);
+
+  }
+
+
   std::cout << "accessToken: " << accessToken << std::endl;
+<<<<<<< HEAD
   std::cout << "query: " << requestPayload.statement() << std::endl;
   std::cout << "tableGroup: " << requestPayload.tableGroup().name << std::endl;
  	std::cout << "tables: " << requestPayload.tableGroup().tables.size() << std::endl;
@@ -513,6 +598,19 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
       table_names.push_back(table_info.name);
       all_column_names.push_back(table_info.columnNames);
     }
+=======
+  std::cout << "query: " << requestPayload.statement << std::endl;
+  std::cout << "tableGroup: " << requestPayload.tableGroup.name << std::endl;
+ 	std::cout << "tables: " << requestPayload.tableGroup.tables.size() << std::endl;
+  std::cout << "tableSize: " << requestPayload.tableGroup.tables.size() << std::endl;
+	//std::cout << "FirstColumn File: "
+	//		<< requestPayload.tableGroup.tables[0].files[0]
+	//		<< std::endl;
+  
+  uint64_t resultToken = 0L;
+  try {
+
+>>>>>>> develop
 
 
     using blazingdb::communication::ContextToken;
@@ -543,7 +641,11 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 
 
     // Execute query
+<<<<<<< HEAD
     resultToken = evaluate_query(input_tables, table_names, all_column_names, requestPayload.statement(), accessToken, {}, queryContext);
+=======
+    resultToken = evaluate_query(input_loaders, schemas, table_names, requestPayload.statement, accessToken );
+>>>>>>> develop
   } catch (const std::exception& e) {
      std::cerr << e.what() << std::endl;
      ResponseErrorMessage errorMessage{ std::string{e.what()} };
@@ -559,6 +661,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
   return std::make_pair(Status_Success, responsePayload.getBufferData());
 }
 
+<<<<<<< HEAD
 static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayloadBuffer)   {
   interpreter::ExecutePlanRequestMessage requestPayload(requestPayloadBuffer.data());
 
@@ -601,6 +704,8 @@ static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayl
   return std::make_pair(Status_Success, responsePayload.getBufferData());
 }
 
+=======
+>>>>>>> develop
 static result_pair freeMemoryCallback(uint64_t accessToken, Buffer&& requesBuffer)   {
     FreeMemory::freeAll();
     ZeroMessage response{};
@@ -683,17 +788,13 @@ int main(int argc, const char *argv[])
   blazingdb::protocol::UnixSocketConnection connection(config.getSocketPath());
   blazingdb::protocol::Server server(connection);
 
-  services.insert(std::make_pair(interpreter::MessageType_ExecutePlan, &executePlanService));
   services.insert(std::make_pair(interpreter::MessageType_ExecutePlanFileSystem, &executeFileSystemPlanService));
-
+  services.insert(std::make_pair(interpreter::MessageType_LoadCsvSchema, &parseSchemaService));
   services.insert(std::make_pair(interpreter::MessageType_CloseConnection, &closeConnectionService));
   services.insert(std::make_pair(interpreter::MessageType_GetResult, &getResultService));
   services.insert(std::make_pair(interpreter::MessageType_FreeResult, &freeResultService));
   services.insert(std::make_pair(interpreter::MessageType_RegisterFileSystem, &registerFileSystem));
   services.insert(std::make_pair(interpreter::MessageType_DeregisterFileSystem, &deregisterFileSystem));
-
-  services.insert(std::make_pair(interpreter::MessageType_LoadCsvSchema, &loadCsvSchema));
-  services.insert(std::make_pair(interpreter::MessageType_LoadParquetSchema, &loadParquetSchema));
 
   services.insert(std::make_pair(9, &freeMemoryCallback));
 

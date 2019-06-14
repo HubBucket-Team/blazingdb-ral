@@ -11,6 +11,7 @@
 #include <arrow/io/interfaces.h>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace ral {
 namespace io {
@@ -23,6 +24,12 @@ public:
 	 * tells us if this provider can generate more arrow::io::RandomAccessFile instances
 	 */
 	virtual bool has_next() = 0;
+
+	/**
+	 *  Resets file read count to 0 for file based DataProvider
+	 */
+	virtual void reset() = 0;
+
 	/**
 	 * gets us the next arrow::io::RandomAccessFile
 	 */
@@ -30,8 +37,11 @@ public:
 	/**
 	 * gets any errors that occured while opening the files
 	 */
+	virtual std::shared_ptr<arrow::io::RandomAccessFile> get_first() = 0;
 	virtual std::vector<std::string> get_errors() = 0;
 	virtual std::string get_current_user_readable_file_handle() = 0;
+
+	virtual std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > get_all() = 0;
 private:
 
 

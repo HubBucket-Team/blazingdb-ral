@@ -134,39 +134,4 @@ namespace {
         ASSERT_TRUE(counter_instance->contains_column(gdf_col_2) == false);
     }
 
-TEST_F(GdfColumnCppTest, ColumnSliceTest) {
-    // create input data
-    gdf_size_type quantity = 120;
-    gdf_dtype dtype = GDF_FLOAT32;
-    gdf_column_cpp intput_column = ral::test::create_gdf_column_cpp(quantity, dtype);
-
-    // make slice
-    gdf_size_type position = 16;
-    gdf_size_type length = 32;
-    gdf_column_cpp output_column = intput_column.slice(position, length);
-
-    // verify column
-    ASSERT_EQ(output_column.size(), length);
-    ASSERT_TRUE(output_column.get_gdf_column()->data != nullptr);
-    ASSERT_TRUE(output_column.get_gdf_column()->valid != nullptr);
-
-    // create data device pointers
-    thrust::device_ptr<float> input_data(reinterpret_cast<float*>(intput_column.get_gdf_column()->data));
-    thrust::device_ptr<float> output_data(reinterpret_cast<float*>(output_column.get_gdf_column()->data));
-
-    // verify data field
-    bool result = thrust::equal(thrust::device, input_data + position, input_data + position + length, output_data);
-    ASSERT_TRUE(result);
-
-    // create valid device pointers
-    thrust::device_ptr<std::uint8_t> input_valid(reinterpret_cast<std::uint8_t*>(intput_column.get_gdf_column()->valid));
-    thrust::device_ptr<std::uint8_t> output_valid(reinterpret_cast<std::uint8_t*>(output_column.get_gdf_column()->valid));
-
-    // verify valid field
-    gdf_size_type valid_position = position / ral::traits::BYTE_SIZE_IN_BITS;
-    gdf_size_type valid_length = length / ral::traits::BYTE_SIZE_IN_BITS;
-    result = thrust::equal(thrust::device, input_valid + valid_position, input_valid + valid_position + valid_length, output_valid);
-    ASSERT_TRUE(result);
-}
-
 } // namespace

@@ -45,12 +45,13 @@ TEST_F(EvaluateQueryTest, TEST_00) {
       .query =
           "select n.n_nationkey, r.r_regionkey from main.nation as n left "
           "outer join main.region as r on n.n_nationkey = r.r_regionkey where "
-          "n.n_nationkey < 10",
+          "n.n_nationkey < 10 order by n.n_nationkey",
       .logicalPlan =
-          "LogicalProject(n_nationkey=[$0], r_regionkey=[$4])\n  "
-          "LogicalFilter(condition=[<($0, 10)])\n    "
-          "LogicalJoin(condition=[=($0, $4)], joinType=[left])\n      "
-          "EnumerableTableScan(table=[[main, nation]])\n      "
+          "LogicalSort(sort0=[$0], dir0=[ASC])\n  "
+          "LogicalProject(n_nationkey=[$0], r_regionkey=[$4])\n    "
+          "LogicalFilter(condition=[<($0, 10)])\n      "
+          "LogicalJoin(condition=[=($0, $4)], joinType=[left])\n        "
+          "EnumerableTableScan(table=[[main, nation]])\n        "
           "EnumerableTableScan(table=[[main, region]])",
       .tableGroup =
           LiteralTableGroupBuilder{
@@ -100,12 +101,13 @@ TEST_F(EvaluateQueryTest, TEST_01) {
       .query =
           "select n.n_nationkey, r.r_regionkey, n.n_nationkey + r.r_regionkey "
           "from main.nation as n left outer join main.region as r on "
-          "n.n_nationkey = r.r_regionkey where n.n_nationkey < 10",
+          "n.n_nationkey = r.r_regionkey where n.n_nationkey < 10 order by n.n_nationkey",
       .logicalPlan =
+          "LogicalSort(sort0=[$0], dir0=[ASC])\n  "
           "LogicalProject(n_nationkey=[$0], r_regionkey=[$4], EXPR$2=[+($0, "
-          "$4)])\n  LogicalFilter(condition=[<($0, 10)])\n    "
-          "LogicalJoin(condition=[=($0, $4)], joinType=[left])\n      "
-          "EnumerableTableScan(table=[[main, nation]])\n      "
+          "$4)])\n    LogicalFilter(condition=[<($0, 10)])\n      "
+          "LogicalJoin(condition=[=($0, $4)], joinType=[left])\n        "
+          "EnumerableTableScan(table=[[main, nation]])\n        "
           "EnumerableTableScan(table=[[main, region]])",
       .tableGroup =
           LiteralTableGroupBuilder{
@@ -158,12 +160,13 @@ TEST_F(EvaluateQueryTest, TEST_02) {
       .query =
           "select n.n_nationkey, r.r_regionkey from main.nation as n left "
           "outer join main.region as r on n.n_regionkey = r.r_regionkey where "
-          "n.n_nationkey < 10 and n.n_nationkey > 5",
+          "n.n_nationkey < 10 and n.n_nationkey > 5 order by n.n_nationkey",
       .logicalPlan =
-          "LogicalProject(n_nationkey=[$0], r_regionkey=[$4])\n  "
-          "LogicalFilter(condition=[AND(<($0, 10), >($0, 5))])\n    "
-          "LogicalJoin(condition=[=($2, $4)], joinType=[left])\n      "
-          "EnumerableTableScan(table=[[main, nation]])\n      "
+          "LogicalSort(sort0=[$0], dir0=[ASC])\n  "
+          "LogicalProject(n_nationkey=[$0], r_regionkey=[$4])\n    "
+          "LogicalFilter(condition=[AND(<($0, 10), >($0, 5))])\n      "
+          "LogicalJoin(condition=[=($2, $4)], joinType=[left])\n        "
+          "EnumerableTableScan(table=[[main, nation]])\n        "
           "EnumerableTableScan(table=[[main, region]])",
       .tableGroup =
           LiteralTableGroupBuilder{

@@ -76,11 +76,11 @@ void sort(blazing_frame& input, std::vector<gdf_column*>& rawCols, std::vector<i
 void single_node_sort(blazing_frame& input, std::vector<gdf_column*>& rawCols, std::vector<int8_t>& sortOrderTypes) {
 	std::vector<gdf_column_cpp> sortedTable(input.get_size_column(0));
 	for(int i = 0; i < sortedTable.size();i++){
-		sortedTable[i].create_gdf_column(input.get_column(i).dtype(),
-																			input.get_column(i).size(),
-																			nullptr,
-																			get_width_dtype(input.get_column(i).dtype()),
-																			input.get_column(i).name());
+		auto& input_col = input.get_column(i);
+		if (input_col.valid())
+			sortedTable[i].create_gdf_column(input_col.dtype(), input_col.size(), nullptr, get_width_dtype(input_col.dtype()), input_col.name());
+		else 
+			sortedTable[i].create_gdf_column(input_col.dtype(), input_col.size(), nullptr, nullptr, get_width_dtype(input_col.dtype()), input_col.name());
 	}
 
 	sort(input, rawCols, sortOrderTypes, sortedTable);
@@ -94,11 +94,11 @@ void distributed_sort(const Context& queryContext, blazing_frame& input, std::ve
 
 	std::vector<gdf_column_cpp> sortedTable(input.get_size_column(0));
 	for(int i = 0; i < sortedTable.size();i++){
-		sortedTable[i].create_gdf_column(input.get_column(i).dtype(),
-																			input.get_column(i).size(),
-																			nullptr,
-																			get_width_dtype(input.get_column(i).dtype()),
-																			input.get_column(i).name());
+		auto& input_col = input.get_column(i);
+		if (input_col.valid())
+			sortedTable[i].create_gdf_column(input_col.dtype(), input_col.size(), nullptr, get_width_dtype(input_col.dtype()), input_col.name());
+		else 
+			sortedTable[i].create_gdf_column(input_col.dtype(), input_col.size(), nullptr, nullptr, get_width_dtype(input_col.dtype()), input_col.name());
 	}
 
 	size_t rowSize = input.get_column(0).size();

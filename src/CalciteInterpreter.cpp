@@ -1319,14 +1319,14 @@ blazing_frame evaluate_split_query(
 			///left_frame.consolidate_tables();
 			blazing_timer.reset();
 			result_frame = ral::operators::process_join(queryContext, left_frame, query[0]);
-			Library::Logging::Logger().logInfo("process_join took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(left_frame.get_column(0).size()) + " rows with an output of " + std::to_string(result_frame.get_column(0).size()));
+			Library::Logging::Logger().logInfo("process_join took " + std::to_string(blazing_timer.getDuration()) + " ms with an output of " + std::to_string(result_frame.get_column(0).size()));
 			return result_frame;
 		}else if(is_union(query[0])){
 			//TODO: append the frames to each other
 			//return right_frame;//!!
 			blazing_timer.reset();
 			result_frame = process_union(left_frame,right_frame,query[0]);
-			Library::Logging::Logger().logInfo("process_union took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(left_frame.get_column(0).size()) + " rows with an output of " + std::to_string(result_frame.get_column(0).size()));
+			Library::Logging::Logger().logInfo("process_union took " + std::to_string(blazing_timer.getDuration()) + " ms with an output of " + std::to_string(result_frame.get_column(0).size()));
 			return result_frame;
 		}else{
 			throw std::runtime_error{"In evaluate_split_query function: unsupported query operator"};

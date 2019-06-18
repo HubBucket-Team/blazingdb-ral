@@ -119,6 +119,11 @@ bool is_exponential_operator(gdf_binary_operator operation){
 	return operation == GDF_POW;
 }
 
+bool is_null_check_operator(gdf_unary_operator operation){
+	return (operation == BLZ_IS_NULL ||
+			operation == BLZ_IS_NOT_NULL);
+}
+
 bool is_arithmetic_operation(gdf_binary_operator operation){
 	return (operation == GDF_ADD ||
 			operation == GDF_SUB ||
@@ -174,6 +179,8 @@ gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_unary_operator operatio
 		} else {
 			return GDF_FLOAT64;
 		}
+	}else if(is_null_check_operator(operation)){
+		return GDF_INT8;
 	}else{
 		return input_left_type;
 	}
@@ -513,7 +520,9 @@ static std::map<std::string, gdf_unary_operator> gdf_unary_operator_map = {
 	{"BL_DAY", BLZ_DAY},
 	{"BL_HOUR", BLZ_HOUR},
 	{"BL_MINUTE", BLZ_MINUTE},
-	{"BL_SECOND", BLZ_SECOND}
+	{"BL_SECOND", BLZ_SECOND},
+	{"IS_NULL", BLZ_IS_NULL},
+	{"IS_NOT_NULL", BLZ_IS_NOT_NULL}
 };
 
 
@@ -695,7 +704,8 @@ std::string clean_calcite_expression(std::string expression){
 	static const std::regex re{R""(CASE\(IS NOT NULL\((\W\(.+?\)|.+)\), \1, (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
 	expression = std::regex_replace(expression, re, "COALESCE($1, $2)");
 	// std::cout << "+++++++++ " << expression << std::endl;
-
+	StringUtil::findAndReplaceAll(expression,"IS NOT NULL","IS_NOT_NULL");
+	StringUtil::findAndReplaceAll(expression,"IS NULL","IS_NULL");
 	StringUtil::findAndReplaceAll(expression," NOT NULL","");
 	StringUtil::findAndReplaceAll(expression,"):DOUBLE","");
 	StringUtil::findAndReplaceAll(expression,"CAST(","");

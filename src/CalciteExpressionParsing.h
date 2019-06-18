@@ -44,7 +44,7 @@ std::string clean_project_expression(std::string expression);
 
 std::string clean_calcite_expression(std::string expression);
 
-std::string get_last_token(std::string expression, int * position);
+std::vector<std::string> get_tokens_in_reverse_order(const std::string & expression);
 
 gdf_agg_op get_aggregation_operation(std::string operator_string);
 

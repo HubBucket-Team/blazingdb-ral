@@ -171,10 +171,9 @@ project_plan_params parse_project_plan(blazing_frame& input, std::string query_p
 
 			//todo put this into its own function
 			std::string clean_expression = clean_calcite_expression(expression);
-			int position = clean_expression.size();
-			while(position > 0){
-				std::string token = get_last_token(clean_expression,&position);
-
+			
+			std::vector<std::string> tokens = get_tokens_in_reverse_order(clean_expression);
+			for (std::string token : tokens){
 				if(!is_operator_token(token) && !is_literal(token)){
 					size_t index = get_index(token);
 					input_used_in_expression[index] = true;
@@ -1040,6 +1039,7 @@ void process_filter(blazing_frame & input, std::string query_part){
 	// std::iota(idx.begin(),idx.end(),0);
 	// CheckCudaErrors(cudaMemcpy(index_col.get_gdf_column()->data, idx.data(), idx.size() * sizeof(int32_t), cudaMemcpyHostToDevice));
 	Library::Logging::Logger().logInfo("-> Filter sub block 5 took " + std::to_string(timer.getDuration()) + " ms");
+
 
 	timer.reset();
 	stencil.get_gdf_column()->dtype = GDF_BOOL8; // apply_boolean_mask expects the stencil to be a GDF_BOOL8 which for our purposes the way we are using the GDF_INT8 is the same as GDF_BOOL8

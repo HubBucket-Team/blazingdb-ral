@@ -61,7 +61,6 @@ void data_loader::load_data(std::vector<gdf_column_cpp> & columns, const std::ve
 
 	std::vector<std::vector<gdf_column_cpp> > columns_per_file; //stores all of the columns parsed from each file
 	//iterates through files and parses them into columns
-	size_t file_index = 0;
 	while(this->provider->has_next()){
 		std::vector<gdf_column_cpp> converted_data;
 		//a file handle that we can use in case errors occur to tell the user which file had parsing issues
@@ -69,13 +68,12 @@ void data_loader::load_data(std::vector<gdf_column_cpp> & columns, const std::ve
 		std::shared_ptr<arrow::io::RandomAccessFile> file = this->provider->get_next();
 
 		if(file != nullptr){
-			parser->parse(file,converted_data,schema,column_indices,file_index);
+			parser->parse(file, user_readable_file_handle, converted_data,schema,column_indices);
 
 			columns_per_file.push_back(converted_data);
 		}else{
 			std::cout<<"Was unable to open "<<user_readable_file_handle<<std::endl;
 		}
-		file_index++;
 	}
 
 	//checking if any errors occurred
@@ -95,7 +93,7 @@ void data_loader::load_data(std::vector<gdf_column_cpp> & columns, const std::ve
 
 	if(num_files == 0 || num_columns == 0){ 	//we got no data
 
-		parser->parse(nullptr,columns,schema,column_indices,file_index);
+		parser->parse(nullptr, "", columns,schema,column_indices);
 		return ;
 	}
 

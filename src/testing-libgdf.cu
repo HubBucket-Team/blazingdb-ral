@@ -458,62 +458,6 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
   return std::make_pair(Status_Success, responsePayload.getBufferData());
 }
 
-static result_pair executePlanService(uint64_t accessToken, Buffer&& requestPayloadBuffer)   {
-  interpreter::ExecutePlanRequestMessage requestPayload(requestPayloadBuffer.data());
-
-  // ExecutePlan
-  std::cout << "accessToken: " << accessToken << std::endl;
-  std::cout << "query: " << requestPayload.getLogicalPlan() << std::endl;
-  std::cout << "tableGroup: " << requestPayload.getTableGroup().name << std::endl;
- 	std::cout << "tables: " << requestPayload.getTableGroup().tables.size() << std::endl;
-  std::cout << "tableSize: " << requestPayload.getTableGroup().tables.size() << std::endl;
-	std::cout << "FirstColumnSize: "
-			<< requestPayload.getTableGroup().tables[0].columns[0].size
-			<< std::endl;
-  std::cout << "resultToken: " << requestPayload.getTableGroup().tables[0].resultToken << std::endl;
-  //Library::Logging::Logger().logInfo("query:\n" + requestPayload.getLogicalPlan());
-
-  std::vector<void *> handles;
-	uint64_t resultToken = 0L;
-  try {
-    std::tuple<std::vector<std::vector<gdf_column_cpp>>, std::vector<std::string>, std::vector<std::vector<std::string>>> request = libgdf::toBlazingDataframe(accessToken, requestPayload.getTableGroup(),handles);
-
-
-    using blazingdb::communication::Context;
-    using blazingdb::communication::Node;
-    Context queryContext{std::vector<std::shared_ptr<Node>>{}, nullptr, ""};
-
-
-    resultToken = evaluate_query(std::get<0>(request), std::get<1>(request), std::get<2>(request),
-                                        requestPayload.getLogicalPlan(), accessToken, handles, queryContext);
-  } catch (const std::exception& e) {
-     std::cerr << e.what() << std::endl;
-     ResponseErrorMessage errorMessage{ std::string{e.what()} };
-     return std::make_pair(Status_Error, errorMessage.getBufferData());
-  }
-  
-  #ifdef USE_UNIX_SOCKETS
-
-  interpreter::NodeConnectionDTO nodeInfo {
-      .port = -1,
-      .path = ral::config::BlazingConfig::getInstance().getSocketPath(),
-      .type = NodeConnectionType {NodeConnectionType_TCP}
-  };
-
-  #else
-
-  interpreter::NodeConnectionDTO nodeInfo {
-      .port = connectionAddress.tcp_port,
-      .path = ral::config::BlazingConfig::getInstance().getSocketPath(),
-      .type = NodeConnectionType {NodeConnectionType_TCP}
-  };
-
-  #endif
-
-  interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
-  return std::make_pair(Status_Success, responsePayload.getBufferData());
-}
-
 static result_pair freeMemoryCallback(uint64_t accessToken, Buffer&& requesBuffer)   {
     FreeMemory::freeAll();
     ZeroMessage response{};

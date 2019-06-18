@@ -32,10 +32,10 @@ parquet_parser::~parquet_parser() {
 }
 
 void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
+	const std::string & user_readable_file_handle,
 	std::vector<gdf_column_cpp> & columns_out,
 	const Schema & schema,
-	std::vector<size_t> column_indices_requested,
-	size_t file_index){
+	std::vector<size_t> column_indices_requested){
 
 	if (column_indices_requested.size() == 0){ // including all columns by default
 		column_indices_requested.resize(schema.get_num_columns());
@@ -45,11 +45,17 @@ void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	// Lets see if we have already loaded columns before and if so, lets adjust the column_indices
 	std::vector<size_t> column_indices;
 	for(auto column_index : column_indices_requested){
+		bool already_parsed_before = false;
 		const std::string column_name = schema.get_name(column_index);
-		auto iter = loaded_columns.find(column_name);
-		if (iter == loaded_columns.end()){ // we have not already parsed this column before
-			column_indices.push_back(column_index);
-		} 
+		auto file_iter = loaded_columns.find(user_readable_file_handle);
+		if (file_iter != loaded_columns.end()){ // we have already parsed this file before
+			auto col_iter = loaded_columns[user_readable_file_handle].find(column_name);
+			if (col_iter != loaded_columns[user_readable_file_handle].end()){ // we have already parsed this column before
+				already_parsed_before = true;				
+			}
+		}
+		if (!already_parsed_before)
+			column_indices.push_back(column_index);		
 	}
 
 	std::vector<gdf_column_cpp> columns;
@@ -106,17 +112,23 @@ void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	// If we had not already loaded them, lets add them to the set of loaded columns
 	int newly_parsed_col_idx = 0;
 	for(auto column_index : column_indices_requested){
+		bool already_parsed_before = false;
 		const std::string column_name = schema.get_name(column_index);
-		auto iter = loaded_columns.find(column_name);
-		if (iter == loaded_columns.end()){ // we have not already parsed this column before, which means we must have just parsed it
+		auto file_iter = loaded_columns.find(user_readable_file_handle);
+		if (file_iter != loaded_columns.end()){ // we have already parsed this file before
+			auto col_iter = loaded_columns[user_readable_file_handle].find(column_name);
+			if (col_iter != loaded_columns[user_readable_file_handle].end()){ // we have already parsed this column before
+				already_parsed_before = true;
+				columns_out.push_back(loaded_columns[user_readable_file_handle][column_name]);
+			}
+		}
+		if (!already_parsed_before) {
 			if (column_name != columns[newly_parsed_col_idx].name()){
-				std::cout<<"ERROR: logic error when trying to use already loaded columns in CSVParser"<<std::endl;
+				std::cout<<"ERROR: logic error when trying to use already loaded columns in ParquetParser"<<std::endl;
 			}
 			columns_out.push_back(columns[newly_parsed_col_idx]);
-			loaded_columns[columns[newly_parsed_col_idx].name()] = columns[newly_parsed_col_idx];
+			loaded_columns[user_readable_file_handle][columns[newly_parsed_col_idx].name()] = columns[newly_parsed_col_idx];
 			newly_parsed_col_idx++;			
-		} else {
-			columns_out.push_back(loaded_columns[column_name]);
 		}
 	}
 }

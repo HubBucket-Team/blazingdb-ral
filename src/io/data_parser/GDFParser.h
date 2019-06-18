@@ -23,10 +23,10 @@ public:
 
 
 	void parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
+			const std::string & user_readable_file_handle,
 			std::vector<gdf_column_cpp> & columns,
 			const Schema & schema,
-			std::vector<size_t> column_indices,
-			size_t file_index);
+			std::vector<size_t> column_indices);
 
 
 	void parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files,

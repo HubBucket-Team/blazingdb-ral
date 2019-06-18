@@ -16,7 +16,7 @@
 #include "vector.h"
 
 #include <arrow/util/bit-util.h>
-#include "cuio/parquet/util/bit_util.cuh"
+#include "gdf_wrapper/utilities/bit_util.cuh"
 
 
 namespace gdf {
@@ -295,7 +295,7 @@ public:
 
 
   Literals(const vector& values, const bool_vector& bools)
-   : values_ {values}, valids_(gdf::util::PaddedLength(arrow::BitUtil::BytesForBits(values.size())), 0) 
+   : values_ {values}, valids_(gdf_valid_allocation_size(values.size()), 0) 
   { 
     assert(values.size() == bools.size());
     gdf_valid_type* host_valids = (gdf_valid_type*)valids_.data();

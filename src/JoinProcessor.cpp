@@ -64,11 +64,11 @@ void parseJoinConditionToColumnIndices(const std::string& condition, std::vector
 	//right now with pred push down the join codnition takes the filters as the second argument to condition
 
 	std::string clean_expression = clean_calcite_expression(condition);
-	int position = clean_expression.size();
 	int operator_count = 0;
 	std::stack<std::string> operand;
-	while(position > 0){
-		std::string token = get_last_token(clean_expression, &position);
+	std::vector<std::string> tokens = get_tokens_in_reverse_order(clean_expression);
+	for (std::string token : tokens){
+
 		if(is_operator_token(token)){
 			if(token == "="){
 				//so far only equijoins are supported in libgdf

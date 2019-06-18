@@ -48,18 +48,6 @@ query_token_t result_set_repository::register_query(connection_id_t connection){
 	return token;
 }
 
-/*void write_response(blazing_frame frame,response_descriptor response_to_write){
-	//TODO: use flatbuffers here to convert the frame to the response message
-	//deregister output since we are going to ipc it
-	for(size_t i = 0; i < frame.get_width(); i++){
-		GDFRefCounter::getInstance()->deregister_column(frame.get_column(i).get_gdf_column());
-	}
-
-	//std::lock_guard<std::mutex> guard(this->repo_mutex);
-	//TODO: pass in query token and connection id so we can remove these form the map
-
-}*/
-
 void result_set_repository::update_token(query_token_t token, blazing_frame frame, double duration, std::string errorMsg){
 	if(this->result_sets.find(token) == this->result_sets.end()){
 		throw std::runtime_error{"Token does not exist"};

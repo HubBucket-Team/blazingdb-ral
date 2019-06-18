@@ -2,6 +2,7 @@
 #include <sstream>
 #include <iomanip>
 #include <regex>
+#include <algorithm>
 
 #include <blazingdb/io/Util/StringUtil.h>
 
@@ -118,6 +119,11 @@ bool is_exponential_operator(gdf_binary_operator operation){
 	return operation == GDF_POW;
 }
 
+bool is_null_check_operator(gdf_unary_operator operation){
+	return (operation == BLZ_IS_NULL ||
+			operation == BLZ_IS_NOT_NULL);
+}
+
 bool is_arithmetic_operation(gdf_binary_operator operation){
 	return (operation == GDF_ADD ||
 			operation == GDF_SUB ||
@@ -173,6 +179,8 @@ gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_unary_operator operatio
 		} else {
 			return GDF_FLOAT64;
 		}
+	}else if(is_null_check_operator(operation)){
+		return GDF_INT8;
 	}else{
 		return input_left_type;
 	}
@@ -407,14 +415,14 @@ int64_t  tmst;  // GDF_TIMESTAMP
 //must pass in temp type as invalid if you are not setting it to something to begin with
 gdf_dtype get_output_type_expression(blazing_frame * input, gdf_dtype * max_temp_type, std::string expression){
 	std::string clean_expression = clean_calcite_expression(expression);
-	int position = clean_expression.size();
+	
 	if(*max_temp_type == GDF_invalid){
 		*max_temp_type = GDF_INT8;
 	}
 
+	std::vector<std::string> tokens = get_tokens_in_reverse_order(clean_expression);
 	std::stack<gdf_dtype> operands;
-	while(position > 0){
-		std::string token = get_last_token(clean_expression,&position);
+	for (std::string token : tokens) {
 
 		if(is_operator_token(token)){
 			if(is_binary_operator_token(token) ){
@@ -440,8 +448,7 @@ gdf_dtype get_output_type_expression(blazing_frame * input, gdf_dtype * max_temp
 				}
 				gdf_binary_operator operation = get_binary_operation(token);
 				operands.push(get_output_type(left_operand,right_operand,operation));
-
-				if(position > 0 && get_width_dtype(operands.top()) > get_width_dtype(*max_temp_type)){
+				if(get_width_dtype(operands.top()) > get_width_dtype(*max_temp_type)){
 					*max_temp_type = operands.top();
 				}
 			}else if(is_unary_operator_token(token)){
@@ -451,7 +458,7 @@ gdf_dtype get_output_type_expression(blazing_frame * input, gdf_dtype * max_temp
 				gdf_unary_operator operation = get_unary_operation(token);
 
 				operands.push(get_output_type(left_operand,operation));
-				if(position > 0 && get_width_dtype(operands.top()) > get_width_dtype(*max_temp_type)){
+				if(get_width_dtype(operands.top()) > get_width_dtype(*max_temp_type)){
 					*max_temp_type = operands.top();
 				}
 			} else {
@@ -513,7 +520,9 @@ static std::map<std::string, gdf_unary_operator> gdf_unary_operator_map = {
 	{"BL_DAY", BLZ_DAY},
 	{"BL_HOUR", BLZ_HOUR},
 	{"BL_MINUTE", BLZ_MINUTE},
-	{"BL_SECOND", BLZ_SECOND}
+	{"BL_SECOND", BLZ_SECOND},
+	{"IS_NULL", BLZ_IS_NULL},
+	{"IS_NOT_NULL", BLZ_IS_NOT_NULL}
 };
 
 
@@ -573,16 +582,11 @@ bool is_number(const std::string &s) {
 	return std::regex_match(s, re);
 }
 
-std::string get_last_token(std::string expression, int * position){
-	size_t old_position = *position;
-	*position = expression.find_last_of(' ',*position - 1);
-	if(*position == expression.npos){
-		//should be at the last token
-		*position = 0;
-		return expression.substr(0,old_position);
-	}else{
-		return expression.substr(*position + 1, old_position- (*position + 1));
-	}
+std::vector<std::string> get_tokens_in_reverse_order(const std::string & expression) {
+
+	std::vector<std::string> tokens = StringUtil::splitNotInQuotes(expression, " ");
+	std::reverse(tokens.begin(), tokens.end());
+	return tokens;
 }
 
 bool is_operator_token(std::string operand) {
@@ -700,7 +704,8 @@ std::string clean_calcite_expression(std::string expression){
 	static const std::regex re{R""(CASE\(IS NOT NULL\((\W\(.+?\)|.+)\), \1, (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
 	expression = std::regex_replace(expression, re, "COALESCE($1, $2)");
 	// std::cout << "+++++++++ " << expression << std::endl;
-
+	StringUtil::findAndReplaceAll(expression,"IS NOT NULL","IS_NOT_NULL");
+	StringUtil::findAndReplaceAll(expression,"IS NULL","IS_NULL");
 	StringUtil::findAndReplaceAll(expression," NOT NULL","");
 	StringUtil::findAndReplaceAll(expression,"):DOUBLE","");
 	StringUtil::findAndReplaceAll(expression,"CAST(","");

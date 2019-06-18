@@ -380,15 +380,16 @@ TEST_F(EvaluateQueryTest, TEST_NULL_BINARY) {
 TEST_F(EvaluateQueryTest, TEST_NULL_OUTER_JOIN) {
   auto input = InputTestItem{
       .query =
-          "SELECT n.n_nationkey, n.n_regionkey, n.n_nationkey + n.n_regionkey  from main.nation AS n INNER JOIN main.region AS r ON n.n_regionkey = r.r_regionkey and n.n_nationkey < 10",
+          "SELECT n.n_nationkey, n.n_regionkey, n.n_nationkey + n.n_regionkey  from main.nation AS n INNER JOIN main.region AS r ON n.n_regionkey = r.r_regionkey and n.n_nationkey < 10 order by n.n_nationkey",
       .logicalPlan =
-    		  "LogicalProject(n_nationkey=[$0], r_regionkey=[$1], EXPR$2=[+($0, $1)])\n"
-    		  "  LogicalJoin(condition=[=($0, $1)], joinType=[left])\n"
-    		  "    LogicalProject(n_nationkey=[$0])\n"
-    		  "      LogicalFilter(condition=[<($0, 10)])\n"
-    		  "        EnumerableTableScan(table=[[main, nation]])\n"
-    		  "    LogicalProject(r_regionkey=[$0])\n"
-    		  "      EnumerableTableScan(table=[[main, region]])\n",
+              "LogicalSort(sort0=[$0], dir0=[ASC])\n  "
+    		  "  LogicalProject(n_nationkey=[$0], r_regionkey=[$1], EXPR$2=[+($0, $1)])\n"
+    		  "    LogicalJoin(condition=[=($0, $1)], joinType=[left])\n"
+    		  "      LogicalProject(n_nationkey=[$0])\n"
+    		  "        LogicalFilter(condition=[<($0, 10)])\n"
+    		  "          EnumerableTableScan(table=[[main, nation]])\n"
+    		  "      LogicalProject(r_regionkey=[$0])\n"
+    		  "        EnumerableTableScan(table=[[main, region]])\n",
       .filePaths = {"/tmp/nation.psv","/tmp/region.psv"},
       .tableNames = {"main.nation", "main.region"},
       .columnNames = {{"n_nationkey", "n_name","n_regionkey", "n_comment"},{"r_regionkey","r_name","r_comment"}},
@@ -464,13 +465,14 @@ TEST_F(EvaluateQueryTest, TEST_NULL_OUTER_JOIN_2) {
         TEST_F(EvaluateQueryTest, TEST_NULL_TRANSFORM_AGGREGATIONS) {
           auto input = InputTestItem{
               .query =
-                  "select count(c_custkey) + sum(c_acctbal) + avg(c_acctbal), min(c_custkey) - max(c_nationkey), c_nationkey * 2 as key from main.customer where  c_nationkey * 2 < 40 group by  c_nationkey * 2",
+                  "select count(c_custkey) + sum(c_acctbal) + avg(c_acctbal), min(c_custkey) - max(c_nationkey), c_nationkey * 2 as key from main.customer where  c_nationkey * 2 < 40 group by  c_nationkey * 2 order by key",
               .logicalPlan =
-            		  "LogicalProject(EXPR$0=[+(+($1, $2), $3)], EXPR$1=[-($4, $5)], key=[$0])\n"
-            		  "  LogicalAggregate(group=[{0}], agg#0=[COUNT($1)], agg#1=[SUM($2)], agg#2=[AVG($2)], agg#3=[MIN($1)], agg#4=[MAX($3)])\n"
-            		  "    LogicalProject(key=[*($3, 2)], c_custkey=[$0], c_acctbal=[$5], c_nationkey=[+($3, 0)])\n"
-            		  "      LogicalFilter(condition=[<(*($3, 2), 40)])\n"
-            		  "        EnumerableTableScan(table=[[main, customer]])",
+                      "LogicalSort(sort0=[$2], dir0=[ASC])\n  "
+            		  "  LogicalProject(EXPR$0=[+(+($1, $2), $3)], EXPR$1=[-($4, $5)], key=[$0])\n"
+            		  "    LogicalAggregate(group=[{0}], agg#0=[COUNT($1)], agg#1=[SUM($2)], agg#2=[AVG($2)], agg#3=[MIN($1)], agg#4=[MAX($3)])\n"
+            		  "      LogicalProject(key=[*($3, 2)], c_custkey=[$0], c_acctbal=[$5], c_nationkey=[$3])\n"
+            		  "        LogicalFilter(condition=[<(*($3, 2), 40)])\n"
+            		  "          EnumerableTableScan(table=[[main, customer]])",
             	      .filePaths = {"/tmp/customer.psv"},
             	      .tableNames = {"main.customer"},
             	      .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
@@ -501,7 +503,7 @@ TEST_F(EvaluateQueryTest, TEST_NULL_OUTER_JOIN_2) {
               GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
           CHECK_RESULT(output_table, input.resultTable);
         }
-/* figure out how to reproduce this test without a huge file
+
         TEST_F(EvaluateQueryTest, TEST_CUSTOMER_1_GB) {
 
            //we are asuming the user has wget
@@ -545,4 +547,51 @@ TEST_F(EvaluateQueryTest, TEST_NULL_OUTER_JOIN_2) {
                 auto output_table =
                     GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
              //   CHECK_RESULT(output_table, input.resultTable);
-              }*/
+              }
+
+
+
+        TEST_F(EvaluateQueryTest, TEST_CUSTOMER_1_GB_COMPLEX) {
+
+           //we are asuming the user has wget
+         // int download_status = system ("wget -O /tmp/customer.tbl 'https://drive.google.com/a/blazingdb.com/uc?authuser=1&id=1I4pGhK0nw4Gw-zI7PsB6sLm0Sya5f9Cq&export=download'");
+          //EXPECT_TRUE(download_status == 0);
+          auto input = InputTestItem{
+                    .query =
+                        "select c_custkey, c_nationkey, c_acctbal from main.customer where c_custkey < 150 and c_nationkey = 5 or c_custkey = 200 or c_nationkey >= 10 or c_acctbal <= 500",
+                    .logicalPlan =
+                        "LogicalProject(c_custkey=[$0], c_nationkey=[$3], c_acctbal=[$5])\n"
+                        "  LogicalFilter(condition=[OR(AND(<($0, 150), =($3, 5)), =($0, 200), >=($3, 10), <=($5, 500))])\n"
+                        "    EnumerableTableScan(table=[[main, customer]])",
+                          .filePaths = {"/tmp/customer.tbl"},
+                          .tableNames = {"main.customer"},
+                          .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
+                                           "c_phone", "c_acctbal", "c_mktsegment", "c_comment"}},
+                          .columnTypes = {{"int32", "int64", "int64", "int32", "int64", "float32",
+                                           "int64", "int64"}},
+                    .resultTable =
+                        LiteralTableBuilder{
+                            "ResultSet",
+                            {{"EXPR$0", Literals<GDF_FLOAT32>{37496.2,47956.6,17314.9,29051.7,18251.4,27370.2, 20676.5,16785.2, 32370.1, 56047.8,41177.7,31379.0, 29994.1,34806.4, 3839.33,
+                            38188.1, 46194.8,24929.0,58479.7,45247.3}},
+                            {"EXPR$1", Literals<GDF_FLOAT32>{29,2,15,2,0,5,12,55,1,36,6,41,13,-11,75,-14,28,-9,-11,24}},
+                            {"key", Literals<GDF_FLOAT32>{0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38}},
+                            }}
+                            .Build()};
+                auto logical_plan = input.logicalPlan;
+                auto input_tables =
+                    ToBlazingFrame(input.filePaths, input.columnNames, input.columnTypes);
+                GdfColumnCppsTableBuilder{"input_table", input_tables[0]}.Build();
+                auto table_names = input.tableNames;
+                auto column_names = input.columnNames;
+                std::vector<gdf_column_cpp> outputs;
+                gdf_error err = evaluate_query(input_tables, table_names, column_names,
+                                               logical_plan, outputs);
+                std::cout<<"null count is "<<outputs[0].null_count()<<std::endl;
+                std::cout<<"size is "<<outputs[0].size()<<std::endl;
+
+                 EXPECT_TRUE(err == GDF_SUCCESS);
+                auto output_table =
+                    GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+             //   CHECK_RESULT(output_table, input.resultTable);
+              }

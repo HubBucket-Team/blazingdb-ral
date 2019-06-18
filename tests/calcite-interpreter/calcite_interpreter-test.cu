@@ -39,7 +39,7 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 		input2 = new char[num_values];
 		input3 = new char[num_values];
 
-		for(int i = 0; i < num_values; i++){
+		for(std::size_t i = 0; i < num_values; i++){
 			if(i % 2 == 0){
 				input1[i] = 1;
 			}else{
@@ -54,23 +54,14 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 		inputs[1].create_gdf_column(GDF_INT8, num_values, (void *) input2, 1);
 		inputs[2].create_gdf_column(GDF_INT8, num_values, (void *) input3, 1);
 
-		/*print_column(inputs[0].get_gdf_column());
-		print_column(inputs[1].get_gdf_column());
-		print_column(inputs[2].get_gdf_column());*/
-
 		input_tables.push_back(inputs); //columns for emps
 		input_tables.push_back(inputs); //columns for sales
 	}
 
 	void TearDown(){
-
-		for(int i = 0; i < outputs.size(); i++){
-			print_column<int8_t>(outputs[i].get_gdf_column());
-
-			// Releasing allocated memory, here we are responsible for that
-			//TODO percy rommel: move to integration/end-to-end test
-			//GDFRefCounter::getInstance()->free_if_deregistered(outputs[i].get_gdf_column());
-		}
+		// Releasing allocated memory, here we are responsible for that
+		//TODO percy rommel: move to integration/end-to-end test
+		//GDFRefCounter::getInstance()->free_if_deregistered(outputs[i].get_gdf_column())
 	}
 
 	void Check(gdf_column_cpp out_col, char* host_output){
@@ -199,7 +190,7 @@ LogicalProject(EXPR$0=[+($0, $1)], z=[$2])\n\
 	}
 }
 
-/*TEST_F(calcite_interpreter_TEST, processing_project5) {
+TEST_F(calcite_interpreter_TEST, processing_project5) {
 
 	{   //select z from hr.emps where x = y
 		std::string query = "\
@@ -238,11 +229,11 @@ LogicalProject(S=[-($0, $1)])\n\
 		EXPECT_TRUE(outputs.size() == 1);
 
 		char * host_output = new char[num_values];
-		for(int i = 0; i < num_values; i++){
+		for(std::size_t i = 0; i < num_values; i++){
 			host_output[i] = input1[i] - input2[i];
 		}
 
-		print_column<int8_t>(outputs[0].get_gdf_column());
+		print_gdf_column(outputs[0].get_gdf_column());
 		Check(outputs[0], host_output);
 	}
 }
@@ -272,7 +263,7 @@ TEST_F(calcite_interpreter_TEST, order_by) {
 		//TODO percy noboa see upgrade to uints
 		//indices_col.create_gdf_column(GDF_UINT64,num_values,nullptr,8);
 		indices_col.create_gdf_column(GDF_INT64,num_values,nullptr,8);
-		print_column<uint64_t>(indices_col.get_gdf_column());
+		print_gdf_column(indices_col.get_gdf_column());
 		gdf_valid_type asc_desc_bitmask = 255;
 		gdf_valid_type* asc_desc_bitmask_dev;
 
@@ -290,7 +281,7 @@ TEST_F(calcite_interpreter_TEST, order_by) {
 		gdf_column* input_columns = &v_cols[0];
 
 
-		print_column<int32_t>(input_column.get_gdf_column());
+		print_gdf_column(input_column.get_gdf_column());
 		try{
 		    //TODO percy noboa felipe see upgrade to order_by
 //		    gdf_error err = gdf_order_by_asc_desc(
@@ -364,8 +355,8 @@ TEST_F(calcite_interpreter_TEST, processing_sort) {
 		EXPECT_TRUE(err == GDF_SUCCESS);
 		EXPECT_TRUE(outputs.size() == 2);
 
-		for(int i = 0; i < outputs.size(); i++){
-			print_column<int8_t>(outputs[i].get_gdf_column());
+		for(std::size_t i = 0; i < outputs.size(); i++){
+			print_gdf_column(outputs[i].get_gdf_column());
 		}
 
 		std::vector<char> output = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29,31};

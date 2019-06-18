@@ -152,10 +152,10 @@ struct NVCategoryTest : public ::testing::Test {
 
 	gdf_column * create_nv_category_column_from_strings(std::vector<std::string>& strings){
 
-		size_t num_rows = strings.size();
+		std::size_t num_rows = strings.size();
 		const char ** string_host_data = new const char *[num_rows];
 
-		for(gdf_size_type row_index = 0; row_index < num_rows; row_index++){
+		for(std::size_t row_index = 0; row_index < num_rows; row_index++){
 			string_host_data[row_index] = new char[200];
 			strings[row_index].push_back(0);
 			std::memcpy((void *) string_host_data[row_index],strings[row_index].c_str(),strings[row_index].size());
@@ -239,14 +239,9 @@ struct NVCategoryTest : public ::testing::Test {
 	}
 
 	void TearDown(){
-
-		for(size_t i = 0; i < outputs.size(); i++){
-			print_column<int8_t>(outputs[i].get_gdf_column());
-
-			// Releasing allocated memory, here we are responsible for that
-			//TODO percy rommel: move to integration/end-to-end test
-			//GDFRefCounter::getInstance()->free_if_deregistered(outputs[i].get_gdf_column());
-		}
+		// Releasing allocated memory, here we are responsible for that
+		//TODO percy rommel: move to integration/end-to-end test
+		//GDFRefCounter::getInstance()->free_if_deregistered(outputs[i].get_gdf_column());
 	}
 
 	template<typename T>

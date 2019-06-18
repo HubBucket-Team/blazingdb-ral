@@ -48,18 +48,6 @@ query_token_t result_set_repository::register_query(connection_id_t connection){
 	return token;
 }
 
-/*void write_response(blazing_frame frame,response_descriptor response_to_write){
-	//TODO: use flatbuffers here to convert the frame to the response message
-	//deregister output since we are going to ipc it
-	for(size_t i = 0; i < frame.get_width(); i++){
-		GDFRefCounter::getInstance()->deregister_column(frame.get_column(i).get_gdf_column());
-	}
-
-	//std::lock_guard<std::mutex> guard(this->repo_mutex);
-	//TODO: pass in query token and connection id so we can remove these form the map
-
-}*/
-
 void result_set_repository::update_token(query_token_t token, blazing_frame frame, double duration, std::string errorMsg){
 	if(this->result_sets.find(token) == this->result_sets.end()){
 		throw std::runtime_error{"Token does not exist"};
@@ -242,7 +230,7 @@ gdf_column_cpp result_set_repository::get_column(connection_id_t connection, col
 	if(this->precalculated_columns[columnToken].dtype() == GDF_STRING){
 		gdf_column_cpp temp_column; //allocar convertir a NVCategory
 		NVStrings * strings = static_cast<NVStrings *>(this->precalculated_columns[columnToken].data());
-		NVCategory * category = NVCategory::create_from_strings(*strings);
+		NVCategory * category = strings ? NVCategory::create_from_strings(*strings) : NVCategory::create_from_array(nullptr, 0);
 		temp_column.create_gdf_column(category, this->precalculated_columns[columnToken].size(),this->precalculated_columns[columnToken].name());
 		return temp_column;
 	}else{

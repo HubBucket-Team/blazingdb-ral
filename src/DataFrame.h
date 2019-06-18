@@ -45,15 +45,22 @@ public:
 
 
 	gdf_column_cpp & get_column(int column_index){
-		size_t cur_count = 0;
-		for(int i = 0; i < columns.size(); i++){
-			if(column_index < cur_count + columns[i].size()){
+
+		if (column_index < 0) {
+			std::cout << "ERROR: negative index in get_column" << std::endl;
+			return columns[0][0];
+		}
+
+		int cur_count = 0;
+		for (std::size_t i = 0; i < columns.size(); i++){
+			if ( column_index < cur_count + static_cast<int>(columns[i].size()) ){
 				return columns[i][column_index - cur_count];
 			}
-
 			cur_count += columns[i].size();
 		}
-		//return nullptr; //error
+
+		std::cout << "ERROR: index in get_column is out of range" << std::endl;
+		return columns[columns.size() - 1][cur_count - 1];
 	}
 
 	std::vector< std::vector<gdf_column_cpp> > get_columns(){
@@ -70,7 +77,7 @@ public:
 
 	void set_column(size_t column_index, gdf_column_cpp column){
 		size_t cur_count = 0;
-		for(int i = 0; i < columns.size(); i++){
+		for(std::size_t i = 0; i < columns.size(); i++){
 			if(column_index < cur_count + columns[i].size()){
 				columns[i][column_index - cur_count] = column;
 			}
@@ -81,7 +88,7 @@ public:
 
 	void consolidate_tables(){
 		std::vector<gdf_column_cpp> new_tables;
-		for(int table_index = 0; table_index < columns.size(); table_index++){
+		for(std::size_t table_index = 0; table_index < columns.size(); table_index++){
 			new_tables.insert(new_tables.end(),columns[table_index].begin(),
 					columns[table_index].end());
 		}
@@ -111,7 +118,7 @@ public:
 
 	size_t get_size_columns(){
 		size_t size_columns = 0;
-		for(int i = 0; i < columns.size(); i++){
+		for(std::size_t i = 0; i < columns.size(); i++){
 			size_columns += columns[i].size();
 		}
 
@@ -125,19 +132,19 @@ public:
 	void print(std::string title)
 	{
 		std::cout<<"---> "<<title<<std::endl;
-		for(int table_index = 0; table_index < columns.size(); table_index++)
+		for(std::size_t table_index = 0; table_index < columns.size(); table_index++)
 		{
 			std::cout<<"Table: "<<table_index<<"\n";
-			for(int column_index = 0; column_index < columns[table_index].size(); column_index++)
-				print_column<int32_t>(columns[table_index][column_index].get_gdf_column());
+			for(std::size_t column_index = 0; column_index < columns[table_index].size(); column_index++)
+				print_gdf_column(columns[table_index][column_index].get_gdf_column());
 		}
 	}
 
 	// This function goes over all columns in the data frame and makes sure that no two columns are actually pointing to the same data, and if so, clones the data so that they are all pointing to unique data pointers
 	void deduplicate(){
 		std::map<void*,std::pair<int, int>>  dataPtrs; // keys are the pointers, value is the table and column index it came from
-		for(int table_index = 0; table_index < columns.size(); table_index++) {
-			for(int column_index = 0; column_index < columns[table_index].size(); column_index++) {
+		for(std::size_t table_index = 0; table_index < columns.size(); table_index++) {
+			for(std::size_t column_index = 0; column_index < columns[table_index].size(); column_index++) {
 				auto it = dataPtrs.find(columns[table_index][column_index].get_gdf_column()->data);
 				if (it != dataPtrs.end() ){ // found a duplicate
 					columns[table_index][column_index] = columns[table_index][column_index].clone();

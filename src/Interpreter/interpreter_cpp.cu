@@ -232,7 +232,7 @@ void perform_operation(	std::vector<gdf_column *> output_columns,
 
 	//find maximum register used
 	column_index_type max_output = 0;
-	for(int i = 0; i < outputs.size(); i++){
+	for(std::size_t i = 0; i < outputs.size(); i++){
 		if(max_output < outputs[i]){
 			max_output = outputs[i];
 		}

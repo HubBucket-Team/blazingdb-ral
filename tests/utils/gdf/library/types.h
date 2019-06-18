@@ -213,6 +213,8 @@ namespace library {
                 return "GDF_DATE64";
             case GDF_TIMESTAMP:
                 return "GDF_TIMESTAMP";
+            default: 
+                return "GDF_UNSUPPORTED_DTYPE"; 
         }
     }
     int8_t getScalar(int8_t, gdf_scalar* scalar) {

@@ -81,11 +81,7 @@ void add_expression_to_plan(	blazing_frame & inputs,
 
 	column_index_type start_processing_position = num_inputs + num_outputs;
 
-
 	std::string clean_expression = clean_calcite_expression(expression);
-
-	int position = clean_expression.size();
-
 
 	std::stack<operand_position> operand_stack;
 	gdf_scalar dummy_scalar;
@@ -96,8 +92,9 @@ void add_expression_to_plan(	blazing_frame & inputs,
 	}
 	//pretend they are like registers and we need to know how many registers we need to evaluate this expression
 
-	while(position > 0){
-		std::string token = get_last_token(clean_expression,&position);
+	std::vector<std::string> tokens = get_tokens_in_reverse_order(clean_expression);
+	for (size_t token_ind = 0; token_ind < tokens.size(); token_ind++){
+		std::string token = tokens[token_ind];
 
 		if(is_operator_token(token)){
 			if(is_binary_operator_token(token)){
@@ -249,7 +246,7 @@ void add_expression_to_plan(	blazing_frame & inputs,
 				//uh oh
 			}
 
-			if(position == 0){
+			if(token_ind == tokens.size() - 1){ // last one
 				//write to final output
 				outputs.push_back(expression_position + num_inputs);
 			}else{
@@ -281,7 +278,7 @@ void evaluate_expression(
 	timer.reset();
 
 	std::string clean_expression = clean_calcite_expression(expression);
-	int position = clean_expression.size();
+	
 	std::stack<std::string> operand_stack;
 
 	std::vector<column_index_type> final_output_positions(1);
@@ -293,9 +290,9 @@ void evaluate_expression(
 	output_type_expressions[0] = output.dtype();
 
 	std::vector<bool> input_used_in_expression(inputs.get_size_columns(),false);
-	while(position > 0){
-		std::string token = get_last_token(clean_expression,&position);
-
+	std::vector<std::string> tokens = get_tokens_in_reverse_order(clean_expression);
+	for (std::string token : tokens){
+		
 		if(!is_operator_token(token) && !is_literal(token) && !is_string(token)){
 			size_t index = get_index(token);
 			input_used_in_expression[index] = true;

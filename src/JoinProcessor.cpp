@@ -59,8 +59,7 @@ void evaluate_join(std::string condition,
 		gdf_column * right_result
 ){
 	std::string clean_expression = clean_calcite_expression(condition);
-	int position = clean_expression.size();
-
+	
 	std::stack<std::string> operand;
 
 	//TODO: for this to work properly we can only do multi column join
@@ -72,8 +71,8 @@ void evaluate_join(std::string condition,
 
 	int operator_count = 0;
 
-	while(position > 0){
-		std::string token = get_last_token(clean_expression,&position);
+	std::vector<std::string> tokens = get_tokens_in_reverse_order(clean_expression);
+	for (std::string token : tokens){
 		//std::cout<<"Token is ==> "<<token<<"\n";
 
 		if(is_operator_token(token)){

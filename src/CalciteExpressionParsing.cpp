@@ -2,6 +2,7 @@
 #include <sstream>
 #include <iomanip>
 #include <regex>
+#include <algorithm>
 
 #include <blazingdb/io/Util/StringUtil.h>
 
@@ -407,14 +408,14 @@ int64_t  tmst;  // GDF_TIMESTAMP
 //must pass in temp type as invalid if you are not setting it to something to begin with
 gdf_dtype get_output_type_expression(blazing_frame * input, gdf_dtype * max_temp_type, std::string expression){
 	std::string clean_expression = clean_calcite_expression(expression);
-	int position = clean_expression.size();
+	
 	if(*max_temp_type == GDF_invalid){
 		*max_temp_type = GDF_INT8;
 	}
 
+	std::vector<std::string> tokens = get_tokens_in_reverse_order(clean_expression);
 	std::stack<gdf_dtype> operands;
-	while(position > 0){
-		std::string token = get_last_token(clean_expression,&position);
+	for (std::string token : tokens) {
 
 		if(is_operator_token(token)){
 			if(is_binary_operator_token(token) ){
@@ -440,7 +441,7 @@ gdf_dtype get_output_type_expression(blazing_frame * input, gdf_dtype * max_temp
 				}
 				gdf_binary_operator operation = get_binary_operation(token);
 				operands.push(get_output_type(left_operand,right_operand,operation));
-				if(position > 0 && get_width_dtype(operands.top()) > get_width_dtype(*max_temp_type)){
+				if(get_width_dtype(operands.top()) > get_width_dtype(*max_temp_type)){
 					*max_temp_type = operands.top();
 				}
 			}else if(is_unary_operator_token(token)){
@@ -450,7 +451,7 @@ gdf_dtype get_output_type_expression(blazing_frame * input, gdf_dtype * max_temp
 				gdf_unary_operator operation = get_unary_operation(token);
 
 				operands.push(get_output_type(left_operand,operation));
-				if(position > 0 && get_width_dtype(operands.top()) > get_width_dtype(*max_temp_type)){
+				if(get_width_dtype(operands.top()) > get_width_dtype(*max_temp_type)){
 					*max_temp_type = operands.top();
 				}
 			} else {
@@ -572,16 +573,11 @@ bool is_number(const std::string &s) {
 	return std::regex_match(s, re);
 }
 
-std::string get_last_token(std::string expression, int * position){
-	size_t old_position = *position;
-	*position = expression.find_last_of(' ',*position - 1);
-	if(*position == expression.npos){
-		//should be at the last token
-		*position = 0;
-		return expression.substr(0,old_position);
-	}else{
-		return expression.substr(*position + 1, old_position- (*position + 1));
-	}
+std::vector<std::string> get_tokens_in_reverse_order(const std::string & expression) {
+
+	std::vector<std::string> tokens = StringUtil::splitNotInQuotes(expression, " ");
+	std::reverse(tokens.begin(), tokens.end());
+	return tokens;
 }
 
 bool is_operator_token(std::string operand) {

@@ -182,10 +182,9 @@ project_plan_params parse_project_plan(blazing_frame& input, std::string query_p
 
 			//todo put this into its own function
 			std::string clean_expression = clean_calcite_expression(expression);
-			int position = clean_expression.size();
-			while(position > 0){
-				std::string token = get_last_token(clean_expression,&position);
-
+			
+			std::vector<std::string> tokens = get_tokens_in_reverse_order(clean_expression);
+			for (std::string token : tokens){
 				if(!is_operator_token(token) && !is_literal(token)){
 					size_t index = get_index(token);
 					input_used_in_expression[index] = true;

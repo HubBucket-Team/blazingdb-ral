@@ -448,7 +448,9 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 
   interpreter::NodeConnectionDTO nodeInfo {
       .port = connectionAddress.tcp_port,
-      .path = ral::config::BlazingConfig::getInstance().getSocketPath(),
+      //.path = ral::config::BlazingConfig::getInstance().getSocketPath(),
+      //TODO percy felipe experimento con dask worker: si funciona mejora esto
+      .path = "127.0.0.1",
       .type = NodeConnectionType {NodeConnectionType_TCP}
   };
 

@@ -46,7 +46,7 @@ namespace traits {
             return GDF_FLOAT32;
         }else if(str == "GDF_FLOAT64"){
             return GDF_FLOAT64;
-        }else if (str == "GDF_BOOL8")
+        }else if (str == "GDF_BOOL8"){
             return GDF_BOOL8;
         }else if(str == "GDF_DATE32"){
             return GDF_DATE32;

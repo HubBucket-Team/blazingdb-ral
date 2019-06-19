@@ -196,13 +196,14 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		const Schema & schema,
 		std::vector<size_t> column_indices_requested){
 
-	if (file == nullptr){
-		columns_out = create_empty_columns(schema.get_names(), schema.get_types());
-	}
-
 	if (column_indices_requested.size() == 0){ // including all columns by default
 		column_indices_requested.resize(schema.get_num_columns());
 		std::iota(column_indices_requested.begin(), column_indices_requested.end(), 0);
+	}
+
+	if (file == nullptr){
+		columns_out = create_empty_columns(schema.get_names(), schema.get_dtypes(), column_indices_requested);
+		return;
 	}
 	
 	// Lets see if we have already loaded columns before and if so, lets adjust the column_indices

@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <string>
 #include <cudf/types.h>
 
 namespace Ral {

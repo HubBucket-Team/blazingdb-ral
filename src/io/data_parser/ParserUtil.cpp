@@ -64,13 +64,14 @@ void get_columns_that_were_already_loaded(
 
 
 std::vector<gdf_column_cpp> create_empty_columns(const std::vector<std::string> & column_names,
-                                                const std::vector<std::string> & column_types){
+                                                const std::vector<gdf_dtype> & column_types,
+												const std::vector<size_t> & column_indices_requested){
 
-    std::vector<gdf_column_cpp> columns(column_names.size());
+    std::vector<gdf_column_cpp> columns(column_indices_requested.size());
 
-    for (size_t i = 0; i < column_names.size(); i++){
-        gdf_dtype type = ral::traits::convert_string_dtype(column_types[i]);
-        columns[i].create_gdf_column(type, 0, nullptr, gdf_dtype_size(type), column_names[i]);
+    for (size_t i = 0; i < column_indices_requested.size(); i++){
+		const size_t ind = column_indices_requested[i];
+        columns[i].create_gdf_column(column_types[ind], 0, nullptr, gdf_dtype_size(column_types[ind]), column_names[ind]);
     }
     return columns;
 }

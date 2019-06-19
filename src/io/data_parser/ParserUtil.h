@@ -25,7 +25,8 @@ namespace io {
             std::vector<gdf_column_cpp> & columns_out);
 
     std::vector<gdf_column_cpp> create_empty_columns(const std::vector<std::string> & column_names,
-            const std::vector<std::string> & column_types);
+            const std::vector<gdf_dtype> & column_types,
+            const std::vector<size_t> & column_indices_requested);
 
 
 } /* namespace io */

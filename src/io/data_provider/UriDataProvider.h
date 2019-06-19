@@ -31,9 +31,18 @@ public:
 	 */
 	bool has_next();
 	/**
+	 *  Resets current_file to 0 
+	 */
+	void reset();
+	/**
 	 * gets a randomaccessfile to the uri at file_uris[current_file] and advances current_file by 1
 	 */
 	std::shared_ptr<arrow::io::RandomAccessFile> get_next();
+	/**
+	 * gets a randomaccessfile to the uri at file_uris[0]
+	 */
+	std::shared_ptr<arrow::io::RandomAccessFile> get_first();
+
 	/**
 	 * returns any errors that were encountered when opening arrow::io::RandomAccessFile
 	 */
@@ -42,6 +51,15 @@ public:
 	 * returns a string that the user should be able to use to identify which file is being referred to in error messages
 	 */
 	std::string get_current_user_readable_file_handle();
+	/**
+	 * returns all of the file handles
+	 */
+	std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > get_all();
+
+	/**
+	 * returns the current file index
+	 */
+	size_t get_file_index();
 private:
 	/**
 	 * stores the list of uris that will be used by the provider
@@ -62,6 +80,8 @@ private:
 	 */
 	std::vector<std::string> errors;
 
+	std::vector<Uri> directory_uris;
+	size_t directory_current_file;
 
 };
 

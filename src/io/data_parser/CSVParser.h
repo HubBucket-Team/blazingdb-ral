@@ -20,32 +20,31 @@ namespace io {
 
 class csv_parser: public data_parser {
 public:
-	csv_parser(const std::string & delimiter,
-			const std::string & line_terminator,
+	csv_parser(std::string  delimiter,
+			 std::string  line_terminator,
 			int skip_rows,
-			const std::vector<std::string> & names,
-			const std::vector<gdf_dtype> & dtypes);
+			 std::vector<std::string>  names,
+			std::vector<gdf_dtype>  dtypes);
 	csv_parser(csv_read_arg	args);
 
 	virtual ~csv_parser();
 
-	void parse(const char *fname, std::vector<gdf_column_cpp> & columns);
 
 	void parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
-				std::vector<gdf_column_cpp> & columns,
-				std::vector<bool> include_column);
+			const std::string & user_readable_file_handle,
+			std::vector<gdf_column_cpp> & columns,
+			const Schema & schema,
+			std::vector<size_t> column_indices);
 
-	void parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
-				std::vector<gdf_column_cpp> & columns);
-
-	void parse_schema(std::shared_ptr<arrow::io::RandomAccessFile> file,
-			std::vector<gdf_column_cpp> & columns);
+	void parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files,
+			ral::io::Schema & schema);
 
 private:
 	char quote_character = '\"';
 	csv_read_arg args;
 	std::vector<std::string> column_names;
 	std::vector<std::string> dtype_strings; //this is only because we have to convert for args and dont want to have to remember to free up all the junk later
+	std::map<std::string,std::map<std::string, gdf_column_cpp>> loaded_columns;
 };
 
 } /* namespace io */

@@ -24,6 +24,8 @@ typedef enum{
 	BLZ_HOUR,
 	BLZ_MINUTE,
 	BLZ_SECOND,
+	BLZ_IS_NULL,
+	BLZ_IS_NOT_NULL,
 	BLZ_INVALID_UNARY
 
 } gdf_unary_operator;

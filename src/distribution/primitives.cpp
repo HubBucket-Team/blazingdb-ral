@@ -23,6 +23,7 @@
 #include "reduction.hpp"
 #include "operators/GroupBy.h"
 #include "copying.hpp"
+#include "sorted_merge.hpp"
 
 
 namespace ral {
@@ -453,11 +454,7 @@ std::vector<NodeColumns> collectPartitions(const Context& context) {
 }
 
 void sortedMerger(std::vector<NodeColumns>& columns, std::vector<int8_t>& sortOrderTypes, std::vector<int>& sortColIndices, blazing_frame& output) {
-  gdf_column_cpp ascDescCol;
-	ascDescCol.create_gdf_column(GDF_INT8, sortOrderTypes.size(), sortOrderTypes.data(), get_width_dtype(GDF_INT8), "");
-
-  gdf_column_cpp sortByColIndices;
-	sortByColIndices.create_gdf_column(GDF_INT32, sortColIndices.size(), sortColIndices.data(), get_width_dtype(GDF_INT32), "");
+  rmm::device_vector<int8_t> ascDesc(sortOrderTypes);
 
   std::vector<gdf_column_cpp> leftCols = columns[0].getColumns();
   std::vector<gdf_column*> rawLeftCols(leftCols.size());
@@ -465,6 +462,7 @@ void sortedMerger(std::vector<NodeColumns>& columns, std::vector<int8_t>& sortOr
     return el.get_gdf_column();
   });
 
+  cudf::table leftTable(rawLeftCols.data(), rawLeftCols.size());
   for(size_t i = 1; i < columns.size(); i++)
   {
     if (columns[i].getColumnsRef()[0].size() == 0) {
@@ -477,27 +475,18 @@ void sortedMerger(std::vector<NodeColumns>& columns, std::vector<int8_t>& sortOr
       return el.get_gdf_column();
     });
 
-    // Create output cols
-    std::vector<gdf_column_cpp> sortedColumns(leftCols.size());
-    std::vector<gdf_column*> rawSortedColumns(leftCols.size());
-    for(size_t j = 0; j < sortedColumns.size(); j++) {
-      sortedColumns[j].create_gdf_column(leftCols[j].dtype(),
-                                        leftCols[j].size() + rightCols[j].size(),
-                                        nullptr,
-                                        get_width_dtype(leftCols[j].dtype()),
-                                        leftCols[j].name());
-      rawSortedColumns[j] = sortedColumns[j].get_gdf_column();
-    }
+    leftTable = cudf::sorted_merge(leftTable,
+                                  cudf::table(rawRightCols.data(), rawRightCols.size()),
+                                  sortColIndices,
+                                  ascDesc);
+  }
 
-    CUDF_CALL( gdf_sorted_merge(rawLeftCols.data(),
-                                rawRightCols.data(),
-                                rawLeftCols.size(),
-                                sortByColIndices.get_gdf_column(),
-                                ascDescCol.get_gdf_column(),
-                                rawSortedColumns.data()));
-
-    leftCols = std::move(sortedColumns);
-    rawLeftCols = std::move(rawSortedColumns);
+  for (size_t i = 0; i < leftTable.num_columns(); i++) {
+    gdf_column * col = leftTable.get_column(i);
+    col->col_name = nullptr; // TODO: Delete this after updating cudf to properly
+    std::string colName = leftCols[i].name(); // zero initialize gdf_columns
+    leftCols[i].create_gdf_column(col);
+    leftCols[i].set_name(colName);
   }
 
   output.clear();

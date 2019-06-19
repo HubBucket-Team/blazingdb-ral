@@ -8,6 +8,7 @@
 #include "DataFrame.h"
 #include "Types.h"
 #include "LogicalFilter.h"
+#include "io/DataLoader.h"
 
 #include <blazingdb/communication/Context.h>
 using blazingdb::communication::Context;
@@ -37,14 +38,6 @@ blazing_frame evalute_split_query(
 		std::vector<std::string> query,
 		const Context* queryContext);
 
-query_token_t evaluate_query(
-		std::vector<std::vector<gdf_column_cpp> > input_tables,
-		std::vector<std::string> table_names,
-		std::vector<std::vector<std::string>> column_names,
-		std::string logicalPlan,
-		connection_id_t connection,
-	  std::vector<void *> handles,
-		const Context& queryContext);
 
 gdf_error evaluate_query(
 		std::vector<std::vector<gdf_column_cpp> > input_tables,
@@ -52,6 +45,14 @@ gdf_error evaluate_query(
 		std::vector<std::vector<std::string>> column_names,
 		std::string logicalPlan,
 		std::vector<gdf_column_cpp> & outputs);
+
+query_token_t evaluate_query(
+		std::vector<ral::io::data_loader > input_loaders,
+		std::vector<ral::io::Schema> schemas,
+		std::vector<std::string> table_names,
+		std::string logicalPlan,
+		connection_id_t connection,
+		const Context& queryContext);
 
 std::string get_named_expression(std::string query_part, std::string expression_name);
 

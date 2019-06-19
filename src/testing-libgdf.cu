@@ -217,8 +217,10 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
                 .time_unit = (gdf_dto::gdf_time_unit)0     // TODO: why is this hardcoded?
           };
 
-          data = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->data);
-          valid = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->valid);
+          if(result.result_frame.get_columns()[0][i].size() > 0) {
+            data = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->data);
+            valid = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->valid);
+          }
         
           col.data = data;
           col.valid = valid;

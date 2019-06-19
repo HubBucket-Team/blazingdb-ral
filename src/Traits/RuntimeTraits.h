@@ -78,6 +78,8 @@ namespace traits {
 
     gdf_size_type get_bitmask_size_in_bytes(gdf_size_type quantity);
 
+    gdf_dtype convert_string_dtype(std::string str);
+
 } // namespace traits
 } // namespace ral
 

@@ -58,6 +58,7 @@ using namespace blazingdb::protocol;
 #include "io/data_parser/DataParser.h"
 #include "io/data_provider/DataProvider.h"
 #include "io/DataLoader.h"
+#include "Traits/RuntimeTraits.h"
 
 
 #include "CodeTimer.h"
@@ -213,8 +214,10 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
                 .time_unit = (gdf_dto::gdf_time_unit)0     // TODO: why is this hardcoded?
           };
 
-          data = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->data);
-          valid = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->valid);
+          if(result.result_frame.get_columns()[0][i].size() > 0) {
+            data = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->data);
+            valid = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->valid);
+          }
         
           col.data = data;
           col.valid = valid;
@@ -271,40 +274,6 @@ static result_pair freeResultService(uint64_t accessToken, Buffer&& requestPaylo
 
 }
 
-
-//TODO: we need to have a centralized place where this can be done
-//perhaps a utility in protocol, add bool8 after update
-gdf_dtype convert_string_dtype(std::string str){
-	if(str == "GDF_INT8"){
-		return GDF_INT8;
-	}else if(str == "GDF_INT16"){
-		return GDF_INT16;
-	}else if(str == "GDF_INT32"){
-		return GDF_INT32;
-	}else if(str == "GDF_INT64"){
-		return GDF_INT64;
-	}else if(str == "GDF_FLOAT32"){
-		return GDF_FLOAT32;
-	}else if(str == "GDF_FLOAT64"){
-		return GDF_FLOAT64;
-	}else if(str == "GDF_DATE32"){
-		return GDF_DATE32;
-	}else if(str == "GDF_DATE64"){
-		return GDF_DATE64;
-	}else if(str == "GDF_TIMESTAMP"){
-		return GDF_TIMESTAMP;
-	}else if(str == "GDF_CATEGORY"){
-		return GDF_CATEGORY;
-	}else if(str == "GDF_STRING"){
-		return GDF_STRING;
-	}else if(str == "GDF_STRING_CATEGORY"){
-		return GDF_STRING_CATEGORY;
-	}else{
-		return GDF_invalid;
-	}
-}
-
-
 static result_pair parseSchemaService(uint64_t accessToken, Buffer&& requestPayloadBuffer) {
 	blazingdb::protocol::orchestrator::DDLCreateTableRequestMessage requestPayload(requestPayloadBuffer.data());
 
@@ -315,7 +284,7 @@ static result_pair parseSchemaService(uint64_t accessToken, Buffer&& requestPayl
 	}else if(requestPayload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
 		std::vector<gdf_dtype> types;
 		for(auto val : requestPayload.columnTypes){
-			types.push_back(convert_string_dtype(val));
+			types.push_back(ral::traits::convert_string_dtype(val));
 		}
 		parser =  std::make_shared<ral::io::csv_parser>(
 				requestPayload.csvDelimiter,

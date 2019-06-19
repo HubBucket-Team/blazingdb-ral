@@ -24,9 +24,9 @@ public:
 
 	void parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 			const std::string & user_readable_file_handle,
-			std::vector<gdf_column_cpp> & columns,
+			std::vector<gdf_column_cpp> & columns_out,
 			const Schema & schema,
-			std::vector<size_t> column_indices);
+			std::vector<size_t> column_indices_requested);
 
 
 	void parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files,
@@ -38,7 +38,7 @@ private:
 	blazingdb::message::io::FileSystemBlazingTableSchema table_schema;
 	std::vector<void *> handles;
 	uint64_t access_token;
-	std::map<std::string, gdf_column_cpp> loaded_columns;
+	std::map<std::string,std::map<std::string, gdf_column_cpp>> loaded_columns;
 };
 
 } /* namespace io */

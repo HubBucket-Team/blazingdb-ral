@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <string>
 #include <cudf/types.h>
 
 namespace Ral {
@@ -77,6 +78,8 @@ namespace traits {
     gdf_size_type get_bitmask_size_in_bytes(const gdf_column* column);
 
     gdf_size_type get_bitmask_size_in_bytes(gdf_size_type quantity);
+
+    gdf_dtype convert_string_dtype(std::string str);
 
 } // namespace traits
 } // namespace ral

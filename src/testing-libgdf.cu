@@ -74,9 +74,7 @@ const Path FS_NAMESPACES_FILE("/tmp/file_system.bin");
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);
 
-//TODO percy c.gonzales fix this later
-std::string global_ip;
-int global_port;
+ConnectionAddress connectionAddress;
 
 static result_pair  registerFileSystem(uint64_t accessToken, Buffer&& buffer) {
   std::cout << "registerFileSystem: " << accessToken << std::endl;
@@ -137,7 +135,6 @@ static result_pair  deregisterFileSystem(uint64_t accessToken, Buffer&& buffer) 
   ZeroMessage response{};
   return std::make_pair(Status_Success, response.getBufferData());
 }
-
 
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);
@@ -410,11 +407,26 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
 
+  #ifdef USE_UNIX_SOCKETS
+
   interpreter::NodeConnectionDTO nodeInfo {
-      .port = global_port,
+      .port = -1,
       .path = ral::config::BlazingConfig::getInstance().getSocketPath(),
       .type = NodeConnectionType {NodeConnectionType_TCP}
   };
+
+  #else
+
+  interpreter::NodeConnectionDTO nodeInfo {
+      .port = connectionAddress.tcp_port,
+      //.path = ral::config::BlazingConfig::getInstance().getSocketPath(),
+      //TODO percy felipe experimento con dask worker: si funciona mejora esto
+      .path = "127.0.0.1",
+      .type = NodeConnectionType {NodeConnectionType_TCP}
+  };
+
+  #endif
+
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
   return std::make_pair(Status_Success, responsePayload.getBufferData());
 }
@@ -442,50 +454,97 @@ auto  interpreterServices(const blazingdb::protocol::Buffer &requestPayloadBuffe
 int main(int argc, const char *argv[])
 {
 
+    std::cout << "Usage: " << argv[0]
+            << " <RAL_ID>"
+                " <ORCHESTRATOR_HTTP_COMMUNICATION_[IP|HOSTNAME]> <ORCHESTRATOR_HTTP_COMMUNICATION_PORT>"
+                " <RAL_HTTP_COMMUNICATION_[IP|HOSTNAME]> <RAL_HTTP_COMMUNICATION_PORT> <RAL_TCP_PROTOCOL_PORT>" << std::endl;
+
+    if (argc != 7) {
+        std::cout << "FATAL: Invalid number of arguments" << std::endl;
+        return EXIT_FAILURE;
+    }
 
   // #ifndef VERBOSE
   // std::cout.rdbuf(nullptr); // substitute internal std::cout buffer with
   // #endif // VERBOSE
 
-
     std::cout << "RAL Engine starting" << std::endl;
 
-    std::string identifier {"1"};
-    if (argc == 2) {
-        identifier = std::string(argv[1]);
+    const std::string ralId = std::string(argv[1]);
+    const std::string orchestratorHost = std::string(argv[2]);
+
+    const int orchestratorCommunicationPort = ConnectionUtils::parsePort(argv[3]);
+
+    if (orchestratorCommunicationPort == -1) {
+        std::cout << "FATAL: Invalid Orchestrator HTTP communication port " + std::string(argv[3]) << std::endl;
+        return EXIT_FAILURE;
     }
-    if (argc > 1 && argc != 6) {
-      std::cout << "Usage: " << argv[0]
-                << " <RAL_ID>"
-                   " <ORCHESTRATOR_[IP|HOSTNAME]> <ORCHESTRATOR_PORT>"
-                   " <RAL_[IP|HOSTNAME]> <RAL_PORT>\n";
-      return 1;
+    
+    const std::string ralHost = std::string(argv[4]);
+
+    const int ralCommunicationPort = ConnectionUtils::parsePort(argv[5]);
+
+    if (ralCommunicationPort == -1) {
+        std::cout << "FATAL: Invalid RAL HTTP communication port " + std::string(argv[5]) << std::endl;
+        return EXIT_FAILURE;
     }
 
-    if (argc == 6) {
-      identifier = std::string(argv[1]);
-      auto& communicationData = ral::communication::CommunicationData::getInstance();
-      communicationData.initialize(std::atoi(argv[1]), argv[2], std::atoi(argv[3]), argv[4], std::atoi(argv[5]));
-      try {
+    const int ralProtocolPort = ConnectionUtils::parsePort(argv[6]);
+
+    if (ralProtocolPort == -1) {
+        std::cout << "FATAL: Invalid RAL TCP protocol port " + std::string(argv[6]) << std::endl;
+        return EXIT_FAILURE;
+    }
+    
+    auto& communicationData = ral::communication::CommunicationData::getInstance();
+
+    communicationData.initialize(
+        std::atoi(ralId.c_str()),
+        orchestratorHost,
+        orchestratorCommunicationPort,
+        ralHost,
+        ralCommunicationPort,
+        ralProtocolPort);
+
+    std::cout << "RAL ID: " << ralId << std::endl;
+    std::cout << "Orchestrator HTTP communication host: " << orchestratorHost << std::endl;
+    std::cout << "Orchestrator HTTP communication port: " << orchestratorCommunicationPort << std::endl;
+    std::cout << "RAL HTTP communication host: " << ralHost << std::endl;
+    std::cout << "RAL HTTP communication port: " << ralCommunicationPort << std::endl;
+
+    try {
         auto nodeDataMesssage = ral::communication::messages::Factory::createNodeDataMessage(communicationData.getSelfNode());
         ral::communication::network::Client::sendNodeData(communicationData.getOrchestratorIp(),
                                                           communicationData.getOrchestratorPort(),
                                                           nodeDataMesssage);
-        ral::communication::network::Server::start(std::atoi(argv[5]));
-      } catch (std::exception &e) {
+
+        ral::communication::network::Server::start(ralCommunicationPort);
+    } catch (std::exception &e) {
         std::cerr << e.what() << "\n";
-        return 1;
-      }
+        return EXIT_FAILURE;
     }
 
     auto& config = ral::config::BlazingConfig::getInstance();
 
-    config.setLogName("RAL." + identifier + ".log")
-          .setSocketPath("/tmp/ral." + identifier + ".socket");
 
-    std::cout << "Log Name: " << config.getLogName() << std::endl;
+#ifdef USE_UNIX_SOCKETS
+
+    config.setLogName("RAL." + ralId + ".log")
+          .setSocketPath("/tmp/ral." + ralId + ".socket");
+
     std::cout << "Socket Name: " << config.getSocketPath() << std::endl;
 
+#else
+
+    // NOTE IMPORTANT PERCY aqui es que pyblazing se entera que este es el ip del RAL en el _send de pyblazing
+    config.setLogName("RAL." + ralId + ".log")
+          .setSocketPath(ralHost);
+
+    std::cout << "Socket Name: " << config.getSocketPath() << std::endl;
+
+#endif
+
+    std::cout << "Log Name: " << config.getLogName() << std::endl;
 
     FreeMemory::Initialize();
 
@@ -495,11 +554,21 @@ int main(int argc, const char *argv[])
     // Init AWS S3 ... TODO see if we need to call shutdown and avoid leaks from s3 percy
     BlazingContext::getInstance()->initExternalSystems();
 
-  //global_ip = "/tmp/ral.socket";
-  //global_port = atoi(port.c_str());
+#ifdef USE_UNIX_SOCKETS
 
-  blazingdb::protocol::UnixSocketConnection connection(config.getSocketPath());
-  blazingdb::protocol::Server server(connection);
+  connectionAddress.unix_socket_path = config.getSocketPath();
+  blazingdb::protocol::UnixSocketConnection connection(connectionAddress);
+
+#else
+
+  connectionAddress.tcp_host = "127.0.0.1"; // NOTE always use localhost for protocol server
+  connectionAddress.tcp_port = ralProtocolPort;
+
+  std::cout << "RAL TCP protocol port: " << connectionAddress.tcp_port << std::endl;
+  
+#endif
+
+  blazingdb::protocol::Server server(connectionAddress.tcp_port);
 
   services.insert(std::make_pair(interpreter::MessageType_ExecutePlanFileSystem, &executeFileSystemPlanService));
   services.insert(std::make_pair(interpreter::MessageType_LoadCsvSchema, &parseSchemaService));

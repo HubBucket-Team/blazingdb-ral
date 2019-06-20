@@ -18,8 +18,12 @@ function(configure_benchmark BENCHMARK_NAME Bench_SRCS)
 
     cuda
     /usr/local/cuda/lib64/libcudart.so
-    ${UCX_UCT_STATIC_LIB}
+
     ${GDR_STATIC_LIB}
+
+   ${BLAZINGDB_COMMUNICATION_STATIC_LIB}
+    # For BlazingDB-Communication
+    ${UCX_UCT_STATIC_LIB}
     ${UCX_UCS_STATIC_LIB}
     ${UCX_UCM_STATIC_LIB}
 

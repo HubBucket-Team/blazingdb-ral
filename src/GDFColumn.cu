@@ -245,9 +245,9 @@ void gdf_column_cpp::create_gdf_column(NVCategory* category, size_t num_values,s
         this->allocated_size_data,
         cudaMemcpyDeviceToDevice) );
     
-    this->column->valid = nullptr; // TODO: Nulls are not supported for strings
+    this->column->valid = nullptr;
     this->allocated_size_valid = 0;
-    this->column->null_count = 0; // TODO: Nulls are not supported for strings
+    this->column->null_count = 0;
 
     if (category->has_nulls()) {
         this->column->valid = allocate_valid();

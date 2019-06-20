@@ -42,6 +42,7 @@ public:
 
 	std::vector<std::string> get_names() const;
 	std::vector<std::string> get_types() const;
+	std::vector<gdf_dtype> get_dtypes() const;
 	std::string get_name(size_t schema_index) const;
 	std::string get_type(size_t schema_index) const;
 	size_t get_file_index(size_t schema_index) const;

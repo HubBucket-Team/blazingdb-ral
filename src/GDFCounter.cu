@@ -54,14 +54,16 @@ void GDFRefCounter::increment(gdf_column* col_ptr)
 
 void deallocate(gdf_column* col_ptr){
 
-    if (col_ptr->dtype == GDF_STRING){
-        NVStrings::destroy(static_cast<NVStrings *>(col_ptr->data));
-        col_ptr->data = nullptr;
-    } else if (col_ptr->dtype == GDF_STRING_CATEGORY){
-        NVCategory::destroy(static_cast<NVCategory *>(col_ptr->dtype_info.category));
-        cuDF::Allocator::deallocate(col_ptr->data);
-    } else {
-        cuDF::Allocator::deallocate(col_ptr->data);
+    if (col_ptr->data != nullptr){
+        if (col_ptr->dtype == GDF_STRING){
+            NVStrings::destroy(static_cast<NVStrings *>(col_ptr->data));
+            col_ptr->data = nullptr;
+        } else if (col_ptr->dtype == GDF_STRING_CATEGORY){
+            NVCategory::destroy(static_cast<NVCategory *>(col_ptr->dtype_info.category));
+            cuDF::Allocator::deallocate(col_ptr->data);
+        } else {
+            cuDF::Allocator::deallocate(col_ptr->data);
+        }
     }
     if (col_ptr->valid != nullptr) {
         cuDF::Allocator::deallocate(col_ptr->valid);

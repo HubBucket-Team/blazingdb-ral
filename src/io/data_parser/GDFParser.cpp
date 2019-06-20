@@ -9,6 +9,7 @@
 #include "ral-message.cuh"
 #include <blazingdb/protocol/message/interpreter/utils.h>
 #include <blazingdb/protocol/message/interpreter/gdf_dto.h>
+#include "io/data_parser/ParserUtil.h"
 
 namespace ral {
 namespace io {
@@ -39,65 +40,67 @@ gdf_parser::~gdf_parser() {
 
 void gdf_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		const std::string & user_readable_file_handle,
-		std::vector<gdf_column_cpp> & columns,
+		std::vector<gdf_column_cpp> & columns_out,
 		const Schema & schema,
-		std::vector<size_t> column_indices){
+		std::vector<size_t> column_indices_requested){
 
-	if (column_indices.size() == 0){ // including all columns by default
-		column_indices.resize(schema.get_num_columns());
-		std::iota(column_indices.begin(), column_indices.end(), 0);
+	if (column_indices_requested.size() == 0){ // including all columns by default
+		column_indices_requested.resize(schema.get_num_columns());
+		std::iota(column_indices_requested.begin(), column_indices_requested.end(), 0);
 	}
 
+	// Lets see if we have already loaded columns before and if so, lets adjust the column_indices
+	std::vector<size_t> column_indices = get_column_indices_not_already_loaded(column_indices_requested, 
+												schema.get_names(), this->loaded_columns, user_readable_file_handle);
+
+	std::vector<gdf_column_cpp> columns;
 	for(auto column_index : column_indices) {
 
 		const std::string column_name = schema.get_name(column_index);
-		auto iter = loaded_columns.find(column_name);
-		if (iter != loaded_columns.end()){ // we have already parsed this column before
-			columns.push_back(loaded_columns[column_name]);
-		} else {
-			auto & column = this->table_schema.gdf.columns[column_index];
-			gdf_column_cpp col;
+		
+		auto & column = this->table_schema.gdf.columns[column_index];
+		gdf_column_cpp col;
 
-			if (this->table_schema.gdf.columnTokens[column_index] == 0){
-				
+		if (this->table_schema.gdf.columnTokens[column_index] == 0){			
 
-				if( ((gdf_dtype) column.dtype) == GDF_STRING){
+			if( ((gdf_dtype) column.dtype) == GDF_STRING){
 
-					nvstrings_ipc_transfer ipc;  // NOTE: IPC handles will be closed when nvstrings_ipc_transfer goes out of scope
-					memcpy(&ipc,column.custrings_data.data(),sizeof(nvstrings_ipc_transfer));
+				nvstrings_ipc_transfer ipc;  // NOTE: IPC handles will be closed when nvstrings_ipc_transfer goes out of scope
+				memcpy(&ipc,column.custrings_data.data(),sizeof(nvstrings_ipc_transfer));
 
-					NVStrings* strs = NVStrings::create_from_ipc(ipc);
-					NVCategory* category = NVCategory::create_from_strings(*strs);
-					NVStrings::destroy(strs);
+				NVStrings* strs = NVStrings::create_from_ipc(ipc);
+				NVCategory* category = NVCategory::create_from_strings(*strs);
+				NVStrings::destroy(strs);
 
-					col.create_gdf_column(category, column.size, column_name);
-				}
-				else {
-					void * dataHandle = libgdf::CudaIpcMemHandlerFrom(column.data);
-					void * validHandle = libgdf::CudaIpcMemHandlerFrom(column.valid);
-
-					col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,dataHandle, static_cast<gdf_valid_type*>(validHandle), column.size, column.null_count, column_name);
-					handles.push_back(dataHandle);
-
-					if(validHandle == nullptr){
-						//TODO: we can remove this when libgdf properly
-						//implements all algorithsm with valid == nullptr support
-						//it crashes somethings like group by
-						col.allocate_set_valid();
-					}else{
-						handles.push_back(validHandle);
-					}
-				}
-			}else{
-				col = result_set_repository::get_instance().get_column(this->access_token, this->table_schema.gdf.columnTokens[column_index]);
+				col.create_gdf_column(category, column.size, column_name);
 			}
+			else {
+				void * dataHandle = libgdf::CudaIpcMemHandlerFrom(column.data);
+				void * validHandle = libgdf::CudaIpcMemHandlerFrom(column.valid);
 
-			columns.push_back(col);
-			loaded_columns[col.name()] = col;
+				col.create_gdf_column_for_ipc((::gdf_dtype)column.dtype,dataHandle, static_cast<gdf_valid_type*>(validHandle), column.size, column.null_count, column_name);
+				handles.push_back(dataHandle);
+
+				if(validHandle == nullptr){
+					//TODO: we can remove this when libgdf properly
+					//implements all algorithsm with valid == nullptr support
+					//it crashes somethings like group by
+					col.allocate_set_valid();
+				}else{
+					handles.push_back(validHandle);
+				}
+			}
+		}else{
+			col = result_set_repository::get_instance().get_column(this->access_token, this->table_schema.gdf.columnTokens[column_index]);
 		}
+
+		columns.push_back(col);		
 	}
 
-	//call to blazing frame here
+	// Lets see if we had already loaded columns before and if so lets put them in out columns_out
+	// If we had not already loaded them, lets add them to the set of loaded columns
+	get_columns_that_were_already_loaded(column_indices_requested, 
+		    schema.get_names(), this->loaded_columns, user_readable_file_handle, columns, columns_out);
 }
 
 void gdf_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files,

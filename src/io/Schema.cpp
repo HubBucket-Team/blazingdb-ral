@@ -74,6 +74,9 @@ std::vector<std::string> Schema::get_types() const{
 	}
 	return string_types;
 }
+std::vector<gdf_dtype> Schema::get_dtypes() const{
+	return this->types;		
+}
 std::string Schema::get_name(size_t schema_index) const{
 	return this->names[schema_index];
 }

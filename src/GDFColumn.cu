@@ -280,20 +280,22 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     //TODO: this is kind of bad its a chicken and egg situation with column_view requiring a pointer to device and allocate_valid
     //needing to not require numvalues so it can be called rom outside
     this->get_gdf_column()->size = num_values;
-    char * data;
+    char * data = nullptr;
     this->is_ipc_column = false;
     this->column_token = 0;
 
     this->allocated_size_data = (width_per_value * num_values); 
-
-    cuDF::Allocator::allocate((void**)&data, allocated_size_data);
+    this->allocated_size_valid = 0;
 
     gdf_valid_type * valid_device = nullptr;
-    if(host_valids != nullptr){
-        valid_device = allocate_valid();
-        CheckCudaErrors(cudaMemcpy(valid_device, host_valids, this->allocated_size_valid, cudaMemcpyHostToDevice));
-    } else {
-        this->allocated_size_valid = 0;
+
+    if (num_values > 0) {    
+        cuDF::Allocator::allocate((void**)&data, allocated_size_data);
+        
+        if(host_valids != nullptr){
+            valid_device = allocate_valid();
+            CheckCudaErrors(cudaMemcpy(valid_device, host_valids, this->allocated_size_valid, cudaMemcpyHostToDevice));
+        } 
     }
 
     gdf_column_view(this->column, (void *) data, valid_device, num_values, type);
@@ -322,25 +324,23 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     //TODO: this is kind of bad its a chicken and egg situation with column_view requiring a pointer to device and allocate_valid
     //needing to not require numvalues so it can be called rom outside
     this->get_gdf_column()->size = num_values;
-    char * data;
+    char * data = nullptr;
     this->is_ipc_column = false;
     this->column_token = 0;
 
-
-    //percy original distribution
-    //gdf_valid_type * valid_device = allocate_valid();
-    //this->allocated_size_data = (width_per_value * num_values);
+    this->allocated_size_data = (width_per_value * num_values);
+    this->allocated_size_valid = 0;
 
     gdf_valid_type * valid_device = nullptr;
-    if (type != GDF_STRING_CATEGORY && type != GDF_STRING){
-        valid_device = allocate_valid();        
-    } else {
-        this->allocated_size_valid = 0;
+
+    if (num_values > 0) {    
+        
+        if (type != GDF_STRING_CATEGORY && type != GDF_STRING){
+            valid_device = allocate_valid();        
+        } 
+
+        cuDF::Allocator::allocate((void**)&data, allocated_size_data);
     }
-    this->allocated_size_data = (width_per_value * num_values); 
-
-
-    cuDF::Allocator::allocate((void**)&data, allocated_size_data);
 
     gdf_column_view(this->column, (void *) data, valid_device, num_values, type);
     this->column->dtype_info.category = nullptr;
@@ -354,30 +354,33 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
 }
 
 void gdf_column_cpp::create_gdf_column(gdf_column * column){
-    decrement_counter(this->column);
 
-	this->column = column;
-	
-    if (column->dtype != GDF_STRING){
-        int width_per_value;
-        gdf_error err = get_column_byte_width(column, &width_per_value);
+    if (column != this->column) { // if this gdf_column_cpp already represented this gdf_column, we dont want to do anything. Especially do decrement_counter, since it might actually free the gdf_column we are trying to use
+        decrement_counter(this->column);
 
-        //TODO: we are assuming they are not padding,
-        this->allocated_size_data = width_per_value * column->size;
-    } else {
-        this->allocated_size_data = 0; // TODO: do we care? what should be put there?
+        this->column = column;
+        
+        if (column->dtype != GDF_STRING){
+            int width_per_value;
+            gdf_error err = get_column_byte_width(column, &width_per_value);
+
+            //TODO: we are assuming they are not padding,
+            this->allocated_size_data = width_per_value * column->size;
+        } else {
+            this->allocated_size_data = 0; // TODO: do we care? what should be put there?
+        }
+        if(column->valid != nullptr){
+            this->allocated_size_valid = gdf_valid_allocation_size(column->size); //so allocations are supposed to be 64byte aligned
+        } else {
+            this->allocated_size_valid = 0;
+        }
+        this->is_ipc_column = false;
+        this->column_token = 0;
+        if (column->col_name)
+            this->set_name(std::string(column->col_name));
+
+        GDFRefCounter::getInstance()->register_column(this->column);
     }
-	if(column->valid != nullptr){
-        this->allocated_size_valid = gdf_valid_allocation_size(column->size); //so allocations are supposed to be 64byte aligned
-	} else {
-        this->allocated_size_valid = 0;
-    }
-    this->is_ipc_column = false;
-    this->column_token = 0;
-    if (column->col_name)
-    	this->set_name(std::string(column->col_name));
-
-    GDFRefCounter::getInstance()->register_column(this->column);
 }
 
 void gdf_column_cpp::create_gdf_column(const gdf_scalar & scalar, const std::string &column_name){

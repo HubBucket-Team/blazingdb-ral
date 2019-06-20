@@ -52,6 +52,12 @@ include(ConfigureRapidJSON)
 find_package(Threads)
 
 # BEGIN MAIN #
+
+# TODO percy move this to tool-chain and add support for cuda def and more than 1 defs
+add_definitions(${CXX_DEFINES})
+get_directory_property(CXX_COMPILE_DEFINITIONS DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS)
+message(STATUS "C++ compiler definitions: ${CXX_COMPILE_DEFINITIONS}")
+
 include_directories(
     ${LIB_BLAZINGIO_INCLUDEDIR}
     ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}
@@ -87,6 +93,7 @@ set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/config/BlazingConfig.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_parser/ParquetParser.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_parser/CSVParser.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_parser/GDFParser.cpp 
+              ${CMAKE_SOURCE_DIR}/src/io/data_parser/ParserUtil.cpp 
               ${CMAKE_SOURCE_DIR}/src/Traits/RuntimeTraits.cpp
               ${CMAKE_SOURCE_DIR}/src/utilities/RalColumn.cpp
               ${CMAKE_SOURCE_DIR}/src/utilities/TableWrapper.cpp

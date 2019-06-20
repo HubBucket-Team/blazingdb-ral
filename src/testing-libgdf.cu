@@ -473,7 +473,7 @@ int main(int argc, const char *argv[])
     bool withGDR = false;
     if ("true" == std::string{argv[7]}) {
         withGDR = true;
-    } else if if ("false" == std::string{argv[7]}) {
+    } else if ("false" == std::string{argv[7]}) {
         withGDR = false;
     } else {
         std::cout << "FATAL: Invalid WithGDR option use either true or false" << std::endl;

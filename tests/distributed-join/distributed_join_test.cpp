@@ -45,12 +45,12 @@ struct DistributedJoinTest : public ::testing::Test {
     }
 
     void initSelfNode() {
-        self_node_ = Node::makeShared(0, self_ip_, self_port_);
+        self_node_ = Node::makeShared(0, self_ip_, self_port_, self_protocol_port_);
     }
 
     void createContext() {
         // Create master node
-        master_node_ = Node::makeShared(12, "192.168.0.2", 1012);
+        master_node_ = Node::makeShared(12, "192.168.0.2", 1012, 8891);
 
         // Create worker nodes
         std::vector<std::shared_ptr<Node>> nodes;
@@ -67,7 +67,7 @@ struct DistributedJoinTest : public ::testing::Test {
     void initializeCommunicationData() {
         using ral::communication::CommunicationData;
         auto& communication_data = CommunicationData::getInstance();
-        communication_data.initialize(0, "192.168.0.100", 1000, self_ip_, self_port_);
+        communication_data.initialize(0, "192.168.0.100", 1000, self_ip_, self_port_, self_protocol_port_);
     }
 
     std::shared_ptr<Context> context_;
@@ -75,6 +75,7 @@ struct DistributedJoinTest : public ::testing::Test {
 
     const std::string self_ip_{"192.168.0.10"};
     const unsigned short self_port_{7897};
+    const unsigned short self_protocol_port_{8891};
     std::shared_ptr<Node> self_node_;
 };
 
@@ -134,7 +135,7 @@ Server::Server() {
 Server::~Server() {
 }
 
-std::shared_ptr<Server::Message> Server::getMessage(const ContextToken& context_token) {
+std::shared_ptr<Server::Message> Server::getMessage(const ContextToken& context_token, const MessageTokenType& messageToken) {
     return ServerFake::getInstance().getMessage(context_token);
 }
 

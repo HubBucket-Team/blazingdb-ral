@@ -124,7 +124,7 @@ project_plan_params parse_project_plan(blazing_frame& input, std::string query_p
 
 	// std::cout<<"starting process_project"<<std::endl;
 
-	size_t size = input.get_column(0).size();
+	size_t size = input.get_num_rows_in_table(0);
 
 
 	// LogicalProject(x=[$0], y=[$1], z=[$2], e=[$3], join_x=[$4], y0=[$5], EXPR$6=[+($0, $5)])
@@ -337,7 +337,7 @@ void process_project(blazing_frame & input, std::string query_part){
 
 	// std::cout<<"starting process_project"<<std::endl;
 
-	size_t size = input.get_column(0).size();
+	size_t size = input.get_num_rows_in_table(0);
 
 	// LogicalProject(x=[$0], y=[$1], z=[$2], e=[$3], join_x=[$4], y0=[$5], EXPR$6=[+($0, $5)])
 	std::string combined_expression = query_part.substr(
@@ -677,7 +677,7 @@ void process_aggregate(blazing_frame & input, std::string query_part){
 
 	std::vector<gdf_dtype> aggregation_input_types;
 
-	size_t size = input.get_column(0).size();
+	size_t size = input.get_num_rows_in_table(0);
 	size_t aggregation_size = group_columns_indices.size()==0 ? 1 : size; //if you have no groups you will output onlu one row
 
 	for(int i = 0; i < aggregation_types.size(); i++){
@@ -932,7 +932,7 @@ void process_sort(blazing_frame & input, std::string query_part){
 	CheckCudaErrors(cudaMemcpy(asc_desc_col.get_gdf_column()->data, sort_order_types.data(), sort_order_types.size() * sizeof(int8_t), cudaMemcpyHostToDevice));
 
 	gdf_column_cpp index_col;
-	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
+	index_col.create_gdf_column(GDF_INT32,input.get_num_rows_in_table(0),nullptr,get_width_dtype(GDF_INT32), "");
 
 	gdf_context context;
 	context.flag_null_sort_behavior = GDF_NULL_AS_LARGEST; // Nulls are are treated as largest
@@ -973,101 +973,104 @@ void process_sort(blazing_frame & input, std::string query_part){
 void process_filter(blazing_frame & input, std::string query_part){
 	static CodeTimer timer;
 
-	size_t size = input.get_column(0).size();
+	size_t size = input.get_num_rows_in_table(0);
 
 	timer.reset();
 
-	//TODO de donde saco el nombre de la columna aqui???
-	gdf_column_cpp stencil;
-	stencil.create_gdf_column(GDF_INT8,input.get_column(0).size(),nullptr,1, "");
+	if (size > 0){
+		
+		//TODO de donde saco el nombre de la columna aqui???
+		gdf_column_cpp stencil;
+		stencil.create_gdf_column(GDF_INT8,input.get_num_rows_in_table(0),nullptr,1, "");
 
-    gdf_dtype output_type_junk; //just gets thrown away
-    gdf_dtype max_temp_type = GDF_INT8;
-    for(int i = 0; i < input.get_width(); i++){
-        if(get_width_dtype(input.get_column(i).dtype()) > get_width_dtype(max_temp_type)){
-            max_temp_type = input.get_column(i).dtype();
-        }
-    }
+		gdf_dtype output_type_junk; //just gets thrown away
+		gdf_dtype max_temp_type = GDF_INT8;
+		for(int i = 0; i < input.get_width(); i++){
+			if(get_width_dtype(input.get_column(i).dtype()) > get_width_dtype(max_temp_type)){
+				max_temp_type = input.get_column(i).dtype();
+			}
+		}
 
-	Library::Logging::Logger().logInfo("-> Filter sub block 1 took " + std::to_string(timer.getDuration()) + " ms");
-	timer.reset();
-    gdf_dtype output_type = get_output_type_expression(&input, &max_temp_type, get_named_expression(query_part,"condition"));
+		Library::Logging::Logger().logInfo("-> Filter sub block 1 took " + std::to_string(timer.getDuration()) + " ms");
+		timer.reset();
+		gdf_dtype output_type = get_output_type_expression(&input, &max_temp_type, get_named_expression(query_part,"condition"));
 
-	Library::Logging::Logger().logInfo("-> Filter sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
-	
-	timer.reset();
-    std::string conditional_expression = get_condition_expression(query_part);
-    Library::Logging::Logger().logInfo("-> Filter sub block 3 took " + std::to_string(timer.getDuration()) + " ms");
-    // timer.reset();
-    evaluate_expression(input, conditional_expression, stencil);
+		Library::Logging::Logger().logInfo("-> Filter sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
+		
+		timer.reset();
+		std::string conditional_expression = get_condition_expression(query_part);
+		Library::Logging::Logger().logInfo("-> Filter sub block 3 took " + std::to_string(timer.getDuration()) + " ms");
+		// timer.reset();
+		evaluate_expression(input, conditional_expression, stencil);
 
-	// Library::Logging::Logger().logInfo("-> Filter sub block 4 took " + std::to_string(timer.getDuration()) + " ms");
+		// Library::Logging::Logger().logInfo("-> Filter sub block 4 took " + std::to_string(timer.getDuration()) + " ms");
 
-	//apply filter to all the columns
-	// for(int i = 0; i < input.get_width(); i++){
-	// 	temp.create_gdf_column(input.get_column(i).dtype(), input.get_column(i).size(), nullptr, get_width_dtype(input.get_column(i).dtype()));
-	// 	//temp.set_dtype(input.get_column(i).dtype());
+		//apply filter to all the columns
+		// for(int i = 0; i < input.get_width(); i++){
+		// 	temp.create_gdf_column(input.get_column(i).dtype(), input.get_column(i).size(), nullptr, get_width_dtype(input.get_column(i).dtype()));
+		// 	//temp.set_dtype(input.get_column(i).dtype());
 
-	// 	//			cudaPointerAttributes attributes;
-	// 	//			cudaError_t err2 = cudaPointerGetAttributes ( &attributes, (void *) temp.data );
-	// 	//			err2 = cudaPointerGetAttributes ( &attributes, (void *) input.get_column(i)->data );
-	// 	//			err2 = cudaPointerGetAttributes ( &attributes, (void *) stencil.data );
-
-
-	// 	//just for testing
-	// 	//			cudaMalloc((void **)&(temp.data),1000);
-	// 	//			cudaMalloc((void **)&(temp.valid),1000);
-
-		// 	err = gpu_apply_stencil(
-	// 			input.get_column(i).get_gdf_column(),
-	// 			stencil.get_gdf_column(),
-	// 			temp.get_gdf_column()
-	// 	);
-	// 	if(err != GDF_SUCCESS){
-	// 		return err;
-	// 	}
-
-	// 	input.set_column(i,temp.clone());
-	// }
-
-	timer.reset();
-	
-	gdf_column_cpp index_col;
-	index_col.create_gdf_column(GDF_INT32,input.get_column(0).size(),nullptr,get_width_dtype(GDF_INT32), "");
-	gdf_sequence(static_cast<int32_t*>(index_col.get_gdf_column()->data), input.get_column(0).size(), 0);
-	// std::vector<int32_t> idx(input.get_column(0).size());
-	// std::iota(idx.begin(),idx.end(),0);
-	// CheckCudaErrors(cudaMemcpy(index_col.get_gdf_column()->data, idx.data(), idx.size() * sizeof(int32_t), cudaMemcpyHostToDevice));
-	Library::Logging::Logger().logInfo("-> Filter sub block 5 took " + std::to_string(timer.getDuration()) + " ms");
+		// 	//			cudaPointerAttributes attributes;
+		// 	//			cudaError_t err2 = cudaPointerGetAttributes ( &attributes, (void *) temp.data );
+		// 	//			err2 = cudaPointerGetAttributes ( &attributes, (void *) input.get_column(i)->data );
+		// 	//			err2 = cudaPointerGetAttributes ( &attributes, (void *) stencil.data );
 
 
-	timer.reset();
-	stencil.get_gdf_column()->dtype = GDF_BOOL8; // apply_boolean_mask expects the stencil to be a GDF_BOOL8 which for our purposes the way we are using the GDF_INT8 is the same as GDF_BOOL8
+		// 	//just for testing
+		// 	//			cudaMalloc((void **)&(temp.data),1000);
+		// 	//			cudaMalloc((void **)&(temp.valid),1000);
 
-	gdf_column temp_idx = cudf::apply_boolean_mask( *(index_col.get_gdf_column()), *(stencil.get_gdf_column()));
-	temp_idx.col_name = nullptr;
-	gdf_column * temp_idx_ptr = new gdf_column;
-	*temp_idx_ptr = temp_idx;
-	gdf_column_cpp temp_idx_col;
-	temp_idx_col.create_gdf_column(temp_idx_ptr);
+			// 	err = gpu_apply_stencil(
+		// 			input.get_column(i).get_gdf_column(),
+		// 			stencil.get_gdf_column(),
+		// 			temp.get_gdf_column()
+		// 	);
+		// 	if(err != GDF_SUCCESS){
+		// 		return err;
+		// 	}
 
-	Library::Logging::Logger().logInfo("-> Filter sub block 6 took " + std::to_string(timer.getDuration()) + " ms");
+		// 	input.set_column(i,temp.clone());
+		// }
 
-	timer.reset();
-	
-	for(int i = 0; i < input.get_width();i++){
-		gdf_column_cpp materialize_temp;
-		if (input.get_column(i).valid())
-			materialize_temp.create_gdf_column(input.get_column(i).dtype(),temp_idx_col.size(),nullptr,get_width_dtype(input.get_column(i).dtype()), input.get_column(i).name());
-		else
-			materialize_temp.create_gdf_column(input.get_column(i).dtype(),temp_idx_col.size(),nullptr,nullptr,get_width_dtype(input.get_column(i).dtype()), input.get_column(i).name());
+		timer.reset();
+		
+		gdf_column_cpp index_col;
+		index_col.create_gdf_column(GDF_INT32,input.get_num_rows_in_table(0),nullptr,get_width_dtype(GDF_INT32), "");
+		gdf_sequence(static_cast<int32_t*>(index_col.get_gdf_column()->data), input.get_num_rows_in_table(0), 0);
+		// std::vector<int32_t> idx(input.get_num_rows_in_table(0));
+		// std::iota(idx.begin(),idx.end(),0);
+		// CheckCudaErrors(cudaMemcpy(index_col.get_gdf_column()->data, idx.data(), idx.size() * sizeof(int32_t), cudaMemcpyHostToDevice));
+		Library::Logging::Logger().logInfo("-> Filter sub block 5 took " + std::to_string(timer.getDuration()) + " ms");
 
-		materialize_column(
-				input.get_column(i).get_gdf_column(),
-				materialize_temp.get_gdf_column(), //output
-				temp_idx_col.get_gdf_column() //indexes
-		);	
-		input.set_column(i,materialize_temp);
+
+		timer.reset();
+		stencil.get_gdf_column()->dtype = GDF_BOOL8; // apply_boolean_mask expects the stencil to be a GDF_BOOL8 which for our purposes the way we are using the GDF_INT8 is the same as GDF_BOOL8
+
+		gdf_column temp_idx = cudf::apply_boolean_mask( *(index_col.get_gdf_column()), *(stencil.get_gdf_column()));
+		temp_idx.col_name = nullptr;
+		gdf_column * temp_idx_ptr = new gdf_column;
+		*temp_idx_ptr = temp_idx;
+		gdf_column_cpp temp_idx_col;
+		temp_idx_col.create_gdf_column(temp_idx_ptr);
+
+		Library::Logging::Logger().logInfo("-> Filter sub block 6 took " + std::to_string(timer.getDuration()) + " ms");
+
+		timer.reset();
+		
+		for(int i = 0; i < input.get_width();i++){
+			gdf_column_cpp materialize_temp;
+			if (input.get_column(i).valid())
+				materialize_temp.create_gdf_column(input.get_column(i).dtype(),temp_idx_col.size(),nullptr,get_width_dtype(input.get_column(i).dtype()), input.get_column(i).name());
+			else
+				materialize_temp.create_gdf_column(input.get_column(i).dtype(),temp_idx_col.size(),nullptr,nullptr,get_width_dtype(input.get_column(i).dtype()), input.get_column(i).name());
+
+			materialize_column(
+					input.get_column(i).get_gdf_column(),
+					materialize_temp.get_gdf_column(), //output
+					temp_idx_col.get_gdf_column() //indexes
+			);	
+			input.set_column(i,materialize_temp);
+		}
 	}
 	Library::Logging::Logger().logInfo("-> Filter sub block 7 took " + std::to_string(timer.getDuration()) + " ms");
 
@@ -1178,14 +1181,14 @@ blazing_frame evaluate_split_query(
 			///left_frame.consolidate_tables();
 			blazing_timer.reset();
 			result_frame = ral::operators::process_join(queryContext, left_frame, query[0]);
-			Library::Logging::Logger().logInfo("process_join took " + std::to_string(blazing_timer.getDuration()) + " ms with an output of " + std::to_string(result_frame.get_column(0).size()));
+			Library::Logging::Logger().logInfo("process_join took " + std::to_string(blazing_timer.getDuration()) + " ms with an output of " + std::to_string(result_frame.get_num_rows_in_table(0)));
 			return result_frame;
 		}else if(is_union(query[0])){
 			//TODO: append the frames to each other
 			//return right_frame;//!!
 			blazing_timer.reset();
 			result_frame = process_union(left_frame,right_frame,query[0]);
-			Library::Logging::Logger().logInfo("process_union took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(left_frame.get_column(0).size()) + " rows with an output of " + std::to_string(result_frame.get_column(0).size()));
+			Library::Logging::Logger().logInfo("process_union took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(left_frame.get_num_rows_in_table(0)) + " rows with an output of " + std::to_string(result_frame.get_num_rows_in_table(0)));
 			return result_frame;
 		}else{
 			throw std::runtime_error{"In evaluate_split_query function: unsupported query operator"};
@@ -1207,22 +1210,22 @@ blazing_frame evaluate_split_query(
 		if(is_project(query[0])){
 			blazing_timer.reset();
 			execute_project_plan(child_frame,query[0]);
-			Library::Logging::Logger().logInfo("process_project took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
+			Library::Logging::Logger().logInfo("process_project took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_num_rows_in_table(0)) + " rows");
 			return child_frame;
 		}else if(ral::operators::is_aggregate(query[0])){
 			blazing_timer.reset();
 			ral::operators::process_aggregate(child_frame, query[0], queryContext);
-			Library::Logging::Logger().logInfo("process_aggregate took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
+			Library::Logging::Logger().logInfo("process_aggregate took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_num_rows_in_table(0)) + " rows");
 			return child_frame;
 		}else if(ral::operators::is_sort(query[0])){
 			blazing_timer.reset();
 			ral::operators::process_sort(child_frame, query[0], queryContext);
-			Library::Logging::Logger().logInfo("process_sort took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
+			Library::Logging::Logger().logInfo("process_sort took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_num_rows_in_table(0)) + " rows");
 			return child_frame;
 		}else if(is_filter(query[0])){
 			blazing_timer.reset();
 			process_filter(child_frame,query[0]);
-			Library::Logging::Logger().logInfo("process_filter took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
+			Library::Logging::Logger().logInfo("process_filter took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_num_rows_in_table(0)) + " rows");
 			return child_frame;
 		}else{
 			throw std::runtime_error{"In evaluate_split_query function: unsupported query operator"};
@@ -1319,14 +1322,14 @@ blazing_frame evaluate_split_query(
 			///left_frame.consolidate_tables();
 			blazing_timer.reset();
 			result_frame = ral::operators::process_join(queryContext, left_frame, query[0]);
-			Library::Logging::Logger().logInfo("process_join took " + std::to_string(blazing_timer.getDuration()) + " ms with an output of " + std::to_string(result_frame.get_column(0).size()));
+			Library::Logging::Logger().logInfo("process_join took " + std::to_string(blazing_timer.getDuration()) + " ms with an output of " + std::to_string(result_frame.get_num_rows_in_table(0)));
 			return result_frame;
 		}else if(is_union(query[0])){
 			//TODO: append the frames to each other
 			//return right_frame;//!!
 			blazing_timer.reset();
 			result_frame = process_union(left_frame,right_frame,query[0]);
-			Library::Logging::Logger().logInfo("process_union took " + std::to_string(blazing_timer.getDuration()) + " ms with an output of " + std::to_string(result_frame.get_column(0).size()));
+			Library::Logging::Logger().logInfo("process_union took " + std::to_string(blazing_timer.getDuration()) + " ms with an output of " + std::to_string(result_frame.get_num_rows_in_table(0)));
 			return result_frame;
 		}else{
 			throw std::runtime_error{"In evaluate_split_query function: unsupported query operator"};
@@ -1348,22 +1351,22 @@ blazing_frame evaluate_split_query(
 		if(is_project(query[0])){
 			blazing_timer.reset();
 			execute_project_plan(child_frame,query[0]);
-			Library::Logging::Logger().logInfo("process_project took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
+			Library::Logging::Logger().logInfo("process_project took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_num_rows_in_table(0)) + " rows");
 			return child_frame;
 		}else if(is_aggregate(query[0])){
 			blazing_timer.reset();
 			ral::operators::process_aggregate(child_frame, query[0], queryContext);
-			Library::Logging::Logger().logInfo("process_aggregate took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
+			Library::Logging::Logger().logInfo("process_aggregate took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_num_rows_in_table(0)) + " rows");
 			return child_frame;
 		}else if(is_sort(query[0])){
 			blazing_timer.reset();
 			ral::operators::process_sort(child_frame, query[0], queryContext);
-			Library::Logging::Logger().logInfo("process_sort took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
+			Library::Logging::Logger().logInfo("process_sort took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_num_rows_in_table(0)) + " rows");
 			return child_frame;
 		}else if(is_filter(query[0])){
 			blazing_timer.reset();
 			process_filter(child_frame,query[0]);
-			Library::Logging::Logger().logInfo("process_filter took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_column(0).size()) + " rows");
+			Library::Logging::Logger().logInfo("process_filter took " + std::to_string(blazing_timer.getDuration()) + " ms for " + std::to_string(child_frame.get_num_rows_in_table(0)) + " rows");
 			return child_frame;
 		}else{
 			throw std::runtime_error{"In evaluate_split_query function: unsupported query operator"};

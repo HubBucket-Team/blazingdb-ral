@@ -241,13 +241,18 @@ void gdf_column_cpp::create_gdf_column(NVCategory* category, size_t num_values,s
     cuDF::Allocator::allocate((void**)&this->column->data, this->allocated_size_data);
     CheckCudaErrors( cudaMemcpy(
         this->column->data,
-        static_cast<NVCategory *>(this->column->dtype_info.category)->values_cptr(),
+        category->values_cptr(),
         this->allocated_size_data,
         cudaMemcpyDeviceToDevice) );
     
     this->column->valid = nullptr; // TODO: Nulls are not supported for strings
     this->allocated_size_valid = 0;
     this->column->null_count = 0; // TODO: Nulls are not supported for strings
+
+    if (category->has_nulls()) {
+        this->column->valid = allocate_valid();
+        this->column->null_count = category->set_null_bitarray((gdf_valid_type*)this->column->valid);
+    }
 
     this->is_ipc_column = false;
     this->column_token = 0;

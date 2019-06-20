@@ -18,14 +18,12 @@
 #endif
 
 
-CUDA_HOST_DEVICE_CALLABLE 
-bool gdf_is_valid(const gdf_valid_type *valid, gdf_index_type pos) {
+inline bool gdf_is_valid(const gdf_valid_type *valid, gdf_index_type pos) {
 	if ( valid )
 		return (valid[pos / GDF_VALID_BITSIZE] >> (pos % GDF_VALID_BITSIZE)) & 1;
 	else
 		return true;
 }
-
 
 // Buffers are padded to 64-byte boundaries (for SIMD) static
 constexpr int32_t kArrowAlignment = 64;
@@ -51,8 +49,7 @@ static inline int64_t PaddedLength(int64_t nbytes, int32_t alignment = kArrowAli
  * for use, in the column
  * @return the number of bytes necessary to make available for the validity indicator pseudo-column
  */
-CUDA_HOST_DEVICE_CALLABLE
-gdf_size_type get_number_of_bytes_for_valid(gdf_size_type column_size) {
+inline gdf_size_type get_number_of_bytes_for_valid(gdf_size_type column_size) {
     // return gdf::util::div_rounding_up_safe(column_size, GDF_VALID_BITSIZE);
 	return (column_size + (gdf_size_type)GDF_VALID_BITSIZE - 1) / ((gdf_size_type)GDF_VALID_BITSIZE);
 }
@@ -121,21 +118,5 @@ inline gdf_error soa_col_info(gdf_column** cols, size_t ncols, void** d_cols, gd
 
 	return GDF_SUCCESS;
 }
-
-
-
-
-int gdf_cuda_last_error() {
-    return cudaGetLastError();
-}
-
-const char * gdf_cuda_error_string(int cuda_error) {
-    return cudaGetErrorString((cudaError_t)cuda_error);
-}
-
-const char * gdf_cuda_error_name(int cuda_error) {
-    return cudaGetErrorName((cudaError_t)cuda_error);
-}
-
 
 #endif // GDF_UTILS_H

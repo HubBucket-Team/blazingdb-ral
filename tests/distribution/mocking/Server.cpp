@@ -16,7 +16,6 @@ Server::Server() {
 Server::~Server() {
 }
 
-
 std::shared_ptr<Server::Message> Server::getMessage(const ContextToken& context_token,  const MessageTokenType& messageToken) {
     return ServerMock::getInstance().getMessage(context_token, messageToken);
 }

@@ -74,7 +74,7 @@ TEST(ComponentMessageTest, SampleToNodeMasterMessage) {
 
     // Create Data - node
     using Address = blazingdb::communication::Address;
-    blazingdb::communication::Node test_node(Address::Make("1.2.3.4", 5678));
+    blazingdb::communication::Node test_node(Address::Make("1.2.3.4", 5678, 8891));
 
     // Create data - gdf_column_cpp
     std::vector<gdf_column_cpp> test_columns;
@@ -89,7 +89,7 @@ TEST(ComponentMessageTest, SampleToNodeMasterMessage) {
         auto message = MessageFactory::createSampleToNodeMaster(*context_token, test_node, total_row_size, test_columns);
 
         // Server address
-        blazingdb::communication::Node server_node(Address::Make("localhost", 8000));
+        blazingdb::communication::Node server_node(Address::Make("localhost", 8000, 8891));
 
         // Send message to the server
         using ral::communication::network::Client;
@@ -100,7 +100,7 @@ TEST(ComponentMessageTest, SampleToNodeMasterMessage) {
     {
         // Messages::SampleToNodeMasterMessage
         // Receive message from the client
-        message = Server::getInstance().getMessage(*context_token);
+        message = Server::getInstance().getMessage(*context_token, "tokenctx");
     }
 
     // Tests

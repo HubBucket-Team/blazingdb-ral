@@ -57,12 +57,12 @@ __host__ __device__ __forceinline__
   return kFlippedBitmask[i];
 }
 
-__host__ __device__ __forceinline__ void turn_bit_on(uint8_t* const bits, size_t i)
+__host__ __device__ __forceinline__ void turn_bit_on(gdf_valid_type* const bits, size_t i)
 {
   bits[i / 8] |= byte_bitmask(i % 8);
 }
 
-__host__ __device__ __forceinline__ void turn_bit_off(uint8_t* const bits, size_t i)
+__host__ __device__ __forceinline__ void turn_bit_off(gdf_valid_type* const bits, size_t i)
 {
   bits[i / 8] &= flipped_bitmask(i % 8);
 }

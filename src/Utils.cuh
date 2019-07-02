@@ -2,6 +2,7 @@
 #define UTILS_CUH_
 
 #include "gdf_wrapper/gdf_wrapper.cuh"
+#include "gdf_wrapper/utilities/cudf_utils.h"
 
 #include <iostream>
 #include <vector>
@@ -62,14 +63,6 @@ static size_t  valid_size(size_t column_length)
   return n_ints * sizeof(ValidType);
 }
 
-
-
-static bool get_bit(const gdf_valid_type* const bits, size_t i)
-{
-  return  bits == nullptr? true :  bits[i >> size_t(3)] & (1 << (i & size_t(7)));
-}
- 
-
 // Type for a unique_ptr to a gdf_column with a custom deleter
 // Custom deleter is defined at construction
 using gdf_col_pointer = typename std::unique_ptr<gdf_column, 
@@ -104,7 +97,7 @@ void print_typed_column(col_type * col_data,
   else {
     for(size_t i = 0; i < num_rows; ++i)
     {
-        std::cout << "(" << std::to_string(h_data[i]) << "|" << get_bit(h_mask.data(), i) << "), ";
+        std::cout << "(" << std::to_string(h_data[i]) << "|" << gdf_is_valid(h_mask.data(), i) << "), ";
     }
   }
   std::cout << std::endl;

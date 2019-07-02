@@ -86,7 +86,10 @@ std::shared_ptr<arrow::io::RandomAccessFile> uri_data_provider::get_next(){
 			if (fs_manager && fs_manager->exists(current_uri) ) {
 				fileStatus = BlazingContext::getInstance()->getFileSystemManager()->getFileStatus(current_uri);
 			} else {
-				throw std::runtime_error("Path '" + current_uri.toString() +  "' does not exist. Use following template hdfs://hdfs_IP/path_to/filename");	
+				throw std::runtime_error("Path '" + current_uri.toString() +  "' does not exist. File paths are expected to be in one of the following formats:   " + 
+				"For local file paths: '/folder0/folder1/fileName.extension'    " +
+				"For s3 file paths: 's3://registeredFileSystemName/folder0/folder1/fileName.extension'    " +
+				"For HDFS file paths: 'hdfs://registeredFileSystemName/folder0/folder1/fileName.extension'");	
 			}
 		}catch (const std::exception & e){
 			std::cerr << e.what() << std::endl;

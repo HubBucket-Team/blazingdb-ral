@@ -79,18 +79,31 @@ std::shared_ptr<arrow::io::RandomAccessFile> uri_data_provider::get_next(){
 
 		return file;
 	}else{
-
-		auto fileStatus = BlazingContext::getInstance()->getFileSystemManager()->getFileStatus(this->file_uris[this->current_file]);
-
+		FileStatus fileStatus; 
+		auto current_uri = this->file_uris[this->current_file];
+		try {
+			auto fs_manager = BlazingContext::getInstance()->getFileSystemManager();
+			if (fs_manager && fs_manager->exists(current_uri) ) {
+				fileStatus = BlazingContext::getInstance()->getFileSystemManager()->getFileStatus(current_uri);
+			} else {
+				throw std::runtime_error("Path '" + current_uri.toString() +  "' does not exist. File paths are expected to be in one of the following formats:   " + 
+				"For local file paths: '/folder0/folder1/fileName.extension'    " +
+				"For s3 file paths: 's3://registeredFileSystemName/folder0/folder1/fileName.extension'    " +
+				"For HDFS file paths: 'hdfs://registeredFileSystemName/folder0/folder1/fileName.extension'");	
+			}
+		}catch (const std::exception & e){
+			std::cerr << e.what() << std::endl;
+			throw;
+		}catch (...) {
+			throw;
+		}
 
 		std::shared_ptr<arrow::io::RandomAccessFile> file =
-				BlazingContext::getInstance()->getFileSystemManager()->openReadable(
-						this->file_uris[this->current_file]);
+				BlazingContext::getInstance()->getFileSystemManager()->openReadable(current_uri);
 
-
-		fileStatus = BlazingContext::getInstance()->getFileSystemManager()->getFileStatus(this->file_uris[this->current_file]);
+		fileStatus = BlazingContext::getInstance()->getFileSystemManager()->getFileStatus(current_uri);
 		if(fileStatus.isDirectory()){
-			this->directory_uris = BlazingContext::getInstance()->getFileSystemManager()->list(this->file_uris[this->current_file]);
+			this->directory_uris = BlazingContext::getInstance()->getFileSystemManager()->list(current_uri);
 			this->directory_current_file = 0;
 			return get_next();
 

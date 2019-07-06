@@ -59,3 +59,16 @@ mkdir -p  build && cd build
 LIBGDF_HOME="/path/to/libgdf"cmake ..
 make -j8
 ```
+
+# Run
+
+```bash
+./testing-libgdf RAL_ID ORCHESTRATOR_IP ORCHESTRATOR_PROTOCOL_TCP_PORT ORCHESTRATOR_COMMUNICATION_TCP_PORT RAL_IP RAL_PROTOCOL_TCP_PORT RAL_COMMUNICATION_TCP_PORT
+
+#Example RAL instance 1 for localhost:
+./testing-libgdf 1 127.0.0.1 9000 127.0.0.1 9001 8891
+
+#Example RAL instance 2 for localhost:
+./testing-libgdf 2 127.0.0.1 9000 127.0.0.1 9002 8892
+
+```

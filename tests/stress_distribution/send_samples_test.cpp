@@ -1,3 +1,5 @@
+#include <tuple>
+#include <algorithm>
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include "CalciteExpressionParsing.h"
@@ -15,7 +17,6 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include "GDFColumn.cuh"
-#include <distribution/NodeSamples.h>
 
 //gtest library
 using ::testing::_;
@@ -26,48 +27,45 @@ using ::testing::ByRef;
  
 
 namespace {
-gdf_column_cpp createRalColumn(std::size_t size, gdf_dtype dtype) {
+auto generateHostData(std::size_t size, gdf_dtype dtype) {
   std::mt19937 rng;
   auto Generator = [&rng]() {
     return (rng() % 26) + 65;
   };
 
   std::size_t data_size = ral::traits::get_data_size_in_bytes(size, dtype);
-  std::vector<std::uint8_t> data;
-  data.resize(data_size);
+  std::vector<std::uint8_t> data(data_size);
 
   std::size_t valid_size = ral::traits::get_bitmask_size_in_bytes(size);
-  std::vector<std::uint8_t> valid;
-  valid.resize(valid_size);
+  std::vector<std::uint8_t> valid(valid_size, 0);
 
   std::generate_n(data.data(), data_size, Generator);
   std::generate_n(valid.data(), valid_size, Generator);
 
+  return std::make_tuple(data, valid);
+}
+
+gdf_column_cpp createRalColumn(std::size_t size, gdf_dtype dtype) {
+  std::vector<std::uint8_t> data, valid;
+  std::tie(data, valid) = generateHostData(size, dtype);
+
   gdf_column_cpp column;
   auto width = ral::traits::get_dtype_size_in_bytes(dtype);
-  column.create_gdf_column(dtype, size, data.data(), valid.data(), width);
+  column.create_gdf_column(dtype, size, data.data(), /* valid.data(), */ width);
 
   return column;
 }
 
-std::vector<std::uint8_t> get_data(gdf_column* column) {
-  std::vector<std::uint8_t> result;
-
+auto extractDataAndValidsToHost(gdf_column* column) {
   std::size_t data_size = ral::traits::get_data_size_in_bytes(column);
-  result.resize(data_size);
-  cudaMemcpy(result.data(), column->data, data_size, cudaMemcpyDeviceToHost);
-
-  return result;
-}
-
-std::vector<std::uint8_t> get_valid(gdf_column* column) {
-  std::vector<std::uint8_t> result;
+  std::vector<std::uint8_t> data(data_size);
+  cudaMemcpy(data.data(), column->data, data_size, cudaMemcpyDeviceToHost);
 
   std::size_t valid_size = ral::traits::get_bitmask_size_in_bytes(column);
-  result.resize(valid_size);
-  cudaMemcpy(result.data(), column->valid, valid_size, cudaMemcpyDeviceToHost);
+  std::vector<std::uint8_t> valid(valid_size);
+  cudaMemcpy(valid.data(), column->valid, valid_size, cudaMemcpyDeviceToHost);
 
-  return result;
+  return std::make_tuple(data, valid);
 }
 }
 
@@ -96,10 +94,24 @@ static void ExecMaster() {
   auto message = Server::getInstance().getMessage(*context_token, Messages::SampleToNodeMasterMessage::getMessageID());
 
   auto concreteMessage = std::static_pointer_cast<Messages::SampleToNodeMasterMessage>(message);
-  ral::distribution::NodeSamples node_samples{concreteMessage->getTotalRowSize(),
-                           concreteMessage->getSenderNode(),
-                           std::move(concreteMessage->getSamples())};
+  ral::distribution::NodeSamples node_samples(concreteMessage->getTotalRowSize(),
+                                              concreteMessage->getSenderNode(),
+                                              std::move(concreteMessage->getSamples()));
   // verify received data
+  const std::uint64_t total_row_size = 17;
+  std::vector<std::uint8_t> expectedData, expectedValid;
+  std::vector<std::uint8_t> data, valid;
+  std::vector<gdf_column_cpp> node_columns = node_samples.getColumnsRef();
+
+  // std::tie(expectedData, expectedValid) = generateHostData(total_row_size, GDF_INT16);
+  // std::tie(data, valid) = extractDataAndValidsToHost(node_columns[0].get_gdf_column());
+  // EXPECT_TRUE(std::equal(data.cbegin(), data.cend(), expectedData.cbegin(), expectedData.cend()));
+  // EXPECT_TRUE(std::equal(valid.cbegin(), valid.cend(), expectedValid.cbegin(), expectedValid.cend()));
+
+  // std::tie(expectedData, expectedValid) = generateHostData(total_row_size, GDF_INT64);
+  // std::tie(data, valid) = extractDataAndValidsToHost(node_columns[1].get_gdf_column());
+  // EXPECT_TRUE(std::equal(data.cbegin(), data.cend(), expectedData.cbegin(), expectedData.cend()));
+  // EXPECT_TRUE(std::equal(valid.cbegin(), valid.cend(), expectedValid.cbegin(), expectedValid.cend()));
 }
 
 static void ExecWorker() {
@@ -114,20 +126,18 @@ static void ExecWorker() {
   // register the context token in the server
   Server::getInstance().registerContext(*context_token);
 
-  const std::uint64_t total_row_size = 16;
-
-
   // create gdf_column data
+  const std::uint64_t total_row_size = 17;
   std::vector<gdf_column_cpp> test_columns;
-  test_columns.emplace_back(createRalColumn(total_row_size, GDF_INT16));
-  test_columns.emplace_back(createRalColumn(total_row_size, GDF_INT64));
+  test_columns.emplace_back(createRalColumn(total_row_size, GDF_INT8));
+  // test_columns.emplace_back(createRalColumn(total_row_size, GDF_INT64));
   {
     // Create message
-    Node sender_node(Address::Make("127.0.0.1", 8001));
+    Node sender_node(Address::Make("127.0.0.1", 8001, 1234));
     auto message = MessageFactory::createSampleToNodeMaster(*context_token, sender_node, total_row_size, test_columns);
 
     // Server address
-    blazingdb::communication::Node server_node(Address::Make("127.0.0.1", 8000));
+    blazingdb::communication::Node server_node(Address::Make("127.0.0.1", 8000, 1234));
 
     // Send message to the server
     using ral::communication::network::Client;

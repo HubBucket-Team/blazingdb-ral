@@ -64,13 +64,6 @@ namespace network {
             comm_server->registerEndPoint(endpoint, CommServer::Methods::Post);
             comm_server->registerDeserializer(endpoint, messages::PartitionPivotsMessage::Make);
         }
-
-        // message PartitionPivotsMessage
-        {
-            const std::string endpoint = messages::DataScatterMessage::getMessageID();
-            comm_server->registerEndPoint(endpoint, CommServer::Methods::Post);
-            comm_server->registerDeserializer(endpoint, messages::DataScatterMessage::Make);
-        }
     }
 
 } // namespace network

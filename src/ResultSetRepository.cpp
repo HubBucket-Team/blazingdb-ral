@@ -32,18 +32,12 @@ void result_set_repository::add_token(query_token_t token, connection_id_t conne
 	this->connection_result_sets[connection].push_back(token);
 }
 
-query_token_t result_set_repository::register_query(connection_id_t connection){
+query_token_t result_set_repository::register_query(connection_id_t connection, query_token_t token){
 	/*enable this when sessions works! if(this->connection_result_sets.find(connection) == this->connection_result_sets.end()){
 		throw std::runtime_error{"Connection does not exist"};
 	}*/
 
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	std::uniform_int_distribution<query_token_t> dis(
-			std::numeric_limits<query_token_t>::min(),
-			std::numeric_limits<query_token_t>::max());
 
-	query_token_t token = dis(gen);
 	this->add_token(token,connection);
 	return token;
 }

@@ -5,6 +5,7 @@
 #include <regex>
 #include <blazingdb/io/Library/Logging/Logger.h>
 #include <blazingdb/io/Util/StringUtil.h>
+#include "config/GPUManager.cuh"
 #include "GroupBy.h"
 #include "CodeTimer.h"
 #include "CalciteExpressionParsing.h"
@@ -47,7 +48,7 @@ std::vector<int> get_group_columns(std::string query_part){
 	return group_column_indices;
 }
 
-std::vector<gdf_column_cpp> groupby_without_aggregations(const std::vector<gdf_column_cpp> & input, const std::vector<int>& group_column_indices){
+std::vector<gdf_column_cpp> groupby_without_aggregations(const std::vector<gdf_column_cpp>& input, const std::vector<int>& group_column_indices){
 
 	gdf_size_type num_group_columns = group_column_indices.size();
 	std::vector<gdf_column*> data_cols_in(input.size());
@@ -116,7 +117,10 @@ void distributed_groupby_without_aggregations(const Context& queryContext, blazi
 	std::vector<gdf_column_cpp> selfSamples = ral::distribution::sampling::generateSample(group_columns, 0.1);
 
 	auto groupByTask = std::async(std::launch::async,
-																groupby_without_aggregations,
+																[](const std::vector<gdf_column_cpp>& input, const std::vector<int>& group_column_indices){
+																	ral::config::GPUManager::getInstance().setDevice();
+																	return groupby_without_aggregations(input, group_column_indices);
+																},
 																std::ref(data_cols_in),
 																std::ref(group_column_indices));
 
@@ -402,7 +406,10 @@ void distributed_aggregations_with_groupby(const Context& queryContext, blazing_
 	std::vector<gdf_column_cpp> selfSamples = ral::distribution::sampling::generateSample(group_columns, 0.1);
 
 	auto aggregationTask = std::async(std::launch::async,
-																		compute_aggregations,
+																		[](blazing_frame& input, std::vector<int>& group_column_indices, std::vector<gdf_agg_op>& aggregation_types, std::vector<std::string>& aggregation_input_expressions, std::vector<std::string>& aggregation_column_assigned_aliases){
+																			ral::config::GPUManager::getInstance().setDevice();
+																			return compute_aggregations(input, group_column_indices, aggregation_types, aggregation_input_expressions, aggregation_column_assigned_aliases);
+																		},
 																		std::ref(input),
 																		std::ref(group_column_indices),
 																		std::ref(aggregation_types),

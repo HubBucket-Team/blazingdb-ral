@@ -98,20 +98,28 @@ static result_pair  registerFileSystem(uint64_t accessToken, Buffer&& buffer) {
     ResponseErrorMessage errorMessage{ std::string{ "ERROR: Invalid root provided when registering file system"} };
     return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
-  FileSystemEntity fileSystemEntity(authority, fileSystemConnection, root);
-  bool ok = BlazingContext::getInstance()->getFileSystemManager()->deregisterFileSystem(authority);
-  ok = BlazingContext::getInstance()->getFileSystemManager()->registerFileSystem(fileSystemEntity);
-	if (ok) { // then save the fs
-		const FileSystemRepository fileSystemRepository(FS_NAMESPACES_FILE, true);
-		const bool saved = fileSystemRepository.add(fileSystemEntity);
-		if (saved == false) {
-			std::cout << "WARNING: could not save the registered file system into ... the data file uri ..."; //TODO percy error message
-		}
-	} else {
-   	  std::cout << "something went wrong when registering filesystem ..." << std::endl;
-      ResponseErrorMessage errorMessage{ std::string{"ERROR: Something went wrong when registering file system"} };
-      return std::make_pair(Status_Error, errorMessage.getBufferData());
-	}
+  try {
+    FileSystemEntity fileSystemEntity(authority, fileSystemConnection, root);
+    bool ok = BlazingContext::getInstance()->getFileSystemManager()->deregisterFileSystem(authority);
+    ok = BlazingContext::getInstance()->getFileSystemManager()->registerFileSystem(fileSystemEntity);
+    if (ok) { // then save the fs
+      const FileSystemRepository fileSystemRepository(FS_NAMESPACES_FILE, true);
+      const bool saved = fileSystemRepository.add(fileSystemEntity);
+      if (saved == false) {
+        std::cerr << "WARNING: could not save the registered file system into ... the data file uri ..."; //TODO percy error message
+      }
+    } else {
+        std::cerr << "something went wrong when registering filesystem ..." << std::endl;
+        ResponseErrorMessage errorMessage{ std::string{"ERROR: Something went wrong when registering file system"} };
+        return std::make_pair(Status_Error, errorMessage.getBufferData());
+    }
+  } catch(const std::exception& e) {
+    ResponseErrorMessage errorMessage{ std::string{e.what()} };
+    return std::make_pair(Status_Error, errorMessage.getBufferData());
+  }  catch (...) {
+    ResponseErrorMessage errorMessage{ std::string{"Unknown error about filesystem. Probably wrong port."} };
+    return std::make_pair(Status_Error, errorMessage.getBufferData());
+  }
   ZeroMessage response{};
   return std::make_pair(Status_Success, response.getBufferData());
 }
@@ -298,16 +306,19 @@ static result_pair parseSchemaService(uint64_t accessToken, Buffer&& requestPayl
 		//this shoudl be done in the orchestrator
 	}
 
-	 std::vector<Uri> uris;
-	 for (auto file_path : requestPayload.files) {
-	     uris.push_back(Uri{file_path});
-	 }
-
-	auto provider = std::make_shared<ral::io::uri_data_provider>(uris);
-	auto loader = std::make_shared<ral::io::data_loader>( parser,provider);
-	ral::io::Schema schema;
-	loader->get_schema(schema);
-
+  std::vector<Uri> uris;
+  for (auto file_path : requestPayload.files) {
+      uris.push_back(Uri{file_path});
+  }
+  auto provider = std::make_shared<ral::io::uri_data_provider>(uris);
+  auto loader = std::make_shared<ral::io::data_loader>( parser,provider);
+  ral::io::Schema schema;
+  try {
+    loader->get_schema(schema);
+  } catch(std::exception & e) {
+    ResponseErrorMessage errorMessage{ std::string{e.what()} };
+    return std::make_pair(Status_Error, errorMessage.getBufferData());
+  }
 
 	blazingdb::protocol::TableSchemaSTL transport_schema = schema.getTransport();
 

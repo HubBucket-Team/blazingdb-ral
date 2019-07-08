@@ -1,10 +1,7 @@
 #include "gtest/gtest.h"
 #include "GDFColumn.cuh"
 #include "GDFCounter.cuh"
-#include "Traits/RuntimeTraits.h"
-#include "tests/utilities/gdf_column_cpp_utilities.h"
-#include <thrust/equal.h>
-#include <thrust/execution_policy.h>
+#include "gdf_wrapper/utilities/bit_util.cuh"
 
 namespace {
 
@@ -132,6 +129,25 @@ namespace {
         ASSERT_EQ(counter_instance->get_map_size(), 0);
         ASSERT_TRUE(counter_instance->contains_column(gdf_col_1) == false);
         ASSERT_TRUE(counter_instance->contains_column(gdf_col_2) == false);
+    }
+
+    TEST_F(GdfColumnCppTest, CreateGdfColumnCppNVCategoryValids) {
+        size_t totalStrings = 7;
+        const char * cstrings[] = {"aaaaaaab", nullptr, "aaaaaaak", nullptr, nullptr, "aaaaaaax", nullptr};
+
+        NVCategory* category = NVCategory::create_from_array(cstrings, totalStrings);
+        
+        gdf_column_cpp cpp_col;
+        cpp_col.create_gdf_column(category, totalStrings, "test");
+        
+        std::vector<gdf_valid_type> valids(gdf_valid_allocation_size(cpp_col.size()));
+        CheckCudaErrors(cudaMemcpy(valids.data(), cpp_col.valid(), valids.size(), cudaMemcpyDeviceToHost));
+
+        for (size_t i = 0; i < totalStrings; i++) {
+            ASSERT_EQ(gdf_is_valid(valids.data(), i), cstrings[i] != nullptr);
+        }
+
+        ASSERT_EQ(cpp_col.null_count(), 4);
     }
 
 } // namespace

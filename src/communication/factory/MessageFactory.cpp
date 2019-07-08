@@ -146,9 +146,38 @@ std::shared_ptr<Message> Factory::createPartitionPivotsMessage(std::shared_ptr<C
                                                     columns);
 }
 
-std::shared_ptr<Message> Factory::createNodeDataMessage(const Node& selfNode) {
-    return std::make_shared<NodeDataMessage>(selfNode);
-}
+
+    std::shared_ptr<Message> Factory::createDataScatterMessage(const ContextToken& context_token,
+                                                               std::vector<gdf_column_cpp>&& columns) {
+        return std::make_shared<DataScatterMessage>(context_token, std::move(columns));
+    }
+
+    std::shared_ptr<Message> Factory::createDataScatterMessage(const ContextToken& context_token,
+                                                               const std::vector<gdf_column_cpp>& columns) {
+        return std::make_shared<DataScatterMessage>(context_token, columns);
+    }
+
+    std::shared_ptr<Message> Factory::createDataScatterMessage(std::shared_ptr<ContextToken>&& context_token,
+                                                               std::vector<gdf_column_cpp>&& columns) {
+        return std::make_shared<DataScatterMessage>(std::move(context_token), std::move(columns));
+    }
+
+    std::shared_ptr<Message> Factory::createDataScatterMessage(std::shared_ptr<ContextToken>&& context_token,
+                                                               const std::vector<gdf_column_cpp>& columns) {
+        return std::make_shared<DataScatterMessage>(std::move(context_token), columns);
+    }
+
+    DataPivot Factory::createDataPivot(const Node& node, std::string&& min_range, std::string&& max_range) {
+        return DataPivot(node, std::move(min_range), std::move(max_range));
+    }
+
+    DataPivot Factory::createDataPivot(const Node& node, const std::string& min_range, const std::string& max_range) {
+        return DataPivot(node, min_range, max_range);
+    }
+
+    std::shared_ptr<Message> Factory::createNodeDataMessage(const Node& selfNode) {
+        return std::make_shared<NodeDataMessage>(selfNode);
+    }
 
 } // namespace messages
 } // namespace communication

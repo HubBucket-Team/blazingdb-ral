@@ -18,15 +18,29 @@ namespace messages {
 
     using SampleToNodeMasterMessage = Messages::SampleToNodeMasterMessage<gdf_column_cpp,
                                                                           gdf_column,
-                                                                          ral::communication::adapter::GpuFunctionsAdapter>;
+                                                                          ral::communication::adapter::GpuFunctionsAdapter,
+                                                                          NVCategory,
+                                                                          nvcategory_ipc_transfer>;
 
     using ColumnDataMessage = Messages::ColumnDataMessage<gdf_column_cpp,
                                                           gdf_column,
-                                                          ral::communication::adapter::GpuFunctionsAdapter>;
+                                                          ral::communication::adapter::GpuFunctionsAdapter,
+                                                          NVCategory,
+                                                          nvcategory_ipc_transfer>;
     
     using PartitionPivotsMessage = Messages::PartitionPivotsMessage<gdf_column_cpp,
                                                                 gdf_column,
-                                                                ral::communication::adapter::GpuFunctionsAdapter>;
+                                                                ral::communication::adapter::GpuFunctionsAdapter,
+                                                                NVCategory,
+                                                                nvcategory_ipc_transfer>;
+
+    using DataScatterMessage = Messages::DataScatterMessage<gdf_column_cpp,
+                                                            gdf_column,
+                                                            ral::communication::adapter::GpuFunctionsAdapter,
+                                                            NVCategory,
+                                                            nvcategory_ipc_transfer>;
+
+    using DataPivot = Messages::DataPivot;
 
     using NodeDataMessage = Messages::NodeDataMessage;
 

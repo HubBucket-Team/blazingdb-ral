@@ -57,7 +57,7 @@ void sort(blazing_frame& input, std::vector<gdf_column*>& rawCols, std::vector<i
 			index_col.get_gdf_column(),
 			&context));
 
-	Library::Logging::Logger().logInfo("-> Sort sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
+	//Library::Logging::Logger().logInfo("-> Sort sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
 
 	timer.reset();
 

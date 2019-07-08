@@ -71,6 +71,29 @@ struct Factory {
 
 
     static std::shared_ptr<Message> createNodeDataMessage(const Node& selfNode);
+
+
+    // deprecated
+    static std::shared_ptr<Message> createDataScatterMessage(const ContextToken& context_token,
+                                                             std::vector<gdf_column_cpp>&& columns);
+
+    // deprecated
+    static std::shared_ptr<Message> createDataScatterMessage(const ContextToken& context_token,
+                                                             const std::vector<gdf_column_cpp>& columns);
+
+    // deprecated
+    static std::shared_ptr<Message> createDataScatterMessage(std::shared_ptr<ContextToken>&& context_token,
+                                                             std::vector<gdf_column_cpp>&& columns);
+
+    // deprecated
+    static std::shared_ptr<Message> createDataScatterMessage(std::shared_ptr<ContextToken>&& context_token,
+                                                             const std::vector<gdf_column_cpp>& columns);
+
+    // deprecated
+    static DataPivot createDataPivot(const Node& node, std::string&& min_range, std::string&& max_range);
+
+    // deprecated
+    static DataPivot createDataPivot(const Node& node, const std::string& min_range, const std::string& max_range);
 };
 
 } // namespace messages

@@ -2,6 +2,8 @@
 
 #include <string>
 #include "GDFColumn.cuh"
+#include <nvstrings/ipc_transfer.h>
+#include <nvstrings/NVCategory.h>
 #include "gdf_wrapper/gdf_types.cuh"
 
 namespace ral {

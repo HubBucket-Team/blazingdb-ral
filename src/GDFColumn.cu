@@ -190,7 +190,7 @@ gdf_valid_type * gdf_column_cpp::allocate_valid(){
 	return valid_device;
 }
 
-void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,gdf_valid_type * valid_data, gdf_size_type num_values, gdf_size_type null_count,const std::string& column_name){
+void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,gdf_valid_type * valid_data, gdf_size_type num_values, gdf_size_type null_count, std::string column_name){
     assert(type != GDF_invalid);
     decrement_counter(column);
 

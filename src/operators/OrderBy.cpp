@@ -46,7 +46,7 @@ void sort(blazing_frame& input, std::vector<gdf_column*>& rawCols, std::vector<i
 	asc_desc_col.create_gdf_column(GDF_INT8, sortOrderTypes.size(), sortOrderTypes.data(), get_width_dtype(GDF_INT8), "");
 
 	gdf_column_cpp index_col;
-	index_col.create_gdf_column(GDF_INT32, input.get_column(0).size(), nullptr, get_width_dtype(GDF_INT32), "");
+	index_col.create_gdf_column(GDF_INT32, input.get_num_rows_in_table(0), nullptr, get_width_dtype(GDF_INT32), "");
 
 	gdf_context context;
 	context.flag_null_sort_behavior = GDF_NULL_AS_LARGEST; // Nulls are are treated as largest
@@ -101,7 +101,7 @@ void distributed_sort(const Context& queryContext, blazing_frame& input, std::ve
 			sortedTable[i].create_gdf_column(input_col.dtype(), input_col.size(), nullptr, nullptr, get_width_dtype(input_col.dtype()), input_col.name());
 	}
 
-	size_t rowSize = input.get_column(0).size();
+	size_t rowSize = input.get_num_rows_in_table(0);
 
 	std::vector<gdf_column_cpp> selfSamples = ral::distribution::sampling::generateSample(cols, 0.1);
 

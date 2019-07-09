@@ -31,9 +31,6 @@ public:
 			Schema & schema);
 
 
-private:
-	std::map<std::string, std::map<std::string, gdf_column_cpp>> loaded_columns;
-
 };
 
 } /* namespace io */

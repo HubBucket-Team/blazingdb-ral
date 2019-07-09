@@ -87,59 +87,6 @@ std::vector<gdf_column_cpp> groupby_without_aggregations(const std::vector<gdf_c
 	return grouped_output;
 }
 
-/*******************************************************************************/
-
-// 	size_t nCols = input.get_size_column(0);
-//   size_t nRows = input.get_column(0).size();
-
-//   std::vector<gdf_column*> raw_cols(nCols);
-//   std::vector<gdf_column_cpp> output_columns(nCols);
-//   std::vector<gdf_column*> raw_output_columns(nCols);
-//   for(size_t i = 0; i < nCols; i++){
-//     raw_cols[i] = input.get_column(i).get_gdf_column();
-//     output_columns[i].create_gdf_column(input.get_column(i).dtype(),
-// 																				nRows,
-// 																				nullptr,
-// 																				get_width_dtype(input.get_column(i).dtype()),
-// 																				input.get_column(i).name());
-//     raw_output_columns[i] = output_columns[i].get_gdf_column();
-//   }
-
-// 	gdf_column_cpp index_col;
-//   index_col.create_gdf_column(GDF_INT32, nRows, nullptr, get_width_dtype(GDF_INT32), "");
-
-//   gdf_size_type index_col_num_rows = 0;
-
-//   gdf_context ctxt;
-//   ctxt.flag_null_sort_behavior = GDF_NULL_AS_LARGEST; //  Nulls are are treated as largest
-//   ctxt.flag_groupby_include_nulls = 1; // Nulls are treated as values in group by keys where NULL == NULL (SQL style)
-
-//   CUDF_CALL( gdf_group_by_without_aggregations(raw_cols.size(),
-//                                               raw_cols.data(),
-//                                               group_column_indices.size(),
-//                                               group_column_indices.data(),
-//                                               raw_output_columns.data(),
-//                                               (gdf_size_type*)(index_col.get_gdf_column()->data),
-//                                               &index_col_num_rows,
-//                                               &ctxt));
-//   index_col.resize(index_col_num_rows);
-
-//   std::vector<gdf_column_cpp> grouped_output(nCols);
-//   for(size_t i = 0; i < nCols; i++){
-//     grouped_output[i].create_gdf_column(input.get_column(i).dtype(),
-// 																				index_col.size(),
-// 																				nullptr,
-// 																				get_width_dtype(input.get_column(i).dtype()),
-// 																				input.get_column(i).name());
-//     materialize_column(raw_output_columns[i],
-//                       grouped_output[i].get_gdf_column(),
-//                       index_col.get_gdf_column());
-//     grouped_output[i].update_null_count();
-//   }
-
-// 	return grouped_output;
-
-
 void single_node_groupby_without_aggregations(blazing_frame& input, std::vector<int>& group_column_indices){
 
 	std::vector<gdf_column_cpp> data_cols_in(input.get_width());
@@ -164,7 +111,7 @@ void distributed_groupby_without_aggregations(const Context& queryContext, blazi
 		data_cols_in[i] = input.get_column(i);
 	}
 
-	size_t rowSize = input.get_column(0).size();
+	size_t rowSize = input.get_num_rows_in_table(0);
 
 	std::vector<gdf_column_cpp> selfSamples = ral::distribution::sampling::generateSample(group_columns, 0.1);
 
@@ -349,7 +296,7 @@ void aggregations_without_groupby(gdf_agg_op agg_op, gdf_column_cpp& aggregation
 }
 
 std::vector<gdf_column_cpp> compute_aggregations(blazing_frame& input, std::vector<int>& group_column_indices, std::vector<gdf_agg_op>& aggregation_types, std::vector<std::string>& aggregation_input_expressions, std::vector<std::string>& aggregation_column_assigned_aliases){
-	size_t row_size = input.get_column(0).size();
+	size_t row_size = input.get_num_rows_in_table(0);
 
 	std::vector<gdf_column*> group_by_columns_ptr(group_column_indices.size());
 	std::vector<gdf_column_cpp> output_columns_group(group_column_indices.size());
@@ -450,7 +397,7 @@ void distributed_aggregations_with_groupby(const Context& queryContext, blazing_
 		group_columns[i] = input.get_column(group_column_indices[i]);
 	}
 
-	size_t rowSize = input.get_column(0).size();
+	size_t rowSize = input.get_num_rows_in_table(0);
 
 	std::vector<gdf_column_cpp> selfSamples = ral::distribution::sampling::generateSample(group_columns, 0.1);
 
@@ -518,8 +465,8 @@ void distributed_aggregations_without_groupby(const Context& queryContext, blazi
 		selfPartition.emplace_back(queryContext.getMasterNode(), std::move(aggregatedTable));
 		ral::distribution::distributePartitions(queryContext, selfPartition);
 
-		// TODO: clear input
-		input.clear();
+		input.clear(); // here we are clearing the input, because since there are no group bys, there will only be one result, which will be with the master node
+
 	}
 }
 

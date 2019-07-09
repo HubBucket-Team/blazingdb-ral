@@ -43,6 +43,15 @@ public:
 		return *this;
 	}
 
+	gdf_size_type get_num_rows_in_table(int table_index){
+		if (table_index >= this->columns.size())
+			return 0;
+		else if (this->columns[table_index].size() == 0)
+			return 0;
+		else
+			return this->columns[table_index][0].size();		
+	}
+
 
 	gdf_column_cpp & get_column(int column_index){
 

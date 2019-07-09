@@ -452,7 +452,7 @@ void distributed_aggregations_without_groupby(const Context& queryContext, blazi
 																																		aggregation_types,
 																																		aggregation_input_expressions,
 																																		aggregation_column_assigned_aliases);
-	print_gdf_column(aggregatedTable[0].get_gdf_column());
+
 	if (queryContext.isMasterNode(CommunicationData::getInstance().getSelfNode())) {
 		std::vector<ral::distribution::NodeColumns> partitionsToMerge = ral::distribution::collectPartitions(queryContext);
 		partitionsToMerge.emplace_back(CommunicationData::getInstance().getSelfNode(), std::move(aggregatedTable));
@@ -465,7 +465,7 @@ void distributed_aggregations_without_groupby(const Context& queryContext, blazi
 		selfPartition.emplace_back(queryContext.getMasterNode(), std::move(aggregatedTable));
 		ral::distribution::distributePartitions(queryContext, selfPartition);
 
-		input.clear(); // here we are clearing the input, because since there are no group bys, there will only be one result, which will be with the master node
+		input.empty_columns(); // here we are clearing the input, because since there are no group bys, there will only be one result, which will be with the master node
 
 	}
 }

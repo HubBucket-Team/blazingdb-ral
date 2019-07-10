@@ -22,6 +22,7 @@ void GPUManager::initialize(int deviceId) {
   }
 
   currentDeviceId = deviceId;
+  setDevice();
 }
 
 void GPUManager::setDevice() {

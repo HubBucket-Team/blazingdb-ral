@@ -1429,9 +1429,8 @@ query_token_t evaluate_query(
 		std::vector<std::string> table_names,
 		std::string logicalPlan,
 		connection_id_t connection,
-		const Context& queryContext){
-	//register the query so we can receive result requests for it
-	query_token_t token = result_set_repository::get_instance().register_query(connection);
+		const Context& queryContext,
+		query_token_t token ){
 
 	std::thread t = std::thread([=]	{
 		std::vector<std::string> splitted = StringUtil::split(logicalPlan, "\n");

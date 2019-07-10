@@ -52,7 +52,8 @@ query_token_t evaluate_query(
 		std::vector<std::string> table_names,
 		std::string logicalPlan,
 		connection_id_t connection,
-		const Context& queryContext);
+		const Context& queryContext,
+		query_token_t query_token);
 
 std::string get_named_expression(std::string query_part, std::string expression_name);
 

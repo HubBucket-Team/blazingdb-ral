@@ -405,10 +405,12 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
     auto ctxToken = ContextToken::Make(rawCommContext.token);
     Context queryContext{ctxToken, contextNodes, contextNodes[rawCommContext.masterIndex], ""};
     ral::communication::network::Server::getInstance().registerContext(*ctxToken);
-
+    resultToken = requestPayload.resultToken();
+    result_set_repository::get_instance().register_query(accessToken,resultToken);
 
     // Execute query
-    resultToken = evaluate_query(input_loaders, schemas, table_names, requestPayload.statement(), accessToken, queryContext );
+
+    evaluate_query(input_loaders, schemas, table_names, requestPayload.statement(), accessToken, queryContext, resultToken );
 
   } catch (const std::exception& e) {
      std::cerr << e.what() << std::endl;

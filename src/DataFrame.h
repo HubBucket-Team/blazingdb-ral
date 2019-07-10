@@ -141,6 +141,14 @@ public:
 		this->columns.resize(0);
 	}
 
+	void empty_columns(){
+		for(std::size_t i = 0; i < columns.size(); i++){
+			for(std::size_t j = 0; j < columns[i].size(); j++){
+				columns[i][j].resize(0);
+			}
+		}
+	}
+
 	void print(std::string title)
 	{
 		std::cout<<"---> "<<title<<std::endl;

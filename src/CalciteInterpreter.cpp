@@ -9,6 +9,7 @@
 #include <string>
 #include <set>
 
+#include "config/GPUManager.cuh"
 #include "Utils.cuh"
 #include "LogicalFilter.h"
 #include "ResultSetRepository.h"
@@ -1432,7 +1433,9 @@ query_token_t evaluate_query(
 		const Context& queryContext,
 		query_token_t token ){
 
-	std::thread t = std::thread([=]	{
+	std::thread t([=]	{
+		ral::config::GPUManager::getInstance().setDevice();
+
 		std::vector<std::string> splitted = StringUtil::split(logicalPlan, "\n");
 		if (splitted[splitted.size() - 1].length() == 0) {
 			splitted.erase(splitted.end() -1);
@@ -1461,8 +1464,6 @@ query_token_t evaluate_query(
 			std::cerr << "evaluate_split_query error => " << e.what() << '\n';
 			result_set_repository::get_instance().update_token(token, blazing_frame{}, 0.0, e.what());
 		}
-
-
 	});
 
 	//@todo: hablar con felipe sobre detach

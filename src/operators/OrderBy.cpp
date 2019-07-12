@@ -3,6 +3,7 @@
 #include <functional>
 #include <blazingdb/io/Library/Logging/Logger.h>
 #include <blazingdb/io/Util/StringUtil.h>
+#include "config/GPUManager.cuh"
 #include "OrderBy.h"
 #include "CodeTimer.h"
 #include "CalciteExpressionParsing.h"
@@ -105,7 +106,10 @@ void distributed_sort(const Context& queryContext, blazing_frame& input, std::ve
 
 	std::vector<gdf_column_cpp> selfSamples = ral::distribution::sampling::generateSample(cols, 0.1);
 
-	std::thread sortThread{sort, std::ref(input), std::ref(rawCols), std::ref(sortOrderTypes), std::ref(sortedTable)};
+	std::thread sortThread{[](blazing_frame& input, std::vector<gdf_column*>& rawCols, std::vector<int8_t>& sortOrderTypes, std::vector<gdf_column_cpp>& sortedTable){
+		ral::config::GPUManager::getInstance().setDevice();
+		sort(input, rawCols, sortOrderTypes, sortedTable);
+	}, std::ref(input), std::ref(rawCols), std::ref(sortOrderTypes), std::ref(sortedTable)};
 	// sort(input, rawCols, sortOrderTypes, sortedTable);
 
 	std::vector<gdf_column_cpp> partitionPlan;

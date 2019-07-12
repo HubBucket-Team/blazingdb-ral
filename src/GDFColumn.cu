@@ -405,11 +405,12 @@ void gdf_column_cpp::create_gdf_column(const gdf_scalar & scalar, const std::str
     //TODO: this is kind of bad its a chicken and egg situation with column_view requiring a pointer to device and allocate_valid
     //needing to not require numvalues so it can be called rom outside
     this->get_gdf_column()->size = 1;
+    this->get_gdf_column()->dtype = type;
     char * data;
     this->is_ipc_column = false;
     this->column_token = 0;
     size_t width_per_value = gdf_dtype_size(type);
-
+    
     this->allocated_size_data = width_per_value; 
 
     cuDF::Allocator::allocate((void**)&data, allocated_size_data);
@@ -423,8 +424,9 @@ void gdf_column_cpp::create_gdf_column(const gdf_scalar & scalar, const std::str
         this->allocated_size_valid = 0;
         this->get_gdf_column()->null_count = 0;
     }
-
-    gdf_column_view(this->column, (void *) data, valid_device, 1, type);
+    this->get_gdf_column()->data = (void *) data;
+    this->get_gdf_column()->valid = valid_device;
+    
     this->set_name(column_name);
     if(scalar.is_valid){
         if(type == GDF_INT8){

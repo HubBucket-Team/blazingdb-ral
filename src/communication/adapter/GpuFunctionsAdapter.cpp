@@ -24,6 +24,7 @@ namespace adapter {
           const std::size_t offsetsLength = stringsLength + 1;
 
           int * const lengthPerStrings = new int[stringsLength];
+          // TODO: When implement null support, a null-string return -1 as byte_count
           nvStrings->byte_count(lengthPerStrings, false);
 
           const std::size_t stringsSize = std::accumulate(

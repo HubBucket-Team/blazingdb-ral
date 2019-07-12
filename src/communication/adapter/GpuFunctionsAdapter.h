@@ -17,6 +17,8 @@ namespace adapter {
         using DataTypePointer = void*;
         using ValidTypePointer = gdf_valid_type*;
 
+        using NvStrings = NVStrings;
+
     public:
         static void copyGpuToCpu(std::size_t& binary_pointer, std::string& result, gdf_column_cpp& column);
 
@@ -25,6 +27,12 @@ namespace adapter {
         static std::size_t getValidCapacity(gdf_column* column);
 
         static std::size_t getDTypeSize(gdf_dtype dtype);
+
+        static std::size_t isGdfString(const gdf_column &);
+
+        static NVStrings * CreateNvStrings(const void *      stringsPointer,
+                                           const void *      offsetsPointer,
+                                           const std::size_t keysLength);
     };
 
 } // namespace adapter

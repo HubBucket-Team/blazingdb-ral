@@ -18,6 +18,7 @@ namespace adapter {
         using ValidTypePointer = gdf_valid_type*;
 
         using NvStrings = NVStrings;
+        using NvCategory = NVCategory;
 
     public:
         static void copyGpuToCpu(std::size_t& binary_pointer, std::string& result, gdf_column_cpp& column);

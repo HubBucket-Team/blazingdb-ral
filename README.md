@@ -63,12 +63,14 @@ make -j8
 # Run
 
 ```bash
-./testing-libgdf RAL_ID ORCHESTRATOR_IP ORCHESTRATOR_PROTOCOL_TCP_PORT ORCHESTRATOR_COMMUNICATION_TCP_PORT RAL_IP RAL_PROTOCOL_TCP_PORT RAL_COMMUNICATION_TCP_PORT
+./testing-libgdf RAL_ID GPU_ID ORCHESTRATOR_IP ORCHESTRATOR_PROTOCOL_TCP_PORT ORCHESTRATOR_COMMUNICATION_TCP_PORT RAL_IP RAL_PROTOCOL_TCP_PORT RAL_COMMUNICATION_TCP_PORT
 
-#Example RAL instance 1 for localhost:
-./testing-libgdf 1 127.0.0.1 9000 127.0.0.1 9001 8891
+#Example if running on one server with two GPU
 
-#Example RAL instance 2 for localhost:
-./testing-libgdf 2 127.0.0.1 9000 127.0.0.1 9002 8892
+#Instance 1 for localhost:
+./testing-libgdf 1 0 127.0.0.1 9000 127.0.0.1 9001 8891
+
+#Instance 2 for localhost:
+./testing-libgdf 2 1 127.0.0.1 9000 127.0.0.1 9002 8892
 
 ```

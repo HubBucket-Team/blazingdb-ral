@@ -14,6 +14,7 @@
 #include <thrust/device_vector.h>
 #include "DataFrame.h"
 #include <stack>
+#include <algorithm>
 
 //based on calcites relational algebra
 const std::string INNER_JOIN = "inner";
@@ -52,31 +53,23 @@ struct bit_mask_pack_op : public thrust::unary_function<int64_t,gdf_valid_type>
 		}
 };
 
-void evaluate_join(std::string condition,
-		std::string join_type,
-		blazing_frame data_frame,
-		gdf_column * left_result,
-		gdf_column * right_result
-){
-	std::string clean_expression = clean_calcite_expression(condition);
-	
-	std::stack<std::string> operand;
+void parseJoinConditionToColumnIndices(const std::string& condition, std::vector<int>& columnIndices) {
+	//TODO: right now this only works for equijoins
+	// since this is all that is implemented at the time
 
 	//TODO: for this to work properly we can only do multi column join
 	// when we have ands, when we have hors we hvae to perform the joisn seperately then
 	// do a unique merge of the indices
 
-
 	//right now with pred push down the join codnition takes the filters as the second argument to condition
 
+	std::string clean_expression = clean_calcite_expression(condition);
 	int operator_count = 0;
-
+	std::stack<std::string> operand;
 	std::vector<std::string> tokens = get_tokens_in_reverse_order(clean_expression);
 	for (std::string token : tokens){
-		//std::cout<<"Token is ==> "<<token<<"\n";
 
 		if(is_operator_token(token)){
-
 			if(token == "="){
 				//so far only equijoins are supported in libgdf
 				operator_count++;
@@ -88,41 +81,99 @@ void evaluate_join(std::string condition,
 		}
 	}
 
-	if(operator_count > 3 && join_type == OUTER_JOIN){
-		throw std::runtime_error("In evaluate_join function: too many columns for join");
-	}
-
-	gdf_column ** left_columns = new gdf_column*[operator_count];
-	gdf_column ** right_columns = new gdf_column*[operator_count];
-	gdf_context ctxt{0, GDF_HASH, 0};
-	int join_cols[operator_count];
-	for(int i = 0; i < operator_count; i++){
-		join_cols[i] = i;
+	columnIndices.resize(2 * operator_count);
+	for(size_t i = 0; i < operator_count; i++){
 		int right_index = get_index(operand.top());
 		operand.pop();
 		int left_index = get_index(operand.top());
 		operand.pop();
 
 		if(right_index < left_index){
-			int temp_index = left_index;
-			left_index = right_index;
-			right_index = temp_index;
+			std::swap(left_index, right_index);
 		}
 
-		left_columns[i] = data_frame.get_column(left_index).get_gdf_column();
-		right_columns[i] = data_frame.get_column(right_index).get_gdf_column();
+		columnIndices[2*i] = left_index;
+		columnIndices[2*i + 1] = right_index;
+	}
+}
+
+void evaluate_join(std::string condition,
+		std::string join_type,
+		blazing_frame data_frame,
+		gdf_column * left_result,
+		gdf_column * right_result
+){
+	//TODO: right now this only works for equijoins
+	// since this is all that is implemented at the time
+
+	//TODO: for this to work properly we can only do multi column join
+	// when we have ands, when we have hors we hvae to perform the joisn seperately then
+	// do a unique merge of the indices
+
+	//right now with pred push down the join codnition takes the filters as the second argument to condition
+
+	std::vector<int> column_indices;
+	parseJoinConditionToColumnIndices(condition, column_indices);
+
+	int operator_count = column_indices.size() / 2;
+	std::vector<gdf_column*> left_columns(operator_count);
+	std::vector<gdf_column*> right_columns(operator_count);
+	std::vector<int> join_cols(operator_count);
+	std::iota(join_cols.begin(), join_cols.end(), 0);
+
+	for(int i = 0; i < operator_count; i++){
+		left_columns[i] = data_frame.get_column(column_indices[2*i]).get_gdf_column();
+		right_columns[i] = data_frame.get_column(column_indices[2*i + 1]).get_gdf_column();
 	}
 
+	if(operator_count > 3 && join_type == OUTER_JOIN){
+		throw std::runtime_error("In evaluate_join function: too many columns for join");
+	}
+
+	gdf_context ctxt{0, GDF_HASH, 0};
 	if(join_type == INNER_JOIN){
-		CUDF_CALL( gdf_inner_join( left_columns,operator_count,join_cols, right_columns,operator_count,join_cols,operator_count,0, nullptr,left_result, right_result, &ctxt) );
+		CUDF_CALL( gdf_inner_join(left_columns.data(),
+														left_columns.size(),
+														join_cols.data(),
+														right_columns.data(),
+														right_columns.size(),
+														join_cols.data(),
+														join_cols.size(),
+														0,
+														nullptr,
+														left_result,
+														right_result,
+														&ctxt) );
 	}else if(join_type == LEFT_JOIN){
-		CUDF_CALL( gdf_left_join( left_columns,operator_count,join_cols, right_columns,operator_count,join_cols,operator_count,0, nullptr,left_result, right_result, &ctxt) );
+		CUDF_CALL( gdf_left_join(left_columns.data(),
+														left_columns.size(),
+														join_cols.data(),
+														right_columns.data(),
+														right_columns.size(),
+														join_cols.data(),
+														join_cols.size(),
+														0,
+														nullptr,
+														left_result,
+														right_result,
+														&ctxt) );
 	}else if(join_type == OUTER_JOIN){
-		CUDF_CALL( gdf_full_join(left_columns,operator_count,join_cols, right_columns,operator_count,join_cols,operator_count,0, nullptr,left_result, right_result, &ctxt) );
+		//WARNING TODO felipe percy noboa alexander see outer_join
+		//err = gdf_outer_join_generic(left_columns[0], right_columns[0], left_result, right_result);
+		//err = gdf_outer_join( left_columns,operator_count,join_cols, right_columns,operator_count,join_cols,operator_count,0, nullptr,left_result, right_result, &ctxt);
+		CUDF_CALL( gdf_full_join(left_columns.data(),
+														left_columns.size(),
+														join_cols.data(),
+														right_columns.data(),
+														right_columns.size(),
+														join_cols.data(),
+														join_cols.size(),
+														0,
+														nullptr,
+														left_result,
+														right_result,
+														&ctxt) );
 	}else{
 		throw std::runtime_error("In evaluate_join function: unsupported join operator, " + join_type);
 	}
-
-	delete[] left_columns;
-	delete[] right_columns;
 }

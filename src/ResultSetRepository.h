@@ -39,7 +39,7 @@ public:
 		  return instance;
 	}
 
-	query_token_t register_query(connection_id_t connection);
+	query_token_t register_query(connection_id_t connection, query_token_t token);
 	void update_token(query_token_t token, blazing_frame frame, double duration, std::string errorMsg = "");
 	connection_id_t init_session();
 	void remove_all_connection_tokens(connection_id_t connection);

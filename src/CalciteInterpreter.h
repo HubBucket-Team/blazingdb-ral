@@ -10,6 +10,9 @@
 #include "LogicalFilter.h"
 #include "io/DataLoader.h"
 
+#include <blazingdb/communication/Context.h>
+using blazingdb::communication::Context;
+
 struct project_plan_params{ 
   size_t num_expressions_out;
   std::vector<gdf_column *> output_columns;
@@ -32,15 +35,9 @@ blazing_frame evalute_split_query(
 		std::vector<std::vector<gdf_column_cpp> > input_tables,
 		std::vector<std::string> table_names,
 		std::vector<std::vector<std::string>> column_names,
-		std::vector<std::string> query);
+		std::vector<std::string> query,
+		const Context* queryContext);
 
-query_token_t evaluate_query(
-		std::vector<std::vector<gdf_column_cpp> > input_tables,
-		std::vector<std::string> table_names,
-		std::vector<std::vector<std::string>> column_names,
-		std::string logicalPlan,
-		connection_id_t connection,
-		  std::vector<void *> handles);
 
 gdf_error evaluate_query(
 		std::vector<std::vector<gdf_column_cpp> > input_tables,
@@ -54,7 +51,9 @@ query_token_t evaluate_query(
 		std::vector<ral::io::Schema> schemas,
 		std::vector<std::string> table_names,
 		std::string logicalPlan,
-		connection_id_t connection);
+		connection_id_t connection,
+		const Context& queryContext,
+		query_token_t query_token);
 
 std::string get_named_expression(std::string query_part, std::string expression_name);
 

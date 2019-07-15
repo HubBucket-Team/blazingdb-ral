@@ -104,7 +104,7 @@ gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregat
 		return GDF_FLOAT64;
 	}else if(aggregation == GDF_COUNT_DISTINCT){
 		return GDF_INT64;
-	}	
+	}
 	else{
 		return GDF_invalid;
 	}
@@ -175,7 +175,7 @@ gdf_dtype get_output_type(gdf_dtype input_left_type, gdf_unary_operator operatio
 		return GDF_INT16;
 	} else if (is_trig_operation(operation) || operation == BLZ_LOG || operation == BLZ_LN){
 		if (input_left_type == GDF_FLOAT32 || input_left_type == GDF_FLOAT64){
-			return input_left_type;	
+			return input_left_type;
 		} else {
 			return GDF_FLOAT64;
 		}
@@ -326,7 +326,7 @@ gdf_dtype get_type_from_string(std::string scalar_string){
 	else if (std::regex_match(scalar_string, reFloat)) {
 		return GDF_FLOAT64;
 	}
-	
+
 	return GDF_DATE64;
 }
 
@@ -498,7 +498,7 @@ gdf_agg_op get_aggregation_operation(std::string operator_string){
 	}else if(operator_string == "COUNT_DISTINCT"){
 		return GDF_COUNT_DISTINCT;
 	}
-	
+
 	throw std::runtime_error("In get_aggregation_operation function: aggregation type not supported, " + operator_string);
 }
 
@@ -554,7 +554,7 @@ static std::map<std::string, gdf_binary_operator> gdf_binary_operator_map = {
 gdf_binary_operator get_binary_operation(std::string operator_string){
 	if(gdf_binary_operator_map.find(operator_string) != gdf_binary_operator_map.end())
 		return gdf_binary_operator_map[operator_string];
-	
+
 	throw std::runtime_error("In get_binary_operation function: unsupported operator, " + operator_string);
 }
 
@@ -727,8 +727,8 @@ std::string clean_calcite_expression(std::string expression){
 	// int endOfFirstArg = find_closing_char(expression, pos + coalesce_identifier.length() - 1) ;
 	// // this should be in this example "$1"
 	// std::string firstArg = expression.substring(pos + coalesce_identifier.length(), endOfFirstArg - (pos + coalesce_identifier.length()));
-	// std::string 
-	
+	// std::string
+
 
 
 
@@ -808,7 +808,24 @@ int find_closing_char(const std::string & expression, int start) {
 
 // takes a comma delimited list of expressions and splits it into separate expressions
 std::vector<std::string> get_expressions_from_expression_list(std::string & combined_expression, bool trim){
-	
+
+	//todo:
+	//combined_expression
+    static const std::regex re{R""(CASE\(IS NOT NULL\((\W\(.+?\)|.+)\), \1, (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
+    static const std::regex count_re{R""(COUNT\(DISTINCT (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
+
+	combined_expression = std::regex_replace(combined_expression, re, "COALESCE($1, $2)");
+	combined_expression = std::regex_replace(combined_expression, count_re, "COUNT_DISTINCT($1)");
+
+	StringUtil::findAndReplaceAll(combined_expression," NOT NULL","");
+	StringUtil::findAndReplaceAll(combined_expression,"):DOUBLE","");
+	StringUtil::findAndReplaceAll(combined_expression,"CAST(","");
+	StringUtil::findAndReplaceAll(combined_expression,"EXTRACT(FLAG(YEAR), ","BL_YEAR(");
+	StringUtil::findAndReplaceAll(combined_expression,"EXTRACT(FLAG(MONTH), ","BL_MONTH(");
+	StringUtil::findAndReplaceAll(combined_expression,"EXTRACT(FLAG(DAY), ","BL_DAY(");
+	StringUtil::findAndReplaceAll(combined_expression,"FLOOR(","BL_FLOUR(");
+
+
 	std::vector<std::string> expressions;
 
 	int curInd = 0;
@@ -857,9 +874,6 @@ std::vector<std::string> get_expressions_from_expression_list(std::string & comb
 			expressions.push_back(exp);
 	}
 
-	static const std::regex re{R""(CASE\(IS NOT NULL\((\W\(.+?\)|.+)\), \1, (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
-	static const std::regex count_re{R""(COUNT\(DISTINCT (\W\(.+?\)|.+)\))"", std::regex_constants::icase};
-
 	for (int i = 0; i < expressions.size(); i++){
 		expressions[i] = std::regex_replace(expressions[i], re, "COALESCE($1, $2)");
 		expressions[i] = std::regex_replace(expressions[i], count_re, "COUNT_DISTINCT($1)");
@@ -877,4 +891,9 @@ std::vector<std::string> get_expressions_from_expression_list(std::string & comb
 
 
 	return expressions;
+}
+
+bool contains_evaluation(std::string expression){
+	std::string cleaned_expression = clean_project_expression(expression);
+	return cleaned_expression.find("(") != std::string::npos;
 }

@@ -17,7 +17,7 @@
 #include <GDFCounter.cuh>
 
 #include "../Schema.h"
-
+#include "io/data_parser/ParserUtil.h"
 
 namespace ral {
 namespace io {
@@ -35,30 +35,18 @@ void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	const std::string & user_readable_file_handle,
 	std::vector<gdf_column_cpp> & columns_out,
 	const Schema & schema,
-	std::vector<size_t> column_indices_requested){
+	std::vector<size_t> column_indices){
 
-	if (column_indices_requested.size() == 0){ // including all columns by default
-		column_indices_requested.resize(schema.get_num_columns());
-		std::iota(column_indices_requested.begin(), column_indices_requested.end(), 0);
+	if (column_indices.size() == 0){ // including all columns by default
+		column_indices.resize(schema.get_num_columns());
+		std::iota(column_indices.begin(), column_indices.end(), 0);
+	}
+
+	if (file == nullptr){
+		columns_out = create_empty_columns(schema.get_names(), schema.get_dtypes(), column_indices);
+		return;
 	}
 	
-	// Lets see if we have already loaded columns before and if so, lets adjust the column_indices
-	std::vector<size_t> column_indices;
-	for(auto column_index : column_indices_requested){
-		bool already_parsed_before = false;
-		const std::string column_name = schema.get_name(column_index);
-		auto file_iter = loaded_columns.find(user_readable_file_handle);
-		if (file_iter != loaded_columns.end()){ // we have already parsed this file before
-			auto col_iter = loaded_columns[user_readable_file_handle].find(column_name);
-			if (col_iter != loaded_columns[user_readable_file_handle].end()){ // we have already parsed this column before
-				already_parsed_before = true;				
-			}
-		}
-		if (!already_parsed_before)
-			column_indices.push_back(column_index);		
-	}
-
-	std::vector<gdf_column_cpp> columns;
 	if (column_indices.size() > 0){
 	
 		// Fill data to pq_args
@@ -96,41 +84,18 @@ void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 			tmp_columns[i].create_gdf_column(pq_args.data[i]);
 		}
 
-		columns.resize(pq_args.num_cols_out);
-		for(size_t i = 0; i < columns.size(); i++){
+		columns_out.resize(pq_args.num_cols_out);
+		for(size_t i = 0; i < columns_out.size(); i++){
 			if (tmp_columns[i].get_gdf_column()->dtype == GDF_STRING){
 				NVStrings* strs = static_cast<NVStrings*>(tmp_columns[i].get_gdf_column()->data);
 				NVCategory* category = NVCategory::create_from_strings(*strs);
-				columns[i].create_gdf_column(category, tmp_columns[i].size(), tmp_columns[i].name());
+				columns_out[i].create_gdf_column(category, tmp_columns[i].size(), tmp_columns[i].name());
 			} else {
-				columns[i] = tmp_columns[i];
+				columns_out[i] = tmp_columns[i];
 			}
 		}
 	}
 
-	// Lets see if we had already loaded columns before and if so lets put them in out columns_out
-	// If we had not already loaded them, lets add them to the set of loaded columns
-	int newly_parsed_col_idx = 0;
-	for(auto column_index : column_indices_requested){
-		bool already_parsed_before = false;
-		const std::string column_name = schema.get_name(column_index);
-		auto file_iter = loaded_columns.find(user_readable_file_handle);
-		if (file_iter != loaded_columns.end()){ // we have already parsed this file before
-			auto col_iter = loaded_columns[user_readable_file_handle].find(column_name);
-			if (col_iter != loaded_columns[user_readable_file_handle].end()){ // we have already parsed this column before
-				already_parsed_before = true;
-				columns_out.push_back(loaded_columns[user_readable_file_handle][column_name]);
-			}
-		}
-		if (!already_parsed_before) {
-			if (column_name != columns[newly_parsed_col_idx].name()){
-				std::cout<<"ERROR: logic error when trying to use already loaded columns in ParquetParser"<<std::endl;
-			}
-			columns_out.push_back(columns[newly_parsed_col_idx]);
-			loaded_columns[user_readable_file_handle][columns[newly_parsed_col_idx].name()] = columns[newly_parsed_col_idx];
-			newly_parsed_col_idx++;			
-		}
-	}
 }
 
 // This function is copied and adapted from cudf

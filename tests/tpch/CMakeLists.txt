@@ -1,5 +1,5 @@
 set(source_files
-    tpch-tests.cu 
+    tpch-tests.cu
 )
 
 set(tpch_csv_tests_src

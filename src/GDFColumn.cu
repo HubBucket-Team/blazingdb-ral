@@ -14,6 +14,10 @@
 #include "GDFColumn.cuh"
 #include "gdf_wrapper/gdf_wrapper.cuh"
 #include "cuDF/Allocator.h"
+#include "cuDF/column_slice/column_cpp_slice.h"
+#include "cuio/parquet/util/bit_util.cuh"
+#include "Traits/RuntimeTraits.h"
+
 #include "bitmask.hpp"
 #include "FreeMemory.h"
 
@@ -144,7 +148,7 @@ void gdf_column_cpp::operator=(const gdf_column_cpp& col)
 
 }
 
-gdf_column* gdf_column_cpp::get_gdf_column()
+gdf_column* gdf_column_cpp::get_gdf_column() const
 {
     return column;
 }
@@ -168,15 +172,7 @@ gdf_error gdf_column_cpp::compact(){
 
 void gdf_column_cpp::update_null_count()
 {
-    if (this->column->size == 0 || this->column->valid == nullptr) {
-        this->column->null_count = 0;
-    }
-    else {
-        int count;
-        gdf_error result = gdf_count_nonzero_mask(this->column->valid, this->column->size, &count);
-        assert(result == GDF_SUCCESS);
-        this->column->null_count = this->column->size - static_cast<gdf_size_type>(count);
-    }
+    update_null_count(column);
 }
 
 void gdf_column_cpp::allocate_set_valid(){
@@ -289,20 +285,22 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     //TODO: this is kind of bad its a chicken and egg situation with column_view requiring a pointer to device and allocate_valid
     //needing to not require numvalues so it can be called rom outside
     this->get_gdf_column()->size = num_values;
-    char * data;
+    char * data = nullptr;
     this->is_ipc_column = false;
     this->column_token = 0;
 
     this->allocated_size_data = (width_per_value * num_values); 
-
-    cuDF::Allocator::allocate((void**)&data, allocated_size_data);
+    this->allocated_size_valid = 0;
 
     gdf_valid_type * valid_device = nullptr;
-    if(host_valids != nullptr){
-        valid_device = allocate_valid();
-        CheckCudaErrors(cudaMemcpy(valid_device, host_valids, this->allocated_size_valid, cudaMemcpyHostToDevice));
-    } else {
-        this->allocated_size_valid = 0;
+
+    if (num_values > 0) {    
+        cuDF::Allocator::allocate((void**)&data, allocated_size_data);
+        
+        if(host_valids != nullptr){
+            valid_device = allocate_valid();
+            CheckCudaErrors(cudaMemcpy(valid_device, host_valids, this->allocated_size_valid, cudaMemcpyHostToDevice));
+        } 
     }
 
     gdf_column_view(this->column, (void *) data, valid_device, num_values, type);
@@ -316,7 +314,7 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     if(host_valids != nullptr){
         this->update_null_count();
     }
-    
+
     GDFRefCounter::getInstance()->register_column(this->column);
 }
 
@@ -331,9 +329,12 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     //TODO: this is kind of bad its a chicken and egg situation with column_view requiring a pointer to device and allocate_valid
     //needing to not require numvalues so it can be called rom outside
     this->get_gdf_column()->size = num_values;
-    char * data;
+    char * data = nullptr;
     this->is_ipc_column = false;
     this->column_token = 0;
+
+    this->allocated_size_data = (width_per_value * num_values);
+    this->allocated_size_valid = 0;
 
     gdf_valid_type * valid_device = nullptr;
     if (type != GDF_STRING){
@@ -343,7 +344,14 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     }
     this->allocated_size_data = (width_per_value * num_values); 
 
-    cuDF::Allocator::allocate((void**)&data, allocated_size_data);
+    if (num_values > 0) {    
+        
+        if (type != GDF_STRING_CATEGORY && type != GDF_STRING){
+            valid_device = allocate_valid();        
+        } 
+
+        cuDF::Allocator::allocate((void**)&data, allocated_size_data);
+    }
 
     gdf_column_view(this->column, (void *) data, valid_device, num_values, type);
     this->column->dtype_info.category = nullptr;
@@ -357,30 +365,33 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
 }
 
 void gdf_column_cpp::create_gdf_column(gdf_column * column){
-    decrement_counter(this->column);
 
-	this->column = column;
-	
-    if (column->dtype != GDF_STRING){
-        int width_per_value;
-        gdf_error err = get_column_byte_width(column, &width_per_value);
+    if (column != this->column) { // if this gdf_column_cpp already represented this gdf_column, we dont want to do anything. Especially do decrement_counter, since it might actually free the gdf_column we are trying to use
+        decrement_counter(this->column);
 
-        //TODO: we are assuming they are not padding,
-        this->allocated_size_data = width_per_value * column->size;
-    } else {
-        this->allocated_size_data = 0; // TODO: do we care? what should be put there?
+        this->column = column;
+        
+        if (column->dtype != GDF_STRING){
+            int width_per_value;
+            gdf_error err = get_column_byte_width(column, &width_per_value);
+
+            //TODO: we are assuming they are not padding,
+            this->allocated_size_data = width_per_value * column->size;
+        } else {
+            this->allocated_size_data = 0; // TODO: do we care? what should be put there?
+        }
+        if(column->valid != nullptr){
+            this->allocated_size_valid = gdf_valid_allocation_size(column->size); //so allocations are supposed to be 64byte aligned
+        } else {
+            this->allocated_size_valid = 0;
+        }
+        this->is_ipc_column = false;
+        this->column_token = 0;
+        if (column->col_name)
+            this->set_name(std::string(column->col_name));
+
+        GDFRefCounter::getInstance()->register_column(this->column);
     }
-	if(column->valid != nullptr){
-        this->allocated_size_valid = gdf_valid_allocation_size(column->size); //so allocations are supposed to be 64byte aligned
-	} else {
-        this->allocated_size_valid = 0;
-    }
-    this->is_ipc_column = false;
-    this->column_token = 0;
-    if (column->col_name)
-    	this->set_name(std::string(column->col_name));
-
-    GDFRefCounter::getInstance()->register_column(this->column);
 }
 
 void gdf_column_cpp::create_gdf_column(const gdf_scalar & scalar, const std::string &column_name){
@@ -394,11 +405,12 @@ void gdf_column_cpp::create_gdf_column(const gdf_scalar & scalar, const std::str
     //TODO: this is kind of bad its a chicken and egg situation with column_view requiring a pointer to device and allocate_valid
     //needing to not require numvalues so it can be called rom outside
     this->get_gdf_column()->size = 1;
+    this->get_gdf_column()->dtype = type;
     char * data;
     this->is_ipc_column = false;
     this->column_token = 0;
     size_t width_per_value = gdf_dtype_size(type);
-
+    
     this->allocated_size_data = width_per_value; 
 
     cuDF::Allocator::allocate((void**)&data, allocated_size_data);
@@ -412,8 +424,9 @@ void gdf_column_cpp::create_gdf_column(const gdf_scalar & scalar, const std::str
         this->allocated_size_valid = 0;
         this->get_gdf_column()->null_count = 0;
     }
-
-    gdf_column_view(this->column, (void *) data, valid_device, 1, type);
+    this->get_gdf_column()->data = (void *) data;
+    this->get_gdf_column()->valid = valid_device;
+    
     this->set_name(column_name);
     if(scalar.is_valid){
         if(type == GDF_INT8){
@@ -468,7 +481,7 @@ gdf_column_cpp::~gdf_column_cpp()
 	}
 
 }
-bool gdf_column_cpp::is_ipc(){
+bool gdf_column_cpp::is_ipc() const {
 	return this->is_ipc_column;
 }
 
@@ -476,18 +489,18 @@ bool gdf_column_cpp::has_token(){
     return (this->column_token != 0);
 }
 
-void* gdf_column_cpp::data(){
+void* gdf_column_cpp::data() const{
     return column->data;
 }
 
-gdf_valid_type* gdf_column_cpp::valid(){
+gdf_valid_type* gdf_column_cpp::valid() const {
     return column->valid;
 }
-gdf_size_type gdf_column_cpp::size(){
+gdf_size_type gdf_column_cpp::size() const {
     return column->size;
 }
 
-gdf_dtype gdf_column_cpp::dtype(){
+gdf_dtype gdf_column_cpp::dtype() const {
     return column->dtype;
 }
 
@@ -507,10 +520,22 @@ std::size_t gdf_column_cpp::get_valid_size() const {
     return allocated_size_valid;
 }
 
-column_token_t gdf_column_cpp::get_column_token(){
+column_token_t gdf_column_cpp::get_column_token() const {
     return this->column_token;
 }
 
 void gdf_column_cpp::set_column_token(column_token_t column_token){
     this->column_token = column_token;
+}
+
+void gdf_column_cpp::update_null_count(gdf_column* column) const {
+    if (column->size == 0 || column->valid == nullptr) {
+        column->null_count = 0;
+    }
+    else {
+        int count;
+        gdf_error result = gdf_count_nonzero_mask(column->valid, column->size, &count);
+        assert(result == GDF_SUCCESS);
+        column->null_count = column->size - static_cast<gdf_size_type>(count);
+    }
 }

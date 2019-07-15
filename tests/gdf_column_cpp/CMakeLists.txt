@@ -1,10 +1,17 @@
+set(gdf_column_cpp_test_SRCS
+    gdf_column_cpp_test.cu
+    ${CMAKE_SOURCE_DIR}/tests/utilities/gdf_column_cpp_utilities.cu
+)
+
+
+#configure_test(gdf_column_cpp_test "${gdf_column_cpp_test_SRCS}")
 
 set(test_name "gdf_column_cpp_test")
 
 project(${test_name} CXX CUDA)
 
 set(test_sources
-    ${CMAKE_CURRENT_SOURCE_DIR}/gdf_column_cpp_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/gdf_column_cpp_test.cu
     ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
     ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
     ${CMAKE_SOURCE_DIR}/src/cuDF/Allocator.cpp

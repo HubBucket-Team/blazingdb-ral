@@ -59,3 +59,18 @@ mkdir -p  build && cd build
 LIBGDF_HOME="/path/to/libgdf"cmake ..
 make -j8
 ```
+
+# Run
+
+```bash
+./testing-libgdf RAL_ID GPU_ID ORCHESTRATOR_HTTP_COMMUNICATION_[IP|HOSTNAME] ORCHESTRATOR_HTTP_COMMUNICATION_PORT RAL_HTTP_COMMUNICATION_[IP|HOSTNAME] RAL_HTTP_COMMUNICATION_PORT RAL_TCP_PROTOCOL_PORT
+
+#Example if running on one server with two GPU
+
+#Instance 1 for localhost:
+./testing-libgdf 1 0 127.0.0.1 9000 127.0.0.1 9001 8891
+
+#Instance 2 for localhost:
+./testing-libgdf 2 1 127.0.0.1 9000 127.0.0.1 9002 8892
+
+```

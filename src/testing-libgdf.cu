@@ -58,19 +58,24 @@ using namespace blazingdb::protocol;
 #include "io/data_parser/DataParser.h"
 #include "io/data_provider/DataProvider.h"
 #include "io/DataLoader.h"
+#include "Traits/RuntimeTraits.h"
 
-
-#include "Config/Config.h"
 
 #include "CodeTimer.h"
+#include "config/BlazingConfig.h"
+#include "config/GPUManager.cuh"
+
+#include "communication/CommunicationData.h"
+#include "communication/factory/MessageFactory.h"
+#include "communication/network/Client.h"
+#include "communication/network/Server.h"
+#include <blazingdb/communication/Context.h>
 
 const Path FS_NAMESPACES_FILE("/tmp/file_system.bin");
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);
 
-//TODO percy c.gonzales fix this later
-std::string global_ip;
-int global_port;
+ConnectionAddress connectionAddress;
 
 static result_pair  registerFileSystem(uint64_t accessToken, Buffer&& buffer) {
   std::cout << "registerFileSystem: " << accessToken << std::endl;
@@ -140,7 +145,6 @@ static result_pair  deregisterFileSystem(uint64_t accessToken, Buffer&& buffer) 
   return std::make_pair(Status_Success, response.getBufferData());
 }
 
-
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
 using FunctionType = result_pair (*)(uint64_t, Buffer&& buffer);
 
@@ -149,7 +153,7 @@ static result_pair closeConnectionService(uint64_t accessToken, Buffer&& request
 
   try {
     result_set_repository::get_instance().remove_all_connection_tokens(accessToken);
-    // NOTE: use next 3 lines to check with "/usr/local/cuda/bin/cuda-memcheck  --leak-check full  ./testing-libgdf"   
+    // NOTE: use next 3 lines to check with "/usr/local/cuda/bin/cuda-memcheck  --leak-check full  ./testing-libgdf"
     // GDFRefCounter::getInstance()->show_summary();
     // cudaDeviceReset();
     // exit(0);
@@ -183,7 +187,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
     if (errorMsg.empty()) {
       status = "OK";
       //TODO ojo el result siempre es una sola tabla por eso indice 0
-      rows =  result.result_frame.get_columns()[0][0].size();
+      rows =  result.result_frame.get_num_rows_in_table(0);
 
       for(std::size_t i = 0; i < result.result_frame.get_columns()[0].size(); ++i) {
         fieldNames.push_back(result.result_frame.get_columns()[0][i].name());
@@ -219,8 +223,10 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
                 .time_unit = (gdf_dto::gdf_time_unit)0     // TODO: why is this hardcoded?
           };
 
-          data = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->data);
-          valid = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->valid);
+          if(result.result_frame.get_columns()[0][i].size() > 0) {
+            data = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->data);
+            valid = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->valid);
+          }
         
           col.data = data;
           col.valid = valid;
@@ -231,7 +237,7 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
         }
 
         values.push_back(col);
-      }
+      }    
     }
 
     interpreter::BlazingMetadataDTO  metadata = {
@@ -277,40 +283,6 @@ static result_pair freeResultService(uint64_t accessToken, Buffer&& requestPaylo
 
 }
 
-
-//TODO: we need to have a centralized place where this can be done
-//perhaps a utility in protocol, add bool8 after update
-gdf_dtype convert_string_dtype(std::string str){
-	if(str == "GDF_INT8"){
-		return GDF_INT8;
-	}else if(str == "GDF_INT16"){
-		return GDF_INT16;
-	}else if(str == "GDF_INT32"){
-		return GDF_INT32;
-	}else if(str == "GDF_INT64"){
-		return GDF_INT64;
-	}else if(str == "GDF_FLOAT32"){
-		return GDF_FLOAT32;
-	}else if(str == "GDF_FLOAT64"){
-		return GDF_FLOAT64;
-	}else if(str == "GDF_DATE32"){
-		return GDF_DATE32;
-	}else if(str == "GDF_DATE64"){
-		return GDF_DATE64;
-	}else if(str == "GDF_TIMESTAMP"){
-		return GDF_TIMESTAMP;
-	}else if(str == "GDF_CATEGORY"){
-		return GDF_CATEGORY;
-	}else if(str == "GDF_STRING"){
-		return GDF_STRING;
-	}else if(str == "GDF_STRING_CATEGORY"){
-		return GDF_STRING_CATEGORY;
-	}else{
-		return GDF_invalid;
-	}
-}
-
-
 static result_pair parseSchemaService(uint64_t accessToken, Buffer&& requestPayloadBuffer) {
 	blazingdb::protocol::orchestrator::DDLCreateTableRequestMessage requestPayload(requestPayloadBuffer.data());
 
@@ -321,7 +293,7 @@ static result_pair parseSchemaService(uint64_t accessToken, Buffer&& requestPayl
 	}else if(requestPayload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
 		std::vector<gdf_dtype> types;
 		for(auto val : requestPayload.columnTypes){
-			types.push_back(convert_string_dtype(val));
+			types.push_back(ral::traits::convert_string_dtype(val));
 		}
 		parser =  std::make_shared<ral::io::csv_parser>(
 				requestPayload.csvDelimiter,
@@ -367,7 +339,7 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 	std::vector<ral::io::data_loader > input_loaders;
 	std::vector<ral::io::Schema> schemas;
 	std::vector<std::string> table_names;
-  for(auto table : requestPayload.tableGroup.tables){
+  for(auto table : requestPayload.tableGroup().tables){
 	  ral::io::Schema schema(table.tableSchema);
 	std::shared_ptr<ral::io::data_parser> parser;
 	  if(table.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_PARQUET){
@@ -412,31 +384,61 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 
 
   std::cout << "accessToken: " << accessToken << std::endl;
-  std::cout << "query: " << requestPayload.statement << std::endl;
-  std::cout << "tableGroup: " << requestPayload.tableGroup.name << std::endl;
- 	std::cout << "tables: " << requestPayload.tableGroup.tables.size() << std::endl;
-  std::cout << "tableSize: " << requestPayload.tableGroup.tables.size() << std::endl;
-	//std::cout << "FirstColumn File: "
-	//		<< requestPayload.tableGroup.tables[0].files[0]
-	//		<< std::endl;
+  std::cout << "query: " << requestPayload.statement() << std::endl;
+  std::cout << "tableGroup: " << requestPayload.tableGroup().name << std::endl;
+ 	std::cout << "num tables: " << requestPayload.tableGroup().tables.size() << std::endl;
+  std::cout << "contextToken: " << requestPayload.communicationContext().token << std::endl;
+  std::cout << "contextTotalNodes: " << requestPayload.communicationContext().nodes.size() << std::endl;
   
   uint64_t resultToken = 0L;
   try {
 
+    using blazingdb::communication::ContextToken;
+    using blazingdb::communication::Context;
+    using blazingdb::communication::Node;
+    using blazingdb::communication::Buffer;
+    auto& rawCommContext = requestPayload.communicationContext();
+    std::vector<std::shared_ptr<Node>> contextNodes;
+    for(auto& rawNode: rawCommContext.nodes){
+      auto& rawBuffer = rawNode.buffer;
+      contextNodes.push_back(Node::Make(Buffer(reinterpret_cast<const char*>(rawBuffer.data()), rawBuffer.size())));
+    }
+    auto ctxToken = ContextToken::Make(rawCommContext.token);
+    Context queryContext{ctxToken, contextNodes, contextNodes[rawCommContext.masterIndex], ""};
+    ral::communication::network::Server::getInstance().registerContext(*ctxToken);
+    resultToken = requestPayload.resultToken();
+    result_set_repository::get_instance().register_query(accessToken,resultToken);
 
     // Execute query
-    resultToken = evaluate_query(input_loaders, schemas, table_names, requestPayload.statement, accessToken );
+
+    evaluate_query(input_loaders, schemas, table_names, requestPayload.statement(), accessToken, queryContext, resultToken );
+
   } catch (const std::exception& e) {
      std::cerr << e.what() << std::endl;
      ResponseErrorMessage errorMessage{ std::string{e.what()} };
      return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
 
+  #ifdef USE_UNIX_SOCKETS
+
   interpreter::NodeConnectionDTO nodeInfo {
-      .port = global_port,
-      .path = "/tmp/ral.socket",
+      .port = -1,
+      .path = ral::config::BlazingConfig::getInstance().getSocketPath(),
       .type = NodeConnectionType {NodeConnectionType_TCP}
   };
+
+  #else
+
+  interpreter::NodeConnectionDTO nodeInfo {
+      .port = connectionAddress.tcp_port,
+      //.path = ral::config::BlazingConfig::getInstance().getSocketPath(),
+      //TODO percy felipe experimento con dask worker: si funciona mejora esto
+      .path = "127.0.0.1",
+      .type = NodeConnectionType {NodeConnectionType_TCP}
+  };
+
+  #endif
+
   interpreter::ExecutePlanResponseMessage responsePayload{resultToken, nodeInfo};
   return std::make_pair(Status_Success, responsePayload.getBufferData());
 }
@@ -464,26 +466,124 @@ auto  interpreterServices(const blazingdb::protocol::Buffer &requestPayloadBuffe
 int main(int argc, const char *argv[])
 {
 
-  /*#ifndef VERBOSE
-  std::cout.rdbuf(nullptr); // substitute internal std::cout buffer with
-  #endif // VERBOSE*/
-  
+    std::cout << "Usage: " << argv[0]
+              << " <RAL_ID> <GPU_ID>"
+                 " <ORCHESTRATOR_HTTP_COMMUNICATION_[IP|HOSTNAME]> <ORCHESTRATOR_HTTP_COMMUNICATION_PORT>"
+                 " <RAL_HTTP_COMMUNICATION_[IP|HOSTNAME]> <RAL_HTTP_COMMUNICATION_PORT> <RAL_TCP_PROTOCOL_PORT>" << std::endl;
+
+    if (argc != 8) {
+        std::cout << "FATAL: Invalid number of arguments" << std::endl;
+        return EXIT_FAILURE;
+    }
+
+  // #ifndef VERBOSE
+  // std::cout.rdbuf(nullptr); // substitute internal std::cout buffer with
+  // #endif // VERBOSE
+
     std::cout << "RAL Engine starting" << std::endl;
 
+    const std::string ralId = std::string(argv[1]);
+    const std::string gpuId = std::string(argv[2]);
+    const std::string orchestratorHost = std::string(argv[3]);
+
+    const int orchestratorCommunicationPort = ConnectionUtils::parsePort(argv[4]);
+
+    if (orchestratorCommunicationPort == -1) {
+        std::cout << "FATAL: Invalid Orchestrator HTTP communication port " + std::string(argv[4]) << std::endl;
+        return EXIT_FAILURE;
+    }
+    
+    const std::string ralHost = std::string(argv[5]);
+
+    const int ralCommunicationPort = ConnectionUtils::parsePort(argv[6]);
+
+    if (ralCommunicationPort == -1) {
+        std::cout << "FATAL: Invalid RAL HTTP communication port " + std::string(argv[6]) << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    const int ralProtocolPort = ConnectionUtils::parsePort(argv[7]);
+
+    if (ralProtocolPort == -1) {
+        std::cout << "FATAL: Invalid RAL TCP protocol port " + std::string(argv[7]) << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    std::cout << "RAL ID: " << ralId << std::endl;
+    std::cout << "GPU ID: " << gpuId << std::endl;
+    std::cout << "Orchestrator HTTP communication host: " << orchestratorHost << std::endl;
+    std::cout << "Orchestrator HTTP communication port: " << orchestratorCommunicationPort << std::endl;
+    std::cout << "RAL HTTP communication host: " << ralHost << std::endl;
+    std::cout << "RAL HTTP communication port: " << ralCommunicationPort << std::endl;
+    
+    ral::config::GPUManager::getInstance().initialize(std::stoi(gpuId));
+    
+    auto& communicationData = ral::communication::CommunicationData::getInstance();
+    communicationData.initialize(
+        std::atoi(ralId.c_str()),
+        orchestratorHost,
+        orchestratorCommunicationPort,
+        ralHost,
+        ralCommunicationPort,
+        ralProtocolPort);
+
+    try {
+        auto nodeDataMesssage = ral::communication::messages::Factory::createNodeDataMessage(communicationData.getSelfNode());
+        ral::communication::network::Client::sendNodeData(communicationData.getOrchestratorIp(),
+                                                          communicationData.getOrchestratorPort(),
+                                                          nodeDataMesssage);
+
+        ral::communication::network::Server::start(ralCommunicationPort);
+    } catch (std::exception &e) {
+        std::cerr << e.what() << "\n";
+        return EXIT_FAILURE;
+    }
+
+    auto& config = ral::config::BlazingConfig::getInstance();
+
+
+#ifdef USE_UNIX_SOCKETS
+
+    config.setLogName("RAL." + ralId + ".log")
+          .setSocketPath("/tmp/ral." + ralId + ".socket");
+
+    std::cout << "Socket Name: " << config.getSocketPath() << std::endl;
+
+#else
+
+    // NOTE IMPORTANT PERCY aqui es que pyblazing se entera que este es el ip del RAL en el _send de pyblazing
+    config.setLogName("RAL." + ralId + ".log")
+          .setSocketPath(ralHost);
+
+    std::cout << "Socket Name: " << config.getSocketPath() << std::endl;
+
+#endif
+
+    std::cout << "Log Name: " << config.getLogName() << std::endl;
 
     FreeMemory::Initialize();
 
-    auto output = new Library::Logging::FileOutput("RAL.log", true);
+    auto output = new Library::Logging::FileOutput(config.getLogName(), true);
     Library::Logging::ServiceLogging::getInstance().setLogOutput(output);
 
     // Init AWS S3 ... TODO see if we need to call shutdown and avoid leaks from s3 percy
     BlazingContext::getInstance()->initExternalSystems();
-    
-  global_ip = "/tmp/ral.socket";
-  //global_port = atoi(port.c_str());
 
-  blazingdb::protocol::UnixSocketConnection connection("/tmp/ral.socket");
-  blazingdb::protocol::Server server(connection);
+#ifdef USE_UNIX_SOCKETS
+
+  connectionAddress.unix_socket_path = config.getSocketPath();
+  blazingdb::protocol::UnixSocketConnection connection(connectionAddress);
+
+#else
+
+  connectionAddress.tcp_host = "127.0.0.1"; // NOTE always use localhost for protocol server
+  connectionAddress.tcp_port = ralProtocolPort;
+
+  std::cout << "RAL TCP protocol port: " << connectionAddress.tcp_port << std::endl;
+  
+#endif
+
+  blazingdb::protocol::Server server(connectionAddress.tcp_port);
 
   services.insert(std::make_pair(interpreter::MessageType_ExecutePlanFileSystem, &executeFileSystemPlanService));
   services.insert(std::make_pair(interpreter::MessageType_LoadCsvSchema, &parseSchemaService));

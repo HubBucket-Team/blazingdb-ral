@@ -32,9 +32,9 @@ public:
 
 	void parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 			const std::string & user_readable_file_handle,
-			std::vector<gdf_column_cpp> & columns,
+			std::vector<gdf_column_cpp> & columns_out,
 			const Schema & schema,
-			std::vector<size_t> column_indices);
+			std::vector<size_t> column_indices_requested);
 
 	void parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files,
 			ral::io::Schema & schema);
@@ -43,8 +43,7 @@ private:
 	char quote_character = '\"';
 	csv_read_arg args;
 	std::vector<std::string> column_names;
-	std::vector<std::string> dtype_strings; //this is only because we have to convert for args and dont want to have to remember to free up all the junk later
-	std::map<std::string,std::map<std::string, gdf_column_cpp>> loaded_columns;
+	std::vector<std::string> dtype_strings; //this is only because we have to convert for args and dont want to have to remember to free up all the junk later	
 };
 
 } /* namespace io */

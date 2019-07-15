@@ -42,18 +42,28 @@ include(ConfigureNVStrings)
 include(ConfigureJitify)
 include(ConfigureLibGDF)
 include(ConfigureBlazingDBProtocol)
+include(ConfigureBlazingDBCommunication)
 include(ConfigureBlazingDBIO)
 include(ConfigureGoogleBenchmark)
+include(ConfigureRapidJSON)
 
 find_package(Threads)
 
 # BEGIN MAIN #
+
+# TODO percy move this to tool-chain and add support for cuda def and more than 1 defs
+add_definitions(${CXX_DEFINES})
+get_directory_property(CXX_COMPILE_DEFINITIONS DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS)
+message(STATUS "C++ compiler definitions: ${CXX_COMPILE_DEFINITIONS}")
+
 include_directories(
     ${LIB_BLAZINGIO_INCLUDEDIR}
     ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}
     ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/thirdparty/jitify
+    ${CMAKE_SOURCE_DIR}/src/gdf_wrapper
+    ${RAPIDJSON_INCLUDE_DIRS}
     ${NVSTRINGS_INCLUDEDIR}
     ${CMAKE_SOURCE_DIR}/src/gdf_wrapper)
 
@@ -61,13 +71,31 @@ include_directories(
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/cuDF)
 get_directory_property(cudf_adapter_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/cuDF DEFINITION source_files)
 
+## communication primitives
+add_subdirectory(${CMAKE_SOURCE_DIR}/src/communication)
+get_directory_property(communication_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/communication DEFINITION source_files)
+
+## communication primitives
+add_subdirectory(${CMAKE_SOURCE_DIR}/src/distribution)
+get_directory_property(distribution_source_files DIRECTORY ${CMAKE_SOURCE_DIR}/src/distribution DEFINITION source_files)
+
 ## Target source files
-set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
+set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/config/BlazingConfig.cpp
+              ${CMAKE_SOURCE_DIR}/src/config/GPUManager.cu
+              ${CMAKE_SOURCE_DIR}/src/exception/RalException.cpp
+              ${CMAKE_SOURCE_DIR}/src/operators/OrderBy.cpp
+              ${CMAKE_SOURCE_DIR}/src/operators/JoinOperator.cpp
+              ${CMAKE_SOURCE_DIR}/src/operators/GroupBy.cpp
+              ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
               ${CMAKE_SOURCE_DIR}/src/FreeMemory.cpp
               ${CMAKE_SOURCE_DIR}/src/io/Schema.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_parser/ParquetParser.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_parser/CSVParser.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_parser/GDFParser.cpp 
+              ${CMAKE_SOURCE_DIR}/src/io/data_parser/ParserUtil.cpp 
+              ${CMAKE_SOURCE_DIR}/src/Traits/RuntimeTraits.cpp
+              ${CMAKE_SOURCE_DIR}/src/utilities/RalColumn.cpp
+              ${CMAKE_SOURCE_DIR}/src/utilities/TableWrapper.cpp
               ${CMAKE_CURRENT_SOURCE_DIR}/src/Config/Config.cpp
               ${CMAKE_SOURCE_DIR}/src/CalciteExpressionParsing.cpp
               ${CMAKE_SOURCE_DIR}/src/io/DataLoader.cpp
@@ -79,13 +107,14 @@ set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/io/data_provider/UriDataProvider.cpp
               ${CMAKE_SOURCE_DIR}/src/LogicalFilter.cpp
               ${CMAKE_SOURCE_DIR}/src/QueryState.cpp
               ${CMAKE_SOURCE_DIR}/src/CodeTimer.cpp
-
-
               ${CMAKE_SOURCE_DIR}/src/Utils.cu
               ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
               ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
               ${cudf_adapter_source_files}
-              ${binary_operation_source_files})
+              ${binary_operation_source_files}
+              ${communication_source_files}
+              ${distribution_source_files}
+)
 
 add_library(testing-libgdf_lib ${SRC_FILES})
 
@@ -94,6 +123,7 @@ target_link_libraries(testing-libgdf_lib
     Threads::Threads
     ${ZEROMQ_STATIC_LIB}
     ${BLAZINGDB_PROTOCOL_STATIC_LIB}
+    ${BLAZINGDB_COMMUNICATION_STATIC_LIB}
 
     ${LIBGDF_STATIC_LIB}
     NVCategory
@@ -121,6 +151,9 @@ target_link_libraries(testing-libgdf_lib
     Boost::filesystem
     Boost::system
     Boost::regex
+
+    # Library needed for blazing communication repository (debug)
+    gcov
 )
 
 set(SRC_FILES_APP

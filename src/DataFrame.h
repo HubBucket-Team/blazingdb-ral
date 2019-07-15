@@ -43,6 +43,15 @@ public:
 		return *this;
 	}
 
+	gdf_size_type get_num_rows_in_table(int table_index){
+		if (table_index >= this->columns.size())
+			return 0;
+		else if (this->columns[table_index].size() == 0)
+			return 0;
+		else
+			return this->columns[table_index][0].size();		
+	}
+
 
 	gdf_column_cpp & get_column(int column_index){
 
@@ -63,17 +72,20 @@ public:
 		return columns[columns.size() - 1][cur_count - 1];
 	}
 
-	std::vector< std::vector<gdf_column_cpp> > get_columns(){
+	std::vector<std::vector<gdf_column_cpp>>& get_columns() {
 		return columns;
 	}
-	void add_table(std::vector<gdf_column_cpp> columns_to_add){
+
+	void add_table(std::vector<gdf_column_cpp>& columns_to_add){
 		columns.push_back(columns_to_add);
 		if(columns_to_add.size() > 0){
 			//fill row_indeces with 0 to n
 		}
 	}
 
-
+    void add_table(std::vector<gdf_column_cpp>&& column_array){
+        columns.emplace_back(std::move(column_array));
+    }
 
 	void set_column(size_t column_index, gdf_column_cpp column){
 		size_t cur_count = 0;
@@ -127,6 +139,14 @@ public:
 
 	void clear(){
 		this->columns.resize(0);
+	}
+
+	void empty_columns(){
+		for(std::size_t i = 0; i < columns.size(); i++){
+			for(std::size_t j = 0; j < columns[i].size(); j++){
+				columns[i][j].resize(0);
+			}
+		}
 	}
 
 	void print(std::string title)

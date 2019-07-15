@@ -8,42 +8,7 @@ namespace io {
 //including the file that defines it causes conflicts becuase we are using string util in both libraries
 //we need to fix that probably my moving stringutil out of both, or making it a header only library
 size_t get_width_dtype(gdf_dtype type){
-	if(type == GDF_INT8){
-		return 1;
-	}else if(type == GDF_INT16){
-		return 2;
-	}else if(type == GDF_INT32){
-		return 4;
-	}else if(type == GDF_INT64){
-		return 8;
-	//}
-	//TODO felipe percy noboa see upgrade to uints
-//	else if(type == GDF_UINT8){
-//		return 1;
-//	}else if(type == GDF_UINT16){
-//		return 2;
-//	}else if(type == GDF_UINT32){
-//		return 4;
-//	}else if(type == GDF_UINT64){
-//		return 8;
-	}else if(type == GDF_FLOAT32)
-	{
-		return 4;
-	}else if(type == GDF_FLOAT64){
-		return 8;
-	}else if(type == GDF_DATE32){
-		return 4;
-	}else if(type == GDF_DATE64){
-		return 8;
-	}else if(type == GDF_TIMESTAMP){
-		return 8;
-	}else if(type == GDF_CATEGORY){
-		return 0;
-	}else if(type == GDF_STRING){
-		return 0;
-	}else{
-		return 0;
-	}
+  return gdf_dtype_size(type);
 }
 
 data_loader::data_loader(std::shared_ptr<data_parser> _parser, std::shared_ptr<data_provider> _data_provider): provider(_data_provider), parser(_parser)  {

@@ -24,7 +24,8 @@ namespace adapter {
           const std::size_t offsetsLength = stringsLength + 1;
 
           int * const lengthPerStrings = new int[stringsLength];
-          // TODO: When implement null support, a null-string return -1 as byte_count
+          // TODO: When implement null support, a null-string return -1 as
+          // byte_count
           nvStrings->byte_count(lengthPerStrings, false);
 
           const std::size_t stringsSize = std::accumulate(
@@ -40,21 +41,25 @@ namespace adapter {
           const std::size_t totalSize =
               stringsSize + offsetsSize + 3 * sizeof(const std::size_t);
 
-          binary_pointer += totalSize;
-          result.reserve(totalSize);
-          std::memcpy(&result[0], &stringsSize, sizeof(const std::size_t));
-          std::memcpy(&result[sizeof(const std::size_t)],
+          const std::size_t previousSize = result.size();
+
+          result.resize(previousSize + totalSize);
+          std::memcpy(
+              &result[binary_pointer], &stringsSize, sizeof(const std::size_t));
+          std::memcpy(&result[binary_pointer + sizeof(const std::size_t)],
                       &offsetsSize,
                       sizeof(const std::size_t));
-          std::memcpy(&result[2 * sizeof(const std::size_t)],
+          std::memcpy(&result[binary_pointer + 2 * sizeof(const std::size_t)],
                       &stringsLength,
                       sizeof(const std::size_t));
-          std::memcpy(&result[3 * sizeof(const std::size_t)],
+          std::memcpy(&result[binary_pointer + 3 * sizeof(const std::size_t)],
                       stringsPointer,
                       stringsSize);
-          std::memcpy(&result[3 * sizeof(const std::size_t) + stringsSize],
+          std::memcpy(&result[binary_pointer + 3 * sizeof(const std::size_t) +
+                              stringsSize],
                       offsetsPointer,
                       offsetsSize);
+          binary_pointer += totalSize;
 
           // TODO: remove pointers to map into `result` without bypass
           delete stringsPointer;

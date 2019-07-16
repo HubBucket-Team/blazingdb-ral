@@ -43,6 +43,13 @@ namespace adapter {
 
           const std::size_t previousSize = result.size();
 
+          // WARNING!!! When setting the size of result outside this function,
+          // we are only getting the size for non-string columns. The size we
+          // need for string columns is determined here inside the copyGpuToCpu
+          // where it is resized again. THIS is a bad performance issue. This
+          // needs to be addressed
+          // TODO: Add to cuStrings functions to evaluate the strings and
+          // offsets sizes before generate them and string array length
           result.resize(previousSize + totalSize);
           std::memcpy(
               &result[binary_pointer], &stringsSize, sizeof(const std::size_t));
@@ -61,7 +68,7 @@ namespace adapter {
                       offsetsSize);
           binary_pointer += totalSize;
 
-          binary_pointer += totalSize;   
+          binary_pointer += totalSize;
           // TODO: remove pointers to map into `result` without bypass
           delete stringsPointer;
           delete[] offsetsPointer;

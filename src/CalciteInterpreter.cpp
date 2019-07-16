@@ -9,6 +9,7 @@
 #include <string>
 #include <set>
 
+#include "config/GPUManager.cuh"
 #include "Utils.cuh"
 #include "LogicalFilter.h"
 #include "ResultSetRepository.h"
@@ -983,55 +984,13 @@ void process_filter(blazing_frame & input, std::string query_part){
 		gdf_column_cpp stencil;
 		stencil.create_gdf_column(GDF_INT8,input.get_num_rows_in_table(0),nullptr,1, "");
 
-		gdf_dtype output_type_junk; //just gets thrown away
-		gdf_dtype max_temp_type = GDF_INT8;
-		for(int i = 0; i < input.get_width(); i++){
-			if(get_width_dtype(input.get_column(i).dtype()) > get_width_dtype(max_temp_type)){
-				max_temp_type = input.get_column(i).dtype();
-			}
-		}
-
 		Library::Logging::Logger().logInfo("-> Filter sub block 1 took " + std::to_string(timer.getDuration()) + " ms");
 		timer.reset();
-		gdf_dtype output_type = get_output_type_expression(&input, &max_temp_type, get_named_expression(query_part,"condition"));
 
-		Library::Logging::Logger().logInfo("-> Filter sub block 2 took " + std::to_string(timer.getDuration()) + " ms");
-		
-		timer.reset();
 		std::string conditional_expression = get_condition_expression(query_part);
-		Library::Logging::Logger().logInfo("-> Filter sub block 3 took " + std::to_string(timer.getDuration()) + " ms");
-		// timer.reset();
 		evaluate_expression(input, conditional_expression, stencil);
 
-		// Library::Logging::Logger().logInfo("-> Filter sub block 4 took " + std::to_string(timer.getDuration()) + " ms");
-
-		//apply filter to all the columns
-		// for(int i = 0; i < input.get_width(); i++){
-		// 	temp.create_gdf_column(input.get_column(i).dtype(), input.get_column(i).size(), nullptr, get_width_dtype(input.get_column(i).dtype()));
-		// 	//temp.set_dtype(input.get_column(i).dtype());
-
-		// 	//			cudaPointerAttributes attributes;
-		// 	//			cudaError_t err2 = cudaPointerGetAttributes ( &attributes, (void *) temp.data );
-		// 	//			err2 = cudaPointerGetAttributes ( &attributes, (void *) input.get_column(i)->data );
-		// 	//			err2 = cudaPointerGetAttributes ( &attributes, (void *) stencil.data );
-
-
-		// 	//just for testing
-		// 	//			cudaMalloc((void **)&(temp.data),1000);
-		// 	//			cudaMalloc((void **)&(temp.valid),1000);
-
-			// 	err = gpu_apply_stencil(
-		// 			input.get_column(i).get_gdf_column(),
-		// 			stencil.get_gdf_column(),
-		// 			temp.get_gdf_column()
-		// 	);
-		// 	if(err != GDF_SUCCESS){
-		// 		return err;
-		// 	}
-
-		// 	input.set_column(i,temp.clone());
-		// }
-
+		Library::Logging::Logger().logInfo("-> Filter sub block 3 took " + std::to_string(timer.getDuration()) + " ms");
 		timer.reset();
 		
 		gdf_column_cpp index_col;
@@ -1429,11 +1388,12 @@ query_token_t evaluate_query(
 		std::vector<std::string> table_names,
 		std::string logicalPlan,
 		connection_id_t connection,
-		const Context& queryContext){
-	//register the query so we can receive result requests for it
-	query_token_t token = result_set_repository::get_instance().register_query(connection);
+		const Context& queryContext,
+		query_token_t token ){
 
-	std::thread t = std::thread([=]	{
+	std::thread t([=]	{
+		ral::config::GPUManager::getInstance().setDevice();
+
 		std::vector<std::string> splitted = StringUtil::split(logicalPlan, "\n");
 		if (splitted[splitted.size() - 1].length() == 0) {
 			splitted.erase(splitted.end() -1);
@@ -1462,8 +1422,6 @@ query_token_t evaluate_query(
 			std::cerr << "evaluate_split_query error => " << e.what() << '\n';
 			result_set_repository::get_instance().update_token(token, blazing_frame{}, 0.0, e.what());
 		}
-
-
 	});
 
 	//@todo: hablar con felipe sobre detach

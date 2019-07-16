@@ -937,6 +937,7 @@ void aggregationsMerger(std::vector<NodeColumns>& aggregations, const std::vecto
     assert(columns.size() == totalConcatsOperations);
     for(size_t j = 0; j < totalConcatsOperations; j++)
     {
+    	print_gdf_column(columns[j].get_gdf_column());
       columnsToConcatArray[j].push_back(columns[j].get_gdf_column());
     }
   }

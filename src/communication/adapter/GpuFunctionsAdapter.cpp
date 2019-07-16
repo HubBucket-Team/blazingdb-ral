@@ -61,6 +61,7 @@ namespace adapter {
                       offsetsSize);
           binary_pointer += totalSize;
 
+          binary_pointer += totalSize;   
           // TODO: remove pointers to map into `result` without bypass
           delete stringsPointer;
           delete[] offsetsPointer;

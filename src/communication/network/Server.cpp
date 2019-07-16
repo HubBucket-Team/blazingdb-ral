@@ -1,3 +1,4 @@
+#include "config/GPUManager.cuh"
 #include "communication/network/Server.h"
 #include "communication/messages/ComponentMessages.h"
 
@@ -23,6 +24,8 @@ namespace network {
         setEndPoints();
 
         thread = std::thread([this]() {
+            ral::config::GPUManager::getInstance().setDevice();
+
             comm_server->Run(port_);
         });
         std::this_thread::yield();

@@ -63,6 +63,7 @@ using namespace blazingdb::protocol;
 
 #include "CodeTimer.h"
 #include "config/BlazingConfig.h"
+#include "config/GPUManager.cuh"
 
 #include "communication/CommunicationData.h"
 #include "communication/factory/MessageFactory.h"
@@ -98,20 +99,28 @@ static result_pair  registerFileSystem(uint64_t accessToken, Buffer&& buffer) {
     ResponseErrorMessage errorMessage{ std::string{ "ERROR: Invalid root provided when registering file system"} };
     return std::make_pair(Status_Error, errorMessage.getBufferData());
   }
-  FileSystemEntity fileSystemEntity(authority, fileSystemConnection, root);
-  bool ok = BlazingContext::getInstance()->getFileSystemManager()->deregisterFileSystem(authority);
-  ok = BlazingContext::getInstance()->getFileSystemManager()->registerFileSystem(fileSystemEntity);
-	if (ok) { // then save the fs
-		const FileSystemRepository fileSystemRepository(FS_NAMESPACES_FILE, true);
-		const bool saved = fileSystemRepository.add(fileSystemEntity);
-		if (saved == false) {
-			std::cout << "WARNING: could not save the registered file system into ... the data file uri ..."; //TODO percy error message
-		}
-	} else {
-   	  std::cout << "something went wrong when registering filesystem ..." << std::endl;
-      ResponseErrorMessage errorMessage{ std::string{"ERROR: Something went wrong when registering file system"} };
-      return std::make_pair(Status_Error, errorMessage.getBufferData());
-	}
+  try {
+    FileSystemEntity fileSystemEntity(authority, fileSystemConnection, root);
+    bool ok = BlazingContext::getInstance()->getFileSystemManager()->deregisterFileSystem(authority);
+    ok = BlazingContext::getInstance()->getFileSystemManager()->registerFileSystem(fileSystemEntity);
+    if (ok) { // then save the fs
+      const FileSystemRepository fileSystemRepository(FS_NAMESPACES_FILE, true);
+      const bool saved = fileSystemRepository.add(fileSystemEntity);
+      if (saved == false) {
+        std::cerr << "WARNING: could not save the registered file system into ... the data file uri ..."; //TODO percy error message
+      }
+    } else {
+        std::cerr << "something went wrong when registering filesystem ..." << std::endl;
+        ResponseErrorMessage errorMessage{ std::string{"ERROR: Something went wrong when registering file system"} };
+        return std::make_pair(Status_Error, errorMessage.getBufferData());
+    }
+  } catch(const std::exception& e) {
+    ResponseErrorMessage errorMessage{ std::string{e.what()} };
+    return std::make_pair(Status_Error, errorMessage.getBufferData());
+  }  catch (...) {
+    ResponseErrorMessage errorMessage{ std::string{"Unknown error about filesystem. Probably wrong port."} };
+    return std::make_pair(Status_Error, errorMessage.getBufferData());
+  }
   ZeroMessage response{};
   return std::make_pair(Status_Success, response.getBufferData());
 }
@@ -180,57 +189,55 @@ static result_pair getResultService(uint64_t accessToken, Buffer&& requestPayloa
       //TODO ojo el result siempre es una sola tabla por eso indice 0
       rows =  result.result_frame.get_num_rows_in_table(0);
 
-      if (rows > 0) {
-        for(std::size_t i = 0; i < result.result_frame.get_columns()[0].size(); ++i) {
-          fieldNames.push_back(result.result_frame.get_columns()[0][i].name());
-          columnTokens.push_back(result.result_frame.get_columns()[0][i].get_column_token());
+      for(std::size_t i = 0; i < result.result_frame.get_columns()[0].size(); ++i) {
+        fieldNames.push_back(result.result_frame.get_columns()[0][i].name());
+        columnTokens.push_back(result.result_frame.get_columns()[0][i].get_column_token());
 
-          std::cout << "col_name: " << result.result_frame.get_columns()[0][i].name() << std::endl;
-          nvstrings_ipc_transfer ipc;
-          gdf_dto::gdf_dtype_extra_info dtype_info;
-          ::gdf_dto::gdf_column col;
+        std::cout << "col_name: " << result.result_frame.get_columns()[0][i].name() << std::endl;
+        nvstrings_ipc_transfer ipc;
+        gdf_dto::gdf_dtype_extra_info dtype_info;
+        ::gdf_dto::gdf_column col;
 
-          std::basic_string<int8_t> data;
-          std::basic_string<int8_t> valid;
+        std::basic_string<int8_t> data;
+        std::basic_string<int8_t> valid;
 
-          if(result.result_frame.get_columns()[0][i].dtype() == GDF_STRING){
-            NVStrings* strings = static_cast<NVStrings *> (result.result_frame.get_columns()[0][i].get_gdf_column()->data);
-            if(result.result_frame.get_columns()[0][i].size() > 0)
-              strings->create_ipc_transfer(ipc);
-            dtype_info = gdf_dto::gdf_dtype_extra_info {
-                  .time_unit = (gdf_dto::gdf_time_unit)0,
-              };
-
-            col.data = data;
-            col.valid = valid;
-            col.size = result.result_frame.get_columns()[0][i].size();
-            col.dtype =  (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype();
-            col.dtype_info = dtype_info;
-            col.null_count = static_cast<gdf_size_type>(result.result_frame.get_columns()[0][i].null_count()),
-            // custrings data
-            col.custrings_data = libgdf::ConvertIpcByteArray(ipc);
-
-          }else{
-            dtype_info = gdf_dto::gdf_dtype_extra_info {
-                  .time_unit = (gdf_dto::gdf_time_unit)0     // TODO: why is this hardcoded?
+        if(result.result_frame.get_columns()[0][i].dtype() == GDF_STRING){
+          NVStrings* strings = static_cast<NVStrings *> (result.result_frame.get_columns()[0][i].get_gdf_column()->data);
+          if(result.result_frame.get_columns()[0][i].size() > 0)
+            strings->create_ipc_transfer(ipc);
+          dtype_info = gdf_dto::gdf_dtype_extra_info {
+                .time_unit = (gdf_dto::gdf_time_unit)0,
             };
 
-            if(result.result_frame.get_columns()[0][i].size() > 0) {
-              data = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->data);
-              valid = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->valid);
-            }
-          
-            col.data = data;
-            col.valid = valid;
-            col.size = result.result_frame.get_columns()[0][i].size();
-            col.dtype =  (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype();
-            col.null_count = result.result_frame.get_columns()[0][i].null_count();
-            col.dtype_info = dtype_info;
-          }
+          col.data = data;
+          col.valid = valid;
+          col.size = result.result_frame.get_columns()[0][i].size();
+          col.dtype =  (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype();
+          col.dtype_info = dtype_info;
+          col.null_count = static_cast<gdf_size_type>(result.result_frame.get_columns()[0][i].null_count()),
+          // custrings data
+          col.custrings_data = libgdf::ConvertIpcByteArray(ipc);
 
-          values.push_back(col);
+        }else{
+          dtype_info = gdf_dto::gdf_dtype_extra_info {
+                .time_unit = (gdf_dto::gdf_time_unit)0     // TODO: why is this hardcoded?
+          };
+
+          if(result.result_frame.get_columns()[0][i].size() > 0) {
+            data = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->data);
+            valid = libgdf::BuildCudaIpcMemHandler(result.result_frame.get_columns()[0][i].get_gdf_column()->valid);
+          }
+        
+          col.data = data;
+          col.valid = valid;
+          col.size = result.result_frame.get_columns()[0][i].size();
+          col.dtype =  (gdf_dto::gdf_dtype)result.result_frame.get_columns()[0][i].dtype();
+          col.null_count = result.result_frame.get_columns()[0][i].null_count();
+          col.dtype_info = dtype_info;
         }
-      }
+
+        values.push_back(col);
+      }    
     }
 
     interpreter::BlazingMetadataDTO  metadata = {
@@ -298,16 +305,19 @@ static result_pair parseSchemaService(uint64_t accessToken, Buffer&& requestPayl
 		//this shoudl be done in the orchestrator
 	}
 
-	 std::vector<Uri> uris;
-	 for (auto file_path : requestPayload.files) {
-	     uris.push_back(Uri{file_path});
-	 }
-
-	auto provider = std::make_shared<ral::io::uri_data_provider>(uris);
-	auto loader = std::make_shared<ral::io::data_loader>( parser,provider);
-	ral::io::Schema schema;
-	loader->get_schema(schema);
-
+  std::vector<Uri> uris;
+  for (auto file_path : requestPayload.files) {
+      uris.push_back(Uri{file_path});
+  }
+  auto provider = std::make_shared<ral::io::uri_data_provider>(uris);
+  auto loader = std::make_shared<ral::io::data_loader>( parser,provider);
+  ral::io::Schema schema;
+  try {
+    loader->get_schema(schema);
+  } catch(std::exception & e) {
+    ResponseErrorMessage errorMessage{ std::string{e.what()} };
+    return std::make_pair(Status_Error, errorMessage.getBufferData());
+  }
 
 	blazingdb::protocol::TableSchemaSTL transport_schema = schema.getTransport();
 
@@ -396,10 +406,12 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
     auto ctxToken = ContextToken::Make(rawCommContext.token);
     Context queryContext{ctxToken, contextNodes, contextNodes[rawCommContext.masterIndex], ""};
     ral::communication::network::Server::getInstance().registerContext(*ctxToken);
-
+    resultToken = requestPayload.resultToken();
+    result_set_repository::get_instance().register_query(accessToken,resultToken);
 
     // Execute query
-    resultToken = evaluate_query(input_loaders, schemas, table_names, requestPayload.statement(), accessToken, queryContext );
+
+    evaluate_query(input_loaders, schemas, table_names, requestPayload.statement(), accessToken, queryContext, resultToken );
 
   } catch (const std::exception& e) {
      std::cerr << e.what() << std::endl;
@@ -455,11 +467,11 @@ int main(int argc, const char *argv[])
 {
 
     std::cout << "Usage: " << argv[0]
-            << " <RAL_ID>"
-                " <ORCHESTRATOR_HTTP_COMMUNICATION_[IP|HOSTNAME]> <ORCHESTRATOR_HTTP_COMMUNICATION_PORT>"
-                " <RAL_HTTP_COMMUNICATION_[IP|HOSTNAME]> <RAL_HTTP_COMMUNICATION_PORT> <RAL_TCP_PROTOCOL_PORT>" << std::endl;
+              << " <RAL_ID> <GPU_ID>"
+                 " <ORCHESTRATOR_HTTP_COMMUNICATION_[IP|HOSTNAME]> <ORCHESTRATOR_HTTP_COMMUNICATION_PORT>"
+                 " <RAL_HTTP_COMMUNICATION_[IP|HOSTNAME]> <RAL_HTTP_COMMUNICATION_PORT> <RAL_TCP_PROTOCOL_PORT>" << std::endl;
 
-    if (argc != 7) {
+    if (argc != 8) {
         std::cout << "FATAL: Invalid number of arguments" << std::endl;
         return EXIT_FAILURE;
     }
@@ -471,33 +483,42 @@ int main(int argc, const char *argv[])
     std::cout << "RAL Engine starting" << std::endl;
 
     const std::string ralId = std::string(argv[1]);
-    const std::string orchestratorHost = std::string(argv[2]);
+    const std::string gpuId = std::string(argv[2]);
+    const std::string orchestratorHost = std::string(argv[3]);
 
-    const int orchestratorCommunicationPort = ConnectionUtils::parsePort(argv[3]);
+    const int orchestratorCommunicationPort = ConnectionUtils::parsePort(argv[4]);
 
     if (orchestratorCommunicationPort == -1) {
-        std::cout << "FATAL: Invalid Orchestrator HTTP communication port " + std::string(argv[3]) << std::endl;
+        std::cout << "FATAL: Invalid Orchestrator HTTP communication port " + std::string(argv[4]) << std::endl;
         return EXIT_FAILURE;
     }
     
-    const std::string ralHost = std::string(argv[4]);
+    const std::string ralHost = std::string(argv[5]);
 
-    const int ralCommunicationPort = ConnectionUtils::parsePort(argv[5]);
+    const int ralCommunicationPort = ConnectionUtils::parsePort(argv[6]);
 
     if (ralCommunicationPort == -1) {
-        std::cout << "FATAL: Invalid RAL HTTP communication port " + std::string(argv[5]) << std::endl;
+        std::cout << "FATAL: Invalid RAL HTTP communication port " + std::string(argv[6]) << std::endl;
         return EXIT_FAILURE;
     }
 
-    const int ralProtocolPort = ConnectionUtils::parsePort(argv[6]);
+    const int ralProtocolPort = ConnectionUtils::parsePort(argv[7]);
 
     if (ralProtocolPort == -1) {
-        std::cout << "FATAL: Invalid RAL TCP protocol port " + std::string(argv[6]) << std::endl;
+        std::cout << "FATAL: Invalid RAL TCP protocol port " + std::string(argv[7]) << std::endl;
         return EXIT_FAILURE;
     }
+
+    std::cout << "RAL ID: " << ralId << std::endl;
+    std::cout << "GPU ID: " << gpuId << std::endl;
+    std::cout << "Orchestrator HTTP communication host: " << orchestratorHost << std::endl;
+    std::cout << "Orchestrator HTTP communication port: " << orchestratorCommunicationPort << std::endl;
+    std::cout << "RAL HTTP communication host: " << ralHost << std::endl;
+    std::cout << "RAL HTTP communication port: " << ralCommunicationPort << std::endl;
+    
+    ral::config::GPUManager::getInstance().initialize(std::stoi(gpuId));
     
     auto& communicationData = ral::communication::CommunicationData::getInstance();
-
     communicationData.initialize(
         std::atoi(ralId.c_str()),
         orchestratorHost,
@@ -505,12 +526,6 @@ int main(int argc, const char *argv[])
         ralHost,
         ralCommunicationPort,
         ralProtocolPort);
-
-    std::cout << "RAL ID: " << ralId << std::endl;
-    std::cout << "Orchestrator HTTP communication host: " << orchestratorHost << std::endl;
-    std::cout << "Orchestrator HTTP communication port: " << orchestratorCommunicationPort << std::endl;
-    std::cout << "RAL HTTP communication host: " << ralHost << std::endl;
-    std::cout << "RAL HTTP communication port: " << ralCommunicationPort << std::endl;
 
     try {
         auto nodeDataMesssage = ral::communication::messages::Factory::createNodeDataMessage(communicationData.getSelfNode());

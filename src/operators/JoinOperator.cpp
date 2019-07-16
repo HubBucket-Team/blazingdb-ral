@@ -1,5 +1,6 @@
 #include <future>
 #include <algorithm>
+#include "config/GPUManager.cuh"
 #include "operators/JoinOperator.h"
 #include "CalciteInterpreter.h"
 #include "CodeTimer.h"
@@ -189,7 +190,10 @@ blazing_frame DistributedJoinOperator::operator()(blazing_frame& frame, const st
 
 std::vector<gdf_column_cpp> DistributedJoinOperator::process_distribution_table(std::vector<gdf_column_cpp>& table, std::vector<int>& columnIndices) {
     auto future_node_columns = std::async(std::launch::async,
-                                          ral::distribution::collectPartitions,
+                                          [](const Context& context){
+                                              ral::config::GPUManager::getInstance().setDevice();
+                                              return ral::distribution::collectPartitions(context);
+                                          },
                                           std::ref(*context_));
 
     auto local_node_columns = ral::distribution::generateJoinPartitions(*context_, table, columnIndices);

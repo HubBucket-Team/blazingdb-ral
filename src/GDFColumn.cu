@@ -237,13 +237,18 @@ void gdf_column_cpp::create_gdf_column(NVCategory* category, size_t num_values,s
     cuDF::Allocator::allocate((void**)&this->column->data, this->allocated_size_data);
     CheckCudaErrors( cudaMemcpy(
         this->column->data,
-        static_cast<NVCategory *>(this->column->dtype_info.category)->values_cptr(),
+        category->values_cptr(),
         this->allocated_size_data,
         cudaMemcpyDeviceToDevice) );
     
-    this->column->valid = nullptr; // TODO: Nulls are not supported for strings
+    this->column->valid = nullptr;
     this->allocated_size_valid = 0;
-    this->column->null_count = 0; // TODO: Nulls are not supported for strings
+    this->column->null_count = 0;
+
+    if (category->has_nulls()) {
+        this->column->valid = allocate_valid();
+        this->column->null_count = category->set_null_bitarray((gdf_valid_type*)this->column->valid);
+    }
 
     this->is_ipc_column = false;
     this->column_token = 0;
@@ -332,6 +337,12 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     this->allocated_size_valid = 0;
 
     gdf_valid_type * valid_device = nullptr;
+    if (type != GDF_STRING){
+        valid_device = allocate_valid();        
+    } else {
+        this->allocated_size_valid = 0;
+    }
+    this->allocated_size_data = (width_per_value * num_values); 
 
     if (num_values > 0) {    
         
@@ -394,11 +405,12 @@ void gdf_column_cpp::create_gdf_column(const gdf_scalar & scalar, const std::str
     //TODO: this is kind of bad its a chicken and egg situation with column_view requiring a pointer to device and allocate_valid
     //needing to not require numvalues so it can be called rom outside
     this->get_gdf_column()->size = 1;
+    this->get_gdf_column()->dtype = type;
     char * data;
     this->is_ipc_column = false;
     this->column_token = 0;
     size_t width_per_value = gdf_dtype_size(type);
-
+    
     this->allocated_size_data = width_per_value; 
 
     cuDF::Allocator::allocate((void**)&data, allocated_size_data);
@@ -412,8 +424,9 @@ void gdf_column_cpp::create_gdf_column(const gdf_scalar & scalar, const std::str
         this->allocated_size_valid = 0;
         this->get_gdf_column()->null_count = 0;
     }
-
-    gdf_column_view(this->column, (void *) data, valid_device, 1, type);
+    this->get_gdf_column()->data = (void *) data;
+    this->get_gdf_column()->valid = valid_device;
+    
     this->set_name(column_name);
     if(scalar.is_valid){
         if(type == GDF_INT8){

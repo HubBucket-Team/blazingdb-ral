@@ -70,8 +70,9 @@ namespace adapter {
 
           binary_pointer += totalSize;
           // TODO: remove pointers to map into `result` without bypass
-          delete stringsPointer;
+          delete[] stringsPointer;
           delete[] offsetsPointer;
+          delete[] lengthPerStrings;
           NVStrings::destroy(nvStrings);
         } else {
           std::size_t data_size = getDataCapacity(column.get_gdf_column());

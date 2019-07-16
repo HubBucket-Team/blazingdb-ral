@@ -24,7 +24,7 @@
 #include "operators/GroupBy.h"
 #include "copying.hpp"
 #include "sorted_merge.hpp"
-
+#include "string/nvcategory_util.hpp"
 
 namespace ral {
 namespace distribution {
@@ -192,11 +192,11 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
                                 columnsToConcatArray[i].size()) );
   }
 
-  std::cout << "After Concat\n";
-  for(auto& p : concatSamples)
-  {
-      print_gdf_column(p.get_gdf_column());
-  }
+  // std::cout << "After Concat\n";
+  // for(auto& p : concatSamples)
+  // {
+  //     print_gdf_column(p.get_gdf_column());
+  // }
 
   // Sort
   std::vector<gdf_column*> rawConcatSamples(concatSamples.size());
@@ -235,11 +235,11 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
     sortedSamples[i].update_null_count();
 	}
 
-  std::cout << "After Sort\n";
-  for(auto& p : sortedSamples)
-  {
-      print_gdf_column(p.get_gdf_column());
-  }
+  // std::cout << "After Sort\n";
+  // for(auto& p : sortedSamples)
+  // {
+  //     print_gdf_column(p.get_gdf_column());
+  // }
 
   // Gather
   std::vector<gdf_column*> rawSortedSamples(sortedSamples.size());
@@ -267,6 +267,14 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
   print_gdf_column(gatherMap.get_gdf_column());
 
   cudf::gather(&srcTable, (gdf_index_type*)(gatherMap.get_gdf_column()->data), &destTable);
+  
+  for(int i = 0; i < destTable.num_columns(); ++i){
+    auto* srcCol = srcTable.get_column(i);
+    auto* dstCol = destTable.get_column(i);
+    if(dstCol->dtype == GDF_STRING_CATEGORY){
+      nvcategory_gather(dstCol,static_cast<NVCategory *>(srcCol->dtype_info.category));
+    }
+  }
 
   std::cout << "After Gather\n";
   for(auto& p : pivots)
@@ -393,8 +401,8 @@ std::vector<NodeColumns> partitionData(const Context& context,
                               false,  // nulls_appear_before_values
                               true) );  // use_haystack_length_for_not_found
 
-    std::cout << "multisearch indices\n";
-    print_gdf_column(indexes.get_gdf_column());
+    // std::cout << "multisearch indices\n";
+    // print_gdf_column(indexes.get_gdf_column());
 
     sort_indices(indexes);
     
@@ -474,6 +482,10 @@ void sortedMerger(std::vector<NodeColumns>& columns, std::vector<int8_t>& sortOr
                                   cudf::table(rawRightCols.data(), rawRightCols.size()),
                                   sortColIndices,
                                   ascDesc);
+
+    // std::for_each(leftTable.begin(), leftTable.end(), [](auto* c){
+    //   print_gdf_column(c);
+    // });
   }
 
   for (size_t i = 0; i < leftTable.num_columns(); i++) {
@@ -652,6 +664,14 @@ std::vector<gdf_column_cpp> generatePartitionPlansGroupBy(const Context& context
   print_gdf_column(gatherMap.get_gdf_column());
 
   cudf::gather(&srcTable, (gdf_index_type*)(gatherMap.get_gdf_column()->data), &destTable);
+
+  for(int i = 0; i < destTable.num_columns(); ++i){
+    auto* srcCol = srcTable.get_column(i);
+    auto* dstCol = destTable.get_column(i);
+    if(dstCol->dtype == GDF_STRING_CATEGORY){
+      nvcategory_gather(dstCol,static_cast<NVCategory *>(srcCol->dtype_info.category));
+    }
+  }
 
   std::cout << "After Gather\n";
   for(auto& p : pivots)

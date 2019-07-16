@@ -4,6 +4,7 @@
 #include <copying.hpp>
 #include <types.hpp>
 #include "table.hpp"
+#include "string/nvcategory_util.hpp"
 
 namespace cudf {
 namespace generator {
@@ -48,6 +49,14 @@ gdf_error generate_sample(std::vector<gdf_column_cpp>& data_frame,
     // print_gdf_column(gatherMap.get_gdf_column());
 
     cudf::gather(&srcTable, (gdf_index_type*)(gatherMap.get_gdf_column()->data), &destTable);
+
+    for(int i = 0; i < destTable.num_columns(); ++i){
+        auto* srcCol = srcTable.get_column(i);
+        auto* dstCol = destTable.get_column(i);
+        if(dstCol->dtype == GDF_STRING_CATEGORY){
+            nvcategory_gather(dstCol,static_cast<NVCategory *>(srcCol->dtype_info.category));
+        }
+    }
 
     return GDF_SUCCESS;
 }

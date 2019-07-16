@@ -1072,11 +1072,13 @@ std::vector<NodeColumns> generateJoinPartitions(const Context& context,
                                                 std::vector<int>& columnIndices) {
     assert(table.size() != 0);
 
-    // Table data
-    gdf_size_type input_column_quantity = table.size();
-    gdf_size_type input_column_size = table[0].size();
+    std::vector<gdf_column*> raw_input_table_col_ptrs(table.size());
+    std::transform(table.begin(), table.end(), raw_input_table_col_ptrs.begin(), [](auto& cpp_col){
+      return cpp_col.get_gdf_column();
+    });
+    cudf::table input_table_wrapper(raw_input_table_col_ptrs);
     
-    if (input_column_size == 0) {
+    if (input_table_wrapper.num_rows() == 0) {
         std::vector<NodeColumns> result;
         auto nodes = context.getAllNodes();
         for (gdf_size_type k = 0; k < nodes.size(); ++k) {
@@ -1086,28 +1088,37 @@ std::vector<NodeColumns> generateJoinPartitions(const Context& context,
         return result;
     }
 
-    // Create input wrapper
-    ral::utilities::TableWrapper input_table_wrapper(table);
-
     // Generate partition offset vector
     gdf_size_type number_nodes = context.getTotalNodes();
     std::vector<gdf_index_type> partition_offset(number_nodes);
 
     // Preallocate output columns
-    std::vector<gdf_column_cpp> output_columns = generateOutputColumns(input_column_quantity,
-                                                                       input_column_size,
+    std::vector<gdf_column_cpp> output_columns = generateOutputColumns(input_table_wrapper.num_columns(),
+                                                                       input_table_wrapper.num_rows(),
                                                                        table);
-    ral::utilities::TableWrapper output_table_wrapper(output_columns);
+    std::vector<gdf_column*> raw_output_table_col_ptrs(table.size());
+    std::transform(output_columns.begin(), output_columns.end(), raw_output_table_col_ptrs.begin(), [](auto& cpp_col){
+      return cpp_col.get_gdf_column();
+    });
+    cudf::table output_table_wrapper(raw_output_table_col_ptrs);
 
     // Execute operation
-    CUDF_CALL( gdf_hash_partition(input_table_wrapper.getQuantity(),
-                                  input_table_wrapper.getColumns(),
+    CUDF_CALL( gdf_hash_partition(input_table_wrapper.num_columns(),
+                                  input_table_wrapper.begin(),
                                   columnIndices.data(),
                                   columnIndices.size(),
                                   number_nodes,
-                                  output_table_wrapper.getColumns(),
+                                  output_table_wrapper.begin(),
                                   partition_offset.data(),
                                   gdf_hash_func::GDF_HASH_MURMUR3) );
+
+    for(int i = 0; i < output_table_wrapper.num_columns(); ++i){
+      auto* srcCol = input_table_wrapper.get_column(i);
+      auto* dstCol = output_table_wrapper.get_column(i);
+      if(dstCol->dtype == GDF_STRING_CATEGORY){
+        nvcategory_gather(dstCol,static_cast<NVCategory *>(srcCol->dtype_info.category));
+      }
+    }      
 
     // Erase input table
     table.clear();

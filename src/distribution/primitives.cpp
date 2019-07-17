@@ -186,7 +186,7 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
   std::vector<gdf_column_cpp> concatSamples(totalConcatsOperations);
   for(size_t i = 0; i < concatSamples.size(); i++) {
     auto& col = tempCols[i];
-    if (col.valid()) {
+    if (std::any_of(columnsToConcatArray[i].begin(), columnsToConcatArray[i].end(), [](auto* c){ return c->valid != nullptr; })) {
       concatSamples[i].create_gdf_column(col.dtype(), outputRowSize, nullptr, get_width_dtype(col.dtype()), col.name());
     } else {
       concatSamples[i].create_gdf_column(col.dtype(), outputRowSize, nullptr, nullptr, get_width_dtype(col.dtype()), col.name());
@@ -531,7 +531,7 @@ std::vector<gdf_column_cpp> generatePartitionPlansGroupBy(const Context& context
   for(size_t i = 0; i < concatSamples.size(); i++)
   {
     auto& col = tempCols[i];
-    if (col.valid()) {
+    if (std::any_of(columnsToConcatArray[i].begin(), columnsToConcatArray[i].end(), [](auto* c){ return c->valid != nullptr; })) {
       concatSamples[i].create_gdf_column(col.dtype(), outputRowSize, nullptr, get_width_dtype(col.dtype()), col.name());
     } else {
       concatSamples[i].create_gdf_column(col.dtype(), outputRowSize, nullptr, nullptr, get_width_dtype(col.dtype()), col.name());

@@ -30,11 +30,12 @@ gdf_error generate_sample(std::vector<gdf_column_cpp>& data_frame,
     std::vector<gdf_column*> raw_data_frame(data_frame.size());
     std::vector<gdf_column*> raw_sampled_data(data_frame.size());
     for(size_t i = 0; i < data_frame.size(); i++) {
-        sampled_data[i].create_gdf_column(data_frame[i].dtype(),
-                                        arrayIdx.size(),
-                                        nullptr,
-                                        get_width_dtype(data_frame[i].dtype()),
-                                        data_frame[i].name());
+		auto& input_col = data_frame[i];
+		if (input_col.valid())
+			sampled_data[i].create_gdf_column(input_col.dtype(), arrayIdx.size(), nullptr, get_width_dtype(input_col.dtype()), input_col.name());
+		else 
+			sampled_data[i].create_gdf_column(input_col.dtype(), arrayIdx.size(), nullptr, nullptr, get_width_dtype(input_col.dtype()), input_col.name());
+
         raw_sampled_data[i] = sampled_data[i].get_gdf_column();
         raw_data_frame[i] = data_frame[i].get_gdf_column();
     }

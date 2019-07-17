@@ -184,9 +184,14 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
 
   auto& tempCols = samples[0].getColumnsRef();
   std::vector<gdf_column_cpp> concatSamples(totalConcatsOperations);
-  for(size_t i = 0; i < concatSamples.size(); i++)
-  {
-    concatSamples[i].create_gdf_column(tempCols[i].dtype(), outputRowSize, nullptr, get_width_dtype(tempCols[i].dtype()), tempCols[i].name());
+  for(size_t i = 0; i < concatSamples.size(); i++) {
+    auto& col = tempCols[i];
+    if (col.valid()) {
+      concatSamples[i].create_gdf_column(col.dtype(), outputRowSize, nullptr, get_width_dtype(col.dtype()), col.name());
+    } else {
+      concatSamples[i].create_gdf_column(col.dtype(), outputRowSize, nullptr, nullptr, get_width_dtype(col.dtype()), col.name());
+    }
+
     CUDF_CALL( gdf_column_concat(concatSamples[i].get_gdf_column(),
                                 columnsToConcatArray[i].data(),
                                 columnsToConcatArray[i].size()) );
@@ -222,11 +227,13 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
 
   std::vector<gdf_column_cpp> sortedSamples(concatSamples.size());
  	for(size_t i = 0; i < sortedSamples.size(); i++) {
-    sortedSamples[i].create_gdf_column(concatSamples[i].dtype(),
-																			concatSamples[i].size(),
-																			nullptr,
-																			get_width_dtype(concatSamples[i].dtype()),
-																			concatSamples[i].name());
+    auto& col = concatSamples[i];
+    if (col.valid()) {
+      sortedSamples[i].create_gdf_column(col.dtype(), col.size(), nullptr, get_width_dtype(col.dtype()), col.name());
+    } else {
+      sortedSamples[i].create_gdf_column(col.dtype(), col.size(), nullptr, nullptr, get_width_dtype(col.dtype()), col.name());
+    }
+
     materialize_column(
       concatSamples[i].get_gdf_column(),
       sortedSamples[i].get_gdf_column(),
@@ -246,11 +253,13 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
   std::vector<gdf_column*> rawPivots(sortedSamples.size());
   std::vector<gdf_column_cpp> pivots(sortedSamples.size());
  	for(size_t i = 0; i < sortedSamples.size(); i++) {
-    pivots[i].create_gdf_column(sortedSamples[i].dtype(),
-                                context.getTotalNodes() - 1,
-                                nullptr,
-                                get_width_dtype(sortedSamples[i].dtype()),
-                                sortedSamples[i].name());
+    auto& col = sortedSamples[i];
+    if (col.valid()) {
+      pivots[i].create_gdf_column(col.dtype(), context.getTotalNodes() - 1, nullptr, get_width_dtype(col.dtype()), col.name());
+    } else {
+      pivots[i].create_gdf_column(col.dtype(), context.getTotalNodes() - 1, nullptr, nullptr, get_width_dtype(col.dtype()), col.name());
+    }
+    
     rawPivots[i] = pivots[i].get_gdf_column();
     rawSortedSamples[i] = sortedSamples[i].get_gdf_column();
 	}

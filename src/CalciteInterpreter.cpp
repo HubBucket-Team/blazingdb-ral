@@ -28,6 +28,7 @@
 #include "stream_compaction.hpp"
 #include "groupby.hpp"
 #include "table.hpp"
+#include "cudf/binaryop.hpp"
 
 const std::string LOGICAL_JOIN_TEXT = "LogicalJoin";
 const std::string LOGICAL_UNION_TEXT = "LogicalUnion";

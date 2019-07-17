@@ -1,16 +1,17 @@
 #include "Traits/RuntimeTraits.h"
 #include "GDFColumn.cuh"
 #include <cudf.h>
+#include <cudf/column_utils.hpp>
 
 namespace ral {
 namespace traits {
 
     gdf_size_type get_dtype_size_in_bytes(const gdf_column* column) {
-        return gdf_dtype_size(column->dtype);
+        return cudf::size_of(column->dtype);
     }
 
     gdf_size_type get_dtype_size_in_bytes(gdf_dtype dtype) {
-        return gdf_dtype_size(dtype);
+        return cudf::size_of(dtype);
     }
 
     gdf_size_type get_data_size_in_bytes(const gdf_column* column) {

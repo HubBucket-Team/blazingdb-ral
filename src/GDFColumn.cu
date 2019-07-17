@@ -20,6 +20,7 @@
 
 #include "bitmask.hpp"
 #include "FreeMemory.h"
+#include <cudf/column_utils.hpp>
 
 gdf_column_cpp::gdf_column_cpp()
 {
@@ -409,7 +410,7 @@ void gdf_column_cpp::create_gdf_column(const gdf_scalar & scalar, const std::str
     char * data;
     this->is_ipc_column = false;
     this->column_token = 0;
-    size_t width_per_value = gdf_dtype_size(type);
+    size_t width_per_value = cudf::size_of(type);
     
     this->allocated_size_data = width_per_value; 
 

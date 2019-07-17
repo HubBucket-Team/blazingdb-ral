@@ -12,6 +12,7 @@
 #include <vector>
 #include "gdf_wrapper/gdf_wrapper.cuh"
 #include "cudf/types.h"
+#include "cudf/binaryop.hpp"
 
 class blazing_frame;
 

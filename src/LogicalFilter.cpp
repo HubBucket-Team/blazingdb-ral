@@ -20,7 +20,7 @@
 
 #include "Interpreter/interpreter_cpp.h"
 #include "string/nvcategory_util.hpp"
-
+#include "cudf/binaryop.hpp"
 
 typedef struct {
 	std::string token;

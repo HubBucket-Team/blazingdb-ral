@@ -20,6 +20,7 @@
 #include "gdf/library/table_group.h"
 #include "gdf/library/types.h"
 #include "gdf/library/api.h"
+#include "cudf/binaryop.hpp"
 using namespace gdf::library;
 
 struct EvaluateQueryTest : public ::testing::Test

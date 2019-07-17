@@ -13,6 +13,7 @@
 #include <string>
 #include "DataFrame.h"
 #include "Utils.cuh"
+#include "cudf/binaryop.hpp"
 
 typedef short column_index_type;
 

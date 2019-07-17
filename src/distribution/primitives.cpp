@@ -530,17 +530,23 @@ std::vector<gdf_column_cpp> generatePartitionPlansGroupBy(const Context& context
   std::vector<gdf_column_cpp> concatSamples{totalConcatsOperations};
   for(size_t i = 0; i < concatSamples.size(); i++)
   {
-    concatSamples[i].create_gdf_column(tempCols[i].dtype(), outputRowSize, nullptr, get_width_dtype(tempCols[i].dtype()), tempCols[i].name());
+    auto& col = tempCols[i];
+    if (col.valid()) {
+      concatSamples[i].create_gdf_column(col.dtype(), outputRowSize, nullptr, get_width_dtype(col.dtype()), col.name());
+    } else {
+      concatSamples[i].create_gdf_column(col.dtype(), outputRowSize, nullptr, nullptr, get_width_dtype(col.dtype()), col.name());
+    }
+
     CUDF_CALL( gdf_column_concat(concatSamples[i].get_gdf_column(),
                                 columnsToConcatArray[i].data(),
                                 columnsToConcatArray[i].size()) );
   }
 
-  std::cout << "After Concat\n";
-  for(auto& p : concatSamples)
-  {
-      print_gdf_column(p.get_gdf_column());
-  }
+  // std::cout << "After Concat\n";
+  // for(auto& p : concatSamples)
+  // {
+  //     print_gdf_column(p.get_gdf_column());
+  // }
 
   // // Get uniques
   // std::vector<gdf_column*> rawConcatSamples(concatSamples.size());
@@ -601,11 +607,11 @@ std::vector<gdf_column_cpp> generatePartitionPlansGroupBy(const Context& context
 
 /****/
 
-  std::cout << "After Group\n";
-  for(auto& p : groupedSamples)
-  {
-      print_gdf_column(p.get_gdf_column());
-  }
+  // std::cout << "After Group\n";
+  // for(auto& p : groupedSamples)
+  // {
+  //     print_gdf_column(p.get_gdf_column());
+  // }
 
   // Sort
   std::vector<gdf_column*> rawGroupedSamples{groupedSamples.size()};
@@ -628,11 +634,13 @@ std::vector<gdf_column_cpp> generatePartitionPlansGroupBy(const Context& context
 
   std::vector<gdf_column_cpp> sortedSamples(groupedSamples.size());
  	for(size_t i = 0; i < sortedSamples.size(); i++) {
-    sortedSamples[i].create_gdf_column(groupedSamples[i].dtype(),
-																			groupedSamples[i].size(),
-																			nullptr,
-																			get_width_dtype(groupedSamples[i].dtype()),
-																			groupedSamples[i].name());
+    auto& col = groupedSamples[i];
+    if (col.valid()) {
+      sortedSamples[i].create_gdf_column(col.dtype(), col.size(), nullptr, get_width_dtype(col.dtype()), col.name());
+    } else {
+      sortedSamples[i].create_gdf_column(col.dtype(), col.size(), nullptr, nullptr, get_width_dtype(col.dtype()), col.name());
+    }
+
     materialize_column(
       groupedSamples[i].get_gdf_column(),
       sortedSamples[i].get_gdf_column(),
@@ -641,22 +649,24 @@ std::vector<gdf_column_cpp> generatePartitionPlansGroupBy(const Context& context
     sortedSamples[i].update_null_count();
 	}
 
-  std::cout << "After Sort\n";
-  for(auto& p : sortedSamples)
-  {
-      print_gdf_column(p.get_gdf_column());
-  }
+  // std::cout << "After Sort\n";
+  // for(auto& p : sortedSamples)
+  // {
+  //     print_gdf_column(p.get_gdf_column());
+  // }
 
   // Gather
   std::vector<gdf_column*> rawSortedSamples{sortedSamples.size()};
   std::vector<gdf_column*> rawPivots{sortedSamples.size()};
   std::vector<gdf_column_cpp> pivots{sortedSamples.size()};
  	for(size_t i = 0; i < sortedSamples.size(); i++) {
-    pivots[i].create_gdf_column(sortedSamples[i].dtype(),
-                                context.getTotalNodes() - 1,
-                                nullptr,
-                                get_width_dtype(sortedSamples[i].dtype()),
-                                sortedSamples[i].name());
+    auto& col = sortedSamples[i];
+    if (col.valid()) {
+      pivots[i].create_gdf_column(col.dtype(), context.getTotalNodes() - 1, nullptr, get_width_dtype(col.dtype()), col.name());
+    } else {
+      pivots[i].create_gdf_column(col.dtype(), context.getTotalNodes() - 1, nullptr, nullptr, get_width_dtype(col.dtype()), col.name());
+    }
+
     rawPivots[i] = pivots[i].get_gdf_column();
     rawSortedSamples[i] = sortedSamples[i].get_gdf_column();
 	}
@@ -730,11 +740,11 @@ void groupByWithoutAggregationsMerger(std::vector<NodeColumns>& groups, const st
                                 columnsToConcatArray[i].size()) );
   }
 
-  std::cout << "After Concat\n";
-  for(auto& p : concatGroups)
-  {
-    print_gdf_column(p.get_gdf_column());
-  }
+  // std::cout << "After Concat\n";
+  // for(auto& p : concatGroups)
+  // {
+  //   print_gdf_column(p.get_gdf_column());
+  // }
 
   // Do groupBy
   // size_t nCols = concatGroups.size();
@@ -791,11 +801,11 @@ void groupByWithoutAggregationsMerger(std::vector<NodeColumns>& groups, const st
 
 
 
-  std::cout << "After Merge\n";
-  for(auto& p : groupedOutput)
-  {
-    print_gdf_column(p.get_gdf_column());
-  }
+  // std::cout << "After Merge\n";
+  // for(auto& p : groupedOutput)
+  // {
+  //   print_gdf_column(p.get_gdf_column());
+  // }
 
 	output.clear();
 	output.add_table(groupedOutput);
@@ -966,7 +976,6 @@ void aggregationsMerger(std::vector<NodeColumns>& aggregations, const std::vecto
     assert(columns.size() == totalConcatsOperations);
     for(size_t j = 0; j < totalConcatsOperations; j++)
     {
-    	print_gdf_column(columns[j].get_gdf_column());
       columnsToConcatArray[j].push_back(columns[j].get_gdf_column());
     }
   }
@@ -989,11 +998,11 @@ void aggregationsMerger(std::vector<NodeColumns>& aggregations, const std::vecto
                                 columnsToConcatArray[i].size()) );
   }
 
-  std::cout << "After Concat\n";
-  for(auto& p : concatAggregations)
-  {
-    print_gdf_column(p.get_gdf_column());
-  }
+  // std::cout << "After Concat\n";
+  // for(auto& p : concatAggregations)
+  // {
+  //   print_gdf_column(p.get_gdf_column());
+  // }
 
   // Do aggregations
 	std::vector<gdf_column*> rawGroupByColumns(groupColIndices.size());
@@ -1044,11 +1053,11 @@ void aggregationsMerger(std::vector<NodeColumns>& aggregations, const std::vecto
 		std::make_move_iterator(aggregatedColumns.end())
 	);
 
-  std::cout << "After Merge\n";
-  for(auto& p : outputTable)
-  {
-    print_gdf_column(p.get_gdf_column());
-  }
+  // std::cout << "After Merge\n";
+  // for(auto& p : outputTable)
+  // {
+  //   print_gdf_column(p.get_gdf_column());
+  // }
 
 	output.clear();
 	output.add_table(outputTable);

@@ -13,7 +13,7 @@
 #include <memory>
 #include "arrow/io/interfaces.h"
 #include "GDFColumn.cuh"
-#include "cudf.h"
+#include <cudf/io_types.hpp>
 
 namespace ral {
 namespace io {
@@ -25,7 +25,7 @@ public:
 			int skip_rows,
 			 std::vector<std::string>  names,
 			std::vector<gdf_dtype>  dtypes);
-	csv_parser(csv_read_arg	args);
+	csv_parser(cudf::io::csv::reader_options	args);
 
 	virtual ~csv_parser();
 
@@ -41,7 +41,7 @@ public:
 
 private:
 	char quote_character = '\"';
-	csv_read_arg args;
+	cudf::io::csv::reader_options args;
 	std::vector<std::string> column_names;
 	std::vector<std::string> dtype_strings; //this is only because we have to convert for args and dont want to have to remember to free up all the junk later	
 };

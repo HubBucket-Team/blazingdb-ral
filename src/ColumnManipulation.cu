@@ -19,6 +19,7 @@
 #include "Utils.cuh"
 #include "string/nvcategory_util.hpp"
 #include "bitmask.hpp"
+#include "Traits/RuntimeTraits.h"
 
 
 const size_t NUM_ELEMENTS_PER_THREAD_GATHER_BITS = 32;
@@ -118,8 +119,7 @@ void materialize_templated_2(gdf_column * input, gdf_column * output, gdf_column
 
 template <typename ElementIterator>
 void materialize_templated_1(gdf_column * input, gdf_column * output, gdf_column * row_indices){
-	int column_width;
-	get_column_byte_width(row_indices, &column_width);
+	int column_width = ral::traits::get_dtype_size_in_bytes(row_indices);
 	if(column_width == 1){
 		return materialize_templated_2<ElementIterator,int8_t>(input,output,row_indices);
 	}else if(column_width == 2){
@@ -135,8 +135,7 @@ void materialize_templated_1(gdf_column * input, gdf_column * output, gdf_column
 
 
 void materialize_column(gdf_column * input, gdf_column * output, gdf_column * row_indices){
-	int column_width;
-	get_column_byte_width(input, &column_width);
+	int column_width = ral::traits::get_dtype_size_in_bytes(input);
 	if(column_width == 1){
 		return materialize_templated_1<int8_t>(input,output,row_indices);
 	}else if(column_width == 2){

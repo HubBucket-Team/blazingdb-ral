@@ -6,7 +6,8 @@
  */
 
 #include "ParquetParser.h"
-#include "cudf/io_functions.hpp"
+#include <cudf/io_functions.hpp>
+#include <cudf/legacy/column.hpp>
 #include <blazingdb/io/Util/StringUtil.h>
 
 #include <arrow/io/file.h>
@@ -18,6 +19,7 @@
 
 #include "../Schema.h"
 #include "io/data_parser/ParserUtil.h"
+
 
 namespace ral {
 namespace io {
@@ -50,52 +52,34 @@ void parquet_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	if (column_indices.size() > 0){
 	
 		// Fill data to pq_args
-		pq_read_arg pq_args;
-		pq_args.source_type = ARROW_RANDOM_ACCESS_FILE;
+		cudf::io::parquet::reader_options pq_args;
 		pq_args.strings_to_categorical = false;
-		pq_args.row_group = -1;	// Set to read all Row Groups (RG)
-		pq_args.skip_rows = 0;		// set to read from the row 0 in a RG
-		pq_args.num_rows = -1;		// Set to read until the last row
-		pq_args.use_cols_len = static_cast<int>(column_indices.size());
-		pq_args.use_cols = new const char*[column_indices.size()];
+		pq_args.columns.resize(column_indices.size());
 		
 		for (size_t column_i = 0; column_i < column_indices.size(); column_i++) {
-			std::string col_name = schema.get_name(column_indices[column_i]);
-			col_name.push_back(0);
-			pq_args.use_cols[column_i] = new char[col_name.size()+1];
-			std::memcpy((void *) pq_args.use_cols[column_i], col_name.c_str(), col_name.size());
+			pq_args.columns[column_i] = schema.get_name(column_indices[column_i]);			
 		}
+
+		cudf::io::parquet::reader parquet_reader(file, pq_args);
+
+		cudf::table table_out = parquet_reader.read_all();
+
+		assert(table_out.num_columns() > 0);
 		
-		gdf_error error_;
-		// Call the new read parquet
-		error_ = read_parquet_arrow(&pq_args, file);
-		
-		for (size_t column_i = 0; column_i < column_indices.size(); column_i++) {
-			delete [] pq_args.use_cols[column_i];
-		}
-		delete [] pq_args.use_cols;
-
-		if (error_ != GDF_SUCCESS) {
-			throw std::runtime_error("In parquet_parser::parse: error in read_parquet_arrow");
-		}
-
-		std::vector<gdf_column_cpp> tmp_columns(pq_args.num_cols_out);
-		for(size_t i = 0; i < pq_args.num_cols_out; i++ ){
-			tmp_columns[i].create_gdf_column(pq_args.data[i]);
-		}
-
-		columns_out.resize(pq_args.num_cols_out);
+		columns_out.resize(column_indices.size());
 		for(size_t i = 0; i < columns_out.size(); i++){
-			if (tmp_columns[i].get_gdf_column()->dtype == GDF_STRING){
-				NVStrings* strs = static_cast<NVStrings*>(tmp_columns[i].get_gdf_column()->data);
+
+			if (table_out.get_column(i)->dtype == GDF_STRING){
+				NVStrings* strs = static_cast<NVStrings*>(table_out.get_column(i)->data);
 				NVCategory* category = NVCategory::create_from_strings(*strs);
-				columns_out[i].create_gdf_column(category, tmp_columns[i].size(), tmp_columns[i].name());
+				std::string column_name(table_out.get_column(i)->col_name);
+				columns_out[i].create_gdf_column(category, table_out.get_column(i)->size, column_name);
+				gdf_column_free(table_out.get_column(i));
 			} else {
-				columns_out[i] = tmp_columns[i];
-			}
+				columns_out[i].create_gdf_column(table_out.get_column(i));
+			}			
 		}
 	}
-
 }
 
 // This function is copied and adapted from cudf

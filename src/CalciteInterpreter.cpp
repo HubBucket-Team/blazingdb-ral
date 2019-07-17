@@ -485,7 +485,7 @@ blazing_frame process_join(blazing_frame input, std::string query_part){
 	for(int column_index = 0; column_index < input.get_size_columns(); column_index++){
 		gdf_column_cpp output;
 
-		CUDF_CALL( get_column_byte_width(input.get_column(column_index).get_gdf_column(), &column_width) );
+		CUDF_CALL( ral::traits::get_dtype_size_in_bytes(input.get_column(column_index).get_gdf_column(), &column_width) );
 
 		//TODO de donde saco el nombre de la columna aqui???
 		if(join_type == INNER_JOIN){

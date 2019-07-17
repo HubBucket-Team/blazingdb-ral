@@ -1,8 +1,6 @@
 #include "ParserUtil.h"
 
-#include <cudf.h>
-#include "Traits/RuntimeTraits.h"
-#include <cudf/column_utils.hpp>
+#include <Traits/RuntimeTraits.h>
 
 namespace ral {
 namespace io {
@@ -72,7 +70,7 @@ std::vector<gdf_column_cpp> create_empty_columns(const std::vector<std::string> 
 
     for (size_t i = 0; i < column_indices_requested.size(); i++){
 		const size_t ind = column_indices_requested[i];
-        columns[i].create_gdf_column(column_types[ind], 0, nullptr, cudf::size_of(column_types[ind]), column_names[ind]);
+        columns[i].create_gdf_column(column_types[ind], 0, nullptr, ral::traits::get_dtype_size_in_bytes(column_types[ind]), column_names[ind]);
     }
     return columns;
 }

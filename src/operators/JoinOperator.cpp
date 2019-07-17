@@ -105,7 +105,7 @@ void JoinOperator::materialize_column(blazing_frame& input, bool is_inner_join) 
     for(int column_index = 0; column_index < input.get_size_columns(); column_index++){
         gdf_column_cpp output;
 
-        CUDF_CALL( get_column_byte_width(input.get_column(column_index).get_gdf_column(), &column_width) );
+        column_width = ral::traits::get_dtype_size_in_bytes(input.get_column(column_index).get_gdf_column());
 
         if(is_inner_join){
 			if (input.get_column(column_index).valid())

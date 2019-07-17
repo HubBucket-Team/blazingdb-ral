@@ -62,7 +62,7 @@ std::vector<gdf_column_cpp> groupby_without_aggregations(const std::vector<gdf_c
 
 	cudf::table group_by_data_in_table(data_cols_in);
 	cudf::table group_by_columns_out_table;
-	rmm::device_vector<gdf_index_type> indexes_out;
+	thrust::device_vector<gdf_index_type, rmm_allocator<gdf_index_type>> indexes_out;
 	std::tie(group_by_columns_out_table, indexes_out) = gdf_group_by_without_aggregations(group_by_data_in_table, 
 															num_group_columns, group_column_indices.data(), &ctxt);
 
@@ -209,13 +209,14 @@ void aggregations_with_groupby(gdf_agg_op agg_op, std::vector<gdf_column*>& grou
 																	&ctxt));
 			break;
 		case GDF_COUNT_DISTINCT:
-			CUDF_CALL(gdf_group_by_count_distinct(group_by_columns_ptr.size(),
+			throw("count distinct is not supported");
+/*			CUDF_CALL(gdf_group_by_count_distinct(group_by_columns_ptr.size(),
 																						group_by_columns_ptr.data(),
 																						aggregation_input.get_gdf_column(),
 																						nullptr,
 																						group_by_columns_ptr_out.data(),
 																						output_column.get_gdf_column(),
-																						&ctxt));
+																						&ctxt));*/
 			break;
 		}
 }

@@ -7,10 +7,10 @@
 #include <blazingdb/io/Util/StringUtil.h>
 
 #include "CalciteExpressionParsing.h"
+#include "Traits/RuntimeTraits.h"
 #include "DataFrame.h"
 #include <map>
 #include <cudf.h>
-#include <cudf/column_utils.hpp>
 #include "cudf/binaryop.hpp"
 
 
@@ -116,7 +116,7 @@ gdf_dtype get_aggregation_output_type(gdf_dtype input_type,  gdf_agg_op aggregat
 }
 
 size_t get_width_dtype(gdf_dtype type){
-	return cudf::size_of(type);	
+	return ral::traits::get_dtype_size_in_bytes(type);	
 }
 
 bool is_exponential_operator(gdf_binary_operator operation){

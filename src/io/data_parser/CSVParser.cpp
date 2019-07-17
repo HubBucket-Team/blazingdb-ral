@@ -42,7 +42,6 @@ void init_default_csv_args(cudf::io::csv::reader_options & args){
 	args.keep_default_na = true;
 	args.na_filter = false;
 	// args.prefix
-	args.nrows = -1;
 	args.header = -1;	
 }
 
@@ -53,7 +52,6 @@ void copy_non_data_csv_args(cudf::io::csv::reader_options & args, cudf::io::csv:
     new_args.lineterminator = args.lineterminator;
 	new_args.skip_blank_lines = args.skip_blank_lines;
 	new_args.header 		= args.header;
-	new_args.nrows 			= args.nrows;
 	new_args.decimal 		= args.decimal;
 	new_args.quotechar 		= args.quotechar;
 	new_args.quoting 		= args.quoting;
@@ -124,7 +122,7 @@ gdf_error read_file_into_buffer(std::shared_ptr<arrow::io::RandomAccessFile> fil
  * Read in a CSV file, extract all fields, and return a GDF (array of gdf_columns) using arrow interface
  **/
 
-cudf::table read_csv_arrow_first_row_only(cudf::io::csv::reader_options args, std::shared_ptr<arrow::io::RandomAccessFile> arrow_file_handle, bool first_row_only = false)
+cudf::table read_csv_arrow(cudf::io::csv::reader_options args, std::shared_ptr<arrow::io::RandomAccessFile> arrow_file_handle, bool first_row_only = false)
 {
 	int64_t 	num_bytes;
 	arrow_file_handle->GetSize(&num_bytes);
@@ -135,8 +133,8 @@ cudf::table read_csv_arrow_first_row_only(cudf::io::csv::reader_options args, st
 	args.filepath_or_buffer.resize(num_bytes);
 
 	gdf_error error = read_file_into_buffer(arrow_file_handle, num_bytes, (uint8_t*) (args.filepath_or_buffer.c_str()),100,10);
-	checkError(error, "reading from file into system memory");
-
+	assert(error == GDF_SUCCESS);
+	
 	cudf::io::csv::reader csv_reader(args);
 	cudf::table table_out;
 	if (first_row_only)
@@ -218,21 +216,19 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		std::sort(idx.begin(), idx.end(),
 		[&column_indices](size_t i1, size_t i2) {return column_indices[i1] < column_indices[i2];});
 
-		std::vector<gdf_column_cpp> tmp_columns(raw_args.num_cols_out);
-		for(size_t i = 0; i < raw_args.num_cols_out; i++ ){
-			tmp_columns[idx[i]].create_gdf_column(raw_args.data[i]);
-		}
-
-		columns_out.resize(raw_args.num_cols_out);
+		columns_out.resize(column_indices.size());
 		for(size_t i = 0; i < columns_out.size(); i++){
-			if (tmp_columns[i].get_gdf_column()->dtype == GDF_STRING){
-				NVStrings* strs = static_cast<NVStrings*>(tmp_columns[i].get_gdf_column()->data);
+
+			if (table_out.get_column(i)->dtype == GDF_STRING){
+				NVStrings* strs = static_cast<NVStrings*>(table_out.get_column(i)->data);
 				NVCategory* category = NVCategory::create_from_strings(*strs);
-				columns_out[i].create_gdf_column(category, tmp_columns[i].size(), tmp_columns[i].name());
+				std::string column_name(table_out.get_column(i)->col_name);
+				columns_out[idx[i]].create_gdf_column(category, table_out.get_column(i)->size, column_name);
+				gdf_column_free(table_out.get_column(i));
 			} else {
-				columns_out[i] = tmp_columns[i];
-			}
-		}		
+				columns_out[idx[i]].create_gdf_column(table_out.get_column(i));
+			}			
+		}
 	}	
 }
 

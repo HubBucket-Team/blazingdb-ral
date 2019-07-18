@@ -74,6 +74,7 @@ std::vector<gdf_column_cpp> groupby_without_aggregations(const std::vector<gdf_c
 		if(grouped_col->dtype == GDF_STRING_CATEGORY){
 			grouped_col->dtype_info.category = nullptr; // TODO: Delete this after cudf properly zero initializes dtype_info
 			nvcategory_gather(grouped_col, static_cast<NVCategory *>(group_by_data_in_table.get_column(i)->dtype_info.category));
+			if (grouped_col->size == 0) grouped_col->dtype_info.category = NVCategory::create_from_array(nullptr, 0);
 		}
 		output_columns_group[i].create_gdf_column(grouped_col);
 	}

@@ -282,6 +282,7 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
     auto* dstCol = destTable.get_column(i);
     if(dstCol->dtype == GDF_STRING_CATEGORY){
       nvcategory_gather(dstCol,static_cast<NVCategory *>(srcCol->dtype_info.category));
+      if (dstCol->size == 0) dstCol->dtype_info.category = NVCategory::create_from_array(nullptr, 0);
     }
   }
 
@@ -689,6 +690,7 @@ std::vector<gdf_column_cpp> generatePartitionPlansGroupBy(const Context& context
     auto* dstCol = destTable.get_column(i);
     if(dstCol->dtype == GDF_STRING_CATEGORY){
       nvcategory_gather(dstCol,static_cast<NVCategory *>(srcCol->dtype_info.category));
+      if (dstCol->size == 0) dstCol->dtype_info.category = NVCategory::create_from_array(nullptr, 0);
     }
   }
 
@@ -1135,6 +1137,7 @@ std::vector<NodeColumns> generateJoinPartitions(const Context& context,
       auto* dstCol = output_table_wrapper.get_column(i);
       if(dstCol->dtype == GDF_STRING_CATEGORY){
         nvcategory_gather(dstCol,static_cast<NVCategory *>(srcCol->dtype_info.category));
+        if (dstCol->size == 0) dstCol->dtype_info.category = NVCategory::create_from_array(nullptr, 0);
       }
     }      
 

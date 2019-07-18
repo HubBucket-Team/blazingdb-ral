@@ -113,6 +113,7 @@ void materialize_templated_2(gdf_column * input, gdf_column * output, gdf_column
 	
 	if( input->dtype == GDF_STRING_CATEGORY ){
 	 	nvcategory_gather(output,static_cast<NVCategory *>(input->dtype_info.category));
+		if (output->size == 0) output->dtype_info.category = NVCategory::create_from_array(nullptr, 0);
 	}
 }
 

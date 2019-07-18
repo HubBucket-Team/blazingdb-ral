@@ -56,6 +56,7 @@ gdf_error generate_sample(std::vector<gdf_column_cpp>& data_frame,
         auto* dstCol = destTable.get_column(i);
         if(dstCol->dtype == GDF_STRING_CATEGORY){
             nvcategory_gather(dstCol,static_cast<NVCategory *>(srcCol->dtype_info.category));
+            if (dstCol->size == 0) dstCol->dtype_info.category = NVCategory::create_from_array(nullptr, 0);
         }
     }
 

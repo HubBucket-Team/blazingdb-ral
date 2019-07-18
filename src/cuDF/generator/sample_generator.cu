@@ -1,9 +1,10 @@
 #include "cuDF/generator/sample_generator.h"
 #include "cuDF/generator/random_generator.cuh"
 #include "CalciteExpressionParsing.h"
+#include "utilities/RalColumn.h"
 #include <copying.hpp>
 #include <types.hpp>
-#include "table.hpp"
+#include "cudf/table.hpp"
 
 namespace cudf {
 namespace generator {
@@ -26,20 +27,16 @@ gdf_error generate_sample(std::vector<gdf_column_cpp>& data_frame,
     // Gather
     sampled_data.clear();
     sampled_data.resize(data_frame.size());
-    std::vector<gdf_column*> raw_data_frame(data_frame.size());
-    std::vector<gdf_column*> raw_sampled_data(data_frame.size());
     for(size_t i = 0; i < data_frame.size(); i++) {
         sampled_data[i].create_gdf_column(data_frame[i].dtype(),
                                         arrayIdx.size(),
                                         nullptr,
                                         get_width_dtype(data_frame[i].dtype()),
                                         data_frame[i].name());
-        raw_sampled_data[i] = sampled_data[i].get_gdf_column();
-        raw_data_frame[i] = data_frame[i].get_gdf_column();
     }
 
-    cudf::table srcTable{raw_data_frame.data(), (gdf_size_type)raw_data_frame.size()};
-    cudf::table destTable{raw_sampled_data.data(), (gdf_size_type)raw_sampled_data.size()};
+    cudf::table srcTable = ral::utilities::create_table(data_frame);
+    cudf::table destTable = ral::utilities::create_table(sampled_data);
 
     gdf_column_cpp gatherMap;
     gatherMap.create_gdf_column(GDF_INT32, arrayIdx.size(), arrayIdx.data(), get_width_dtype(GDF_INT32), "");

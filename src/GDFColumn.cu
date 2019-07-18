@@ -18,7 +18,7 @@
 #include "cuio/parquet/util/bit_util.cuh"
 #include "Traits/RuntimeTraits.h"
 
-#include "bitmask.hpp"
+#include <cudf/legacy/bitmask.hpp>
 #include "FreeMemory.h"
 
 gdf_column_cpp::gdf_column_cpp()
@@ -353,7 +353,7 @@ void gdf_column_cpp::create_gdf_column(gdf_column * column){
         this->column = column;
         
         if (column->dtype != GDF_STRING){
-            int width_per_value = ral::traits::get_dtype_size_in_bytes(columnn);
+            int width_per_value = ral::traits::get_dtype_size_in_bytes(column);
             
             //TODO: we are assuming they are not padding,
             this->allocated_size_data = width_per_value * column->size;

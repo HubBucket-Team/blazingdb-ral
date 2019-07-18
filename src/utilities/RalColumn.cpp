@@ -1,5 +1,7 @@
 #include "utilities/RalColumn.h"
 
+#include <algorithm>
+
 namespace ral {
 namespace utilities {
 
@@ -39,6 +41,16 @@ gdf_column_cpp create_zero_column(const gdf_size_type size, const gdf_dtype dtyp
 
     // done
     return column;
+}
+
+cudf::table create_table(std::vector<gdf_column_cpp> & columns){
+    std::vector<gdf_column*> columns_ptrs(columns.size());
+	std::transform(columns.begin(), columns.end(), 
+						columns_ptrs.begin(), [&](gdf_column_cpp& el) {
+    	return el.get_gdf_column();  
+	});
+	cudf::table table(columns_ptrs);
+    return table;
 }
 
 } // namespace utilities

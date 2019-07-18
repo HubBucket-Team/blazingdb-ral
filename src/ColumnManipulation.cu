@@ -18,7 +18,7 @@
 
 #include "Utils.cuh"
 #include "string/nvcategory_util.hpp"
-#include "bitmask.hpp"
+#include <cudf/legacy/bitmask.hpp>
 #include "Traits/RuntimeTraits.h"
 
 

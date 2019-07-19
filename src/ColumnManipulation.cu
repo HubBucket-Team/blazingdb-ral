@@ -110,9 +110,12 @@ void materialize_templated_2(gdf_column * input, gdf_column * output, gdf_column
 			assert(result == GDF_SUCCESS);
 			output->null_count = output->size - static_cast<gdf_size_type>(count);
 		}
-	
+
 	if( input->dtype == GDF_STRING_CATEGORY ){
-	 	nvcategory_gather(output,static_cast<NVCategory *>(input->dtype_info.category));
+ 		// TODO(cudf): We need to check output size because nvcategory_gather
+ 		// doesn''t create a empty NVCategory for output gdf column, so it could
+ 		// produce crashes
+ 		nvcategory_gather(output,static_cast<NVCategory *>(input->dtype_info.category));
 		if (output->size == 0) output->dtype_info.category = NVCategory::create_from_array(nullptr, 0);
 	}
 }
@@ -147,6 +150,6 @@ void materialize_column(gdf_column * input, gdf_column * output, gdf_column * ro
 	}else if(column_width == 8){
 		return materialize_templated_1<int64_t>(input,output,row_indices);
 	}
-	
+
 	throw std::runtime_error("In materialize_column function: unsupported type");
 }

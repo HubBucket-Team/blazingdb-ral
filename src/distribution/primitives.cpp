@@ -383,18 +383,18 @@ std::vector<NodeColumns> partitionData(const Context& context,
 	  cudf::table haystack_table(haystack_column_ptrs);
     cudf::table needles_table = ral::utilities::create_table(pivots);
     std::vector<bool> desc_flags(searchColIndices.size(), false);
-    
-    gdf_column raw_indexes = cudf::upper_bound(haystack_table,
+
+    //We want the raw_indexes be on the heap because indexes will call delete when it goes out of scope
+    gdf_column* raw_indexes = new gdf_column;
+    *raw_indexes = cudf::upper_bound(haystack_table,
                        needles_table,
                        desc_flags,
                        true); // nulls_as_largest
+     gdf_column_cpp indexes;
+     indexes.create_gdf_column(raw_indexes);
+     sort_indices(indexes);
 
-    gdf_column_cpp indexes;
-    indexes.create_gdf_column(&raw_indexes);
-
-    sort_indices(indexes);
-    
-    return split_data_into_NodeColumns(context, table, indexes);    
+     return split_data_into_NodeColumns(context, table, indexes);
 }
 
 void distributePartitions(const Context& context, std::vector<NodeColumns>& partitions){

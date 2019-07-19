@@ -337,16 +337,9 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     this->allocated_size_valid = 0;
 
     gdf_valid_type * valid_device = nullptr;
-    if (type != GDF_STRING){
-        valid_device = allocate_valid();        
-    } else {
-        this->allocated_size_valid = 0;
-    }
-    this->allocated_size_data = (width_per_value * num_values); 
 
     if (num_values > 0) {    
-        
-        if (type != GDF_STRING_CATEGORY && type != GDF_STRING){
+        if (type != GDF_STRING){
             valid_device = allocate_valid();        
         } 
 

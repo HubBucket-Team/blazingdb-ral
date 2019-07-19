@@ -62,26 +62,21 @@ void get_columns_that_were_already_loaded(
 }
 
 
-
-std::vector<gdf_column_cpp> create_empty_columns(const std::vector<std::string> & column_names,
-                                                const std::vector<gdf_dtype> & column_types,
-												const std::vector<size_t> & column_indices_requested){
-
+std::vector<gdf_column_cpp>
+create_empty_columns(const std::vector<std::string> & column_names,
+                     const std::vector<gdf_dtype> &   column_types,
+                     const std::vector<size_t> & column_indices_requested) {
     std::vector<gdf_column_cpp> columns(column_indices_requested.size());
 
-    for (size_t i = 0; i < column_indices_requested.size(); i++){
+    for (size_t i = 0; i < column_indices_requested.size(); i++) {
         const size_t ind = column_indices_requested[i];
 
-        gdf_dtype dtype = column_types[ind];
-        const std::string &column_name = column_names[ind];
+        gdf_dtype           dtype       = column_types[ind];
+        const std::string & column_name = column_names[ind];
 
-        if (GDF_STRING == dtype) {
-            NVCategory * nvCategory = NVCategory::create_from_array(nullptr, 0);
-            columns[i].create_gdf_column(nvCategory, 0, column_name);
-        } else {
-            columns[i].create_gdf_column(dtype, 0, nullptr, gdf_dtype_size(dtype), column_name);
-        }
+        columns[i].create_empty(dtype, column_name);
     }
+
     return columns;
 }
 

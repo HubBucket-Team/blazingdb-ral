@@ -34,7 +34,7 @@ void init_default_csv_args(cudf::io::csv::reader_options & args){
 	args.skipinitialspace = false;
 	args.dayfirst = false;
 	args.mangle_dupe_cols = true;
-	args.compression = nullptr;
+	args.compression = "none";
 	args.decimal = '.';
 	// args.thousands
 	args.skip_blank_lines = true;

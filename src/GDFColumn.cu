@@ -117,7 +117,7 @@ gdf_column_cpp gdf_column_cpp::clone(std::string name)  // TODO clone needs to r
     if (this->column->dtype == GDF_STRING_CATEGORY && this->column->dtype_info.category){
         col1.column->dtype_info.category =  static_cast<void*>(static_cast<NVCategory *>(this->column->dtype_info.category)->copy());
     }
-    
+
     col1.is_ipc_column = false;
     col1.column_token = 0;
 	if(name == ""){
@@ -212,7 +212,7 @@ void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,g
     } else {
         this->allocated_size_valid = gdf_valid_allocation_size(num_values);
     }
-    
+
     is_ipc_column = true;
     this->column_token = 0;
     this->set_name(column_name);
@@ -230,7 +230,7 @@ void gdf_column_cpp::create_gdf_column(NVCategory* category, size_t num_values,s
     this->column = new gdf_column;
     gdf_dtype type = GDF_STRING_CATEGORY;
     gdf_column_view(this->column, nullptr, nullptr, num_values, type);
-    
+
     this->column->dtype_info.category = (void*) category;
 
     this->allocated_size_data = sizeof(nv_category_index_type) * this->column->size;
@@ -240,7 +240,7 @@ void gdf_column_cpp::create_gdf_column(NVCategory* category, size_t num_values,s
         category->values_cptr(),
         this->allocated_size_data,
         cudaMemcpyDeviceToDevice) );
-    
+
     this->column->valid = nullptr;
     this->allocated_size_valid = 0;
     this->column->null_count = 0;
@@ -264,7 +264,7 @@ void gdf_column_cpp::create_gdf_column(NVStrings* strings, size_t num_values, st
     //TODO crate column here
     this->column = new gdf_column;
     gdf_column_view(this->column, static_cast<void*>(strings), nullptr, num_values, GDF_STRING);
-    
+
     this->allocated_size_data = 0; // TODO: do we care? what should be put there?
     this->allocated_size_valid = 0;
 
@@ -289,23 +289,23 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     this->is_ipc_column = false;
     this->column_token = 0;
 
-    this->allocated_size_data = (width_per_value * num_values); 
+    this->allocated_size_data = (width_per_value * num_values);
     this->allocated_size_valid = 0;
 
     gdf_valid_type * valid_device = nullptr;
 
-    if (num_values > 0) {    
+    if (num_values > 0) {
         cuDF::Allocator::allocate((void**)&data, allocated_size_data);
-        
+
         if(host_valids != nullptr){
             valid_device = allocate_valid();
             CheckCudaErrors(cudaMemcpy(valid_device, host_valids, this->allocated_size_valid, cudaMemcpyHostToDevice));
-        } 
+        }
     }
 
     gdf_column_view(this->column, (void *) data, valid_device, num_values, type);
     this->column->dtype_info.category = nullptr;
-    
+
     this->set_name(column_name);
     if(input_data != nullptr){
         CheckCudaErrors(cudaMemcpy(data, input_data, num_values * width_per_value, cudaMemcpyHostToDevice));
@@ -337,25 +337,18 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
     this->allocated_size_valid = 0;
 
     gdf_valid_type * valid_device = nullptr;
-    if (type != GDF_STRING){
-        valid_device = allocate_valid();        
-    } else {
-        this->allocated_size_valid = 0;
-    }
-    this->allocated_size_data = (width_per_value * num_values); 
 
-    if (num_values > 0) {    
-        
-        if (type != GDF_STRING_CATEGORY && type != GDF_STRING){
-            valid_device = allocate_valid();        
-        } 
+    if (num_values > 0) {
+        if (type != GDF_STRING){
+            valid_device = allocate_valid();
+        }
 
         cuDF::Allocator::allocate((void**)&data, allocated_size_data);
     }
 
     gdf_column_view(this->column, (void *) data, valid_device, num_values, type);
     this->column->dtype_info.category = nullptr;
-    
+
     this->set_name(column_name);
     if(input_data != nullptr){
         CheckCudaErrors(cudaMemcpy(data, input_data, num_values * width_per_value, cudaMemcpyHostToDevice));
@@ -370,7 +363,7 @@ void gdf_column_cpp::create_gdf_column(gdf_column * column){
         decrement_counter(this->column);
 
         this->column = column;
-        
+
         if (column->dtype != GDF_STRING){
             int width_per_value;
             gdf_error err = get_column_byte_width(column, &width_per_value);
@@ -410,8 +403,8 @@ void gdf_column_cpp::create_gdf_column(const gdf_scalar & scalar, const std::str
     this->is_ipc_column = false;
     this->column_token = 0;
     size_t width_per_value = gdf_dtype_size(type);
-    
-    this->allocated_size_data = width_per_value; 
+
+    this->allocated_size_data = width_per_value;
 
     cuDF::Allocator::allocate((void**)&data, allocated_size_data);
 
@@ -426,32 +419,48 @@ void gdf_column_cpp::create_gdf_column(const gdf_scalar & scalar, const std::str
     }
     this->get_gdf_column()->data = (void *) data;
     this->get_gdf_column()->valid = valid_device;
-    
+
     this->set_name(column_name);
     if(scalar.is_valid){
         if(type == GDF_INT8){
-            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.si08), width_per_value, cudaMemcpyHostToDevice));            
+            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.si08), width_per_value, cudaMemcpyHostToDevice));
         }else if(type == GDF_INT16){
-            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.si16), width_per_value, cudaMemcpyHostToDevice));            
+            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.si16), width_per_value, cudaMemcpyHostToDevice));
         }else if(type == GDF_INT32){
-            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.si32), width_per_value, cudaMemcpyHostToDevice));            
+            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.si32), width_per_value, cudaMemcpyHostToDevice));
         }else if(type == GDF_DATE32){
-            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.dt32), width_per_value, cudaMemcpyHostToDevice));            
+            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.dt32), width_per_value, cudaMemcpyHostToDevice));
         }else if(type == GDF_INT64 ){
-            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.si64), width_per_value, cudaMemcpyHostToDevice));            
+            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.si64), width_per_value, cudaMemcpyHostToDevice));
         }else if(type == GDF_DATE64){
-            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.dt64), width_per_value, cudaMemcpyHostToDevice));            
+            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.dt64), width_per_value, cudaMemcpyHostToDevice));
         } else if(type == GDF_TIMESTAMP){
-            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.tmst), width_per_value, cudaMemcpyHostToDevice));            
+            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.tmst), width_per_value, cudaMemcpyHostToDevice));
         }else if(type == GDF_FLOAT32){
-            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.fp32), width_per_value, cudaMemcpyHostToDevice));            
+            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.fp32), width_per_value, cudaMemcpyHostToDevice));
         }else if(type == GDF_FLOAT64){
-            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.fp64), width_per_value, cudaMemcpyHostToDevice));            
-        }        
+            CheckCudaErrors(cudaMemcpy(data, &(scalar.data.fp64), width_per_value, cudaMemcpyHostToDevice));
+        }
     }
-    
+
     GDFRefCounter::getInstance()->register_column(this->column);
 }
+
+void gdf_column_cpp::create_empty(const gdf_dtype     dtype,
+                                  const std::string & column_name) {
+    if (GDF_STRING == dtype) {  // cudf::size_of doesn't support GDF_STRING
+        create_gdf_column(
+            NVCategory::create_from_array(nullptr, 0), 0, column_name);
+    } else {
+        create_gdf_column(
+            dtype, 0, nullptr, gdf_dtype_size(dtype), column_name);
+    }
+}
+
+void gdf_column_cpp::create_empty(const gdf_dtype dtype) {
+    create_empty(dtype, "");
+}
+
 /*
 void gdf_column_cpp::realloc_gdf_column(gdf_dtype type, size_t size, size_t width){
 	const std::string col_name = this->column_name;

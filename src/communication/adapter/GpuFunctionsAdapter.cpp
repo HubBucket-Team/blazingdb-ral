@@ -24,7 +24,8 @@ namespace adapter {
           const std::size_t offsetsLength = stringsLength + 1;
 
           int * const lengthPerStrings = new int[stringsLength];
-          // TODO: When implement null support, a null-string return -1 as byte_count
+          // TODO: When implement null support, a null-string return -1 as
+          // byte_count
           nvStrings->byte_count(lengthPerStrings, false);
 
           const std::size_t stringsSize = std::accumulate(
@@ -40,12 +41,18 @@ namespace adapter {
           const std::size_t totalSize =
               stringsSize + offsetsSize + 3 * sizeof(const std::size_t);
 
-              // WARNING!!! When setting the size of result outside this function, we are only getting the size for non-string columns. 
-              // The size we need for string columns is determined here inside the copyGpuToCpu where it is resized again. 
-              // THIS is a bad performance issue. This needs to be addressed
-              // TODO!!
-          result.resize(result.size() + totalSize);
-          std::memcpy(&result[binary_pointer], &stringsSize, sizeof(const std::size_t));
+          const std::size_t previousSize = result.size();
+
+          // WARNING!!! When setting the size of result outside this function,
+          // we are only getting the size for non-string columns. The size we
+          // need for string columns is determined here inside the copyGpuToCpu
+          // where it is resized again. THIS is a bad performance issue. This
+          // needs to be addressed
+          // TODO: Add to cuStrings functions to evaluate the strings and
+          // offsets sizes before generate them and string array length
+          result.resize(previousSize + totalSize);
+          std::memcpy(
+              &result[binary_pointer], &stringsSize, sizeof(const std::size_t));
           std::memcpy(&result[binary_pointer + sizeof(const std::size_t)],
                       &offsetsSize,
                       sizeof(const std::size_t));
@@ -55,14 +62,16 @@ namespace adapter {
           std::memcpy(&result[binary_pointer + 3 * sizeof(const std::size_t)],
                       stringsPointer,
                       stringsSize);
-          std::memcpy(&result[binary_pointer + 3 * sizeof(const std::size_t) + stringsSize],
+          std::memcpy(&result[binary_pointer + 3 * sizeof(const std::size_t) +
+                              stringsSize],
                       offsetsPointer,
                       offsetsSize);
+          binary_pointer += totalSize;
 
-          binary_pointer += totalSize;   
           // TODO: remove pointers to map into `result` without bypass
-          delete stringsPointer;
+          delete[] stringsPointer;
           delete[] offsetsPointer;
+          delete[] lengthPerStrings;
           NVStrings::destroy(nvStrings);
         } else {
           std::size_t data_size = getDataCapacity(column.get_gdf_column());

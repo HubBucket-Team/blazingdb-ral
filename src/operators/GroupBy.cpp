@@ -18,7 +18,8 @@
 #include "groupby.hpp"
 #include "table.hpp"
 #include "reduction.hpp"
-#include "string/nvcategory_util.hpp"
+
+#include <cuDF/safe_nvcategory_gather.hpp>
 
 namespace ral {
 namespace operators {
@@ -64,7 +65,7 @@ std::vector<gdf_column_cpp> groupby_without_aggregations(const std::vector<gdf_c
 	cudf::table group_by_data_in_table(data_cols_in);
 	cudf::table group_by_columns_out_table;
 	rmm::device_vector<gdf_index_type> indexes_out;
-	std::tie(group_by_columns_out_table, indexes_out) = gdf_group_by_without_aggregations(group_by_data_in_table, 
+	std::tie(group_by_columns_out_table, indexes_out) = gdf_group_by_without_aggregations(group_by_data_in_table,
 															num_group_columns, group_column_indices.data(), &ctxt);
 
 	std::vector<gdf_column_cpp> output_columns_group(group_by_columns_out_table.num_columns());
@@ -73,8 +74,7 @@ std::vector<gdf_column_cpp> groupby_without_aggregations(const std::vector<gdf_c
 		grouped_col->col_name = nullptr; // need to do this because gdf_group_by_without_aggregations is not setting the name properly
 		if(grouped_col->dtype == GDF_STRING_CATEGORY){
 			grouped_col->dtype_info.category = nullptr; // TODO: Delete this after cudf properly zero initializes dtype_info
-			nvcategory_gather(grouped_col, static_cast<NVCategory *>(group_by_data_in_table.get_column(i)->dtype_info.category));
-			if (grouped_col->size == 0) grouped_col->dtype_info.category = NVCategory::create_from_array(nullptr, 0);
+      ral::safe_nvcategory_gather_for_string_category(grouped_col, group_by_data_in_table.get_column(i)->dtype_info.category);
 		}
 		output_columns_group[i].create_gdf_column(grouped_col);
 	}
@@ -234,7 +234,7 @@ gdf_reduction_op gdf_agg_op_to_gdf_reduction_op(gdf_agg_op agg_op){
 		case GDF_MIN:
 			return GDF_REDUCTION_MIN;
 		case GDF_MAX:
-			return GDF_REDUCTION_MAX; 
+			return GDF_REDUCTION_MAX;
 		default:
 			std::cout<<"ERROR:	Unexpected gdf_agg_op"<<std::endl;
 			return GDF_REDUCTION_SUM;
@@ -242,7 +242,7 @@ gdf_reduction_op gdf_agg_op_to_gdf_reduction_op(gdf_agg_op agg_op){
 }
 
 void aggregations_without_groupby(gdf_agg_op agg_op, gdf_column_cpp& aggregation_input, gdf_column_cpp& output_column, gdf_dtype output_type, std::string output_column_name){
-	
+
 	gdf_column_cpp temp;
 	switch(agg_op){
 		case GDF_SUM:
@@ -253,7 +253,7 @@ void aggregations_without_groupby(gdf_agg_op agg_op, gdf_column_cpp& aggregation
 				gdf_scalar null_value;
 				null_value.is_valid = false;
 				null_value.dtype = output_type;
-				output_column.create_gdf_column(null_value, output_column_name);	
+				output_column.create_gdf_column(null_value, output_column_name);
 				break;
 			} else {
 				gdf_reduction_op reduction_op = gdf_agg_op_to_gdf_reduction_op(agg_op);
@@ -267,7 +267,7 @@ void aggregations_without_groupby(gdf_agg_op agg_op, gdf_column_cpp& aggregation
 				gdf_scalar null_value;
 				null_value.is_valid = false;
 				null_value.dtype = output_type;
-				output_column.create_gdf_column(null_value, output_column_name);	
+				output_column.create_gdf_column(null_value, output_column_name);
 				break;
 			} else {
 				gdf_dtype sum_output_type = get_aggregation_output_type(aggregation_input.dtype(),GDF_SUM, false);
@@ -276,7 +276,7 @@ void aggregations_without_groupby(gdf_agg_op agg_op, gdf_column_cpp& aggregation
 
 				assert(output_type == GDF_FLOAT64);
 				assert(sum_output_type == GDF_INT64 || sum_output_type == GDF_FLOAT64);
-				
+
 				gdf_scalar avg_scalar;
 				avg_scalar.dtype = GDF_FLOAT64;
 				avg_scalar.is_valid = true;
@@ -287,14 +287,14 @@ void aggregations_without_groupby(gdf_agg_op agg_op, gdf_column_cpp& aggregation
 
 				output_column.create_gdf_column(avg_scalar, output_column_name);
 				break;
-			}			
+			}
 		case GDF_COUNT:
 		{
 			gdf_scalar reduction_out;
 			reduction_out.dtype = GDF_INT64;
 			reduction_out.is_valid = true;
-			reduction_out.data.si64 = aggregation_input.get_gdf_column()->size - aggregation_input.get_gdf_column()->null_count;   
-			
+			reduction_out.data.si64 = aggregation_input.get_gdf_column()->size - aggregation_input.get_gdf_column()->null_count;
+
 			output_column.create_gdf_column(reduction_out, output_column_name);
 			break;
 		}
@@ -347,7 +347,7 @@ std::vector<gdf_column_cpp> compute_aggregations(blazing_frame& input, std::vect
 		std::string output_column_name = (aggregation_column_assigned_aliases[i] == ""
 																			? (aggregator_to_string(aggregation_types[i]) + "(" + aggregation_input.name() + ")")
 																			: aggregation_column_assigned_aliases[i]);
-		
+
 		if (group_column_indices.size() == 0) {
 			aggregations_without_groupby(aggregation_types[i], aggregation_input, output_columns_aggregations[i], output_type, output_column_name);
 		}else{

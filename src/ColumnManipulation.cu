@@ -17,7 +17,7 @@
 #include <thrust/iterator/transform_iterator.h>
 
 #include "Utils.cuh"
-#include "string/nvcategory_util.hpp"
+#include "cuDF/safe_nvcategory_gather.hpp"
 #include "bitmask.hpp"
 
 
@@ -112,11 +112,7 @@ void materialize_templated_2(gdf_column * input, gdf_column * output, gdf_column
 		}
 
 	if( input->dtype == GDF_STRING_CATEGORY ){
- 		// TODO(cudf): We need to check output size because nvcategory_gather
- 		// doesn''t create a empty NVCategory for output gdf column, so it could
- 		// produce crashes
- 		nvcategory_gather(output,static_cast<NVCategory *>(input->dtype_info.category));
-		if (output->size == 0) output->dtype_info.category = NVCategory::create_from_array(nullptr, 0);
+    ral::safe_nvcategory_gather_for_string_category(output, input->dtype_info.category);
 	}
 }
 

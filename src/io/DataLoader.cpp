@@ -77,39 +77,29 @@ void data_loader::load_data(std::vector<gdf_column_cpp> & columns, const std::ve
 
 		columns.resize(num_columns);
 		for(size_t column_index = 0; column_index < num_columns; column_index++){
-			//allocate space for the output
-			gdf_column_cpp column;
-			column.create_gdf_column(columns_per_file[0][column_index].dtype(),
-					total_row_count,
-					nullptr,
-					ral::io::get_width_dtype(columns_per_file[0][column_index].dtype()),
-					columns_per_file[0][column_index].name());
-			columns[column_index] = column;
-
 			//collect the columns into an array for the concat function
 			gdf_column * columns_to_concat[num_files];
 			for(size_t file_index = 0; file_index < num_files; file_index++){
 				columns_to_concat[file_index] = columns_per_file[file_index][column_index].get_gdf_column();
 			}
 
-			gdf_error err = gdf_column_concat(column.get_gdf_column(),
-					columns_to_concat,
-					num_files);
+			//allocate space for the output
+			gdf_column_cpp& col = columns_per_file[0][column_index];
+			gdf_column_cpp concatColumn;
+			if (std::any_of(columns_to_concat, columns_to_concat + num_files, [](auto* c){ return c->valid != nullptr; }))
+				concatColumn.create_gdf_column(col.dtype(), total_row_count, nullptr, ral::io::get_width_dtype(col.dtype()), col.name());
+			else
+				concatColumn.create_gdf_column(col.dtype(), total_row_count, nullptr, nullptr, ral::io::get_width_dtype(col.dtype()), col.name());
+			columns[column_index] = concatColumn;
+
+			CUDF_CALL(gdf_column_concat(concatColumn.get_gdf_column(),	columns_to_concat, num_files));
 
 			//make the column that was parsed from the file go out of scope to get freed
 			for(size_t file_index = 0; file_index < num_files; file_index++){
 				columns_per_file[file_index][column_index] = dummy_column;
 			}
-
-			if(err != GDF_SUCCESS){
-				columns.resize(0);
-				//TODO: do something better than this, we should proably be throwing errors and handling them up the stack
-				std::cout<<"Error when trying to concatenate columns"<<std::endl;
-			}
 		}
-
 	}
-
 }
 
 void data_loader::get_schema(Schema & schema){

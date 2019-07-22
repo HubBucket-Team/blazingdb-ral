@@ -63,6 +63,7 @@ void copy_non_data_csv_args(cudf::io::csv::reader_options & args, cudf::io::csv:
 	new_args.compression 	= args.compression;
 	new_args.keep_default_na = args.keep_default_na;
 	new_args.na_filter		= args.na_filter;
+	new_args.use_cols_indexes = args.use_cols_indexes;
 	
 }
 

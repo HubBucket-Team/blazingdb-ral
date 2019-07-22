@@ -100,8 +100,9 @@ std::vector<gdf_column_cpp> groupby_without_aggregations(std::vector<gdf_column_
 
 	std::vector<gdf_column_cpp> output_columns_group(group_by_columns_out_table.num_columns());
 	for(int i = 0; i < output_columns_group.size(); i++){
-		group_by_columns_out_table.get_column(i)->col_name = nullptr; // need to do this because gdf_group_by_without_aggregations is not setting the name properly
-		output_columns_group[i].create_gdf_column(group_by_columns_out_table.get_column(i));
+		auto* grouped_col = group_by_columns_out_table.get_column(i);
+		grouped_col->col_name = nullptr; // need to do this because gdf_group_by_without_aggregations is not setting the name properly
+		output_columns_group[i].create_gdf_column(grouped_col);
 	}
 	gdf_column index_col;
 	gdf_column_view(&index_col, static_cast<void*>(indexes_out.data().get()), nullptr,indexes_out.size(), GDF_INT32);

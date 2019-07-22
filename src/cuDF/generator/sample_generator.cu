@@ -15,7 +15,7 @@ gdf_error generate_sample(std::vector<gdf_column_cpp>& data_frame,
     if (data_frame.size() == 0) {
         return GDF_DATASET_EMPTY;
     }
-    
+
     if (num_samples <= 0) {
         sampled_data = data_frame;
         return GDF_SUCCESS;
@@ -28,11 +28,11 @@ gdf_error generate_sample(std::vector<gdf_column_cpp>& data_frame,
     sampled_data.clear();
     sampled_data.resize(data_frame.size());
     for(size_t i = 0; i < data_frame.size(); i++) {
-        sampled_data[i].create_gdf_column(data_frame[i].dtype(),
-                                        arrayIdx.size(),
-                                        nullptr,
-                                        get_width_dtype(data_frame[i].dtype()),
-                                        data_frame[i].name());
+		auto& input_col = data_frame[i];
+		if (input_col.valid())
+			sampled_data[i].create_gdf_column(input_col.dtype(), arrayIdx.size(), nullptr, get_width_dtype(input_col.dtype()), input_col.name());
+		else
+			sampled_data[i].create_gdf_column(input_col.dtype(), arrayIdx.size(), nullptr, nullptr, get_width_dtype(input_col.dtype()), input_col.name());
     }
 
     cudf::table srcTable = ral::utilities::create_table(data_frame);

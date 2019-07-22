@@ -1090,13 +1090,7 @@ std::vector<NodeColumns> generateJoinPartitions(const Context& context,
                                                 std::vector<int>& columnIndices) {
     assert(table.size() != 0);
 
-    std::vector<gdf_column*> raw_input_table_col_ptrs(table.size());
-    std::transform(table.begin(), table.end(), raw_input_table_col_ptrs.begin(), [](auto& cpp_col){
-      return cpp_col.get_gdf_column();
-    });
-    cudf::table input_table_wrapper(raw_input_table_col_ptrs);
-
-    if (input_table_wrapper.num_rows() == 0) {
+    if (table[0].size() == 0) {
         std::vector<NodeColumns> result;
         auto nodes = context.getAllNodes();
         for (gdf_size_type k = 0; k < nodes.size(); ++k) {
@@ -1106,6 +1100,36 @@ std::vector<NodeColumns> generateJoinPartitions(const Context& context,
         return result;
     }
 
+    // Support for GDF_STRING_CATEGORY. We need the string hashes not the category indices
+    std::vector<gdf_column_cpp> temp_input_table(table);
+    std::vector<int> temp_input_col_indices(columnIndices);
+    for (size_t i = 0; i < columnIndices.size(); i++) {
+      gdf_column_cpp& col = table[columnIndices[i]];
+      
+      if (col.dtype() != GDF_STRING_CATEGORY)
+        continue;
+      
+      NVCategory* nvCategory = static_cast<NVCategory *>(col.get_gdf_column()->dtype_info.category);
+      NVStrings* nvStrings = nvCategory->gather_strings(static_cast<nv_category_index_type*>(col.data()),
+                                                                                            col.size(),
+                                                                                            true);
+      
+      gdf_column_cpp str_hash;
+      str_hash.create_gdf_column(GDF_INT32, nvStrings->size(), nullptr, nullptr, get_width_dtype(GDF_INT32), "");
+      nvStrings->hash(static_cast<unsigned int*>(str_hash.data()));
+      NVStrings::destroy(nvStrings);
+
+      temp_input_col_indices[i] = temp_input_table.size();
+      temp_input_table.push_back(str_hash);
+    }
+
+
+    std::vector<gdf_column*> raw_input_table_col_ptrs(temp_input_table.size());
+    std::transform(temp_input_table.begin(), temp_input_table.end(), raw_input_table_col_ptrs.begin(), [](auto& cpp_col){
+      return cpp_col.get_gdf_column();
+    });
+    cudf::table input_table_wrapper(raw_input_table_col_ptrs);
+
     // Generate partition offset vector
     gdf_size_type number_nodes = context.getTotalNodes();
     std::vector<gdf_index_type> partition_offset(number_nodes);
@@ -1113,8 +1137,8 @@ std::vector<NodeColumns> generateJoinPartitions(const Context& context,
     // Preallocate output columns
     std::vector<gdf_column_cpp> output_columns = generateOutputColumns(input_table_wrapper.num_columns(),
                                                                        input_table_wrapper.num_rows(),
-                                                                       table);
-    std::vector<gdf_column*> raw_output_table_col_ptrs(table.size());
+                                                                       temp_input_table);
+    std::vector<gdf_column*> raw_output_table_col_ptrs(output_columns.size());
     std::transform(output_columns.begin(), output_columns.end(), raw_output_table_col_ptrs.begin(), [](auto& cpp_col){
       return cpp_col.get_gdf_column();
     });
@@ -1123,19 +1147,24 @@ std::vector<NodeColumns> generateJoinPartitions(const Context& context,
     // Execute operation
     CUDF_CALL( gdf_hash_partition(input_table_wrapper.num_columns(),
                                   input_table_wrapper.begin(),
-                                  columnIndices.data(),
-                                  columnIndices.size(),
+                                  temp_input_col_indices.data(),
+                                  temp_input_col_indices.size(),
                                   number_nodes,
                                   output_table_wrapper.begin(),
                                   partition_offset.data(),
                                   gdf_hash_func::GDF_HASH_MURMUR3) );
 
-    for(int i = 0; i < output_table_wrapper.num_columns(); ++i){
-      auto* srcCol = input_table_wrapper.get_column(i);
-      auto* dstCol = output_table_wrapper.get_column(i);
-      if(dstCol->dtype == GDF_STRING_CATEGORY){
-        ral::safe_nvcategory_gather_for_string_category(dstCol, srcCol->dtype_info.category);
-      }
+    std::vector<gdf_column_cpp> temp_output_columns(output_columns.begin(), output_columns.begin() + table.size());
+    for (size_t i = 0; i < table.size(); i++) {
+      // gdf_column_cpp& srcCol = table[columnIndices[i]];
+
+      gdf_column* srcCol = input_table_wrapper.get_column(i);
+      gdf_column* dstCol = output_table_wrapper.get_column(i);
+
+      if (srcCol->dtype != GDF_STRING_CATEGORY)
+        continue;
+
+      ral::safe_nvcategory_gather_for_string_category(dstCol, srcCol->dtype_info.category);
     }
 
     // Erase input table
@@ -1145,7 +1174,7 @@ std::vector<NodeColumns> generateJoinPartitions(const Context& context,
     gdf_column_cpp indexes;
     indexes.create_gdf_column(GDF_INT32, number_nodes - 1, partition_offset.data() + 1, nullptr, get_width_dtype(GDF_INT32), "");
 
-    return split_data_into_NodeColumns(context, output_columns, indexes);
+    return split_data_into_NodeColumns(context, temp_output_columns, indexes);
 }
 
 } // namespace distribution

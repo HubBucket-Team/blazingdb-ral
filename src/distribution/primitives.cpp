@@ -1110,9 +1110,7 @@ std::vector<NodeColumns> generateJoinPartitions(const Context& context,
         continue;
       
       NVCategory* nvCategory = static_cast<NVCategory *>(col.get_gdf_column()->dtype_info.category);
-      NVStrings* nvStrings = nvCategory->gather_strings(static_cast<nv_category_index_type*>(col.data()),
-                                                                                            col.size(),
-                                                                                            true);
+      NVStrings* nvStrings = nvCategory->gather_strings(static_cast<nv_category_index_type*>(col.data()), col.size(), true);
       
       gdf_column_cpp str_hash;
       str_hash.create_gdf_column(GDF_INT32, nvStrings->size(), nullptr, nullptr, get_width_dtype(GDF_INT32), "");
@@ -1156,8 +1154,6 @@ std::vector<NodeColumns> generateJoinPartitions(const Context& context,
 
     std::vector<gdf_column_cpp> temp_output_columns(output_columns.begin(), output_columns.begin() + table.size());
     for (size_t i = 0; i < table.size(); i++) {
-      // gdf_column_cpp& srcCol = table[columnIndices[i]];
-
       gdf_column* srcCol = input_table_wrapper.get_column(i);
       gdf_column* dstCol = output_table_wrapper.get_column(i);
 

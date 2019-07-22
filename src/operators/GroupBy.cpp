@@ -94,9 +94,13 @@ std::vector<gdf_column_cpp> groupby_without_aggregations(std::vector<gdf_column_
 
 	cudf::table group_by_data_in_table = ral::utilities::create_table(input);
 	cudf::table group_by_columns_out_table;
-	thrust::device_vector<gdf_index_type, rmm_allocator<gdf_index_type>> indexes_out;
-	std::tie(group_by_columns_out_table, indexes_out) = gdf_group_by_without_aggregations(group_by_data_in_table, 
+
+	//We want the index_col_ptr be on the heap because index_col will call delete when it goes out of scope
+	gdf_column * index_col_ptr = new gdf_column;
+	std::tie(group_by_columns_out_table, *index_col_ptr) = gdf_group_by_without_aggregations(group_by_data_in_table, 
 															num_group_columns, group_column_indices.data(), &ctxt);
+	gdf_column_cpp index_col;
+    index_col.create_gdf_column(index_col_ptr);
 
 	std::vector<gdf_column_cpp> output_columns_group(group_by_columns_out_table.num_columns());
 	for(int i = 0; i < output_columns_group.size(); i++){
@@ -104,19 +108,17 @@ std::vector<gdf_column_cpp> groupby_without_aggregations(std::vector<gdf_column_
 		grouped_col->col_name = nullptr; // need to do this because gdf_group_by_without_aggregations is not setting the name properly
 		output_columns_group[i].create_gdf_column(grouped_col);
 	}
-	gdf_column index_col;
-	gdf_column_view(&index_col, static_cast<void*>(indexes_out.data().get()), nullptr,indexes_out.size(), GDF_INT32);
-
+	
 	std::vector<gdf_column_cpp> grouped_output(num_group_columns);
 	for(int i = 0; i < num_group_columns; i++){
 		if (input[i].valid())
-			grouped_output[i].create_gdf_column(input[i].dtype(), index_col.size, nullptr, get_width_dtype(input[i].dtype()), input[i].name());
+			grouped_output[i].create_gdf_column(input[i].dtype(), index_col_ptr->size, nullptr, get_width_dtype(input[i].dtype()), input[i].name());
 		else
-			grouped_output[i].create_gdf_column(input[i].dtype(), index_col.size, nullptr, nullptr, get_width_dtype(input[i].dtype()), input[i].name());
+			grouped_output[i].create_gdf_column(input[i].dtype(), index_col_ptr->size, nullptr, nullptr, get_width_dtype(input[i].dtype()), input[i].name());
 
 		materialize_column(output_columns_group[i].get_gdf_column(),
 											grouped_output[i].get_gdf_column(),
-											&index_col);
+											index_col_ptr);
 	}
 	return grouped_output;
 }

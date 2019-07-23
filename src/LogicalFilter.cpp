@@ -175,10 +175,10 @@ void add_expression_to_plan(	blazing_frame & inputs,
 
 						size_t size_to_copy = sizeof(int32_t) * left_column->size;
 
-						cudaMemcpyAsync(left_column->data,
-							static_cast<NVCategory *>(left_column->dtype_info.category)->values_cptr(),
-							size_to_copy,
-							cudaMemcpyDeviceToDevice);
+						CheckCudaErrors(cudaMemcpyAsync(left_column->data,
+																						static_cast<NVCategory *>(left_column->dtype_info.category)->values_cptr(),
+																						size_to_copy,
+																						cudaMemcpyDeviceToDevice));
 						
 						int found = static_cast<NVCategory *>(left_column->dtype_info.category)->get_value(right_operand.c_str());
 

@@ -116,7 +116,7 @@ namespace adapter {
           keysLength,
           reinterpret_cast<const int *>(offsetsPointer),
           nullptr,
-          0);
+          0, false);
     }
 
 } // namespace adapter

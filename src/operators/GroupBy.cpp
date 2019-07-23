@@ -364,7 +364,8 @@ void aggregationsMerger(std::vector<ral::distribution::NodeColumns>& aggregation
 
 		assert(columns.size() == totalConcatsOperations);
 		for(size_t j = 0; j < totalConcatsOperations; j++)
-		{
+		{	
+			std::cout<<"aggregationsMerger iteration "<<j<<std::endl;
 			print_gdf_column(columns[j].get_gdf_column());
 			columnsToConcatArray[j].push_back(columns[j].get_gdf_column());
 		}

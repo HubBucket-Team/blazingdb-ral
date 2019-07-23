@@ -23,6 +23,8 @@
 #include "cudf/reduction.hpp"
 #include <rmm/thrust_rmm_allocator.h>
 
+#include "cuDF/safe_nvcategory_gather.hpp"
+
 namespace ral {
 namespace operators {
 
@@ -97,6 +99,8 @@ std::vector<gdf_column_cpp> groupby_without_aggregations(std::vector<gdf_column_
 	thrust::device_vector<gdf_index_type, rmm_allocator<gdf_index_type>> indexes_out;
 	std::tie(group_by_columns_out_table, indexes_out) = gdf_group_by_without_aggregations(group_by_data_in_table, 
 															num_group_columns, group_column_indices.data(), &ctxt);
+
+	ral::init_string_category_if_null(group_by_columns_out_table);
 
 	std::vector<gdf_column_cpp> output_columns_group(group_by_columns_out_table.num_columns());
 	for(int i = 0; i < output_columns_group.size(); i++){

@@ -3,6 +3,7 @@
 
 #include <nvstrings/NVCategory.h>
 #include <string/nvcategory_util.hpp>
+#include "cudf/table.hpp"
 
 namespace ral {
 
@@ -25,6 +26,14 @@ inline gdf_error safe_nvcategory_gather_for_string_category(gdf_column * column,
                                                             void * category) {
     return safe_nvcategory_gather_for_string_category(
         column, static_cast<NVCategory *>(category));
+}
+
+inline void init_string_category_if_null(cudf::table& table) {
+    for (auto &&c : table){
+        if (c->dtype == GDF_STRING_CATEGORY && 0 == c->size && c->dtype_info.category == nullptr){
+            c->dtype_info.category = NVCategory::create_from_array(nullptr, 0);
+        }
+    }
 }
 
 }  // namespace ral

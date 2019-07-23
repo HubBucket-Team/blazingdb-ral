@@ -273,6 +273,7 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
   print_gdf_column(gatherMap.get_gdf_column());
 
   cudf::gather(&srcTable, (gdf_index_type*)(gatherMap.get_gdf_column()->data), &destTable);
+  ral::init_string_category_if_null(destTable);
 
   std::cout << "After Gather\n";
   for(auto& p : pivots)
@@ -655,6 +656,7 @@ std::vector<gdf_column_cpp> generatePartitionPlansGroupBy(const Context& context
   print_gdf_column(gatherMap.get_gdf_column());
 
   cudf::gather(&srcTable, (gdf_index_type*)(gatherMap.get_gdf_column()->data), &destTable);
+  ral::init_string_category_if_null(destTable);
 
   std::cout << "After Gather\n";
   for(auto& p : pivots)

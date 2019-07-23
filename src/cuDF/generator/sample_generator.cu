@@ -5,6 +5,7 @@
 #include <copying.hpp>
 #include <types.hpp>
 #include "cudf/table.hpp"
+#include "cuDF/safe_nvcategory_gather.hpp"
 
 namespace cudf {
 namespace generator {
@@ -45,6 +46,7 @@ gdf_error generate_sample(std::vector<gdf_column_cpp>& data_frame,
     // print_gdf_column(gatherMap.get_gdf_column());
 
     cudf::gather(&srcTable, (gdf_index_type*)(gatherMap.get_gdf_column()->data), &destTable);
+    ral::init_string_category_if_null(destTable);
 
     return GDF_SUCCESS;
 }

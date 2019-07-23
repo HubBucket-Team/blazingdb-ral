@@ -68,7 +68,7 @@ protected:
 
     std::vector<gdf_column_cpp> process_distribution_table(std::vector<gdf_column_cpp>& table, std::vector<int>& columnIndices);
 
-    std::vector<gdf_column_cpp> concat_columns(std::vector<NodeColumns>& local_partition,
+    std::vector<gdf_column_cpp> concat_columns(std::vector<gdf_column_cpp>& local_table,
                                                std::vector<NodeColumns>& remote_partition);
 };
 
@@ -189,20 +189,22 @@ blazing_frame DistributedJoinOperator::operator()(blazing_frame& frame, const st
 }
 
 std::vector<gdf_column_cpp> DistributedJoinOperator::process_distribution_table(std::vector<gdf_column_cpp>& table, std::vector<int>& columnIndices) {
-    auto future_node_columns = std::async(std::launch::async,
-                                          [](const Context& context){
-                                              ral::config::GPUManager::getInstance().setDevice();
-                                              return ral::distribution::collectPartitions(context);
-                                          },
-                                          std::ref(*context_));
+    
+    std::vector<NodeColumns> partitions = ral::distribution::generateJoinPartitions(*context_, table, columnIndices);
 
-    auto local_node_columns = ral::distribution::generateJoinPartitions(*context_, table, columnIndices);
+    distributePartitions(*context_, partitions);
 
-    distributePartitions(*context_, local_node_columns);
+    std::vector<NodeColumns> remote_node_columns = ral::distribution::collectPartitions(*context_);
 
-    auto remote_node_columns = future_node_columns.get();
+    std::vector<gdf_column_cpp> local_table;
+    for (auto& local_node_column : partitions) {
+        if (ral::communication::CommunicationData::getInstance().getSelfNode() == local_node_column.getNode()) {
+            local_table = local_node_column.getColumns();
+            break;
+        }
+    }
 
-    return concat_columns(local_node_columns, remote_node_columns);
+    return concat_columns(local_table, remote_node_columns);
 }
 
 blazing_frame DistributedJoinOperator::process_distribution(blazing_frame& frame, const std::string& query) {
@@ -227,20 +229,8 @@ blazing_frame DistributedJoinOperator::process_distribution(blazing_frame& frame
     return join_frame;
 }
 
-std::vector<gdf_column_cpp> DistributedJoinOperator::concat_columns(std::vector<NodeColumns>& local_node_columns,
+std::vector<gdf_column_cpp> DistributedJoinOperator::concat_columns(std::vector<gdf_column_cpp>  & local_table,
                                                                     std::vector<NodeColumns>& remote_node_columns) {
-    // Obtain the current node
-    using ral::communication::CommunicationData;
-    const Node& node = CommunicationData::getInstance().getSelfNode();
-
-    // Obtain local table partition
-    std::vector<gdf_column_cpp> local_table;
-    for (auto& local_node_column : local_node_columns) {
-        if (node == local_node_column.getNode()) {
-            local_table = local_node_column.getColumns();
-        }
-    }
-
     // Get column quantity
     gdf_size_type column_quantity = local_table.size();
 

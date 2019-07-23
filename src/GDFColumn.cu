@@ -14,7 +14,6 @@
 #include "GDFColumn.cuh"
 #include "gdf_wrapper/gdf_wrapper.cuh"
 #include "cuDF/Allocator.h"
-#include "cuDF/column_slice/column_cpp_slice.h"
 #include "cuio/parquet/util/bit_util.cuh"
 #include "Traits/RuntimeTraits.h"
 

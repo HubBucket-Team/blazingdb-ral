@@ -27,25 +27,25 @@ include(ConfigureBlazingDBDependencies)
 include(ConfigureCUDA)
 
 # NOTE Do not change the inclusion order
-include(ConfigureBoost)
+#include(ConfigureBoost)
 include(ConfigureAWSSDK)
-include(ConfigureFlatBuffers)
-include(ConfigureLz4)
-include(ConfigureZSTD)
-include(ConfigureBrotli)
-include(ConfigureSnappy)
-include(ConfigureThrift)
-include(ConfigureArrow)
-include(ConfigureParquet)
-include(ConfigureRMM)
-include(ConfigureNVStrings)
-include(ConfigureJitify)
+#include(ConfigureFlatBuffers)
+#include(ConfigureLz4)
+#include(ConfigureZSTD)
+#include(ConfigureBrotli)
+#include(ConfigureSnappy)
+#include(ConfigureThrift)
+#include(ConfigureArrow)
+#include(ConfigureParquet)
+#include(ConfigureRMM)
+#include(ConfigureNVStrings)
+#include(ConfigureJitify)
 include(ConfigureLibGDF)
 include(ConfigureBlazingDBProtocol)
 include(ConfigureBlazingDBCommunication)
 include(ConfigureBlazingDBIO)
 include(ConfigureGoogleBenchmark)
-include(ConfigureRapidJSON)
+#include(ConfigureRapidJSON)
 
 find_package(Threads)
 
@@ -91,8 +91,8 @@ set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/config/BlazingConfig.cpp
               ${CMAKE_SOURCE_DIR}/src/io/Schema.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_parser/ParquetParser.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_parser/CSVParser.cpp
-              ${CMAKE_SOURCE_DIR}/src/io/data_parser/GDFParser.cpp 
-              ${CMAKE_SOURCE_DIR}/src/io/data_parser/ParserUtil.cpp 
+              ${CMAKE_SOURCE_DIR}/src/io/data_parser/GDFParser.cpp
+              ${CMAKE_SOURCE_DIR}/src/io/data_parser/ParserUtil.cpp
               ${CMAKE_SOURCE_DIR}/src/Traits/RuntimeTraits.cpp
               ${CMAKE_SOURCE_DIR}/src/utilities/RalColumn.cpp
               ${CMAKE_SOURCE_DIR}/src/utilities/TableWrapper.cpp

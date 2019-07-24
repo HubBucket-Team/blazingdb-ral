@@ -345,7 +345,8 @@ std::vector<NodeColumns> split_data_into_NodeColumns(const Context& context, con
 std::vector<NodeColumns> partitionData(const Context& context,
                                        std::vector<gdf_column_cpp>& table,
                                        std::vector<int>& searchColIndices,
-                                       std::vector<gdf_column_cpp>& pivots) {
+                                       std::vector<gdf_column_cpp>& pivots,
+                                       bool isTableSorted) {
     // verify input
     if (pivots.size() == 0) {
         throw std::runtime_error("The pivots array is empty");
@@ -385,7 +386,6 @@ std::vector<NodeColumns> partitionData(const Context& context,
       return array_node_columns;
     }
 
-
     std::vector<gdf_column*> haystack_column_ptrs(searchColIndices.size());
     for (size_t i = 0; i < searchColIndices.size(); i++){
       haystack_column_ptrs[i] = table[searchColIndices[i]].get_gdf_column();
@@ -393,6 +393,51 @@ std::vector<NodeColumns> partitionData(const Context& context,
 	  cudf::table haystack_table(haystack_column_ptrs);
     cudf::table needles_table = ral::utilities::create_table(pivots);
     std::vector<bool> desc_flags(searchColIndices.size(), false);
+
+    // Ensure data is sorted.
+    // Would it be better to use gdf_hash instead or gdf_order_by?
+    std::vector<gdf_column_cpp> sortedTable;
+    if (!isTableSorted) {
+      std::vector<int8_t> sortOrderTypes(searchColIndices.size(), 0);
+      gdf_column_cpp asc_desc_col;
+      asc_desc_col.create_gdf_column(GDF_INT8, sortOrderTypes.size(), sortOrderTypes.data(), get_width_dtype(GDF_INT8), "");
+
+      gdf_column_cpp index_col;
+      index_col.create_gdf_column(GDF_INT32, haystack_table.num_rows(), nullptr, get_width_dtype(GDF_INT32), "");
+
+      gdf_context gdfcontext;
+      gdfcontext.flag_null_sort_behavior = GDF_NULL_AS_LARGEST; // Nulls are are treated as largest
+
+      CUDF_CALL( gdf_order_by(haystack_table.begin(),
+          (int8_t*)(asc_desc_col.get_gdf_column()->data),
+          haystack_table.num_columns(),
+          index_col.get_gdf_column(),
+          &gdfcontext));
+
+      sortedTable.resize(table.size());
+      for(size_t i = 0; i < sortedTable.size(); i++) {
+        auto& col = table[i];
+        if (col.valid()) {
+          sortedTable[i].create_gdf_column(col.dtype(), col.size(), nullptr, get_width_dtype(col.dtype()), col.name());
+        } else {
+          sortedTable[i].create_gdf_column(col.dtype(), col.size(), nullptr, nullptr, get_width_dtype(col.dtype()), col.name());
+        }
+
+        materialize_column(
+          table[i].get_gdf_column(),
+          sortedTable[i].get_gdf_column(),
+          index_col.get_gdf_column()
+        );
+        sortedTable[i].update_null_count();
+      }
+
+      table = sortedTable;
+
+      for (size_t i = 0; i < searchColIndices.size(); i++){
+        haystack_column_ptrs[i] = table[searchColIndices[i]].get_gdf_column();
+      }
+      haystack_table = cudf::table(haystack_column_ptrs);
+    }
 
     //We want the raw_indexes be on the heap because indexes will call delete when it goes out of scope
     gdf_column* raw_indexes = new gdf_column;

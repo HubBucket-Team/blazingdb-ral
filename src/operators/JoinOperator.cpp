@@ -208,6 +208,8 @@ std::vector<gdf_column_cpp> DistributedJoinOperator::process_distribution_table(
             break;
         }
     }
+    if (local_table.size() == 0)
+        std::cout<<"ERROR: no local_table identified in process_distribution_table"<<std::endl;
 
     return concat_columns(local_table, remote_node_columns);
 }

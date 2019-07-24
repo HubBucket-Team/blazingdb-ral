@@ -14,6 +14,14 @@ namespace adapter {
             return;
         }
 
+        std::cout<<"copyGpuToCpu name: "<<column.name()<<std::endl;
+        std::cout<<"copyGpuToCpu size: "<<column.size()<<std::endl;
+        std::cout<<"copyGpuToCpu dtype: "<<column.dtype()<<std::endl;
+        if (column.valid())
+            std::cout<<"copyGpuToCpu has_valids: "<<"true"<<std::endl;
+        else
+            std::cout<<"copyGpuToCpu has_valids: "<<"false"<<std::endl;
+
         if (isGdfString(*column.get_gdf_column())) {
           NVCategory * nvCategory = reinterpret_cast<NVCategory *>(
               column.get_gdf_column()->dtype_info.category);

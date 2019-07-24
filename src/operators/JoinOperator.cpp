@@ -87,14 +87,19 @@ JoinOperator::JoinOperator(const Context* context)
 
 //TODO: On error clean up everything here so we dont run out of memory
 void JoinOperator::evaluate_join(blazing_frame& input, const std::string& query) {
-    std::string condition = get_named_expression(query, "condition");
-    std::string join_type = get_named_expression(query, "joinType");
 
-    ::evaluate_join(condition,
-                    join_type,
-                    input,
-                    left_indices_.get_gdf_column(),
-                    right_indices_.get_gdf_column());
+    if (input.get_num_rows_in_table(0) > 0 && input.get_num_rows_in_table(1) > 0){
+        std::string condition = get_named_expression(query, "condition");
+        std::string join_type = get_named_expression(query, "joinType");
+
+        ::evaluate_join(condition,
+                        join_type,
+                        input,
+                        left_indices_.get_gdf_column(),
+                        right_indices_.get_gdf_column());
+    }else {
+        std::cout<<"WARNING: evaluate_join on empty tables "<<std::endl;
+    }
 }
 
 

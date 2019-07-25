@@ -4,6 +4,9 @@
 #include "Traits/RuntimeTraits.h"
 #include "GDFColumn.cuh"
 
+#include <blazing/metrics/chronometer.hpp>
+#include <blazing/uss/conio.hpp>
+
 namespace ral {
 namespace communication {
 namespace adapter {
@@ -15,6 +18,9 @@ namespace adapter {
         }
 
         if (isGdfString(*column.get_gdf_column())) {
+          using blazing::metrics::Chronometer;
+          std::unique_ptr<Chronometer> chronometer = Chronometer::MakeStarted();
+
           NVCategory * nvCategory = reinterpret_cast<NVCategory *>(
               column.get_gdf_column()->dtype_info.category);
 
@@ -73,6 +79,18 @@ namespace adapter {
           delete[] offsetsPointer;
           delete[] lengthPerStrings;
           NVStrings::destroy(nvStrings);
+
+          const std::uintmax_t elapsedTime = chronometer->Elapsed();
+
+          using blazing::uss::conio::Console;  
+          Console console;
+
+          console.SetColor(Console::kGreen)
+              .Write("String column serializing time for \"" +
+                     std::string{column.get_gdf_column()->col_name} +
+                     "\": " + std::to_string(elapsedTime))
+              .SetColor(Console::kNone)
+              .EndLine();
         } else {
           std::size_t data_size = getDataCapacity(column.get_gdf_column());
           CheckCudaErrors(cudaMemcpy(&result[binary_pointer],

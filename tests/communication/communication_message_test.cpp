@@ -100,7 +100,8 @@ TEST(ComponentMessageTest, SampleToNodeMasterMessage) {
     {
         // Messages::SampleToNodeMasterMessage
         // Receive message from the client
-        message = Server::getInstance().getMessage(*context_token, "tokenctx");
+        using ral::communication::messages::SampleToNodeMasterMessage;
+        message = Server::getInstance().getMessage(*context_token, SampleToNodeMasterMessage::getMessageID());
     }
 
     // Tests

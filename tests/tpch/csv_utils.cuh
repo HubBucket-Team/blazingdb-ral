@@ -87,34 +87,34 @@ int dtype_size(gdf_dtype col_type) {
     return 0;
 }
 
-std::vector<gdf_column_cpp> ToGdfColumnCpps(gdf_column	**data, const char	**names, size_t ncols)   {
+std::vector<gdf_column_cpp> ToGdfColumnCpps(const cudf::table& table)   {
   std::vector<gdf_column_cpp> gdfColumnsCpps;
-  for(size_t i = 0; i < ncols; i++ ){
-    gdf_column	*column = data[i];
+  for(size_t i = 0; i < table.num_columns(); i++ ){
+    const gdf_column	*column = table.get_column(i);
     if(column->dtype == GDF_STRING){
       size_t type_size = dtype_size(column->dtype);
-      gdf_column_cpp column;
-      NVStrings * string = static_cast<NVStrings *>(data[i]->data);
+      gdf_column_cpp column_cpp;
+      NVStrings * string = static_cast<NVStrings *>(column->data);
       NVCategory * category = NVCategory::create_from_strings(*string);
       size_t num_values = category->size();
-      column.create_gdf_column(category,num_values,std::string(names[i]));
-      gdfColumnsCpps.push_back(column);
+      column_cpp.create_gdf_column(category,num_values,std::string(column->col_name));
+      gdfColumnsCpps.push_back(column_cpp);
     }else{
       size_t type_size = dtype_size(column->dtype);
-      gdfColumnsCpps.push_back(ToGdfColumnCpp(names[i], column->dtype, column->size, column->data, type_size));
+      gdfColumnsCpps.push_back(ToGdfColumnCpp(column->col_name, column->dtype, column->size, column->data, type_size));
     }
 
   }
   return gdfColumnsCpps;
 }
 
-BlazingFrame ToBlazingFrame(gdf_column	**data, const char	**names, size_t ncols)   {
-  BlazingFrame frame;
-  frame.push_back(
-    ToGdfColumnCpps(data, names, ncols)
-  );
-  return frame;
-}
+// BlazingFrame ToBlazingFrame(gdf_column	**data, const char	**names, size_t ncols)   {
+//   BlazingFrame frame;
+//   frame.push_back(
+//     ToGdfColumnCpps(data, names, ncols)
+//   );
+//   return frame;
+// }
 
 
 BlazingFrame ToBlazingFrame(std::vector<std::string> filePaths, std::vector<std::vector<std::string>> columnNames, std::vector<std::vector<const char*>> columnDTypes)
@@ -122,37 +122,43 @@ BlazingFrame ToBlazingFrame(std::vector<std::string> filePaths, std::vector<std:
   BlazingFrame frame;
   for(size_t index = 0; index < filePaths.size(); index++) {
     auto file_path = filePaths[index];
-  
-    std::vector<const char*> columnNamesPointers;
-    std::transform(columnNames[index].begin(), columnNames[index].end(), std::back_inserter(columnNamesPointers),
-                   [](std::string &s)  { return s.c_str(); });
 
-
+    std::vector<std::string> dtypes;
+    for (auto* c_str : columnDTypes[index]){
+      dtypes.push_back(c_str);
+    }
+    
 
     if (checkFile(file_path.c_str())) {
     	cudf::io::csv::reader_options args{};
       args.filepath_or_buffer		= file_path.c_str();
-      args.num_names		=  columnNames[index].size();
-      args.num_dtype		=  columnNames[index].size();
-      args.names			= columnNamesPointers.data();
-      args.dtype			= columnDTypes[index].data();
-      args.delimiter		= '|';
+      args.names			= columnNames[index];
+      args.dtype			= dtypes;
+      
+      args.delimiter = '|';
       args.lineterminator = '\n';
+      args.quotechar = '"';
+      args.quoting = cudf::io::csv::quote_style::QUOTE_MINIMAL;
+      args.doublequote = false;
+      args.delim_whitespace = false;
+      args.skipinitialspace = false;
+      args.dayfirst = false;
+      args.mangle_dupe_cols = true;
+      args.compression = "none";
       args.decimal = '.';
+      // args.thousands
+      args.skip_blank_lines = true;
+      // args.comment
+      args.keep_default_na = true;
+      args.na_filter = false;
+      // args.prefix
+      args.header = -1;	
 
-	args.skip_blank_lines = true;
-	args.header = -1;
-	args.nrows = -1;
-
-      gdf_error error = read_csv(&args);
-      assert(error == GDF_SUCCESS);
-
-      std::cout << "CSV output" << std::endl;
-      std::cout << args.num_cols_out << std::endl;
-      std::cout << args.num_rows_out << std::endl;
+	    cudf::io::csv::reader csv_reader(args);
+      cudf::table outTable = csv_reader.read();
 
       frame.push_back(
-        ToGdfColumnCpps(args.data, args.names, args.num_cols_out)
+        ToGdfColumnCpps(outTable)
       );
 
     }

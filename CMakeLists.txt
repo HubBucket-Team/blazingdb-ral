@@ -149,12 +149,12 @@ target_link_libraries(testing-libgdf_lib ${Boost_LIBRARIES})
 include_directories(${Boost_INCLUDE_DIRS})
 
 find_path(RMM_INCLUDE "rmm"
-          HINTS "$ENV{RMM_ROOT}/include"
+          HINTS "$RMM_INSTALL_DIR/include"
                 "$ENV{CONDA_PREFIX}/include/rmm"
                 "$ENV{CONDA_PREFIX}/include")
 
 find_library(RMM_LIBRARY "rmm"
-             HINTS "$ENV{RMM_ROOT}/lib"
+             HINTS "$RMM_INSTALL_DIR/lib"
                    "$ENV{CONDA_PREFIX}/lib")
 
 message(STATUS "RMM: RMM_LIBRARY set to ${RMM_LIBRARY}")
@@ -173,7 +173,7 @@ find_path(FLATBUFERS_INCLUDE "flatbuffers"
                 "$ENV{CONDA_PREFIX}/include/flatbuffers"
                 "$ENV{CONDA_PREFIX}/include")
 
-find_library(NVSTRINGS_LIBRARY "flatbuffers"
+find_library(FLATBUFFERS_LIBRARY "flatbuffers"
           HINTS "$ENV{FLATBUFFERS_ROOT}/lib"
                 "$ENV{CONDA_PREFIX}/lib/flatbuffers"
                 "$ENV{CONDA_PREFIX}/lib")

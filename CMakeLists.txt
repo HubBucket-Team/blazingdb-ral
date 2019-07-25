@@ -136,26 +136,17 @@ target_link_libraries(testing-libgdf_lib
     ${CUDA_NVRTC_LIBRARY}
     ${CUDA_NVTX_LIBRARY}
 
-    ${PARQUET_STATIC_LIB}
-    ${ARROW_STATIC_LIB}
-    ${THRIFT_STATIC_LIB}
-    ${SNAPPY_STATIC_LIB}
-    ${BROTLI_STATIC_LIB}
-    ${ZSTD_STATIC_LIB}
-    ${LZ4_STATIC_LIB}
-    ${FLATBUFFERS_STATIC_LIB}
 
     aws-cpp-sdk-s3
     aws-cpp-sdk-s3-encryption
 
-    Boost::filesystem
-    Boost::system
-    Boost::regex
 
     # Library needed for blazing communication repository (debug)
     gcov
 )
-
+find_package(Boost COMPONENTS regex system filesystem REQUIRED)
+target_link_libraries(testing-libgdf_lib ${Boost_LIBRARIES})
+include_directories(${Boost_INCLUDE_DIRS})
 set(SRC_FILES_APP
     ${CMAKE_SOURCE_DIR}/src/testing-libgdf.cu)
 

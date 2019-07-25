@@ -139,14 +139,14 @@ target_link_libraries(testing-libgdf_lib
     arrow
     aws-cpp-sdk-s3
     aws-cpp-sdk-s3-encryption
-
+    Boost
     parquet
     # Library needed for blazing communication repository (debug)
     gcov
 )
-find_package(Boost COMPONENTS regex system filesystem REQUIRED)
-target_link_libraries(testing-libgdf_lib ${Boost_LIBRARIES})
-include_directories(${Boost_INCLUDE_DIRS})
+#find_package(Boost COMPONENTS regex system filesystem REQUIRED)
+#target_link_libraries(testing-libgdf_lib ${Boost_LIBRARIES})
+#include_directories(${Boost_INCLUDE_DIRS})
 
 find_path(RMM_INCLUDE "rmm"
           HINTS "$RMM_INSTALL_DIR/include"

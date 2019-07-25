@@ -165,6 +165,20 @@ if (RMM_INCLUDE AND RMM_LIBRARY)
     set_target_properties(rmm PROPERTIES IMPORTED_LOCATION ${RMM_LIBRARY})
 endif (RMM_INCLUDE AND RMM_LIBRARY)
 
+#################################################
+# - Flatbuffers
+
+find_path(FLATBUFERS_INCLUDE "flatbuffers"
+          HINTS "$ENV{FLATBUFFERS_ROOT}/include"
+                "$ENV{CONDA_PREFIX}/include/flatbuffers"
+                "$ENV{CONDA_PREFIX}/include")
+
+find_library(NVSTRINGS_LIBRARY "flatbuffers"
+          HINTS "$ENV{FLATBUFFERS_ROOT}/lib"
+                "$ENV{CONDA_PREFIX}/lib/flatbuffers"
+                "$ENV{CONDA_PREFIX}/lib")
+
+add_library(flatbuffers STATIC IMPORTED ${FLATBUFFERS_LIBRARY})
 ###################################################################################################
 # - NVStrings -------------------------------------------------------------------------------------
 
@@ -184,7 +198,6 @@ find_library(NVCATEGORY_LIBRARY "NVCategory"
 message(STATUS "NVSTRINGS: NVSTRINGS_INCLUDE set to ${NVSTRINGS_INCLUDE}")
 message(STATUS "NVSTRINGS: NVSTRINGS_LIBRARY set to ${NVSTRINGS_LIBRARY}")
 message(STATUS "NVSTRINGS: NVCATEGORY_LIBRARY set to ${NVCATEGORY_LIBRARY}")
-message(STATUS "NVSTRINGS: NVTEXT_LIBRARY set to ${NVTEXT_LIBRARY}")
 
 add_library(NVStrings SHARED IMPORTED ${NVSTRINGS_LIBRARY})
 if (NVSTRINGS_INCLUDE AND NVSTRINGS_LIBRARY)

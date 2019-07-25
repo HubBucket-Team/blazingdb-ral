@@ -1,7 +1,7 @@
 #ifndef CUDF_NVCATEGORY_GATHER_HPP_
 #define CUDF_NVCATEGORY_GATHER_HPP_
 
-#include <nvstrings/NVCategory.h>
+
 #include <string/nvcategory_util.hpp>
 #include "cudf/table.hpp"
 

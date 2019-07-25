@@ -153,6 +153,7 @@ find_path(RMM_INCLUDE "rmm"
                 "$ENV{CONDA_PREFIX}/include/rmm"
                 "$ENV{CONDA_PREFIX}/include")
 
+include_directories(${RMM_INCLUDE})
 find_library(RMM_LIBRARY "rmm"
              HINTS "$RMM_INSTALL_DIR/lib"
                    "$ENV{CONDA_PREFIX}/lib")
@@ -179,6 +180,7 @@ find_library(FLATBUFFERS_LIBRARY "flatbuffers"
                 "$ENV{CONDA_PREFIX}/lib")
 
 add_library(flatbuffers STATIC IMPORTED ${FLATBUFFERS_LIBRARY})
+include_directories(${FLATBUFFERS_INCLUDE})
 ###################################################################################################
 # - NVStrings -------------------------------------------------------------------------------------
 
@@ -194,6 +196,8 @@ find_library(NVSTRINGS_LIBRARY "NVStrings"
 find_library(NVCATEGORY_LIBRARY "NVCategory"
              HINTS "$ENV{NVSTRINGS_ROOT}/lib"
                    "$ENV{CONDA_PREFIX}/lib")
+
+include_directories(${NVSTRINGS_INCLUDE})
 
 message(STATUS "NVSTRINGS: NVSTRINGS_INCLUDE set to ${NVSTRINGS_INCLUDE}")
 message(STATUS "NVSTRINGS: NVSTRINGS_LIBRARY set to ${NVSTRINGS_LIBRARY}")

@@ -269,17 +269,17 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
 	gatherMap.create_gdf_column(GDF_INT32, context.getTotalNodes() - 1, nullptr, get_width_dtype(GDF_INT32), "");
 	gdf_sequence(static_cast<int32_t*>(gatherMap.get_gdf_column()->data), gatherMap.size(), step, step);
 
-  std::cout << "Gather Map\n";
-  print_gdf_column(gatherMap.get_gdf_column());
+  // std::cout << "Gather Map\n";
+  // print_gdf_column(gatherMap.get_gdf_column());
 
   cudf::gather(&srcTable, (gdf_index_type*)(gatherMap.get_gdf_column()->data), &destTable);
   ral::init_string_category_if_null(destTable);
 
-  std::cout << "After Gather\n";
-  for(auto& p : pivots)
-  {
-      print_gdf_column(p.get_gdf_column());
-  }
+  // std::cout << "After Gather\n";
+  // for(auto& p : pivots)
+  // {
+  //     print_gdf_column(p.get_gdf_column());
+  // }
 
   return pivots;
 }
@@ -702,17 +702,17 @@ std::vector<gdf_column_cpp> generatePartitionPlansGroupBy(const Context& context
 	gatherMap.create_gdf_column(GDF_INT32, context.getTotalNodes() - 1, nullptr, get_width_dtype(GDF_INT32), "");
 	gdf_sequence(static_cast<int32_t*>(gatherMap.get_gdf_column()->data), gatherMap.size(), step, step);
 
-  std::cout << "Gather Map\n";
-  print_gdf_column(gatherMap.get_gdf_column());
+  // std::cout << "Gather Map\n";
+  // print_gdf_column(gatherMap.get_gdf_column());
 
   cudf::gather(&srcTable, (gdf_index_type*)(gatherMap.get_gdf_column()->data), &destTable);
   ral::init_string_category_if_null(destTable);
 
-  std::cout << "After Gather\n";
-  for(auto& p : pivots)
-  {
-      print_gdf_column(p.get_gdf_column());
-  }
+  // std::cout << "After Gather\n";
+  // for(auto& p : pivots)
+  // {
+  //     print_gdf_column(p.get_gdf_column());
+  // }
 
   return pivots;
 }

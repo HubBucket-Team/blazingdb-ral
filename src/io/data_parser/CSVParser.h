@@ -21,14 +21,14 @@ namespace io {
 class csv_parser: public data_parser {
 public:
 	csv_parser(std::string  delimiter,
-			 std::string  line_terminator,
-			int skip_rows,
-			 std::vector<std::string>  names,
-			std::vector<gdf_dtype>  dtypes);
-	csv_parser(cudf::io::csv::reader_options	args);
+			std::string  lineterminator,
+			int skiprows,
+			std::vector<std::string> names,
+			std::vector<gdf_dtype> dtypes);
+
+	csv_parser(cudf::io::csv::reader_options args);
 
 	virtual ~csv_parser();
-
 
 	void parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 			const std::string & user_readable_file_handle,
@@ -39,11 +39,17 @@ public:
 	void parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files,
 			ral::io::Schema & schema);
 
+	void validate_aditional_csv_params();
+	cudf::table read_csv_arrow(cudf::io::csv::reader_options args, std::shared_ptr<arrow::io::RandomAccessFile> arrow_file_handle, bool first_row_only = false);
+
 private:
-	char quote_character = '\"';
+	//char quote_character = '\"'; args already contains quotechar ..
 	cudf::io::csv::reader_options args;
 	std::vector<std::string> column_names;
-	std::vector<std::string> dtype_strings; //this is only because we have to convert for args and dont want to have to remember to free up all the junk later	
+	std::vector<std::string> dtype_strings; //this is only because we have to convert for args and dont want to have to remember to free up all the junk later
+
+	// Aditional params	
+	gdf_size_type skiprows;
 };
 
 } /* namespace io */

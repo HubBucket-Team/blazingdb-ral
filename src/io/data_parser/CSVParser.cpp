@@ -27,7 +27,7 @@ void init_default_csv_args(cudf::io::csv::reader_options & args){
 
 	args.delimiter = '|';
 	args.lineterminator = '\n';
-	args.quotechar = '"';
+	args.quotechar = '"';	// '\"'
 	args.quoting = cudf::io::csv::quote_style::QUOTE_MINIMAL;
 	args.doublequote = false;
 	args.delim_whitespace = false;
@@ -43,6 +43,11 @@ void init_default_csv_args(cudf::io::csv::reader_options & args){
 	args.na_filter = false;
 	// args.prefix
 	args.header = -1;	
+}
+
+void csv_parser::validate_aditional_csv_params()
+{
+	if (this->skiprows < 0) this->skiprows = 0;
 }
 
 void copy_non_data_csv_args(cudf::io::csv::reader_options & args, cudf::io::csv::reader_options & new_args){
@@ -123,7 +128,7 @@ gdf_error read_file_into_buffer(std::shared_ptr<arrow::io::RandomAccessFile> fil
  * Read in a CSV file, extract all fields, and return a GDF (array of gdf_columns) using arrow interface
  **/
 
-cudf::table read_csv_arrow(cudf::io::csv::reader_options args, std::shared_ptr<arrow::io::RandomAccessFile> arrow_file_handle, bool first_row_only = false)
+cudf::table csv_parser::read_csv_arrow(cudf::io::csv::reader_options args, std::shared_ptr<arrow::io::RandomAccessFile> arrow_file_handle, bool first_row_only)
 {
 	int64_t 	num_bytes;
 	arrow_file_handle->GetSize(&num_bytes);
@@ -139,7 +144,7 @@ cudf::table read_csv_arrow(cudf::io::csv::reader_options args, std::shared_ptr<a
 	cudf::io::csv::reader csv_reader(args);
 	cudf::table table_out;
 	if (first_row_only)
-		table_out = csv_reader.read_rows(0, 0, 1);
+		table_out = csv_reader.read_rows(this->skiprows, 0, 2); // num_skip_header, num_skip_footer, num_rows (-1 bring all)
 	else 
 		table_out = csv_reader.read_byte_range(0, num_bytes);
 	
@@ -151,16 +156,20 @@ cudf::table read_csv_arrow(cudf::io::csv::reader_options args, std::shared_ptr<a
 
 
 csv_parser::csv_parser(std::string delimiter,
-		 std::string line_terminator,
-		int skip_rows,
+		std::string lineterminator,
+		int skiprows,
 		std::vector<std::string> names,
 		std::vector<gdf_dtype> dtypes) {
 
 	init_default_csv_args(args);
 
 	args.delimiter 		= delimiter[0];
-	args.lineterminator = line_terminator[0];
+	args.lineterminator = lineterminator[0];
+	this->skiprows = skiprows;
 	this->column_names = names;
+
+	validate_aditional_csv_params();
+	
 	this->dtype_strings.resize(dtypes.size());
 	for(int i = 0; i < dtypes.size(); i++){
 		this->dtype_strings[i] = convert_dtype_to_string(dtypes[i]);
@@ -206,7 +215,7 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		
 		copy_non_data_csv_args(args, raw_args);
 
-		cudf::table table_out = read_csv_arrow(raw_args,file);
+		cudf::table table_out = read_csv_arrow(raw_args,file, true);
 
 		assert(table_out.num_columns() > 0);
 

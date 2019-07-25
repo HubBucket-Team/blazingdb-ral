@@ -141,6 +141,7 @@ target_link_libraries(testing-libgdf_lib
     aws-cpp-sdk-s3-encryption
     Boost
     parquet
+    flatbuffers
     # Library needed for blazing communication repository (debug)
     gcov
 )
@@ -169,19 +170,19 @@ endif (RMM_INCLUDE AND RMM_LIBRARY)
 #################################################
 # - Flatbuffers
 
-find_path(FLATBUFERS_INCLUDE "flatbuffers"
-          HINTS "$ENV{FLATBUFFERS_ROOT}/include"
-                "$ENV{CONDA_PREFIX}/include/flatbuffers"
-                "$ENV{CONDA_PREFIX}/include")
+#find_path(FLATBUFERS_INCLUDE "flatbuffers"
+#          HINTS "$ENV{FLATBUFFERS_ROOT}/include"
+#                "$ENV{CONDA_PREFIX}/include/flatbuffers"
+#                "$ENV{CONDA_PREFIX}/include")
+#
+#find_library(FLATBUFFERS_LIBRARY "flatbuffers"
+#          HINTS "$ENV{FLATBUFFERS_ROOT}/lib"
+#                "$ENV{CONDA_PREFIX}/lib/flatbuffers"
+#                "$ENV{CONDA_PREFIX}/lib")
 
-find_library(FLATBUFFERS_LIBRARY "flatbuffers"
-          HINTS "$ENV{FLATBUFFERS_ROOT}/lib"
-                "$ENV{CONDA_PREFIX}/lib/flatbuffers"
-                "$ENV{CONDA_PREFIX}/lib")
+#add_library(flatbuffers STATIC IMPORTED ${FLATBUFFERS_LIBRARY})
 
-add_library(flatbuffers STATIC IMPORTED ${FLATBUFFERS_LIBRARY})
-
-include_directories(${FLATBUFFERS_INCLUDE})
+#include_directories(${FLATBUFFERS_INCLUDE})
 ###################################################################################################
 # - NVStrings -------------------------------------------------------------------------------------
 

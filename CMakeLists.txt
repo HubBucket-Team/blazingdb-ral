@@ -37,7 +37,7 @@ include(ConfigureAWSSDK)
 #include(ConfigureThrift)
 #include(ConfigureArrow)
 #include(ConfigureParquet)
-include(ConfigureRMM)
+#include(ConfigureRMM)
 #include(ConfigureNVStrings)
 #include(ConfigureJitify)
 include(ConfigureLibGDF)
@@ -147,6 +147,56 @@ target_link_libraries(testing-libgdf_lib
 find_package(Boost COMPONENTS regex system filesystem REQUIRED)
 target_link_libraries(testing-libgdf_lib ${Boost_LIBRARIES})
 include_directories(${Boost_INCLUDE_DIRS})
+
+find_path(RMM_INCLUDE "rmm"
+          HINTS "$ENV{RMM_ROOT}/include"
+                "$ENV{CONDA_PREFIX}/include/rmm"
+                "$ENV{CONDA_PREFIX}/include")
+
+find_library(RMM_LIBRARY "rmm"
+             HINTS "$ENV{RMM_ROOT}/lib"
+                   "$ENV{CONDA_PREFIX}/lib")
+
+message(STATUS "RMM: RMM_LIBRARY set to ${RMM_LIBRARY}")
+message(STATUS "RMM: RMM_INCLUDE set to ${RMM_INCLUDE}")
+
+add_library(rmm SHARED IMPORTED ${RMM_LIBRARY})
+if (RMM_INCLUDE AND RMM_LIBRARY)
+    set_target_properties(rmm PROPERTIES IMPORTED_LOCATION ${RMM_LIBRARY})
+endif (RMM_INCLUDE AND RMM_LIBRARY)
+
+###################################################################################################
+# - NVStrings -------------------------------------------------------------------------------------
+
+find_path(NVSTRINGS_INCLUDE "nvstrings"
+          HINTS "$ENV{NVSTRINGS_ROOT}/include"
+                "$ENV{CONDA_PREFIX}/include/nvstrings"
+                "$ENV{CONDA_PREFIX}/include")
+
+find_library(NVSTRINGS_LIBRARY "NVStrings"
+             HINTS "$ENV{NVSTRINGS_ROOT}/lib"
+                   "$ENV{CONDA_PREFIX}/lib")
+
+find_library(NVCATEGORY_LIBRARY "NVCategory"
+             HINTS "$ENV{NVSTRINGS_ROOT}/lib"
+                   "$ENV{CONDA_PREFIX}/lib")
+
+message(STATUS "NVSTRINGS: NVSTRINGS_INCLUDE set to ${NVSTRINGS_INCLUDE}")
+message(STATUS "NVSTRINGS: NVSTRINGS_LIBRARY set to ${NVSTRINGS_LIBRARY}")
+message(STATUS "NVSTRINGS: NVCATEGORY_LIBRARY set to ${NVCATEGORY_LIBRARY}")
+message(STATUS "NVSTRINGS: NVTEXT_LIBRARY set to ${NVTEXT_LIBRARY}")
+
+add_library(NVStrings SHARED IMPORTED ${NVSTRINGS_LIBRARY})
+if (NVSTRINGS_INCLUDE AND NVSTRINGS_LIBRARY)
+    set_target_properties(NVStrings PROPERTIES IMPORTED_LOCATION ${NVSTRINGS_LIBRARY})
+endif (NVSTRINGS_INCLUDE AND NVSTRINGS_LIBRARY)
+
+add_library(NVCategory SHARED IMPORTED ${NVCATEGORY_LIBRARY})
+if (NVSTRINGS_INCLUDE AND NVCATEGORY_LIBRARY)
+    set_target_properties(NVCategory PROPERTIES IMPORTED_LOCATION ${NVCATEGORY_LIBRARY})
+endif (NVSTRINGS_INCLUDE AND NVCATEGORY_LIBRARY)
+
+
 set(SRC_FILES_APP
     ${CMAKE_SOURCE_DIR}/src/testing-libgdf.cu)
 

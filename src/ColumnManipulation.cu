@@ -17,7 +17,7 @@
 #include <thrust/iterator/transform_iterator.h>
 
 #include "Utils.cuh"
-#include "string/nvcategory_util.hpp"
+#include "cuDF/safe_nvcategory_gather.hpp"
 #include <cudf/legacy/bitmask.hpp>
 #include "Traits/RuntimeTraits.h"
 
@@ -111,9 +111,9 @@ void materialize_templated_2(gdf_column * input, gdf_column * output, gdf_column
 			assert(result == GDF_SUCCESS);
 			output->null_count = output->size - static_cast<gdf_size_type>(count);
 		}
-	
+
 	if( input->dtype == GDF_STRING_CATEGORY ){
-	 	nvcategory_gather(output,static_cast<NVCategory *>(input->dtype_info.category));
+    ral::safe_nvcategory_gather_for_string_category(output, input->dtype_info.category);
 	}
 }
 
@@ -145,6 +145,6 @@ void materialize_column(gdf_column * input, gdf_column * output, gdf_column * ro
 	}else if(column_width == 8){
 		return materialize_templated_1<int64_t>(input,output,row_indices);
 	}
-	
+
 	throw std::runtime_error("In materialize_column function: unsupported type");
 }

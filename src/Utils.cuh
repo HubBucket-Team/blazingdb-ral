@@ -75,14 +75,14 @@ void print_typed_column(col_type * col_data,
 {
 
   std::vector<col_type> h_data(num_rows);
-  cudaMemcpy(h_data.data(), col_data, num_rows * sizeof(col_type), cudaMemcpyDeviceToHost);
+  CheckCudaErrors(cudaMemcpy(h_data.data(), col_data, num_rows * sizeof(col_type), cudaMemcpyDeviceToHost));
 
 
   const size_t num_masks = valid_size(num_rows);
   std::vector<gdf_valid_type> h_mask(num_masks);
   if(nullptr != validity_mask)
   {
-    cudaMemcpy((int *) h_mask.data(), validity_mask, num_masks * sizeof(gdf_valid_type), cudaMemcpyDeviceToHost);
+    CheckCudaErrors(cudaMemcpy((int *) h_mask.data(), validity_mask, num_masks * sizeof(gdf_valid_type), cudaMemcpyDeviceToHost));
   }
 
   if (validity_mask == nullptr) {

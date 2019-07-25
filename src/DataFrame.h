@@ -92,6 +92,7 @@ public:
 		for(std::size_t i = 0; i < columns.size(); i++){
 			if(column_index < cur_count + columns[i].size()){
 				columns[i][column_index - cur_count] = column;
+				return;
 			}
 
 			cur_count += columns[i].size();

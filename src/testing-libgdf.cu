@@ -409,6 +409,13 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
     resultToken = requestPayload.resultToken();
     result_set_repository::get_instance().register_query(accessToken,resultToken);
 
+    std::cout<<"Query Start: queryContext Nodes: "<<std::endl;
+    std::cout<<"queryContext master node: "<<std::endl;
+    queryContext.getMasterNode().print();
+    for (auto node : queryContext.getAllNodes()) {
+      node.get()->print();
+    }
+
     // Execute query
 
     evaluate_query(input_loaders, schemas, table_names, requestPayload.statement(), accessToken, queryContext, resultToken );
@@ -515,6 +522,7 @@ int main(int argc, const char *argv[])
     std::cout << "Orchestrator HTTP communication port: " << orchestratorCommunicationPort << std::endl;
     std::cout << "RAL HTTP communication host: " << ralHost << std::endl;
     std::cout << "RAL HTTP communication port: " << ralCommunicationPort << std::endl;
+    std::cout << "RAL protocol port: " << ralProtocolPort << std::endl;
     
     ral::config::GPUManager::getInstance().initialize(std::stoi(gpuId));
     

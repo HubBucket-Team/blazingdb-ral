@@ -7,7 +7,7 @@ namespace io {
 
 // Used to create column new indexes that dont include columns that are already loaded
 std::vector<size_t> get_column_indices_not_already_loaded(
-            const std::vector<size_t> & column_indices_requested, 
+            const std::vector<size_t> & column_indices_requested,
             const std::vector<std::string> & column_names,
             std::map<std::string,std::map<std::string, gdf_column_cpp>> & loaded_columns,
             const std::string & user_readable_file_handle) {
@@ -19,24 +19,24 @@ std::vector<size_t> get_column_indices_not_already_loaded(
 		if (file_iter != loaded_columns.end()){ // we have already parsed this file before
 			auto col_iter = loaded_columns[user_readable_file_handle].find(column_names[column_index]);
 			if (col_iter != loaded_columns[user_readable_file_handle].end()){ // we have already parsed this column before
-				already_parsed_before = true;				
+				already_parsed_before = true;
 			}
 		}
 		if (!already_parsed_before)
-			column_indices.push_back(column_index);		
+			column_indices.push_back(column_index);
 	}
     return column_indices;
 }
 
 
 void get_columns_that_were_already_loaded(
-    const std::vector<size_t> & column_indices_requested, 
+    const std::vector<size_t> & column_indices_requested,
     const std::vector<std::string> & column_names,
     std::map<std::string,std::map<std::string, gdf_column_cpp>> & loaded_columns,
     const std::string & user_readable_file_handle,
     std::vector<gdf_column_cpp> & columns,
     std::vector<gdf_column_cpp> & columns_out) {
-    
+
     int newly_parsed_col_idx = 0;
 	for(auto column_index : column_indices_requested){
 		bool already_parsed_before = false;
@@ -55,23 +55,27 @@ void get_columns_that_were_already_loaded(
 			}
 			columns_out.push_back(columns[newly_parsed_col_idx]);
 			loaded_columns[user_readable_file_handle][columns[newly_parsed_col_idx].name()] = columns[newly_parsed_col_idx];
-			newly_parsed_col_idx++;			
+			newly_parsed_col_idx++;
 		}
 	}
 }
 
 
-
-std::vector<gdf_column_cpp> create_empty_columns(const std::vector<std::string> & column_names,
-                                                const std::vector<gdf_dtype> & column_types,
-												const std::vector<size_t> & column_indices_requested){
-
+std::vector<gdf_column_cpp>
+create_empty_columns(const std::vector<std::string> & column_names,
+                     const std::vector<gdf_dtype> &   column_types,
+                     const std::vector<size_t> & column_indices_requested) {
     std::vector<gdf_column_cpp> columns(column_indices_requested.size());
 
-    for (size_t i = 0; i < column_indices_requested.size(); i++){
-		const size_t ind = column_indices_requested[i];
-        columns[i].create_gdf_column(column_types[ind], 0, nullptr, ral::traits::get_dtype_size_in_bytes(column_types[ind]), column_names[ind]);
+    for (size_t i = 0; i < column_indices_requested.size(); i++) {
+        const size_t ind = column_indices_requested[i];
+
+        gdf_dtype           dtype       = column_types[ind];
+        const std::string & column_name = column_names[ind];
+
+        columns[i].create_empty(dtype, column_name);
     }
+
     return columns;
 }
 

@@ -63,6 +63,7 @@ void copy_non_data_csv_args(cudf::io::csv::reader_options & args, cudf::io::csv:
 	new_args.compression 	= args.compression;
 	new_args.keep_default_na = args.keep_default_na;
 	new_args.na_filter		= args.na_filter;
+	new_args.use_cols_indexes = args.use_cols_indexes;
 	
 }
 
@@ -200,8 +201,8 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		args.dtype = this->dtype_strings;
 
 		// copy column_indices into use_col_indexes
-		std::copy(column_indices.begin(), column_indices.end(), 
-          std::back_inserter(args.use_cols_indexes));
+		args.use_cols_indexes.resize(column_indices.size());
+		args.use_cols_indexes.assign(column_indices.begin(), column_indices.end());
 		
 		copy_non_data_csv_args(args, raw_args);
 

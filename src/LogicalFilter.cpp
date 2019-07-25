@@ -277,6 +277,15 @@ void evaluate_expression(
 	static CodeTimer timer;
 	timer.reset();
 
+	// special case when there is nothing to evaluate in the condition expression i.e. LogicalFilter(condition=[$16])
+	if(expression[0] == '$'){
+		size_t index = get_index(expression);
+		if( index >= 0){
+			output = inputs.get_column(index).clone();
+			return;
+		}
+	}
+
 	std::string clean_expression = clean_calcite_expression(expression);
 	
 	std::stack<std::string> operand_stack;

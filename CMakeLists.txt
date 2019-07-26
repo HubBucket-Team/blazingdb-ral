@@ -119,7 +119,7 @@ set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/config/BlazingConfig.cpp
 add_library(testing-libgdf_lib ${SRC_FILES})
 
 find_library(FLATBUFFERS_LIB flatbuffers )
-
+find_library(PARQUET_LIB parquet )
 target_link_libraries(testing-libgdf_lib
     ${BLAZINGDB_IO_STATIC_LIB}
     Threads::Threads
@@ -140,15 +140,16 @@ target_link_libraries(testing-libgdf_lib
     arrow
     aws-cpp-sdk-s3
     aws-cpp-sdk-s3-encryption
-    Boost
+
     parquet
     ${FLATBUFFERS_LIB}
+    ${PARQUET_LIB}
     # Library needed for blazing communication repository (debug)
     gcov
 )
-#find_package(Boost COMPONENTS regex system filesystem REQUIRED)
-#target_link_libraries(testing-libgdf_lib ${Boost_LIBRARIES})
-#include_directories(${Boost_INCLUDE_DIRS})
+find_package(Boost COMPONENTS regex system filesystem REQUIRED)
+target_link_libraries(testing-libgdf_lib ${Boost_LIBRARIES})
+include_directories(${Boost_INCLUDE_DIRS})
 
 find_path(RMM_INCLUDE "rmm"
           HINTS "$RMM_INSTALL_DIR/include"

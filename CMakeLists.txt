@@ -147,6 +147,12 @@ target_link_libraries(testing-libgdf_lib
     ${FLATBUFFERS_LIB}
     ${PARQUET_LIB}
     ${ARROW_LIB}
+    Boost::filesystem
+    Boost::system
+    Boost::regex
+    aws-cpp-sdk-s3
+    aws-cpp-sdk-s3-encryption
+
 #    ${BOOST_REGEX}
 #    ${BOOST_SYSTEM}
 #    ${BOOST_FILESYSTEM}

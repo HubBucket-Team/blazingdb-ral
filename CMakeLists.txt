@@ -118,6 +118,8 @@ set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/config/BlazingConfig.cpp
 
 add_library(testing-libgdf_lib ${SRC_FILES})
 
+find_library(FLATBUFFERS_LIB flatbuffers )
+
 target_link_libraries(testing-libgdf_lib
     ${BLAZINGDB_IO_STATIC_LIB}
     Threads::Threads
@@ -140,7 +142,7 @@ target_link_libraries(testing-libgdf_lib
     aws-cpp-sdk-s3-encryption
     Boost
     parquet
-    flatbuffers
+    ${FLATBUFFERS}
     # Library needed for blazing communication repository (debug)
     gcov
 )

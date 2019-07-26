@@ -131,10 +131,11 @@ TEST_F(DistributionPrimitivesTest, collectPartitionTest) {
 
     // Create data - message
     using MessageFactory = ral::communication::messages::Factory;
+    using ral::communication::messages::ColumnDataMessage;
     auto message = MessageFactory::createColumnDataMessage(context_token, *self_node_, test_columns);
 
     // Verify test
-    EXPECT_CALL(ServerMock::getInstance(), getMessage(ContextTokenEqual(ByRef(context_token))))
+    EXPECT_CALL(ServerMock::getInstance(), getMessage(ContextTokenEqual(ByRef(context_token)),ColumnDataMessage::getMessageID()))
                .Times(context_->getAllNodes().size() - 1)
                .WillRepeatedly(::testing::Return(message));
 
@@ -152,10 +153,11 @@ TEST_F(DistributionPrimitivesTest, collectPartitionExceptionTest) {
 
     // Create data - message
     using MessageFactory = ral::communication::messages::Factory;
+    using ral::communication::messages::ColumnDataMessage;
     auto message = MessageFactory::createSampleToNodeMaster(context_token, *self_node_, 10, test_columns);
 
     // Verify test
-    EXPECT_CALL(ServerMock::getInstance(), getMessage(ContextTokenEqual(ByRef(context_token))))
+    EXPECT_CALL(ServerMock::getInstance(), getMessage(ContextTokenEqual(ByRef(context_token)),ColumnDataMessage::getMessageID()))
                 .Times(1)
                 .WillOnce(::testing::Return(message));
 
@@ -175,10 +177,11 @@ TEST_F(DistributionPrimitivesTest, collectSamplesTest) {
 
     // Create data - message
     using MessageFactory = ral::communication::messages::Factory;
+    using ral::communication::messages::SampleToNodeMasterMessage;
     auto message = MessageFactory::createSampleToNodeMaster(context_token, *self_node_, total_row_size, test_columns);
 
     // Verify test
-    EXPECT_CALL(ServerMock::getInstance(), getMessage(_))
+    EXPECT_CALL(ServerMock::getInstance(), getMessage(ContextTokenEqual(ByRef(context_token)),SampleToNodeMasterMessage::getMessageID()))
                 .Times(context_->getAllNodes().size() - 1)
                 .WillRepeatedly(::testing::Return(message));
 
@@ -196,10 +199,11 @@ TEST_F(DistributionPrimitivesTest, collectSamplesExceptionTest) {
 
     // Create data - message
     using MessageFactory = ral::communication::messages::Factory;
+    using ral::communication::messages::SampleToNodeMasterMessage;
     auto message = MessageFactory::createColumnDataMessage(context_token, *self_node_, test_columns);
 
     // Verify test
-    EXPECT_CALL(ServerMock::getInstance(), getMessage(_))
+    EXPECT_CALL(ServerMock::getInstance(), getMessage(ContextTokenEqual(ByRef(context_token)),SampleToNodeMasterMessage::getMessageID()))
                 .Times(1)
                 .WillOnce(::testing::Return(message));
 
@@ -214,16 +218,18 @@ TEST_F(DistributionPrimitivesTest, distributePartitionPlanTest) {
     std::vector<gdf_column_cpp> test_columns;
 
     // Get data for validation
-    using ral::communication::messages::ColumnDataMessage;
-    const auto& message_token = ColumnDataMessage::getMessageID();
+    using ral::communication::messages::PartitionPivotsMessage;
+    const auto& message_token = PartitionPivotsMessage::getMessageID();
     const auto  context_token = context_->getContextToken().getIntToken();
 
     // Verify test
     for (auto& node : context_->getWorkerNodes()) {
-        EXPECT_CALL(ClientMock::getInstance(),
-                    send(NodeEqual(*node),
-                         MessageEqual(*self_node_, message_token, context_token)))
-                    .Times(1);
+        if (!(context_->getMasterNode() == *node)){
+            EXPECT_CALL(ClientMock::getInstance(),
+                        send(NodeEqual(*node),
+                            MessageEqual(*self_node_, message_token, context_token)))
+                        .Times(1);
+        }
     }
 
     // Execute test
@@ -240,10 +246,11 @@ TEST_F(DistributionPrimitivesTest, getPartitionPlanTest) {
 
     // Create data - message
     using MessageFactory = ral::communication::messages::Factory;
-    auto message = MessageFactory::createColumnDataMessage(context_token, *self_node_, test_columns);
+    using ral::communication::messages::PartitionPivotsMessage;
+    auto message = MessageFactory::createPartitionPivotsMessage(context_token, *self_node_, test_columns);
 
     // Verify test
-    EXPECT_CALL(ServerMock::getInstance(), getMessage(ContextTokenEqual(ByRef(context_token))))
+    EXPECT_CALL(ServerMock::getInstance(), getMessage(ContextTokenEqual(ByRef(context_token)), PartitionPivotsMessage::getMessageID()))
                 .Times(1)
                 .WillOnce(::testing::Return(message));
 
@@ -261,10 +268,11 @@ TEST_F(DistributionPrimitivesTest, getPartitionPlanExceptionTest) {
 
     // Create data - message
     using MessageFactory = ral::communication::messages::Factory;
+    using ral::communication::messages::PartitionPivotsMessage;
     auto message = MessageFactory::createSampleToNodeMaster(context_token, *self_node_, 1000, test_columns);
 
     // Verify test
-    EXPECT_CALL(ServerMock::getInstance(), getMessage(ContextTokenEqual(ByRef(context_token))))
+    EXPECT_CALL(ServerMock::getInstance(), getMessage(ContextTokenEqual(ByRef(context_token)), PartitionPivotsMessage::getMessageID()))
                 .Times(1)
                 .WillOnce(::testing::Return(message));
 
@@ -309,7 +317,6 @@ TEST_F(DistributionPrimitivesTest, partitionData_SingleColumn) {
     ASSERT_NO_THROW(columns = ral::distribution::partitionData(*context_, table, searchColIndices, pivots, true));
 
     // verify
-    ASSERT_EQ(table.size(), 0);
     ASSERT_EQ(columns.size(), output_result.size());
 
     for (std::size_t k = 0; k < columns.size(); ++k) {
@@ -367,7 +374,6 @@ TEST_F(DistributionPrimitivesTest, PartitionData_DoubleColumns) {
     ASSERT_NO_THROW(columns = ral::distribution::partitionData(*context_, table, searchColIndices, pivots, true));
 
     // verify
-    ASSERT_EQ(table.size(), 0);
     ASSERT_EQ(columns.size(), output_result.size());
 
     for (std::size_t i = 0; i < columns.size(); ++i) {
@@ -411,7 +417,7 @@ TEST_F(DistributionPrimitivesTest, partitionData_SingleColumn__WithInvalidIndex)
             { {10.0, 12.0}             },
             { {14.0, 16.0, 18.0, 20.0} },
             { {22.0, 24.0, 26.0, 28.0} },
-            {                          }
+            {  {}                      }
     };
 
     // execute distributed function
@@ -421,7 +427,6 @@ TEST_F(DistributionPrimitivesTest, partitionData_SingleColumn__WithInvalidIndex)
     ASSERT_NO_THROW(columns = ral::distribution::partitionData(*context_, table, searchColIndices, pivots, true));
 
     // verify
-    ASSERT_EQ(table.size(), 0);
     ASSERT_EQ(columns.size(), output_result.size());
 
     for (std::size_t i = 0; i < columns.size(); ++i) {
@@ -471,7 +476,7 @@ TEST_F(DistributionPrimitivesTest, PartitionData_DoubleColumns_WithInvalidIndex)
             { {110, 112, 114},           {210, 212, 214}           },
             { {116, 118},                {216, 218}                },
             { {120, 122, 124, 126, 128}, {220, 222, 224, 226, 228} },
-            {                                                      }
+            { {}                       , {}                        }
     };
 
     // execute distributed function
@@ -481,7 +486,6 @@ TEST_F(DistributionPrimitivesTest, PartitionData_DoubleColumns_WithInvalidIndex)
     ASSERT_NO_THROW(columns = ral::distribution::partitionData(*context_, table, searchColIndices, pivots, true));
 
     // verify
-    ASSERT_EQ(table.size(), 0);
     ASSERT_EQ(columns.size(), output_result.size());
 
     for (std::size_t i = 0; i < columns.size(); ++i) {

@@ -234,7 +234,10 @@ set(SRC_FILES_APP
     ${CMAKE_SOURCE_DIR}/src/testing-libgdf.cu)
 
 add_executable(testing-libgdf ${SRC_FILES_APP})
-target_link_libraries(testing-libgdf testing-libgdf_lib ${BLAZINGDB_PROTOCOL_STATIC_LIB})
+target_link_libraries(testing-libgdf testing-libgdf_lib ${BLAZINGDB_PROTOCOL_STATIC_LIB}
+    Boost::filesystem
+    Boost::system
+    Boost::regex)
 
 # Tests
 if(BUILD_TESTING)
@@ -248,11 +251,11 @@ if(BUILD_TESTING)
 endif()
 
 #Benchmarks
-if(GBENCHMARK_FOUND)
-    add_subdirectory(benchmarks)
-else()
-    message(AUTHOR_WARNING "Google C++ Benchmarking Framework (Google Benchmark) not found")
-endif()
+#if(GBENCHMARK_FOUND)
+#    add_subdirectory(benchmarks)
+#else()
+#    message(AUTHOR_WARNING "Google C++ Benchmarking Framework (Google Benchmark) not found")
+#endif()
 
 # Print the project summary
 feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)

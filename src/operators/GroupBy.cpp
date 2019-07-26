@@ -447,6 +447,10 @@ void single_node_aggregations(blazing_frame& input, std::vector<int>& group_colu
 void distributed_aggregations_with_groupby(const Context& queryContext, blazing_frame& input, std::vector<int>& group_column_indices, std::vector<gdf_agg_op>& aggregation_types, std::vector<std::string>& aggregation_input_expressions, std::vector<std::string>& aggregation_column_assigned_aliases) {
 	using ral::communication::CommunicationData;
 
+	if(std::find(aggregation_types.begin(), aggregation_types.end(), GDF_AVG) != aggregation_types.end()) {
+		throw std::runtime_error{"In distributed_aggregations_with_groupby function: unsupported avg function"};
+	}
+
 	std::vector<gdf_column_cpp> group_columns(group_column_indices.size());
 	for(size_t i = 0; i < group_column_indices.size(); i++){
 		group_columns[i] = input.get_column(group_column_indices[i]);

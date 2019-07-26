@@ -241,7 +241,8 @@ add_executable(testing-libgdf ${SRC_FILES_APP})
 target_link_libraries(testing-libgdf testing-libgdf_lib ${BLAZINGDB_PROTOCOL_STATIC_LIB}
     Boost::filesystem
     Boost::system
-    Boost::regex)
+    Boost::regex
+    ${ARROW_LIB})
 
 # Tests
 if(BUILD_TESTING)

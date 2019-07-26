@@ -142,7 +142,7 @@ target_link_libraries(testing-libgdf_lib
     aws-cpp-sdk-s3-encryption
     Boost
     parquet
-    ${FLATBUFFERS}
+    ${FLATBUFFERS_LIB}
     # Library needed for blazing communication repository (debug)
     gcov
 )

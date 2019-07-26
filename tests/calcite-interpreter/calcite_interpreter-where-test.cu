@@ -102,7 +102,7 @@ TEST_F(calcite_interpreter_TEST, where_greater) {
 		std::string query = "\
 LogicalProject(y=[$1])\n\
   LogicalFilter(condition=[>($1, 5)])\n\
-    EnumerableTableScan(table=[[hr, emps]])";
+    LogicalTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 			query, outputs);
@@ -128,7 +128,7 @@ TEST_F(calcite_interpreter_TEST, where_equals) {
 		std::string query = "\
 LogicalProject(z=[$2])\n\
   LogicalFilter(condition=[=($0, $1)])\n\
-    EnumerableTableScan(table=[[hr, emps]])";
+    LogicalTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 			query, outputs);
@@ -155,7 +155,7 @@ TEST_F(calcite_interpreter_TEST, DISABLED_processing_project51) {
 		std::string query = "\
 LogicalProject(z=[$2])\n\
   LogicalFilter(condition=[=(1, 1)])\n\
-    EnumerableTableScan(table=[[hr, emps]])";
+    LogicalTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 			query, outputs);
@@ -177,7 +177,7 @@ TEST_F(calcite_interpreter_TEST, where_withmod) {
 		std::string query = "\
 LogicalProject(y=[$1])\n\
   LogicalFilter(condition=[=(MOD($1, 5), 0)])\n\
-    EnumerableTableScan(table=[[hr, emps]])";
+    LogicalTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 			query, outputs);
@@ -203,7 +203,7 @@ TEST_F(calcite_interpreter_TEST, where_equals_and_greater) {
 		std::string query = "\
 LogicalProject(z=[$2])\n\
   LogicalFilter(condition=[AND(=($1, $0), >($0, 4))])\n\
-    EnumerableTableScan(table=[[hr, emps]])";
+    LogicalTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 			query, outputs);
@@ -229,7 +229,7 @@ TEST_F(calcite_interpreter_TEST, where_not_equals) {
 		std::string query = "\
 LogicalProject(x=[$0])\n\
   LogicalFilter(condition=[<>($0, 1)])\n\
-    EnumerableTableScan(table=[[hr, emps]])";
+    LogicalTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 			query, outputs);
@@ -256,7 +256,7 @@ TEST_F(calcite_interpreter_TEST, where_all_columns_withand) {
 		std::string query = "\
 LogicalProject(x=[$0], y=[$1], z=[$2])\n\
   LogicalFilter(condition=[AND(=($0, $2), >=(4, $1))])\n\
-	EnumerableTableScan(table=[[hr, emps]])";
+	LogicalTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 			query, outputs);
@@ -290,7 +290,7 @@ TEST_F(calcite_interpreter_TEST, where_two_columns_withand) {
 		std::string query = "\
 LogicalProject(x=[$0], z=[$2])\n\
   LogicalFilter(condition=[AND(=(1, $0), >=(4, $1))])\n\
-	EnumerableTableScan(table=[[hr, emps]])";
+	LogicalTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 			query, outputs);
@@ -321,7 +321,7 @@ LogicalProject(x=[$0], z=[$2])\n\
 		std::string query = "\
 LogicalProject(x=[$0], z=[$2])\n\
   LogicalFilter(condition=[OR(=(1, $0), >=(4, $1))])\n\
-	EnumerableTableScan(table=[[hr, emps]])";
+	LogicalTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 			query, outputs);

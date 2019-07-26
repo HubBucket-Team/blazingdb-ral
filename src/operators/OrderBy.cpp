@@ -130,7 +130,7 @@ void distributed_sort(const Context& queryContext, blazing_frame& input, std::ve
 	// Wait for sortThread
 	sortThread.join();
 
-	std::vector<ral::distribution::NodeColumns> partitions = ral::distribution::partitionData(queryContext, sortedTable, sortColIndices, partitionPlan);
+	std::vector<ral::distribution::NodeColumns> partitions = ral::distribution::partitionData(queryContext, sortedTable, sortColIndices, partitionPlan, true, sortOrderTypes);
 
 	ral::distribution::distributePartitions(queryContext, partitions);
 

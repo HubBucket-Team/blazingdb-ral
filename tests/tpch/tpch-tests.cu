@@ -49,7 +49,7 @@ TEST_F(EvaluateQueryTest, TEST_00) {
       .logicalPlan =
           "LogicalProject(c_custkey=[$0], c_nationkey=[$3], c_acctbal=[$5])\n  "
           "LogicalFilter(condition=[<($0, 15)])\n    "
-          "EnumerableTableScan(table=[[main, customer]])",
+          "LogicalTableScan(table=[[main, customer]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.customer",
@@ -192,7 +192,7 @@ TEST_F(EvaluateQueryTest, TEST_01) {
       .logicalPlan =
           "LogicalProject(c_custkey=[$0], c_nationkey=[$3], c_acctbal=[$5])\n  "
           "LogicalFilter(condition=[AND(<($0, 150), =($3, 5))])\n    "
-          "EnumerableTableScan(table=[[main, customer]])",
+          "LogicalTableScan(table=[[main, customer]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.customer",
@@ -331,7 +331,7 @@ TEST_F(EvaluateQueryTest, TEST_02) {
       .logicalPlan =
           "LogicalProject(c_custkey=[$0], nkey=[$3])\n  "
           "LogicalFilter(condition=[<($0, 0)])\n    "
-          "EnumerableTableScan(table=[[main, customer]])",
+          "LogicalTableScan(table=[[main, customer]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.customer",
@@ -462,7 +462,7 @@ TEST_F(EvaluateQueryTest, TEST_03) {
       .logicalPlan =
           "LogicalProject(c_custkey=[$0], nkey=[$3])\n  "
           "LogicalFilter(condition=[AND(<($0, 0), >=($3, 30))])\n    "
-          "EnumerableTableScan(table=[[main, customer]])",
+          "LogicalTableScan(table=[[main, customer]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.customer",
@@ -593,7 +593,7 @@ TEST_F(EvaluateQueryTest, TEST_04) {
       .logicalPlan =
           "LogicalProject(c_custkey=[$0], nkey=[$3])\n  "
           "LogicalFilter(condition=[OR(<($0, 0), >=($3, 24))])\n    "
-          "EnumerableTableScan(table=[[main, customer]])",
+          "LogicalTableScan(table=[[main, customer]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.customer",
@@ -728,7 +728,7 @@ TEST_F(EvaluateQueryTest, TEST_05) {
       .logicalPlan =
           "LogicalProject(c_custkey=[$0], nkey=[$3])\n  "
           "LogicalFilter(condition=[AND(<($0, 0), >=($3, 3))])\n    "
-          "EnumerableTableScan(table=[[main, customer]])",
+          "LogicalTableScan(table=[[main, customer]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.customer",
@@ -859,7 +859,7 @@ TEST_F(EvaluateQueryTest, TEST_05) {
 //       .logicalPlan =
 //           "LogicalProject(c_custkey=[$0], nkey=[$3])\n  "
 //           "LogicalFilter(condition=[>(+(-($3), $5), 750.3)])\n    "
-//           "EnumerableTableScan(table=[[main, customer]])",
+//           "LogicalTableScan(table=[[main, customer]])",
 //       .tableGroup =
 //           LiteralTableGroupBuilder{
 //               {"main.customer",
@@ -1017,7 +1017,7 @@ TEST_F(EvaluateQueryTest, TEST_05) {
 //       .logicalPlan =
 //           "LogicalProject(c_custkey=[$0], nkey=[$3])\n  "
 //           "LogicalFilter(condition=[>(+(-($3), $5), 750)])\n    "
-//           "EnumerableTableScan(table=[[main, customer]])",
+//           "LogicalTableScan(table=[[main, customer]])",
 //       .tableGroup =
 //           LiteralTableGroupBuilder{
 //               {"main.customer",

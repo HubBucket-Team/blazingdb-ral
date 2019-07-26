@@ -35,7 +35,7 @@ struct EvaluateQueryTest : public ::testing::Test
                               .query = "select id + salary from main.emps",
                               .logicalPlan =
                                   "LogicalProject(EXPR$0=[+($0, $2)])\n  "
-                                  "EnumerableTableScan(table=[[main, emps]])",
+                                  "LogicalTableScan(table=[[main, emps]])",
                               .tableGroup =
                                   LiteralTableGroupBuilder{
                                       {"main.emps",
@@ -70,7 +70,7 @@ struct EvaluateQueryTest : public ::testing::Test
     }
 };
 
-// EnumerableTableScan(table=[[main, emps]])
+// LogicalTableScan(table=[[main, emps]])
 TEST_F(EvaluateQueryTest, TEST_01)
 {
     auto logical_plan = input.logicalPlan;

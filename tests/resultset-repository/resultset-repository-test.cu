@@ -13,7 +13,7 @@
 class ResultSetRepositoryTest : public ::testing::Test {
   virtual void SetUp() {
     connection = result_set_repository::get_instance().init_session();
-    token = result_set_repository::get_instance().register_query(connection);
+    token = result_set_repository::get_instance().register_query(connection, 0);
 
   }
 
@@ -97,4 +97,3 @@ TEST_F(ResultSetRepositoryTest, string_resulset_test) {
        delete[] char_array;
   }
 }
-

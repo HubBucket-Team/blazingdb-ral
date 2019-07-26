@@ -80,7 +80,9 @@ std::vector<gdf_column_cpp> getPartitionPlan(const Context& context);
 std::vector<NodeColumns> partitionData(const Context& context,
                                        std::vector<gdf_column_cpp>& table,
                                        std::vector<int>& searchColIndices,
-                                       std::vector<gdf_column_cpp>& pivots);
+                                       std::vector<gdf_column_cpp>& pivots,
+                                       bool isTableSorted,
+                                       std::vector<int8_t> sortOrderTypes = {});
 
 void distributePartitions(const Context& context, std::vector<NodeColumns>& partitions);
 

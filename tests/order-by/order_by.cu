@@ -47,7 +47,7 @@ TEST_F(EvaluateQueryTest, TEST_00) {
       .logicalPlan =
           "LogicalSort(sort0=[$1], dir0=[ASC])\n  "
           "LogicalProject(c_custkey=[$0], c_acctbal=[$5])\n    "
-          "EnumerableTableScan(table=[[main, customer]])",
+          "LogicalTableScan(table=[[main, customer]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.customer",
@@ -223,7 +223,7 @@ TEST_F(EvaluateQueryTest, TEST_01) {
       .logicalPlan =
           "LogicalSort(sort0=[$2], dir0=[ASC])\n  "
           "LogicalProject(c_custkey=[$0], c_nationkey=[$3], c_acctbal=[$5])\n  "
-          "  EnumerableTableScan(table=[[main, customer]])",
+          "  LogicalTableScan(table=[[main, customer]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.customer",
@@ -411,7 +411,7 @@ TEST_F(EvaluateQueryTest, TEST_02) {
       .logicalPlan =
           "LogicalSort(sort0=[$1], sort1=[$2], dir0=[ASC], dir1=[ASC])\n  "
           "LogicalProject(c_custkey=[$0], c_nationkey=[$3], c_acctbal=[$5])\n  "
-          "  EnumerableTableScan(table=[[main, customer]])",
+          "  LogicalTableScan(table=[[main, customer]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.customer",
@@ -600,7 +600,7 @@ TEST_F(EvaluateQueryTest, TEST_03) {
       .logicalPlan =
           "LogicalSort(sort0=[$0], sort1=[$1], dir0=[ASC], dir1=[ASC])\n  "
           "LogicalProject(EXPR$0=[+($0, $3)], c_acctbal=[$5])\n    "
-          "EnumerableTableScan(table=[[main, customer]])",
+          "LogicalTableScan(table=[[main, customer]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.customer",
@@ -780,7 +780,7 @@ TEST_F(EvaluateQueryTest, TEST_04) {
           "LogicalProject(EXPR$0=[+($0, $3)], c_acctbal=[$5], EXPR$2=[-($0, "
           "$3)], c_nationkey=[$3], c_custkey=[$0])\n      "
           "LogicalFilter(condition=[AND(<($0, 25), >($3, 5))])\n        "
-          "EnumerableTableScan(table=[[main, customer]])",
+          "LogicalTableScan(table=[[main, customer]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.customer",
@@ -925,7 +925,7 @@ TEST_F(EvaluateQueryTest, TEST_05) {
           "LogicalSort(sort0=[$0], dir0=[ASC])\n  "
           "LogicalProject(c_acctbal=[$5], c_custkey=[$0])\n    "
           "LogicalFilter(condition=[AND(<($0, 25), >($3, 5), >($5, 500))])\n   "
-          "   EnumerableTableScan(table=[[main, customer]])",
+          "   LogicalTableScan(table=[[main, customer]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.customer",
@@ -1067,7 +1067,7 @@ TEST_F(EvaluateQueryTest, TEST_06) {
           "LogicalSort(sort0=[$1], sort1=[$0], dir0=[ASC], dir1=[ASC])\n  "
           "LogicalProject(c_custkey=[$0], c_nationkey=[$3])\n    "
           "LogicalFilter(condition=[<($0, 25)])\n      "
-          "EnumerableTableScan(table=[[main, customer]])",
+          "LogicalTableScan(table=[[main, customer]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.customer",
@@ -1210,7 +1210,7 @@ TEST_F(EvaluateQueryTest, TEST_07) {
           "LogicalSort(sort0=[$1], sort1=[$0], dir0=[ASC], dir1=[ASC])\n  "
           "LogicalProject(c_custkey=[$0], c_nationkey=[$3])\n    "
           "LogicalFilter(condition=[<($0, 25)])\n      "
-          "EnumerableTableScan(table=[[main, customer]])",
+          "LogicalTableScan(table=[[main, customer]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.customer",

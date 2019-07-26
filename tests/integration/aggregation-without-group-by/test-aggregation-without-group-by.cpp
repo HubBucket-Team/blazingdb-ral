@@ -71,7 +71,7 @@ TEST_F(EvaluateQueryTest, TEST_01) {
       .logicalPlan =
           "LogicalAggregate(group=[{}], EXPR$0=[COUNT()], EXPR$1=[SUM($0)], "
           "EXPR$2=[AVG($0)], EXPR$3=[MAX($0)], EXPR$4=[MIN($0)])\n  "
-          "EnumerableTableScan(table=[[main, part]])",
+          "LogicalTableScan(table=[[main, part]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.part",
@@ -125,7 +125,7 @@ TEST_F(EvaluateQueryTest, TEST_03) {
       .logicalPlan =
           "LogicalAggregate(group=[{}], EXPR$0=[COUNT()], EXPR$1=[SUM($0)], EXPR$2=[AVG($0)], EXPR$3=[MAX($0)], EXPR$4=[MIN($0)])\n"
           "  LogicalFilter(condition=[<($0, 0)])\n"
-          "    EnumerableTableScan(table=[[main, part]])",
+          "    LogicalTableScan(table=[[main, part]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.part",

@@ -49,7 +49,7 @@ TEST_F(EvaluateQueryTest, TEST_00) {
           .logicalPlan =
               "LogicalProject(EXPR$0=[SIN($1)], EXPR$1=[COS($1)], "
               "EXPR$2=[TAN($1)], EXPR$3=[ASIN($2)], EXPR$4=[ACOS($3)], "
-              "EXPR$5=[ATAN($4)])\n  EnumerableTableScan(table=[[main, emps]])",
+              "EXPR$5=[ATAN($4)])\n  LogicalTableScan(table=[[main, emps]])",
           .tableGroup =
               LiteralTableGroupBuilder{
                   {"main.emps",
@@ -328,7 +328,7 @@ TEST_F(EvaluateQueryTest, TEST_01) {
       .query = "select ln(value_) from main.emps",
       .logicalPlan =
           "LogicalProject(EXPR$0=[LN($1)])\n  "
-          "EnumerableTableScan(table=[[main, emps]])",
+          "LogicalTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.emps",
@@ -397,7 +397,7 @@ TEST_F(EvaluateQueryTest, TEST_02) {
       .query = "select ceil(value_), floor(value_) from main.emps",
       .logicalPlan =
           "LogicalProject(EXPR$0=[CEIL($1)], EXPR$1=[FLOOR($1)])\n  "
-          "EnumerableTableScan(table=[[main, emps]])",
+          "LogicalTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.emps",

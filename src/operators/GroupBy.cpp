@@ -448,7 +448,7 @@ void distributed_aggregations_with_groupby(const Context& queryContext, blazing_
 	using ral::communication::CommunicationData;
 
 	if(std::find(aggregation_types.begin(), aggregation_types.end(), GDF_AVG) != aggregation_types.end()) {
-		throw std::runtime_error{"In distributed_aggregations_with_groupby function: unsupported avg function"};
+		throw std::runtime_error{"In distributed_aggregations_with_groupby function: AVG is currently not supported in distributed mode"};
 	}
 
 	std::vector<gdf_column_cpp> group_columns(group_column_indices.size());

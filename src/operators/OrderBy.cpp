@@ -151,7 +151,7 @@ void process_sort(blazing_frame & input, std::string query_part, const Context* 
 
 	auto fetchLimit = query_part.find("fetch");
 	if(fetchLimit != std::string::npos) {
-		throw std::runtime_error{"In evaluate_split_query function: unsupported limit clause"};
+		throw std::runtime_error{"In evaluate_split_query function: LIMIT clause is currently not suported"};
 	}
 
 	//LogicalSort(sort0=[$4], sort1=[$7], dir0=[ASC], dir1=[ASC])

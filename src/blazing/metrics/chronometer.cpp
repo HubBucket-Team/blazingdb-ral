@@ -24,10 +24,11 @@ public:
     explicit InternalWatchBase() = default;
 
     std::uintmax_t Read() const noexcept final {
-        return std::chrono::time_point_cast<std::chrono::nanoseconds>(
-                   std::chrono::system_clock::now())
-            .time_since_epoch()
-            .count();
+        return static_cast<std::uintmax_t>(
+            std::chrono::time_point_cast<std::chrono::nanoseconds>(
+                std::chrono::system_clock::now())
+                .time_since_epoch()
+                .count());
     }
 };
 

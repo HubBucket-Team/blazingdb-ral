@@ -48,9 +48,9 @@ TEST_F(EvaluateQueryTest, TEST_00) {
       .logicalPlan =
           "LogicalUnion(all=[true])\n  LogicalProject(c_custkey=[$0])\n    "
           "LogicalFilter(condition=[<($0, 15)])\n      "
-          "EnumerableTableScan(table=[[main, customer]])\n  "
+          "LogicalTableScan(table=[[main, customer]])\n  "
           "LogicalProject(c_custkey=[$0])\n    LogicalFilter(condition=[>($0, "
-          "140)])\n      EnumerableTableScan(table=[[main, customer]])",
+          "140)])\n      LogicalTableScan(table=[[main, customer]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.customer",
@@ -189,10 +189,10 @@ TEST_F(EvaluateQueryTest, TEST_01) {
       .logicalPlan =
           "LogicalUnion(all=[true])\n  LogicalProject(c_acctbal=[$5], "
           "c_custkey=[$0])\n    LogicalFilter(condition=[<($5, 0)])\n      "
-          "EnumerableTableScan(table=[[main, customer]])\n  "
+          "LogicalTableScan(table=[[main, customer]])\n  "
           "LogicalProject(o_totalprice=[$3], o_custkey=[$1])\n    "
           "LogicalFilter(condition=[<($0, 100)])\n      "
-          "EnumerableTableScan(table=[[main, orders]])",
+          "LogicalTableScan(table=[[main, orders]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.customer",
@@ -1440,10 +1440,10 @@ TEST_F(EvaluateQueryTest, TEST_02) {
       .logicalPlan =
           "LogicalUnion(all=[true])\n  LogicalProject(o_orderkey=[$0], "
           "o_custkey=[$1])\n    LogicalFilter(condition=[<($0, 100)])\n      "
-          "EnumerableTableScan(table=[[main, orders]])\n  "
+          "LogicalTableScan(table=[[main, orders]])\n  "
           "LogicalProject(o_orderkey=[$0], o_custkey=[$1])\n    "
           "LogicalFilter(condition=[AND(<($0, 300), >=($0, 200))])\n      "
-          "EnumerableTableScan(table=[[main, orders]])",
+          "LogicalTableScan(table=[[main, orders]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.orders",

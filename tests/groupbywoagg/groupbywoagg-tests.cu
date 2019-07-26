@@ -49,7 +49,7 @@ TEST_F(EvaluateQueryTest, TEST_00) {
           "LogicalSort(sort0=[$0], dir0=[ASC])\n  "
           "LogicalAggregate(group=[{0}])\n    "
           "LogicalProject(n_regionkey=[$2])\n      "
-          "EnumerableTableScan(table=[[main, nation]])",
+          "LogicalTableScan(table=[[main, nation]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.nation",
@@ -93,7 +93,7 @@ TEST_F(EvaluateQueryTest, TEST_01) {
           "LogicalProject(n_nationkey=[$1], n_regionkey=[$0])\n    "
           "LogicalAggregate(group=[{0, 1}])\n      "
           "LogicalProject(n_regionkey=[$2], n_nationkey=[$0])\n        "
-          "EnumerableTableScan(table=[[main, nation]])",
+          "LogicalTableScan(table=[[main, nation]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.nation",
@@ -145,8 +145,8 @@ TEST_F(EvaluateQueryTest, TEST_02) {
           "LogicalSort(sort0=[$0], dir0=[ASC])\n  LogicalAggregate(group=[{0, "
           "1}])\n    LogicalProject(n_nationkey=[$0], r_regionkey=[$4])\n      "
           "LogicalJoin(condition=[=($4, $0)], joinType=[inner])\n        "
-          "EnumerableTableScan(table=[[main, nation]])\n        "
-          "EnumerableTableScan(table=[[main, region]])",
+          "LogicalTableScan(table=[[main, nation]])\n        "
+          "LogicalTableScan(table=[[main, region]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.nation",

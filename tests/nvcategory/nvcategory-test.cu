@@ -245,16 +245,15 @@ struct NVCategoryTest : public ::testing::Test {
 	}
 
 	template<typename T>
-	void Check(gdf_column_cpp out_col, T* host_output, size_t num_output_values){
+	void Check(gdf_column_cpp out_col, const std::vector<T>& host_output, size_t num_output_values){
 
 		EXPECT_EQ(out_col.size(), num_output_values) << "Mismatch columns size";
 
 		if(num_output_values == 0)
 			num_output_values = out_col.size();
 
-		T * device_output;
-		device_output = new T[num_output_values];
-		cudaMemcpy(device_output, out_col.data(), num_output_values * sizeof(T), cudaMemcpyDeviceToHost);
+		std::vector<T> device_output(num_output_values);
+		cudaMemcpy(device_output.data(), out_col.data(), num_output_values * sizeof(T), cudaMemcpyDeviceToHost);
 
 		for(size_t i = 0; i < num_output_values; i++){
 			EXPECT_TRUE(host_output[i] == device_output[i]);
@@ -268,7 +267,7 @@ struct NVCategoryTest : public ::testing::Test {
 		EXPECT_EQ(num_values, reference_result.size()) << "Mismatch columns size";
 
 		if(reference_result.size()>0){
-			NVStrings * temp_strings = static_cast<NVCategory *>(out_col.get_gdf_column()->dtype_info.category)->gather_strings( (int*) out_col.get_gdf_column()->data, num_values, true );
+			NVStrings * temp_strings = static_cast<NVCategory *>(out_col.get_gdf_column()->dtype_info.category)->gather_strings(static_cast<nv_category_index_type*>(out_col.get_gdf_column()->data), num_values, true );
 
 			char** host_strings = new char*[num_values];
 			for(size_t i=0;i<num_values;i++){
@@ -340,7 +339,7 @@ TEST_F(NVCategoryTest, processing_filter_comparison_right_string) {
 
 		std::string query = "LogicalProject(x=[$0])\n\
 	LogicalFilter(condition=[<($1, 'm')])\n\
-		EnumerableTableScan(table=[[hr, emps]])";
+		LogicalTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 				query, outputs);
@@ -356,7 +355,7 @@ TEST_F(NVCategoryTest, processing_filter_comparison_right_string) {
 		std::cout<<"Output:\n";
 		print_gdf_column(outputs[0].get_gdf_column());
 
-		Check(outputs[0], reference_result.data(), reference_result.size());
+		Check(outputs[0], reference_result, reference_result.size());
 	}
 }
 
@@ -381,7 +380,7 @@ TEST_F(NVCategoryTest, processing_filter_comparison_right_string_exists) {
 
 		std::string query = "LogicalProject(x=[$0])\n\
 	LogicalFilter(condition=[<($1, 'e')])\n\
-		EnumerableTableScan(table=[[hr, emps]])";
+		LogicalTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 				query, outputs);
@@ -397,7 +396,7 @@ TEST_F(NVCategoryTest, processing_filter_comparison_right_string_exists) {
 		std::cout<<"Output:\n";
 		print_gdf_column(outputs[0].get_gdf_column());
 
-		Check(outputs[0], reference_result.data(), reference_result.size());
+		Check(outputs[0], reference_result, reference_result.size());
 	}
 }
 
@@ -422,7 +421,7 @@ TEST_F(NVCategoryTest, processing_filter_comparison_right_string_noexists) {
 
 		std::string query = "LogicalProject(x=[$0])\n\
 	LogicalFilter(condition=[<($1, 'f')])\n\
-		EnumerableTableScan(table=[[hr, emps]])";
+		LogicalTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 				query, outputs);
@@ -438,7 +437,7 @@ TEST_F(NVCategoryTest, processing_filter_comparison_right_string_noexists) {
 		std::cout<<"Output:\n";
 		print_gdf_column(outputs[0].get_gdf_column());
 
-		Check(outputs[0], reference_result.data(), reference_result.size());
+		Check(outputs[0], reference_result, reference_result.size());
 	}
 }
 
@@ -468,7 +467,7 @@ TEST_F(NVCategoryTest, processing_filter_comparison_both_strings) {
 
 		std::string query = "LogicalProject(x=[$0], y=[$1])\n\
 	LogicalFilter(condition=[=($0, $1)])\n\
-		EnumerableTableScan(table=[[hr, emps]])";
+		LogicalTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 				query, outputs);
@@ -527,8 +526,8 @@ TEST_F(NVCategoryTest, processing_filter_join) {
 
 		std::string query = "LogicalProject(x=[$0], a=[$2])\n\
 	LogicalJoin(condition=[=($0, $2)], joinType=[inner])\n\
-		EnumerableTableScan(table=[[hr, emps]])\n\
-		EnumerableTableScan(table=[[hr, sales]])";
+		LogicalTableScan(table=[[hr, emps]])\n\
+		LogicalTableScan(table=[[hr, sales]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 				query, outputs);
@@ -590,7 +589,7 @@ TEST_F(NVCategoryTest, processing_orderby) {
 
 		std::string query = "LogicalSort(sort0=[$0], dir0=[ASC])\n\
 	LogicalProject(x=[$0], y=[$1])\n\
-		EnumerableTableScan(table=[[hr, emps]])";
+		LogicalTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 				query, outputs);
@@ -618,7 +617,7 @@ TEST_F(NVCategoryTest, processing_orderby) {
 		print_gdf_column(outputs[1].get_gdf_column());
 
 		Check(outputs[0], string_reference_result, length);
-		Check(outputs[1], int_reference_result.data(), int_reference_result.size());
+		Check(outputs[1], int_reference_result, int_reference_result.size());
 	}
 }
 
@@ -647,7 +646,7 @@ TEST_F(NVCategoryTest, processing_orderby_desc) {
 
 		std::string query = "LogicalSort(sort0=[$0], dir0=[DESC])\n\
 	LogicalProject(x=[$0], y=[$1])\n\
-		EnumerableTableScan(table=[[hr, emps]])";
+		LogicalTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 				query, outputs);
@@ -675,7 +674,7 @@ TEST_F(NVCategoryTest, processing_orderby_desc) {
 		print_gdf_column(outputs[1].get_gdf_column());
 
 		Check(outputs[0], string_reference_result, length);
-		Check(outputs[1], int_reference_result.data(), int_reference_result.size());
+		Check(outputs[1], int_reference_result, int_reference_result.size());
 	}
 }
 
@@ -703,10 +702,10 @@ TEST_F(NVCategoryTest, processing_filter_union_all) {
 		std::string query = "LogicalUnion(all=[true])\n\
   LogicalProject(y=[$1])\n\
     LogicalFilter(condition=[<($0, 30)])\n\
-      EnumerableTableScan(table=[[hr, emps]])\n\
+      LogicalTableScan(table=[[hr, emps]])\n\
   LogicalProject(y=[$1])\n\
     LogicalFilter(condition=[>($0, 50)])\n\
-      EnumerableTableScan(table=[[hr, emps]])";
+      LogicalTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 				query, outputs);
@@ -750,16 +749,16 @@ TEST_F(NVCategoryTest, processing_filter_count_group_by) {
 		input_tables.push_back(inputs);
 
 	  std::string query = "LogicalProject(EXPR$0=[$1], y=[$0])\n\
-  LogicalAggregate(group=[{0}], EXPR$0=[COUNT()])\n\
-    LogicalProject(y=[$1])\n\
-      EnumerableTableScan(table=[[hr, emps]])";
+	LogicalSort(sort0=[$0], dir0=[ASC])\n\
+  	LogicalAggregate(group=[{0}], EXPR$0=[COUNT()])\n\
+    	LogicalProject(y=[$1])\n\
+      	LogicalTableScan(table=[[hr, emps]])";
 	  
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 				query, outputs);
 		EXPECT_TRUE(err == GDF_SUCCESS);
 
-		std::vector<std::pair<int64_t, std::string>> reference_result;
-		std::map<std::string, int64_t> reference_map;
+		std::map<std::string, int32_t> reference_map;
 
 		for(size_t I=0; I<num_rows; I++){
 			auto it = reference_map.find(std::string(string_data[I]));
@@ -772,7 +771,7 @@ TEST_F(NVCategoryTest, processing_filter_count_group_by) {
 		}
 
 		std::vector<std::string> string_reference_result;
-		std::vector<int64_t> int_reference_result;
+		std::vector<int32_t> int_reference_result;
 
 		std::transform(reference_map.begin(), reference_map.end(), std::back_inserter(string_reference_result),
 						[](const std::pair<std::string, int64_t>& mapItem) { return mapItem.first; });
@@ -784,7 +783,7 @@ TEST_F(NVCategoryTest, processing_filter_count_group_by) {
 		print_gdf_column(outputs[0].get_gdf_column());
 		print_gdf_column(outputs[1].get_gdf_column());
 
-		Check(outputs[0], int_reference_result.data(), int_reference_result.size());
+		Check(outputs[0], int_reference_result, int_reference_result.size());
 		Check(outputs[1], string_reference_result, length);
 	}
 }

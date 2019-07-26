@@ -75,8 +75,8 @@ TYPED_TEST(JoinTest, SimpleTest)
    std::string query = "
    LogicalProject(x=[$0], y=[$1], z=[$2], join_x=[$3], y0=[$4], EXPR$5=[+($0, $4)])\n
      LogicalJoin(condition=[=($3, $0)], joinType=[inner])\n
-       EnumerableTableScan(table=[[hr, emps]])\n
-       EnumerableTableScan(table=[[hr, joiner]])";
+       LogicalTableScan(table=[[hr, emps]])\n
+       LogicalTableScan(table=[[hr, joiner]])";
 
 	 	gdf_error err = evaluate_query(this->input_tables, this->table_names, this->column_names,
 	 			query, this->outputs);

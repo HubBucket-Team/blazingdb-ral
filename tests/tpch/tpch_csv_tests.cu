@@ -260,7 +260,7 @@ TEST_F(EvaluateQueryTest, TEST_00) {
       .logicalPlan =
           "LogicalProject(c_custkey=[$0], c_nationkey=[$3], c_acctbal=[$5])\n  "
           "LogicalFilter(condition=[<($0, 15)])\n    "
-          "EnumerableTableScan(table=[[main, customer]])",
+          "LogicalTableScan(table=[[main, customer]])",
       .filePaths = {"/tmp/customer.psv"},
       .tableNames = {"main.customer"},
       .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
@@ -302,7 +302,7 @@ TEST_F(EvaluateQueryTest, TEST_01) {
       .logicalPlan =
           "LogicalProject(c_custkey=[$0], c_nationkey=[$3], c_acctbal=[$5])\n  "
           "LogicalFilter(condition=[AND(<($0, 150), =($3, 5))])\n    "
-          "EnumerableTableScan(table=[[main, customer]])",
+          "LogicalTableScan(table=[[main, customer]])",
       .filePaths = {"/tmp/customer.psv"},
       .tableNames = {"main.customer"},
       .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
@@ -342,9 +342,9 @@ TEST_F(EvaluateQueryTest, TEST_NULL_BINARY) {
           "  LogicalJoin(condition=[AND(=($0, $3), $2)], joinType=[inner])\n"
           "    LogicalProject(n_regionkey=[$2], +=[+($0, 1)], ==[=($0, 5)])\n"
     	  "      LogicalFilter(condition=[=($0, 5)])\n"
-    	  "        EnumerableTableScan(table=[[main, nation]])\n"
+    	  "        LogicalTableScan(table=[[main, nation]])\n"
     	  "    LogicalProject(r_regionkey=[$0])\n"
-          "      EnumerableTableScan(table=[[main, region]])",
+          "      LogicalTableScan(table=[[main, region]])",
       .filePaths = {"/tmp/nation.psv","/tmp/region.psv"},
       .tableNames = {"main.nation", "main.region"},
       .columnNames = {{"n_nationkey", "n_name","n_regionkey", "n_comment"},{"r_regionkey","r_name","r_comment"}},
@@ -387,9 +387,9 @@ TEST_F(EvaluateQueryTest, TEST_NULL_OUTER_JOIN) {
     		  "    LogicalJoin(condition=[=($0, $1)], joinType=[left])\n"
     		  "      LogicalProject(n_nationkey=[$0])\n"
     		  "        LogicalFilter(condition=[<($0, 10)])\n"
-    		  "          EnumerableTableScan(table=[[main, nation]])\n"
+    		  "          LogicalTableScan(table=[[main, nation]])\n"
     		  "      LogicalProject(r_regionkey=[$0])\n"
-    		  "        EnumerableTableScan(table=[[main, region]])\n",
+    		  "        LogicalTableScan(table=[[main, region]])\n",
       .filePaths = {"/tmp/nation.psv","/tmp/region.psv"},
       .tableNames = {"main.nation", "main.region"},
       .columnNames = {{"n_nationkey", "n_name","n_regionkey", "n_comment"},{"r_regionkey","r_name","r_comment"}},
@@ -429,8 +429,8 @@ TEST_F(EvaluateQueryTest, TEST_NULL_OUTER_JOIN_2) {
     		  "LogicalProject(n_nationkey=[$0], r_regionkey=[$4])\n"
     		  "  LogicalJoin(condition=[=($2, $4)], joinType=[left])\n"
     		  "    LogicalFilter(condition=[AND(<($0, 10), >=($0, 5))])\n"
-    		  "      EnumerableTableScan(table=[[main, nation]])\n"
-    		  "    EnumerableTableScan(table=[[main, region]])",
+    		  "      LogicalTableScan(table=[[main, nation]])\n"
+    		  "    LogicalTableScan(table=[[main, region]])",
       .filePaths = {"/tmp/nation.psv","/tmp/region.psv"},
       .tableNames = {"main.nation", "main.region"},
       .columnNames = {{"n_nationkey", "n_name","n_regionkey", "n_comment"},{"r_regionkey","r_name","r_comment"}},
@@ -472,7 +472,7 @@ TEST_F(EvaluateQueryTest, TEST_NULL_OUTER_JOIN_2) {
             		  "    LogicalAggregate(group=[{0}], agg#0=[COUNT($1)], agg#1=[SUM($2)], agg#2=[AVG($2)], agg#3=[MIN($1)], agg#4=[MAX($3)])\n"
             		  "      LogicalProject(key=[*($3, 2)], c_custkey=[$0], c_acctbal=[$5], c_nationkey=[$3])\n"
             		  "        LogicalFilter(condition=[<(*($3, 2), 40)])\n"
-            		  "          EnumerableTableScan(table=[[main, customer]])",
+            		  "          LogicalTableScan(table=[[main, customer]])",
             	      .filePaths = {"/tmp/customer.psv"},
             	      .tableNames = {"main.customer"},
             	      .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
@@ -515,7 +515,7 @@ TEST_F(EvaluateQueryTest, TEST_NULL_OUTER_JOIN_2) {
                     .logicalPlan =
                         "LogicalProject(EXPR$0=[+($5, 3)])\n"
                         "  LogicalFilter(condition=[>($5, 1000)])\n"
-                        "    EnumerableTableScan(table=[[main, customer]])",
+                        "    LogicalTableScan(table=[[main, customer]])",
                           .filePaths = {"/tmp/customer.tbl"},
                           .tableNames = {"main.customer"},
                           .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
@@ -562,7 +562,7 @@ TEST_F(EvaluateQueryTest, TEST_NULL_OUTER_JOIN_2) {
                     .logicalPlan =
                         "LogicalProject(c_custkey=[$0], c_nationkey=[$3], c_acctbal=[$5])\n"
                         "  LogicalFilter(condition=[OR(AND(<($0, 150), =($3, 5)), =($0, 200), >=($3, 10), <=($5, 500))])\n"
-                        "    EnumerableTableScan(table=[[main, customer]])",
+                        "    LogicalTableScan(table=[[main, customer]])",
                           .filePaths = {"/tmp/customer.tbl"},
                           .tableNames = {"main.customer"},
                           .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",

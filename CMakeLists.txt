@@ -142,7 +142,6 @@ target_link_libraries(testing-libgdf_lib
     ${CUDA_CUDA_LIBRARY}
     ${CUDA_NVRTC_LIBRARY}
     ${CUDA_NVTX_LIBRARY}
-    arrow
     aws-cpp-sdk-s3
     aws-cpp-sdk-s3-encryption
     ${FLATBUFFERS_LIB}

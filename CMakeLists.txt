@@ -140,8 +140,6 @@ target_link_libraries(testing-libgdf_lib
     arrow
     aws-cpp-sdk-s3
     aws-cpp-sdk-s3-encryption
-
-    parquet
     ${FLATBUFFERS_LIB}
     ${PARQUET_LIB}
     # Library needed for blazing communication repository (debug)

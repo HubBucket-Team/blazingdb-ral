@@ -27,7 +27,7 @@ include(ConfigureBlazingDBDependencies)
 include(ConfigureCUDA)
 
 # NOTE Do not change the inclusion order
-#include(ConfigureBoost)
+include(ConfigureBoost)
 include(ConfigureAWSSDK)
 #include(ConfigureFlatBuffers)
 #include(ConfigureLz4)
@@ -121,9 +121,9 @@ add_library(testing-libgdf_lib ${SRC_FILES})
 find_library(FLATBUFFERS_LIB flatbuffers )
 find_library(PARQUET_LIB parquet )
 find_library(ARROW_LIB arrow )
-find_library(BOOST_REGEX boost_regex)
-find_library(BOOST_SYSTEM boost_system)
-find_library(BOOST_FILESYSTEM boost_filesystem)
+#find_library(BOOST_REGEX boost_regex)
+#find_library(BOOST_SYSTEM boost_system)
+#find_library(BOOST_FILESYSTEM boost_filesystem)
 
 target_link_libraries(testing-libgdf_lib
     ${BLAZINGDB_IO_STATIC_LIB}
@@ -147,9 +147,9 @@ target_link_libraries(testing-libgdf_lib
     ${FLATBUFFERS_LIB}
     ${PARQUET_LIB}
     ${ARROW_LIB}
-    ${BOOST_REGEX}
-    ${BOOST_SYSTEM}
-    ${BOOST_FILESYSTEM}
+#    ${BOOST_REGEX}
+#    ${BOOST_SYSTEM}
+#    ${BOOST_FILESYSTEM}
     # Library needed for blazing communication repository (debug)
     gcov
 )

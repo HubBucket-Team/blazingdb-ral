@@ -138,8 +138,9 @@ target_link_libraries(testing-libgdf_lib
     arrow
     aws-cpp-sdk-s3
     aws-cpp-sdk-s3-encryption
-
-
+    Boost
+    parquet
+    flatbuffers
     # Library needed for blazing communication repository (debug)
     gcov
 )
@@ -212,7 +213,7 @@ add_library(NVCategory SHARED IMPORTED ${NVCATEGORY_LIBRARY})
 if (NVSTRINGS_INCLUDE AND NVCATEGORY_LIBRARY)
     set_target_properties(NVCategory PROPERTIES IMPORTED_LOCATION ${NVCATEGORY_LIBRARY})
 endif (NVSTRINGS_INCLUDE AND NVCATEGORY_LIBRARY)
-
+target_link_libraries(testing-libgdf_lib flatbuffers rmm)
 
 set(SRC_FILES_APP
     ${CMAKE_SOURCE_DIR}/src/testing-libgdf.cu)

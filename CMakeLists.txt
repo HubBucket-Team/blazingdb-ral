@@ -126,32 +126,36 @@ find_library(ARROW_LIB arrow )
 #find_library(BOOST_FILESYSTEM boost_filesystem)
 
 target_link_libraries(testing-libgdf_lib
+
+Boost::filesystem
+Boost::system
+Boost::regex
+aws-cpp-sdk-s3
+aws-cpp-sdk-s3-encryption
+${FLATBUFFERS_LIB}
+${ARROW_LIB}
+${PARQUET_LIB}
     ${BLAZINGDB_IO_STATIC_LIB}
     Threads::Threads
     ${ZEROMQ_STATIC_LIB}
     ${BLAZINGDB_PROTOCOL_STATIC_LIB}
     ${BLAZINGDB_COMMUNICATION_STATIC_LIB}
+    rmm
+    NVStrings
+    NVCategory
+
 
     ${LIBGDF_STATIC_LIB}
-    NVCategory
-    NVStrings
-    rmm
+
 
     cudart
     cuda
     ${CUDA_CUDA_LIBRARY}
     ${CUDA_NVRTC_LIBRARY}
     ${CUDA_NVTX_LIBRARY}
-    aws-cpp-sdk-s3
-    aws-cpp-sdk-s3-encryption
-    ${FLATBUFFERS_LIB}
-    ${PARQUET_LIB}
-    ${ARROW_LIB}
-    Boost::filesystem
-    Boost::system
-    Boost::regex
-    aws-cpp-sdk-s3
-    aws-cpp-sdk-s3-encryption
+
+
+
 
 #    ${BOOST_REGEX}
 #    ${BOOST_SYSTEM}

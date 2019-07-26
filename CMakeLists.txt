@@ -120,6 +120,11 @@ add_library(testing-libgdf_lib ${SRC_FILES})
 
 find_library(FLATBUFFERS_LIB flatbuffers )
 find_library(PARQUET_LIB parquet )
+find_library(ARROW_LIB arrow )
+find_library(BOOST_REGEX boost_regex)
+find_library(BOOST_SYSTEM boost_system)
+find_library(BOOST_FILESYSTEM boost_filesystem)
+
 target_link_libraries(testing-libgdf_lib
     ${BLAZINGDB_IO_STATIC_LIB}
     Threads::Threads
@@ -142,12 +147,16 @@ target_link_libraries(testing-libgdf_lib
     aws-cpp-sdk-s3-encryption
     ${FLATBUFFERS_LIB}
     ${PARQUET_LIB}
+    ${ARROW_LIB}
+    ${BOOST_REGEX}
+    ${BOOST_SYSTEM}
+    ${BOOST_FILESYSTEM}
     # Library needed for blazing communication repository (debug)
     gcov
 )
-find_package(Boost COMPONENTS regex system filesystem REQUIRED)
-target_link_libraries(testing-libgdf_lib ${Boost_LIBRARIES})
-include_directories(${Boost_INCLUDE_DIRS})
+
+# Boost COMPONENTS regex system filesystem REQUIRED)
+
 
 find_path(RMM_INCLUDE "rmm"
           HINTS "$RMM_INSTALL_DIR/include"

@@ -955,7 +955,14 @@ query_token_t evaluate_query(
 		catch(const std::exception& e)
 		{
 			std::cerr << "evaluate_split_query error => " << e.what() << '\n';
-			result_set_repository::get_instance().update_token(token, blazing_frame{}, 0.0, e.what());
+			try
+			{
+				result_set_repository::get_instance().update_token(token, blazing_frame{}, 0.0, e.what());
+			}
+			catch(const std::exception& e)
+			{
+				std::cerr << "error => " << e.what() << '\n';
+			}
 		}
 	});
 

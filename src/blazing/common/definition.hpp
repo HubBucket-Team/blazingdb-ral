@@ -1,6 +1,9 @@
 #ifndef BLAZING_COMMON_DEFINITION_HPP_
 #define BLAZING_COMMON_DEFINITION_HPP_
 
+#include <iostream>
+#include <sstream>
+
 #define BLAZING_CONST const __attribute__((__const__))
 #define BLAZING_DEPRECATED __attribute__((deprecated))
 #define BLAZING_INLINE inline __attribute__((always_inline))
@@ -12,6 +15,14 @@
 
 #define blazing_likely(x) __builtin_expect(x, 1)
 #define blazing_unlikely(x) __builtin_expect(x, 0)
+
+#define BLAZING_ABORT(_message)                                                \
+    do {                                                                       \
+        std::stringstream ss{std::ios_base::out | std::ios_base::in};          \
+        ss << __FILE__ << ':' << __LINE__ << ": " << (_message) << std::endl;  \
+        std::cerr << ss.str();                                                 \
+        std::exit(-1);                                                         \
+    } while (0)
 
 #define BLAZING_INTERFACE(Kind)                                                \
 public:                                                                        \

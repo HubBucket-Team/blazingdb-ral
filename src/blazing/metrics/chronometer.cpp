@@ -7,7 +7,6 @@ namespace metrics {
 
 // Check
 
-
 void Check::State(bool expressionValue) {
     if (!expressionValue) {
         throw std::runtime_error("Illegal State Exception");
@@ -70,9 +69,10 @@ public:
                           : elapsedTime_;
     }
 
-    std::uintmax_t Elapsed(const TimeUnit::type /*timeUnitType*/) const
-        noexcept {
-        return 0;  // TODO: timeUnit.convertFrom(Elapsed(), NANOSECOND);
+    std::uintmax_t BLAZING_NORETURN
+                   Elapsed(const TimeUnit::type /*timeUnitType*/) const noexcept {
+        BLAZING_ABORT("Not Implemented");
+        // TODO: return timeUnit.convertFrom(Elapsed(), NANOSECOND);
     }
 
     Chronometer & Reset() noexcept final {

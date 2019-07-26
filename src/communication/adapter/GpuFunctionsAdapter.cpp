@@ -14,6 +14,14 @@ namespace adapter {
             return;
         }
 
+        std::cout<<"copyGpuToCpu name: "<<column.name()<<std::endl;
+        std::cout<<"copyGpuToCpu size: "<<column.size()<<std::endl;
+        std::cout<<"copyGpuToCpu dtype: "<<column.dtype()<<std::endl;
+        if (column.valid())
+            std::cout<<"copyGpuToCpu has_valids: "<<"true"<<std::endl;
+        else
+            std::cout<<"copyGpuToCpu has_valids: "<<"false"<<std::endl;
+
         if (isGdfString(*column.get_gdf_column())) {
           NVCategory * nvCategory = reinterpret_cast<NVCategory *>(
               column.get_gdf_column()->dtype_info.category);
@@ -75,17 +83,17 @@ namespace adapter {
           NVStrings::destroy(nvStrings);
         } else {
           std::size_t data_size = getDataCapacity(column.get_gdf_column());
-          cudaMemcpy(&result[binary_pointer],
-                     column.data(),
-                     data_size,
-                     cudaMemcpyDeviceToHost);
+          CheckCudaErrors(cudaMemcpy(&result[binary_pointer],
+                                    column.data(),
+                                    data_size,
+                                    cudaMemcpyDeviceToHost));
           binary_pointer += data_size;
 
           std::size_t valid_size = getValidCapacity(column.get_gdf_column());
-          cudaMemcpy(&result[binary_pointer],
-                     column.valid(),
-                     valid_size,
-                     cudaMemcpyDeviceToHost);
+          CheckCudaErrors(cudaMemcpy(&result[binary_pointer],
+                        column.valid(),
+                        valid_size,
+                        cudaMemcpyDeviceToHost));
           binary_pointer += valid_size;
         }
     }
@@ -95,7 +103,7 @@ namespace adapter {
     }
 
     std::size_t GpuFunctionsAdapter::getValidCapacity(gdf_column* column) {
-        return ral::traits::get_bitmask_size_in_bytes(column->size);
+        return column->null_count > 0 ? ral::traits::get_bitmask_size_in_bytes(column->size) : 0;
     }
 
     std::size_t GpuFunctionsAdapter::getDTypeSize(gdf_dtype dtype) {
@@ -116,7 +124,7 @@ namespace adapter {
           keysLength,
           reinterpret_cast<const int *>(offsetsPointer),
           nullptr,
-          0);
+          0, false);
     }
 
 } // namespace adapter

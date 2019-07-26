@@ -1,6 +1,7 @@
 #include "distribution/primitives.h"
 #include "distribution/primitives_util.cuh"
 #include "cuDF/generator/sample_generator.h"
+#include "cuDF/safe_nvcategory_gather.hpp"
 #include "communication/network/Server.h"
 #include "communication/network/Client.h"
 #include "communication/messages/ComponentMessages.h"
@@ -23,8 +24,9 @@
 #include "reduction.hpp"
 #include "operators/GroupBy.h"
 #include "copying.hpp"
-#include "sorted_merge.hpp"
-#include "cuDF/safe_nvcategory_gather.hpp"
+#include "cudf/merge.hpp"
+#include "cudf/search.hpp"
+
 
 namespace ral {
 namespace distribution {
@@ -249,8 +251,6 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
   // }
 
   // Gather
-  std::vector<gdf_column*> rawSortedSamples(sortedSamples.size());
-  std::vector<gdf_column*> rawPivots(sortedSamples.size());
   std::vector<gdf_column_cpp> pivots(sortedSamples.size());
  	for(size_t i = 0; i < sortedSamples.size(); i++) {
     auto& col = sortedSamples[i];
@@ -259,13 +259,10 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
     } else {
       pivots[i].create_gdf_column(col.dtype(), context.getTotalNodes() - 1, nullptr, nullptr, get_width_dtype(col.dtype()), col.name());
     }
-
-    rawPivots[i] = pivots[i].get_gdf_column();
-    rawSortedSamples[i] = sortedSamples[i].get_gdf_column();
 	}
 
-  cudf::table srcTable{rawSortedSamples.data(), (gdf_size_type)rawSortedSamples.size()};
-  cudf::table destTable{rawPivots.data(), (gdf_size_type)rawPivots.size()};
+  cudf::table srcTable = ral::utilities::create_table(sortedSamples);
+  cudf::table destTable = ral::utilities::create_table(pivots);
 
   int step = outputRowSize / context.getTotalNodes();
   gdf_column_cpp gatherMap;
@@ -276,14 +273,7 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
   print_gdf_column(gatherMap.get_gdf_column());
 
   cudf::gather(&srcTable, (gdf_index_type*)(gatherMap.get_gdf_column()->data), &destTable);
-
-  for(int i = 0; i < destTable.num_columns(); ++i){
-    auto* srcCol = srcTable.get_column(i);
-    auto* dstCol = destTable.get_column(i);
-    if(dstCol->dtype == GDF_STRING_CATEGORY){
-      ral::safe_nvcategory_gather_for_string_category(dstCol, srcCol->dtype_info.category);
-    }
-  }
+  ral::init_string_category_if_null(destTable);
 
   std::cout << "After Gather\n";
   for(auto& p : pivots)
@@ -355,7 +345,8 @@ std::vector<NodeColumns> split_data_into_NodeColumns(const Context& context, con
 std::vector<NodeColumns> partitionData(const Context& context,
                                        std::vector<gdf_column_cpp>& table,
                                        std::vector<int>& searchColIndices,
-                                       std::vector<gdf_column_cpp>& pivots) {
+                                       std::vector<gdf_column_cpp>& pivots,
+                                       bool isTableSorted) {
     // verify input
     if (pivots.size() == 0) {
         throw std::runtime_error("The pivots array is empty");
@@ -395,27 +386,70 @@ std::vector<NodeColumns> partitionData(const Context& context,
       return array_node_columns;
     }
 
-    // create output column
-    gdf_column_cpp indexes = ral::utilities::create_zero_column(pivot.size(), GDF_SIZE_TYPE);
+    std::vector<gdf_column*> haystack_column_ptrs(searchColIndices.size());
+    for (size_t i = 0; i < searchColIndices.size(); i++){
+      haystack_column_ptrs[i] = table[searchColIndices[i]].get_gdf_column();
+    }
+	  cudf::table haystack_table(haystack_column_ptrs);
+    cudf::table needles_table = ral::utilities::create_table(pivots);
+    std::vector<bool> desc_flags(searchColIndices.size(), false);
 
-    // apply gdf_multisearch
-    ral::utilities::TableWrapper haystack(table, searchColIndices);
-    ral::utilities::TableWrapper needles(pivots);
+    // Ensure data is sorted.
+    // Would it be better to use gdf_hash instead or gdf_order_by?
+    std::vector<gdf_column_cpp> sortedTable;
+    if (!isTableSorted) {
+      std::vector<int8_t> sortOrderTypes(searchColIndices.size(), 0);
+      gdf_column_cpp asc_desc_col;
+      asc_desc_col.create_gdf_column(GDF_INT8, sortOrderTypes.size(), sortOrderTypes.data(), get_width_dtype(GDF_INT8), "");
 
-    CUDF_CALL( gdf_multisearch(indexes.get_gdf_column(),
-                              haystack.getColumns(),
-                              needles.getColumns(),
-                              haystack.getQuantity(),
-                              true,   // find_first_greater
-                              false,  // nulls_appear_before_values
-                              true) );  // use_haystack_length_for_not_found
+      gdf_column_cpp index_col;
+      index_col.create_gdf_column(GDF_INT32, haystack_table.num_rows(), nullptr, get_width_dtype(GDF_INT32), "");
 
-    // std::cout << "multisearch indices\n";
-    // print_gdf_column(indexes.get_gdf_column());
+      gdf_context gdfcontext;
+      gdfcontext.flag_null_sort_behavior = GDF_NULL_AS_LARGEST; // Nulls are are treated as largest
 
-    sort_indices(indexes);
+      CUDF_CALL( gdf_order_by(haystack_table.begin(),
+          (int8_t*)(asc_desc_col.get_gdf_column()->data),
+          haystack_table.num_columns(),
+          index_col.get_gdf_column(),
+          &gdfcontext));
 
-    return split_data_into_NodeColumns(context, table, indexes);
+      sortedTable.resize(table.size());
+      for(size_t i = 0; i < sortedTable.size(); i++) {
+        auto& col = table[i];
+        if (col.valid()) {
+          sortedTable[i].create_gdf_column(col.dtype(), col.size(), nullptr, get_width_dtype(col.dtype()), col.name());
+        } else {
+          sortedTable[i].create_gdf_column(col.dtype(), col.size(), nullptr, nullptr, get_width_dtype(col.dtype()), col.name());
+        }
+
+        materialize_column(
+          table[i].get_gdf_column(),
+          sortedTable[i].get_gdf_column(),
+          index_col.get_gdf_column()
+        );
+        sortedTable[i].update_null_count();
+      }
+
+      table = sortedTable;
+
+      for (size_t i = 0; i < searchColIndices.size(); i++){
+        haystack_column_ptrs[i] = table[searchColIndices[i]].get_gdf_column();
+      }
+      haystack_table = cudf::table(haystack_column_ptrs);
+    }
+
+    //We want the raw_indexes be on the heap because indexes will call delete when it goes out of scope
+    gdf_column* raw_indexes = new gdf_column;
+    *raw_indexes = cudf::upper_bound(haystack_table,
+                       needles_table,
+                       desc_flags,
+                       true); // nulls_as_largest
+     gdf_column_cpp indexes;
+     indexes.create_gdf_column(raw_indexes);
+     sort_indices(indexes);
+
+     return split_data_into_NodeColumns(context, table, indexes);
 }
 
 void distributePartitions(const Context& context, std::vector<NodeColumns>& partitions){
@@ -466,15 +500,14 @@ std::vector<NodeColumns> collectPartitions(const Context& context) {
 }
 
 void sortedMerger(std::vector<NodeColumns>& columns, std::vector<int8_t>& sortOrderTypes, std::vector<int>& sortColIndices, blazing_frame& output) {
-  rmm::device_vector<int8_t> ascDesc(sortOrderTypes);
-
-  std::vector<gdf_column_cpp> leftCols = columns[0].getColumns();
-  std::vector<gdf_column*> rawLeftCols(leftCols.size());
-  std::transform(leftCols.begin(), leftCols.end(), rawLeftCols.begin(), [&](gdf_column_cpp& el) {
-    return el.get_gdf_column();
+  
+  std::vector<order_by_type> ascDesc(sortOrderTypes.size());
+  std::transform(sortOrderTypes.begin(), sortOrderTypes.end(), ascDesc.begin(), [&](int8_t sortOrderType){
+    return sortOrderType == 1 ? GDF_ORDER_DESC : GDF_ORDER_ASC;
   });
 
-  cudf::table leftTable(rawLeftCols.data(), rawLeftCols.size());
+  std::vector<gdf_column_cpp> leftCols = columns[0].getColumns();
+  cudf::table leftTable = ral::utilities::create_table(leftCols);
   for(size_t i = 1; i < columns.size(); i++)
   {
     if (columns[i].getColumnsRef()[0].size() == 0) {
@@ -482,19 +515,9 @@ void sortedMerger(std::vector<NodeColumns>& columns, std::vector<int8_t>& sortOr
     }
 
     std::vector<gdf_column_cpp> rightCols = columns[i].getColumns();
-    std::vector<gdf_column*> rawRightCols(rightCols.size());
-    std::transform(rightCols.begin(), rightCols.end(), rawRightCols.begin(), [&](gdf_column_cpp& el) {
-      return el.get_gdf_column();
-    });
-
-    leftTable = cudf::sorted_merge(leftTable,
-                                  cudf::table(rawRightCols.data(), rawRightCols.size()),
-                                  sortColIndices,
-                                  ascDesc);
-
-    // std::for_each(leftTable.begin(), leftTable.end(), [](auto* c){
-    //   print_gdf_column(c);
-    // });
+    cudf::table rightTable = ral::utilities::create_table(rightCols);
+    
+    leftTable = cudf::merge(leftTable, rightTable, sortColIndices, ascDesc);
   }
 
   for (size_t i = 0; i < leftTable.num_columns(); i++) {
@@ -656,8 +679,6 @@ std::vector<gdf_column_cpp> generatePartitionPlansGroupBy(const Context& context
   // }
 
   // Gather
-  std::vector<gdf_column*> rawSortedSamples{sortedSamples.size()};
-  std::vector<gdf_column*> rawPivots{sortedSamples.size()};
   std::vector<gdf_column_cpp> pivots{sortedSamples.size()};
  	for(size_t i = 0; i < sortedSamples.size(); i++) {
     auto& col = sortedSamples[i];
@@ -666,14 +687,11 @@ std::vector<gdf_column_cpp> generatePartitionPlansGroupBy(const Context& context
     } else {
       pivots[i].create_gdf_column(col.dtype(), context.getTotalNodes() - 1, nullptr, nullptr, get_width_dtype(col.dtype()), col.name());
     }
-
-    rawPivots[i] = pivots[i].get_gdf_column();
-    rawSortedSamples[i] = sortedSamples[i].get_gdf_column();
 	}
 
-  cudf::table srcTable{rawSortedSamples.data(), (gdf_size_type)rawSortedSamples.size()};
-  cudf::table destTable{rawPivots.data(), (gdf_size_type)rawPivots.size()};
-
+  cudf::table srcTable = ral::utilities::create_table(sortedSamples);
+  cudf::table destTable = ral::utilities::create_table(pivots);
+  
   int step = sortedIndexCol.size() / context.getTotalNodes();
   gdf_column_cpp gatherMap;
 	gatherMap.create_gdf_column(GDF_INT32, context.getTotalNodes() - 1, nullptr, get_width_dtype(GDF_INT32), "");
@@ -683,14 +701,7 @@ std::vector<gdf_column_cpp> generatePartitionPlansGroupBy(const Context& context
   print_gdf_column(gatherMap.get_gdf_column());
 
   cudf::gather(&srcTable, (gdf_index_type*)(gatherMap.get_gdf_column()->data), &destTable);
-
-  for(int i = 0; i < destTable.num_columns(); ++i){
-    auto* srcCol = srcTable.get_column(i);
-    auto* dstCol = destTable.get_column(i);
-    if(dstCol->dtype == GDF_STRING_CATEGORY){
-      ral::safe_nvcategory_gather_for_string_category(dstCol, srcCol->dtype_info.category);
-    }
-  }
+  ral::init_string_category_if_null(destTable);
 
   std::cout << "After Gather\n";
   for(auto& p : pivots)
@@ -811,257 +822,6 @@ void groupByWithoutAggregationsMerger(std::vector<NodeColumns>& groups, const st
 	output.add_table(groupedOutput);
 }
 
-namespace {
-  // TODO DUPLICATE IN GROUP BY
-void aggregations_with_groupby(gdf_agg_op agg_op, std::vector<gdf_column*>& group_by_columns_ptr, gdf_column_cpp& aggregation_input, std::vector<gdf_column*>& group_by_columns_ptr_out, gdf_column_cpp& output_column){
-	gdf_context ctxt;
-	ctxt.flag_distinct = (agg_op == GDF_COUNT_DISTINCT);
-	ctxt.flag_method = GDF_HASH;
-	ctxt.flag_sort_result = 1;
-
-	switch(agg_op){
-		case GDF_SUM:
-			CUDF_CALL(gdf_group_by_sum(group_by_columns_ptr.size(),
-																group_by_columns_ptr.data(),
-																aggregation_input.get_gdf_column(),
-																nullptr,
-																group_by_columns_ptr_out.data(),
-																output_column.get_gdf_column(),
-																&ctxt));
-			break;
-		case GDF_MIN:
-			CUDF_CALL(gdf_group_by_min(group_by_columns_ptr.size(),
-																group_by_columns_ptr.data(),
-																aggregation_input.get_gdf_column(),
-																nullptr,
-																group_by_columns_ptr_out.data(),
-																output_column.get_gdf_column(),
-																&ctxt));
-			break;
-		case GDF_MAX:
-			CUDF_CALL(gdf_group_by_max(group_by_columns_ptr.size(),
-																group_by_columns_ptr.data(),
-																aggregation_input.get_gdf_column(),
-																nullptr,
-																group_by_columns_ptr_out.data(),
-																output_column.get_gdf_column(),
-																&ctxt));
-			break;
-		case GDF_AVG:
-      CUDF_CALL(gdf_group_by_avg(group_by_columns_ptr.size(),
-																group_by_columns_ptr.data(),
-																aggregation_input.get_gdf_column(),
-																nullptr,
-																group_by_columns_ptr_out.data(),
-																output_column.get_gdf_column(),
-																&ctxt));
-			break;
-		case GDF_COUNT:
-			CUDF_CALL(gdf_group_by_count(group_by_columns_ptr.size(),
-																	group_by_columns_ptr.data(),
-																	aggregation_input.get_gdf_column(),
-																	nullptr,
-																	group_by_columns_ptr_out.data(),
-																	output_column.get_gdf_column(),
-																	&ctxt));
-			break;
-		case GDF_COUNT_DISTINCT:
-			CUDF_CALL(gdf_group_by_count_distinct(group_by_columns_ptr.size(),
-																						group_by_columns_ptr.data(),
-																						aggregation_input.get_gdf_column(),
-																						nullptr,
-																						group_by_columns_ptr_out.data(),
-																						output_column.get_gdf_column(),
-																						&ctxt));
-			break;
-		}
-}
-
-// TODO DUPLICATE IN GROUP BY
-gdf_reduction_op gdf_agg_op_to_gdf_reduction_op(gdf_agg_op agg_op){
-	switch(agg_op){
-		case GDF_SUM:
-			return GDF_REDUCTION_SUM;
-		case GDF_MIN:
-			return GDF_REDUCTION_MIN;
-		case GDF_MAX:
-			return GDF_REDUCTION_MAX;
-		default:
-			std::cout<<"ERROR:	Unexpected gdf_agg_op"<<std::endl;
-			return GDF_REDUCTION_SUM;
-	}
-}
-
-// TODO DUPLICATE IN GROUP BY
-void aggregations_without_groupby(gdf_agg_op agg_op, gdf_column_cpp& aggregation_input, gdf_column_cpp& output_column, gdf_dtype output_type, std::string output_column_name){
-	gdf_column_cpp temp;
-	switch(agg_op){
-		case GDF_SUM:
-		case GDF_MIN:
-		case GDF_MAX:
-			if (aggregation_input.size() == 0) {
-				// Set output_column data to invalid
-				gdf_scalar null_value;
-				null_value.is_valid = false;
-				null_value.dtype = output_type;
-				output_column.create_gdf_column(null_value, output_column_name);
-				break;
-			} else {
-				gdf_reduction_op reduction_op = gdf_agg_op_to_gdf_reduction_op(agg_op);
-				gdf_scalar reduction_out = cudf::reduction(aggregation_input.get_gdf_column(), reduction_op, output_type);
-				output_column.create_gdf_column(reduction_out, output_column_name);
-				break;
-			}
-		case GDF_AVG:
-			if (aggregation_input.size() == 0 || (aggregation_input.size() == aggregation_input.null_count())) {
-				// Set output_column data to invalid
-				gdf_scalar null_value;
-				null_value.is_valid = false;
-				null_value.dtype = output_type;
-				output_column.create_gdf_column(null_value, output_column_name);
-				break;
-			} else {
-				gdf_dtype sum_output_type = get_aggregation_output_type(aggregation_input.dtype(),GDF_SUM, false);
-				gdf_scalar avg_sum_scalar = cudf::reduction(aggregation_input.get_gdf_column(), GDF_REDUCTION_SUM, sum_output_type);
-				long avg_count = aggregation_input.get_gdf_column()->size - aggregation_input.get_gdf_column()->null_count;
-
-				assert(output_type == GDF_FLOAT64);
-				assert(sum_output_type == GDF_INT64 || sum_output_type == GDF_FLOAT64);
-
-				gdf_scalar avg_scalar;
-				avg_scalar.dtype = GDF_FLOAT64;
-				avg_scalar.is_valid = true;
-				if (avg_sum_scalar.dtype == GDF_INT64)
-					avg_scalar.data.fp64 = (double)avg_sum_scalar.data.si64/(double)avg_count;
-				else
-					avg_scalar.data.fp64 = (double)avg_sum_scalar.data.fp64/(double)avg_count;
-
-				output_column.create_gdf_column(avg_scalar, output_column_name);
-				break;
-			}
-		case GDF_COUNT:
-		{
-			gdf_scalar reduction_out;
-			reduction_out.dtype = GDF_INT64;
-			reduction_out.is_valid = true;
-			reduction_out.data.si64 = aggregation_input.get_gdf_column()->size - aggregation_input.get_gdf_column()->null_count;
-
-			output_column.create_gdf_column(reduction_out, output_column_name);
-			break;
-		}
-		case GDF_COUNT_DISTINCT:
-		{
-			// TODO not currently supported
-			std::cout<<"ERROR: COUNT DISTINCT currently not supported without a group by"<<std::endl;
-		}
-	}
-}
-}
-
-void aggregationsMerger(std::vector<NodeColumns>& aggregations, const std::vector<int>& groupColIndices, const std::vector<gdf_agg_op>& aggregationTypes, blazing_frame& output){
-  // std::vector<NodeColumns>& aggregations => [groupedCols, aggregatedCols]
-
-  // Concat
-  size_t totalConcatsOperations = groupColIndices.size() + aggregationTypes.size();
-  int outputRowSize = 0;
-  std::vector<std::vector<gdf_column*>> columnsToConcatArray(totalConcatsOperations);
-  for(size_t i = 0; i < aggregations.size(); i++)
-  {
-    auto& columns = aggregations[i].getColumnsRef();
-    if (columns[0].size() == 0) {
-      continue;
-    }
-    outputRowSize += columns[0].size();
-
-    assert(columns.size() == totalConcatsOperations);
-    for(size_t j = 0; j < totalConcatsOperations; j++)
-    {
-      columnsToConcatArray[j].push_back(columns[j].get_gdf_column());
-    }
-  }
-
-  if (outputRowSize == 0)
-  {
-    output.clear();
-    std::vector<gdf_column_cpp> output_table = aggregations[0].getColumnsRef();
-    output.add_table(std::move(output_table));
-    return;
-  }
-
-  std::vector<gdf_column_cpp> concatAggregations(totalConcatsOperations);
-  for(size_t i = 0; i < concatAggregations.size(); i++)
-  {
-    auto* tempGdfCol = columnsToConcatArray[i][0];
-    concatAggregations[i].create_gdf_column(tempGdfCol->dtype, outputRowSize, nullptr, get_width_dtype(tempGdfCol->dtype), std::string(tempGdfCol->col_name));
-    CUDF_CALL( gdf_column_concat(concatAggregations[i].get_gdf_column(),
-                                columnsToConcatArray[i].data(),
-                                columnsToConcatArray[i].size()) );
-  }
-
-  // std::cout << "After Concat\n";
-  // for(auto& p : concatAggregations)
-  // {
-  //   print_gdf_column(p.get_gdf_column());
-  // }
-
-  // Do aggregations
-	std::vector<gdf_column*> rawGroupByColumns(groupColIndices.size());
-	std::vector<gdf_column_cpp> groupedColumns(groupColIndices.size());
-	std::vector<gdf_column*> rawGroupedColumns(groupColIndices.size());
-	for(size_t i = 0; i < groupColIndices.size(); i++){
-		gdf_column_cpp& inputColumn = concatAggregations[groupColIndices[i]];
-
-		rawGroupByColumns[i] = inputColumn.get_gdf_column();
-
-		groupedColumns[i].create_gdf_column(inputColumn.dtype(), outputRowSize, nullptr, get_width_dtype(inputColumn.dtype()), inputColumn.name());
-		rawGroupedColumns[i] = groupedColumns[i].get_gdf_column();
-	}
-
-  // when we are merging COUNT aggregations, we want to SUM them, not use COUNT
-  std::vector<gdf_agg_op> modAggregationTypes(aggregationTypes.size());
-  for(size_t i = 0; i < aggregationTypes.size(); i++){
-    modAggregationTypes[i] = aggregationTypes[i] == GDF_COUNT ? GDF_SUM : aggregationTypes[i];
-  }
-
-	// If we have no groups you will output only one row
-	size_t aggregation_size = (groupColIndices.size() == 0 ? 1 : outputRowSize);
-
-	std::vector<gdf_column_cpp> aggregatedColumns(modAggregationTypes.size());
-	for(size_t i = 0; i < modAggregationTypes.size(); i++){
-    // Use "groupColIndices.size() + i" because concatAggregations has the same layout as std::vector<NodeColumns>& aggregations
-		gdf_column_cpp& aggregationInput = concatAggregations[groupColIndices.size() + i];
-
-		if (groupColIndices.size() == 0) {
-			aggregations_without_groupby(modAggregationTypes[i], aggregationInput, aggregatedColumns[i], aggregationInput.dtype(), aggregationInput.name());
-		}else{
-      aggregatedColumns[i].create_gdf_column(aggregationInput.dtype(), aggregation_size, nullptr, get_width_dtype(aggregationInput.dtype()), aggregationInput.name());
-			aggregations_with_groupby(modAggregationTypes[i],
-																rawGroupByColumns,
-																aggregationInput,
-																rawGroupedColumns,
-																aggregatedColumns[i]);
-		}
-
-		//so that subsequent iterations won't be too large
-		aggregation_size = aggregatedColumns[i].size();
-	}
-
-  std::vector<gdf_column_cpp> outputTable(std::move(groupedColumns));
-	outputTable.insert(
-		outputTable.end(),
-		std::make_move_iterator(aggregatedColumns.begin()),
-		std::make_move_iterator(aggregatedColumns.end())
-	);
-
-  // std::cout << "After Merge\n";
-  // for(auto& p : outputTable)
-  // {
-  //   print_gdf_column(p.get_gdf_column());
-  // }
-
-	output.clear();
-	output.add_table(outputTable);
-}
 
 }  // namespace distribution
 }  // namespace ral

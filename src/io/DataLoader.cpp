@@ -1,5 +1,6 @@
 
 #include "DataLoader.h"
+#include "Traits/RuntimeTraits.h"
 
 namespace ral {
 namespace io {
@@ -8,7 +9,7 @@ namespace io {
 //including the file that defines it causes conflicts becuase we are using string util in both libraries
 //we need to fix that probably my moving stringutil out of both, or making it a header only library
 size_t get_width_dtype(gdf_dtype type){
-  return gdf_dtype_size(type);
+  return ral::traits::get_dtype_size_in_bytes(type);
 }
 
 data_loader::data_loader(std::shared_ptr<data_parser> _parser, std::shared_ptr<data_provider> _data_provider): provider(_data_provider), parser(_parser)  {

@@ -1,7 +1,6 @@
 #include "ParserUtil.h"
 
-#include <cudf.h>
-#include "Traits/RuntimeTraits.h"
+#include <Traits/RuntimeTraits.h>
 
 namespace ral {
 namespace io {

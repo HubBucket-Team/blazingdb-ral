@@ -3,6 +3,7 @@
 
 #include "GDFColumn.cuh"
 #include "Traits/RuntimeTraits.h"
+#include <cudf/table.hpp>
 
 namespace ral {
 namespace utilities {
@@ -37,6 +38,8 @@ gdf_column_cpp create_column(const gdf_size_type size, const gdf_dtype dtype, co
 gdf_column_cpp create_zero_column(const gdf_size_type size, const gdf_dtype dtype, std::string&& name);
 
 gdf_column_cpp create_zero_column(const gdf_size_type size, const gdf_dtype dtype, const std::string& name = "");
+
+cudf::table create_table(std::vector<gdf_column_cpp> & columns);
 
 } // namespace utilities
 } // namespace ral

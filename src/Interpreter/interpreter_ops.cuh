@@ -11,7 +11,7 @@
 #include <cuda_runtime.h>
 #include "../Utils.cuh"
 #include "helper_cuda.h"
-
+#include "cudf/binaryop.hpp"
 #include "CalciteExpressionParsing.h"
 
 typedef int64_t temp_gdf_valid_type; //until its an int32 in cudf

@@ -5,12 +5,39 @@
 namespace ral {
 namespace traits {
 
-    gdf_size_type get_dtype_size_in_bytes(const gdf_column* column) {
-        return gdf_dtype_size(column->dtype);
+    gdf_size_type get_dtype_size_in_bytes(gdf_dtype dtype) {
+
+        gdf_size_type size = 0;
+        switch (dtype){
+            case GDF_INT8:
+            case GDF_BOOL8:
+                size = 1;
+                break;
+            case GDF_INT16:
+                size = 2;
+                break;
+            case GDF_INT32:
+            case GDF_DATE32:
+            case GDF_FLOAT32:
+            case GDF_CATEGORY:
+            case GDF_STRING_CATEGORY:
+                size = 4;
+                break;
+            case GDF_INT64:
+            case GDF_FLOAT64:
+            case GDF_DATE64:
+            case GDF_TIMESTAMP:
+                size = 8;
+                break;
+            default:
+                size = 0;
+                break;
+        }
+        return size;
     }
 
-    gdf_size_type get_dtype_size_in_bytes(gdf_dtype dtype) {
-        return gdf_dtype_size(dtype);
+    gdf_size_type get_dtype_size_in_bytes(const gdf_column* column) {
+        return get_dtype_size_in_bytes(column->dtype);        
     }
 
     gdf_size_type get_data_size_in_bytes(const gdf_column* column) {

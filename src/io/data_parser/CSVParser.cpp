@@ -23,21 +23,18 @@
 namespace ral {
 namespace io {
 
-void init_default_csv_args(csv_read_arg & args){
+void init_default_csv_args(cudf::io::csv::reader_options & args){
 
 	args.delimiter = '|';
 	args.lineterminator = '\n';
 	args.quotechar = '"';
-	args.quoting = QUOTE_MINIMAL;
+	args.quoting = cudf::io::csv::quote_style::QUOTE_MINIMAL;
 	args.doublequote = false;
 	args.delim_whitespace = false;
 	args.skipinitialspace = false;
 	args.dayfirst = false;
-	args.skiprows = 0;
-	args.skipfooter = 0;
 	args.mangle_dupe_cols = true;
-	args.windowslinetermination = false;
-	args.compression = nullptr;
+	args.compression = "none";
 	args.decimal = '.';
 	// args.thousands
 	args.skip_blank_lines = true;
@@ -45,25 +42,16 @@ void init_default_csv_args(csv_read_arg & args){
 	args.keep_default_na = true;
 	args.na_filter = false;
 	// args.prefix
-	args.nrows = -1;
-	args.header = -1;
-	args.use_cols_int = nullptr;
-	args.use_cols_int_len = 0;
-	args.use_cols_char = nullptr;     
-  	args.use_cols_char_len = 0;
-
+	args.header = -1;	
 }
 
-void copy_non_data_csv_args(csv_read_arg & args, csv_read_arg & new_args){
-	new_args.num_names		= args.num_names;
-	new_args.num_dtype		= args.num_dtype;
-    new_args.names			= args.names;
+void copy_non_data_csv_args(cudf::io::csv::reader_options & args, cudf::io::csv::reader_options & new_args){
+	new_args.names			= args.names;
     new_args.dtype			= args.dtype;
     new_args.delimiter		= args.delimiter;
     new_args.lineterminator = args.lineterminator;
 	new_args.skip_blank_lines = args.skip_blank_lines;
 	new_args.header 		= args.header;
-	new_args.nrows 			= args.nrows;
 	new_args.decimal 		= args.decimal;
 	new_args.quotechar 		= args.quotechar;
 	new_args.quoting 		= args.quoting;
@@ -71,18 +59,12 @@ void copy_non_data_csv_args(csv_read_arg & args, csv_read_arg & new_args){
 	new_args.delim_whitespace = args.delim_whitespace;
 	new_args.skipinitialspace = args.skipinitialspace;
 	new_args.dayfirst 		= args.dayfirst;
-	new_args.skiprows 		= args.skiprows;
-	new_args.skipfooter 	= args.skipfooter;
 	new_args.mangle_dupe_cols = args.mangle_dupe_cols;
-	new_args.windowslinetermination	= args.windowslinetermination;
 	new_args.compression 	= args.compression;
 	new_args.keep_default_na = args.keep_default_na;
 	new_args.na_filter		= args.na_filter;
-	new_args.use_cols_int = args.use_cols_int;
-	new_args.use_cols_int_len = args.use_cols_int_len;
-	new_args.use_cols_char = args.use_cols_char;     
-  	new_args.use_cols_char_len = args.use_cols_char_len;
-
+	new_args.use_cols_indexes = args.use_cols_indexes;
+	
 }
 
 
@@ -134,32 +116,37 @@ gdf_error read_file_into_buffer(std::shared_ptr<arrow::io::RandomAccessFile> fil
 }
 
 
+
 /**
  * @brief read in a CSV file
  *
  * Read in a CSV file, extract all fields, and return a GDF (array of gdf_columns) using arrow interface
  **/
 
-gdf_error read_csv_arrow(csv_read_arg *args, std::shared_ptr<arrow::io::RandomAccessFile> arrow_file_handle)
+cudf::table read_csv_arrow(cudf::io::csv::reader_options args, std::shared_ptr<arrow::io::RandomAccessFile> arrow_file_handle, bool first_row_only = false)
 {
-	void * 		map_data = NULL;
 	int64_t 	num_bytes;
 	arrow_file_handle->GetSize(&num_bytes);
-	map_data = (void *) malloc(num_bytes);
-	gdf_error error = read_file_into_buffer(arrow_file_handle, num_bytes, (uint8_t*) map_data,100,10);
-	checkError(error, "reading from file into system memory");
 
-	args->input_data_form = gdf_csv_input_form::HOST_BUFFER;
-	args->filepath_or_buffer = (const char *)map_data;
-	args->buffer_size = num_bytes;
+	if (first_row_only && num_bytes > 8192) // lets only read up to 8192 bytes. We are assuming that a full row will always be less than that
+		num_bytes = 8192;
 
-	error = read_csv(args);
-	free(map_data);
+	args.filepath_or_buffer.resize(num_bytes);
 
-	//done reading data from map
+	gdf_error error = read_file_into_buffer(arrow_file_handle, num_bytes, (uint8_t*) (args.filepath_or_buffer.c_str()),100,10);
+	assert(error == GDF_SUCCESS);
+	
+	cudf::io::csv::reader csv_reader(args);
+	cudf::table table_out;
+	if (first_row_only)
+		table_out = csv_reader.read_rows(0, 0, 1);
+	else 
+		table_out = csv_reader.read_byte_range(0, num_bytes);
+	
 	arrow_file_handle->Close();
+	args.filepath_or_buffer.resize(0);
 
-	return error;
+	return table_out;
 }
 
 
@@ -181,7 +168,7 @@ csv_parser::csv_parser(std::string delimiter,
 }
 
 
-csv_parser::csv_parser(csv_read_arg args) {
+csv_parser::csv_parser(cudf::io::csv::reader_options args) {
 	this->args = args;
 }
 
@@ -208,48 +195,21 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	
 	if (column_indices.size() > 0){
 
-		csv_read_arg raw_args{};
+		cudf::io::csv::reader_options raw_args{};
 
-		args.num_names = schema.get_names().size();
-		if(this->column_names.size() > 0){
-			args.names = new const char *[args.num_names];
-			for(int i = 0; i < args.num_names; i++){
-				args.names[i] = this->column_names[i].c_str();
-			}
-		}else{
-			args.names = nullptr;
-		}
+		args.names = this->column_names;
+		args.dtype = this->dtype_strings;
 
-		args.num_dtype = schema.get_names().size();
-		if(this->dtype_strings.size() > 0){
-			args.dtype = new const char *[args.num_dtype]; //because dynamically allocating metadata is fun
-			for(int i = 0; i < args.num_dtype; i++){
-
-				args.dtype[i] = this->dtype_strings[i].c_str();
-			}
-
-		}else{
-			args.dtype = nullptr;
-		}
-
-		// convert column indices into use_col_int
-		std::vector<int> column_indices_int(column_indices.size());
-		for(int i = 0; i < column_indices.size(); i++){
-			column_indices_int[i] = column_indices[i];
-		}
-		args.use_cols_int = column_indices_int.data();
-		args.use_cols_int_len = column_indices_int.size();
+		// copy column_indices into use_col_indexes
+		args.use_cols_indexes.resize(column_indices.size());
+		args.use_cols_indexes.assign(column_indices.begin(), column_indices.end());
 		
-
 		copy_non_data_csv_args(args, raw_args);
 
-		CUDF_CALL(read_csv_arrow(&raw_args,file));
+		cudf::table table_out = read_csv_arrow(raw_args,file);
 
-		//	std::cout << "args.num_cols_out " << raw_args.num_cols_out << std::endl;
-		//	std::cout << "args.num_rows_out " <<raw_args.num_rows_out << std::endl;
-		assert(raw_args.num_cols_out > 0);
-		
-		
+		assert(table_out.num_columns() > 0);
+
 		//column_indices may be requested in a specific order (not necessarily sorted), but read_csv will output the columns in the sorted order, so we need to put them back into the order we want
 		std::vector<size_t> idx(column_indices.size());
 		std::iota(idx.begin(), idx.end(), 0);
@@ -257,74 +217,39 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		std::sort(idx.begin(), idx.end(),
 		[&column_indices](size_t i1, size_t i2) {return column_indices[i1] < column_indices[i2];});
 
-		std::vector<gdf_column_cpp> tmp_columns(raw_args.num_cols_out);
-		for(size_t i = 0; i < raw_args.num_cols_out; i++ ){
-			tmp_columns[idx[i]].create_gdf_column(raw_args.data[i]);
-		}
-
-		columns_out.resize(raw_args.num_cols_out);
+		columns_out.resize(column_indices.size());
 		for(size_t i = 0; i < columns_out.size(); i++){
-			if (tmp_columns[i].get_gdf_column()->dtype == GDF_STRING){
-				NVStrings* strs = static_cast<NVStrings*>(tmp_columns[i].get_gdf_column()->data);
-				NVCategory* category = NVCategory::create_from_strings(*strs);
-				columns_out[i].create_gdf_column(category, tmp_columns[i].size(), tmp_columns[i].name());
-			} else {
-				columns_out[i] = tmp_columns[i];
-			}
-		}
 
-		delete []args.dtype;
-		args.dtype = nullptr;
-		delete []args.names;
-		args.names = nullptr;
+			if (table_out.get_column(i)->dtype == GDF_STRING){
+				NVStrings* strs = static_cast<NVStrings*>(table_out.get_column(i)->data);
+				NVCategory* category = NVCategory::create_from_strings(*strs);
+				std::string column_name(table_out.get_column(i)->col_name);
+				columns_out[idx[i]].create_gdf_column(category, table_out.get_column(i)->size, column_name);
+				gdf_column_free(table_out.get_column(i));
+			} else {
+				columns_out[idx[i]].create_gdf_column(table_out.get_column(i));
+			}			
+		}
 	}	
 }
 
 void csv_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files, ral::io::Schema & schema)  {
-	csv_read_arg raw_args{};
+	cudf::io::csv::reader_options raw_args{};
 
-	args.num_names = this->column_names.size();
-	if(this->column_names.size() > 0){
-		args.names = new const char *[args.num_names];
-		for(int column_index = 0; column_index < args.num_names; column_index++){
-			args.names[column_index] = this->column_names[column_index].c_str();
-		}
-	}else{
-		args.names = nullptr;
-	}
-
-	args.num_dtype = this->dtype_strings.size();
-	if(this->dtype_strings.size() > 0){
-		args.dtype = new const char *[args.num_dtype]; //because dynamically allocating metadata is fun
-		for(int column_index = 0; column_index < args.num_dtype; column_index++){
-
-			args.dtype[column_index] = this->dtype_strings[column_index].c_str();
-		}
-
-	}else{
-		args.dtype = nullptr;
-	}
+	args.names = this->column_names;
+	args.dtype = this->dtype_strings;
 
 	copy_non_data_csv_args(args, raw_args);
 
-	std::shared_ptr< arrow::Buffer > buffer;
-	arrow::AllocateBuffer(8192, &buffer);
-	files[0]->ReadAt(0,8192,&buffer);
-	auto buffer_reader = std::make_shared<arrow::io::BufferReader>(buffer);
+	cudf::table table_out = read_csv_arrow(raw_args, files[0], true);
+	
+	assert(table_out.num_columns() > 0);
 
-	raw_args.nrows=1;
-	CUDF_CALL(read_csv_arrow(&raw_args,buffer_reader));
-	buffer_reader->Close();
-	//	std::cout << "args.num_cols_out " << raw_args.num_cols_out << std::endl;
-	//	std::cout << "args.num_rows_out " <<raw_args.num_rows_out << std::endl;
-	assert(raw_args.num_cols_out > 0);
-
-	for(size_t i = 0; i < raw_args.num_cols_out; i++ ){
+	for(size_t i = 0; i < table_out.num_columns(); i++ ){
 		gdf_column_cpp c;
-		c.create_gdf_column(raw_args.data[i]); 
-		c.set_name(std::string{raw_args.names[i]});
+		c.create_gdf_column(table_out.get_column(i)); 
+		c.set_name(args.names[i]);
 		schema.add_column(c,i);
-
 	}
 }
 

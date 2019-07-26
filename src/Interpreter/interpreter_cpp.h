@@ -12,6 +12,7 @@
 #include <gdf_wrapper/gdf_wrapper.cuh>
 #include <vector>
 #include "interpreter_cpp.h"
+#include "cudf/binaryop.hpp"
 
 //We have templated cude that has to be in a
 //.cuh but we need to be able to include this in cpp code that is not compiled with nvcc

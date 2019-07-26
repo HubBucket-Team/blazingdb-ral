@@ -9,6 +9,7 @@
 #include "Types.h"
 #include "LogicalFilter.h"
 #include "io/DataLoader.h"
+#include "cudf/binaryop.hpp"
 
 #include <blazingdb/communication/Context.h>
 using blazingdb::communication::Context;

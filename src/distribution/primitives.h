@@ -80,7 +80,8 @@ std::vector<gdf_column_cpp> getPartitionPlan(const Context& context);
 std::vector<NodeColumns> partitionData(const Context& context,
                                        std::vector<gdf_column_cpp>& table,
                                        std::vector<int>& searchColIndices,
-                                       std::vector<gdf_column_cpp>& pivots);
+                                       std::vector<gdf_column_cpp>& pivots,
+                                       bool isTableSorted);
 
 void distributePartitions(const Context& context, std::vector<NodeColumns>& partitions);
 
@@ -92,7 +93,6 @@ std::vector<gdf_column_cpp> generatePartitionPlansGroupBy(const Context& context
 
 void groupByWithoutAggregationsMerger(std::vector<NodeColumns>& groups, const std::vector<int>& groupColIndices, blazing_frame& output);
 
-void aggregationsMerger(std::vector<NodeColumns>& aggregations, const std::vector<int>& groupColIndices, const std::vector<gdf_agg_op>& aggregationTypes, blazing_frame& output);
 
 }  // namespace distribution
 }  // namespace ral

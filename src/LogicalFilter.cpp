@@ -20,7 +20,7 @@
 
 #include "Interpreter/interpreter_cpp.h"
 #include "string/nvcategory_util.hpp"
-
+#include "cudf/binaryop.hpp"
 
 typedef struct {
 	std::string token;
@@ -175,10 +175,10 @@ void add_expression_to_plan(	blazing_frame & inputs,
 
 						size_t size_to_copy = sizeof(int32_t) * left_column->size;
 
-						cudaMemcpyAsync(left_column->data,
-							static_cast<NVCategory *>(left_column->dtype_info.category)->values_cptr(),
-							size_to_copy,
-							cudaMemcpyDeviceToDevice);
+						CheckCudaErrors(cudaMemcpyAsync(left_column->data,
+																						static_cast<NVCategory *>(left_column->dtype_info.category)->values_cptr(),
+																						size_to_copy,
+																						cudaMemcpyDeviceToDevice));
 						
 						int found = static_cast<NVCategory *>(left_column->dtype_info.category)->get_value(right_operand.c_str());
 
@@ -276,6 +276,15 @@ void evaluate_expression(
 	// make temp a column of size 8 bytes so it can accomodate the largest possible size
 	static CodeTimer timer;
 	timer.reset();
+
+	// special case when there is nothing to evaluate in the condition expression i.e. LogicalFilter(condition=[$16])
+	if(expression[0] == '$'){
+		size_t index = get_index(expression);
+		if( index >= 0){
+			output = inputs.get_column(index).clone();
+			return;
+		}
+	}
 
 	std::string clean_expression = clean_calcite_expression(expression);
 	

@@ -91,9 +91,6 @@ public:
         }
     }
 
-public:
-    gdf_column_cpp slice(gdf_size_type data_position, gdf_size_type data_length) const;
-
 protected:
 
     void update_null_count(gdf_column* column) const;

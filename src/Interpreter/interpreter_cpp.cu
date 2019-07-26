@@ -4,6 +4,7 @@
 #include "gdf_wrapper/gdf_wrapper.cuh"
 #include "cuDF/Allocator.h"
 #include "../Utils.cuh"
+#include "cudf/binaryop.hpp"
 
 //TODO: a better way to handle all this thread block size is
 //to get the amount of shared memory from the device and figure it out that way

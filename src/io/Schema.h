@@ -21,7 +21,7 @@ namespace io {
 
 /**
  * I did not want to write this and its very dangerous
- * but the csv_read_arg (what a name) currently requires a char * input
+ * but the cudf::io::csv::reader_options (what a name) currently requires a char * input
  *I have no idea why
  */
 std::string convert_dtype_to_string(const gdf_dtype & dtype);

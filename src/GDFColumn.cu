@@ -14,11 +14,10 @@
 #include "GDFColumn.cuh"
 #include "gdf_wrapper/gdf_wrapper.cuh"
 #include "cuDF/Allocator.h"
-#include "cuDF/column_slice/column_cpp_slice.h"
 #include "cuio/parquet/util/bit_util.cuh"
 #include "Traits/RuntimeTraits.h"
 
-#include "bitmask.hpp"
+#include <cudf/legacy/bitmask.hpp>
 #include "FreeMemory.h"
 
 gdf_column_cpp::gdf_column_cpp()
@@ -29,23 +28,7 @@ gdf_column_cpp::gdf_column_cpp()
     this->is_ipc_column = false;
     this->column_token = 0;
 }
-/*
-gdf_column_cpp::gdf_column_cpp(void* _data, gdf_valid_type* _valid, gdf_dtype _dtype, size_t _size, gdf_size_type _null_count, const std::string &column_name)
-{
 
-    column->data = _data;
-    column->valid = _valid;
-    column->size = _size;
-    column->dtype = _dtype;
-    column->null_count = _null_count;
-    int byte_width;
-    get_column_byte_width(&column,&byte_width);
-    this->allocated_size_data = _size * byte_width;
-    //Todo: To validate valid_size
-    this->allocated_size_valid = gdf_get_num_chars_bitmask(_size);
-    this->column_name = column_name;
-
-}*/
 
 gdf_column_cpp::gdf_column_cpp(const gdf_column_cpp& col)
 {
@@ -162,8 +145,7 @@ gdf_error gdf_column_cpp::compact(){
     	//compact valid allcoation
     }
 
-    int byte_width;
-    get_column_byte_width(this->get_gdf_column(),&byte_width);
+    int byte_width = ral::traits::get_dtype_size_in_bytes(this->get_gdf_column());
     if( this->allocated_size_data != (this->size() * static_cast<std::size_t>(byte_width)) ){
     	//compact data allocation
     }
@@ -194,13 +176,11 @@ void gdf_column_cpp::create_gdf_column_for_ipc(gdf_dtype type, void * col_data,g
     assert(type != GDF_invalid);
     decrement_counter(column);
 
-    int width;
-
     //TODO crate column here
     this->column = new gdf_column;
     gdf_column_view(this->column, col_data, valid_data, num_values, type);
     this->column->null_count = null_count;
-    get_column_byte_width(this->column, &width);
+    int width = ral::traits::get_dtype_size_in_bytes(this->column);
     this->allocated_size_data = num_values * width;
 
     if(col_data == nullptr){
@@ -365,9 +345,8 @@ void gdf_column_cpp::create_gdf_column(gdf_column * column){
         this->column = column;
 
         if (column->dtype != GDF_STRING){
-            int width_per_value;
-            gdf_error err = get_column_byte_width(column, &width_per_value);
-
+            int width_per_value = ral::traits::get_dtype_size_in_bytes(column);
+            
             //TODO: we are assuming they are not padding,
             this->allocated_size_data = width_per_value * column->size;
         } else {
@@ -402,9 +381,9 @@ void gdf_column_cpp::create_gdf_column(const gdf_scalar & scalar, const std::str
     char * data;
     this->is_ipc_column = false;
     this->column_token = 0;
-    size_t width_per_value = gdf_dtype_size(type);
-
-    this->allocated_size_data = width_per_value;
+    size_t width_per_value = ral::traits::get_dtype_size_in_bytes(type);
+    
+    this->allocated_size_data = width_per_value; 
 
     cuDF::Allocator::allocate((void**)&data, allocated_size_data);
 
@@ -453,7 +432,7 @@ void gdf_column_cpp::create_empty(const gdf_dtype     dtype,
             NVCategory::create_from_array(nullptr, 0), 0, column_name);
     } else {
         create_gdf_column(
-            dtype, 0, nullptr, gdf_dtype_size(dtype), column_name);
+            dtype, 0, nullptr, ral::traits::get_dtype_size_in_bytes(dtype), column_name);
     }
 }
 

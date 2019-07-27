@@ -120,7 +120,7 @@ add_library(testing-libgdf_lib ${SRC_FILES})
 
 find_library(FLATBUFFERS_LIB flatbuffers )
 find_library(PARQUET_LIB parquet )
-find_library(ARROW_LIB arrow )
+find_library(ARROW_LIB libarrow.a )
 #find_library(BOOST_REGEX boost_regex)
 #find_library(BOOST_SYSTEM boost_system)
 #find_library(BOOST_FILESYSTEM boost_filesystem)

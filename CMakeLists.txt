@@ -147,6 +147,13 @@ ${PARQUET_LIB}
 
     ${LIBGDF_STATIC_LIB}
 
+
+          ${THRIFT_STATIC_LIB}
+          ${SNAPPY_STATIC_LIB}
+          ${BROTLI_STATIC_LIB}
+          ${ZSTD_STATIC_LIB}
+          ${LZ4_STATIC_LIB}
+
     ${ARROW_STATIC_LIB}
     cudart
     cuda
@@ -154,12 +161,6 @@ ${PARQUET_LIB}
     ${CUDA_NVRTC_LIBRARY}
     ${CUDA_NVTX_LIBRARY}
 
-    ${ARROW_STATIC_LIB}
-      ${THRIFT_STATIC_LIB}
-      ${SNAPPY_STATIC_LIB}
-      ${BROTLI_STATIC_LIB}
-      ${ZSTD_STATIC_LIB}
-      ${LZ4_STATIC_LIB}
 
 
 #    ${BOOST_REGEX}

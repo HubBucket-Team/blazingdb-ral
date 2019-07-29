@@ -35,7 +35,7 @@ include(ConfigureAWSSDK)
 #include(ConfigureBrotli)
 #include(ConfigureSnappy)
 #include(ConfigureThrift)
-#include(ConfigureArrow)
+include(ConfigureArrow)
 #include(ConfigureParquet)
 #include(ConfigureRMM)
 #include(ConfigureNVStrings)
@@ -147,7 +147,7 @@ ${PARQUET_LIB}
 
     ${LIBGDF_STATIC_LIB}
 
-
+    ${ARROW_STATIC_LIB}
     cudart
     cuda
     ${CUDA_CUDA_LIBRARY}

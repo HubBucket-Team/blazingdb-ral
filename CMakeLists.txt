@@ -120,7 +120,7 @@ add_library(testing-libgdf_lib ${SRC_FILES})
 
 find_library(FLATBUFFERS_LIB flatbuffers )
 find_library(PARQUET_LIB parquet )
-find_library(ARROW_LIB libarrow.a )
+
 #find_library(BOOST_REGEX boost_regex)
 #find_library(BOOST_SYSTEM boost_system)
 #find_library(BOOST_FILESYSTEM boost_filesystem)
@@ -133,7 +133,7 @@ Boost::regex
 aws-cpp-sdk-s3
 aws-cpp-sdk-s3-encryption
 ${FLATBUFFERS_LIB}
-${ARROW_LIB}
+
 ${PARQUET_LIB}
     ${BLAZINGDB_IO_STATIC_LIB}
     Threads::Threads
@@ -154,7 +154,12 @@ ${PARQUET_LIB}
     ${CUDA_NVRTC_LIBRARY}
     ${CUDA_NVTX_LIBRARY}
 
-
+    ${ARROW_STATIC_LIB}
+      ${THRIFT_STATIC_LIB}
+      ${SNAPPY_STATIC_LIB}
+      ${BROTLI_STATIC_LIB}
+      ${ZSTD_STATIC_LIB}
+      ${LZ4_STATIC_LIB}
 
 
 #    ${BOOST_REGEX}

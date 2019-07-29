@@ -134,7 +134,7 @@ aws-cpp-sdk-s3
 aws-cpp-sdk-s3-encryption
 ${FLATBUFFERS_LIB}
 
-${PARQUET_LIB}
+
     ${BLAZINGDB_IO_STATIC_LIB}
     Threads::Threads
     ${ZEROMQ_STATIC_LIB}
@@ -155,6 +155,7 @@ ${PARQUET_LIB}
           ${LZ4_STATIC_LIB}
 
     ${ARROW_STATIC_LIB}
+    ${PARQUET_LIB}
     cudart
     cuda
     ${CUDA_CUDA_LIBRARY}
@@ -245,10 +246,7 @@ set(SRC_FILES_APP
 
 add_executable(testing-libgdf ${SRC_FILES_APP})
 target_link_libraries(testing-libgdf testing-libgdf_lib ${BLAZINGDB_PROTOCOL_STATIC_LIB}
-    Boost::filesystem
-    Boost::system
-    Boost::regex
-    ${ARROW_LIB})
+    )
 
 # Tests
 if(BUILD_TESTING)

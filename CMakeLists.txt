@@ -118,7 +118,7 @@ set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/config/BlazingConfig.cpp
 
 add_library(testing-libgdf_lib ${SRC_FILES})
 
-find_library(FLATBUFFERS_LIB flatbuffers )
+#find_library(FLATBUFFERS_LIB flatbuffers )
 find_library(PARQUET_LIB parquet )
 
 #find_library(BOOST_REGEX boost_regex)
@@ -132,7 +132,7 @@ Boost::system
 Boost::regex
 aws-cpp-sdk-s3
 aws-cpp-sdk-s3-encryption
-${FLATBUFFERS_LIB}
+${FLATBUFFERS_STATIC_LIB}
 
 
     ${BLAZINGDB_IO_STATIC_LIB}

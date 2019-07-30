@@ -149,7 +149,7 @@ void parquet_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomA
 	const parquet::SchemaDescriptor * schema = file_metadata->schema();
 	for(int i = 0; i < total_columns; i++){
 		const parquet::ColumnDescriptor * column = schema->Column(i);
-		column_names.push_back(StringUtil::toLower(column->name()));
+		column_names.push_back(column->name());
 		std::pair<gdf_dtype, gdf_dtype_extra_info> dtype_pair = to_dtype(column->physical_type(), column->logical_type());
 		dtypes.push_back(dtype_pair.first);
 	}

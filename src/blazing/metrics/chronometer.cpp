@@ -8,9 +8,7 @@ namespace metrics {
 // Check
 
 void Check::State(bool expressionValue) {
-    if (!expressionValue) {
-        throw std::runtime_error("Illegal State Exception");
-    }
+    if (!expressionValue) { throw IllegalStateException(); }
 }
 
 // Watch
@@ -46,19 +44,19 @@ class BLAZING_NOEXPORT ChronometerBase : public Chronometer {
     BLAZING_CONCRETE(ChronometerBase);
 
 public:
-    explicit ChronometerBase() : watch_{Watch::InternalWatch()} {}
+    explicit ChronometerBase(const Watch & watch) : watch_{watch} {}
 
     bool IsRunning() const noexcept final { return isRunning_; }
 
     Chronometer & Start() final {
         Check::State(!isRunning_);
         isRunning_ = true;
-        startTime_ = watch_->Read();
+        startTime_ = watch_.Read();
         return *this;
     }
 
     Chronometer & Stop() final {
-        const std::uintmax_t stopTime = watch_->Read();
+        const std::uintmax_t stopTime = watch_.Read();
         Check::State(isRunning_);
         isRunning_ = false;
         elapsedTime_ += stopTime - startTime_;
@@ -66,7 +64,7 @@ public:
     }
 
     std::uintmax_t Elapsed() const noexcept {
-        return isRunning_ ? watch_->Read() - startTime_ + elapsedTime_
+        return isRunning_ ? watch_.Read() - startTime_ + elapsedTime_
                           : elapsedTime_;
     }
 
@@ -82,22 +80,40 @@ public:
         return *this;
     }
 
-protected:
-    ChronometerBase(std::unique_ptr<const Watch> && watch)
-        : watch_{std::move(watch)} {}
+private:
+    const Watch &  watch_;
+    bool           isRunning_;
+    std::uintmax_t startTime_;
+    std::uintmax_t elapsedTime_;
+};
+
+class BLAZING_NOEXPORT WithManagedWatch {
+    BLAZING_CONCRETE(WithManagedWatch);
+
+public:
+    explicit WithManagedWatch() : watch_{Watch::InternalWatch()} {}
+
+    const Watch & watch() const noexcept { return *watch_; }
 
 private:
     const std::unique_ptr<const Watch> watch_;
-    bool                               isRunning_;
-    std::uintmax_t                     startTime_;
-    std::uintmax_t                     elapsedTime_;
 };
 
-class BLAZING_NOEXPORT UnstartedChronometer : public ChronometerBase {
+class BLAZING_NOEXPORT ChronometerContent : public ChronometerBase {
+    BLAZING_CONCRETE(ChronometerContent);
+
+public:
+    explicit ChronometerContent(const Watch & watch) : ChronometerBase{watch} {
+        Reset();
+    }
+};
+
+class BLAZING_NOEXPORT UnstartedChronometer : public WithManagedWatch,
+                                              public ChronometerBase {
     BLAZING_CONCRETE(UnstartedChronometer);
 
 public:
-    explicit UnstartedChronometer() { Reset(); }
+    explicit UnstartedChronometer() : ChronometerBase{watch()} { Reset(); }
 };
 
 class BLAZING_NOEXPORT StartedChronometer : public UnstartedChronometer {
@@ -115,6 +131,10 @@ std::unique_ptr<Chronometer> Chronometer::MakeUnstarted() {
 
 std::unique_ptr<Chronometer> Chronometer::MakeStarted() {
     return std::make_unique<StartedChronometer>();
+}
+
+std::unique_ptr<Chronometer> Chronometer::Content(const Watch & watch) {
+    return std::make_unique<ChronometerContent>(watch);
 }
 
 }  // namespace metrics

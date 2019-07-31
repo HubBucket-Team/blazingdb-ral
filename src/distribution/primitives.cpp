@@ -269,17 +269,17 @@ std::vector<gdf_column_cpp> generatePartitionPlans(const Context& context, std::
 	gatherMap.create_gdf_column(GDF_INT32, context.getTotalNodes() - 1, nullptr, get_width_dtype(GDF_INT32), "");
 	gdf_sequence(static_cast<int32_t*>(gatherMap.get_gdf_column()->data), gatherMap.size(), step, step);
 
-  std::cout << "Gather Map\n";
-  print_gdf_column(gatherMap.get_gdf_column());
+  // std::cout << "Gather Map\n";
+  // print_gdf_column(gatherMap.get_gdf_column());
 
   cudf::gather(&srcTable, (gdf_index_type*)(gatherMap.get_gdf_column()->data), &destTable);
   ral::init_string_category_if_null(destTable);
 
-  std::cout << "After Gather\n";
-  for(auto& p : pivots)
-  {
-      print_gdf_column(p.get_gdf_column());
-  }
+  // std::cout << "After Gather\n";
+  // for(auto& p : pivots)
+  // {
+  //     print_gdf_column(p.get_gdf_column());
+  // }
 
   return pivots;
 }
@@ -346,11 +346,12 @@ std::vector<NodeColumns> partitionData(const Context& context,
                                        std::vector<gdf_column_cpp>& table,
                                        std::vector<int>& searchColIndices,
                                        std::vector<gdf_column_cpp>& pivots,
-                                       bool isTableSorted) {
+                                       bool isTableSorted,
+                                       std::vector<int8_t> sortOrderTypes) {
     // verify input
     if (pivots.size() == 0) {
         throw std::runtime_error("The pivots array is empty");
-    }
+    }    
 
     if (pivots.size() != searchColIndices.size()) {
         throw std::runtime_error("The pivots and searchColIndices vectors don't have the same size");
@@ -392,13 +393,17 @@ std::vector<NodeColumns> partitionData(const Context& context,
     }
 	  cudf::table haystack_table(haystack_column_ptrs);
     cudf::table needles_table = ral::utilities::create_table(pivots);
-    std::vector<bool> desc_flags(searchColIndices.size(), false);
+
+    if (sortOrderTypes.size() == 0) {
+      sortOrderTypes.assign(searchColIndices.size(), 0);
+    }
+
+    std::vector<bool> desc_flags(sortOrderTypes.begin(), sortOrderTypes.end());
 
     // Ensure data is sorted.
     // Would it be better to use gdf_hash instead or gdf_order_by?
     std::vector<gdf_column_cpp> sortedTable;
     if (!isTableSorted) {
-      std::vector<int8_t> sortOrderTypes(searchColIndices.size(), 0);
       gdf_column_cpp asc_desc_col;
       asc_desc_col.create_gdf_column(GDF_INT8, sortOrderTypes.size(), sortOrderTypes.data(), get_width_dtype(GDF_INT8), "");
 
@@ -697,17 +702,17 @@ std::vector<gdf_column_cpp> generatePartitionPlansGroupBy(const Context& context
 	gatherMap.create_gdf_column(GDF_INT32, context.getTotalNodes() - 1, nullptr, get_width_dtype(GDF_INT32), "");
 	gdf_sequence(static_cast<int32_t*>(gatherMap.get_gdf_column()->data), gatherMap.size(), step, step);
 
-  std::cout << "Gather Map\n";
-  print_gdf_column(gatherMap.get_gdf_column());
+  // std::cout << "Gather Map\n";
+  // print_gdf_column(gatherMap.get_gdf_column());
 
   cudf::gather(&srcTable, (gdf_index_type*)(gatherMap.get_gdf_column()->data), &destTable);
   ral::init_string_category_if_null(destTable);
 
-  std::cout << "After Gather\n";
-  for(auto& p : pivots)
-  {
-      print_gdf_column(p.get_gdf_column());
-  }
+  // std::cout << "After Gather\n";
+  // for(auto& p : pivots)
+  // {
+  //     print_gdf_column(p.get_gdf_column());
+  // }
 
   return pivots;
 }

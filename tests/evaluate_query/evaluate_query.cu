@@ -47,7 +47,7 @@ TEST_F(EvaluateQueryTest, TEST_IS_NULL) {
       .logicalPlan =
           "LogicalProject(id=[$0], age=[$1])\n  "
    		  "LogicalFilter(condition=[IS NULL($0)])\n    "
-          "EnumerableTableScan(table=[[main, emps]])",
+          "LogicalTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.emps",
@@ -80,7 +80,7 @@ TEST_F(EvaluateQueryTest, TEST_IS_NOT_NULL) {
       .logicalPlan =
           "LogicalProject(id=[$0], age=[$1])\n  "
    		  "LogicalFilter(condition=[IS NOT NULL($0)])\n    "
-          "EnumerableTableScan(table=[[main, emps]])",
+          "LogicalTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.emps",
@@ -114,7 +114,7 @@ TEST_F(EvaluateQueryTest, TEST_01) {
       .query = "select * from main.emps",
       .logicalPlan =
           "LogicalProject(id=[$0], age=[$1])\n  "
-          "EnumerableTableScan(table=[[main, emps]])",
+          "LogicalTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.emps",
@@ -149,7 +149,7 @@ TEST_F(EvaluateQueryTest, TEST_02) {
       .query = "select id > 3 from main.emps",
       .logicalPlan =
           "LogicalProject(EXPR$0=[>($0, 3)])\n  "
-          "EnumerableTableScan(table=[[main, emps]])",
+          "LogicalTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.emps",
@@ -179,7 +179,7 @@ TEST_F(EvaluateQueryTest, TEST_03) {
       .query = "select id from main.emps where age > 30",
       .logicalPlan =
           "LogicalProject(id=[$0])\n  LogicalFilter(condition=[>($1, 30)])\n   "
-          " EnumerableTableScan(table=[[main, emps]])",
+          " LogicalTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.emps",
@@ -208,7 +208,7 @@ TEST_F(EvaluateQueryTest, TEST_04) {
       .query = "select age + salary from main.emps",
       .logicalPlan =
           "LogicalProject(EXPR$0=[+($1, $2)])\n  "
-          "EnumerableTableScan(table=[[main, emps]])",
+          "LogicalTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.emps",
@@ -241,7 +241,7 @@ TEST_F(EvaluateQueryTest, TEST_05) {
       .query = "select salary from main.emps where age > 80",
       .logicalPlan =
           "LogicalProject(salary=[$2])\n  LogicalFilter(condition=[>($1, "
-          "80)])\n    EnumerableTableScan(table=[[main, emps]])",
+          "80)])\n    LogicalTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.emps",
@@ -272,7 +272,7 @@ TEST_F(EvaluateQueryTest, TEST_06) {
       .logicalPlan =
           "LogicalProject(id=[$0], age=[$1], salary=[$2])\n  "
           "LogicalFilter(condition=[=(CAST($1):INTEGER NOT NULL, 10)])\n    "
-          "EnumerableTableScan(table=[[main, emps]])",
+          "LogicalTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.emps",
@@ -307,7 +307,7 @@ TEST_F(EvaluateQueryTest, TEST_07) {
       .logicalPlan =
           "LogicalProject(id=[$0], age=[$1], salary=[$2])\n  "
           "LogicalFilter(condition=[AND(=($1, 10), >($2, 4999))])\n    "
-          "EnumerableTableScan(table=[[main, emps]])",
+          "LogicalTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.emps",
@@ -341,7 +341,7 @@ TEST_F(EvaluateQueryTest, TEST_08) {
       .query = "select id + salary from main.emps",
       .logicalPlan =
           "LogicalProject(EXPR$0=[+($0, $2)])\n  "
-          "EnumerableTableScan(table=[[main, emps]])",
+          "LogicalTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.emps",
@@ -375,7 +375,7 @@ TEST_F(EvaluateQueryTest, TEST_09) {
       .logicalPlan =
           "LogicalProject(EXPR$0=[*($1, $2)])\n  "
           "LogicalFilter(condition=[AND(<($0, 5), =($1, 10))])\n    "
-          "EnumerableTableScan(table=[[main, emps]])",
+          "LogicalTableScan(table=[[main, emps]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.emps",
@@ -403,7 +403,7 @@ TEST_F(EvaluateQueryTest, TEST_09) {
 }
 
 TEST_F(EvaluateQueryTest, TEST_UNARY) {
-	auto input = InputTestItem{.query = "select floor(double_value), floor(float_value)  from main.emps", .logicalPlan ="LogicalProject(EXPR$0=[FLOOR($1)], EXPR$1=[FLOOR($2)])\n  EnumerableTableScan(table=[[main, emps]])", .tableGroup = LiteralTableGroupBuilder{{"main.emps", {{"id", Literals<GDF_INT32>{1,2,3,4,5,6,7,8,9,1} },{"double_value", Literals<GDF_FLOAT64>{10.5,20.5,30.4,40.6,50.1,60.5,70.4,80.9,90.1,10.11} },{"float_value", Literals<GDF_FLOAT32>{10.5,20.5,30.4,40.6,50.1,60.5,70.4,80.9,90.1,10.11} }}}}.Build(), .resultTable = LiteralTableBuilder{"ResultSet", {{"GDF_FLOAT64", Literals<GDF_FLOAT64>{10.0,20.0,30.0,40.0,50.0,60.0,70.0,80.0,90.0,10.0} },{"GDF_FLOAT32", Literals<GDF_FLOAT32>{10.0,20.0,30.0,40.0,50.0,60.0,70.0,80.0,90.0,10.0} }}}.Build()};
+	auto input = InputTestItem{.query = "select floor(double_value), floor(float_value)  from main.emps", .logicalPlan ="LogicalProject(EXPR$0=[FLOOR($1)], EXPR$1=[FLOOR($2)])\n  LogicalTableScan(table=[[main, emps]])", .tableGroup = LiteralTableGroupBuilder{{"main.emps", {{"id", Literals<GDF_INT32>{1,2,3,4,5,6,7,8,9,1} },{"double_value", Literals<GDF_FLOAT64>{10.5,20.5,30.4,40.6,50.1,60.5,70.4,80.9,90.1,10.11} },{"float_value", Literals<GDF_FLOAT32>{10.5,20.5,30.4,40.6,50.1,60.5,70.4,80.9,90.1,10.11} }}}}.Build(), .resultTable = LiteralTableBuilder{"ResultSet", {{"GDF_FLOAT64", Literals<GDF_FLOAT64>{10.0,20.0,30.0,40.0,50.0,60.0,70.0,80.0,90.0,10.0} },{"GDF_FLOAT32", Literals<GDF_FLOAT32>{10.0,20.0,30.0,40.0,50.0,60.0,70.0,80.0,90.0,10.0} }}}.Build()};
 	auto logical_plan = input.logicalPlan;
 	auto input_tables = input.tableGroup.ToBlazingFrame();
 	auto table_names = input.tableGroup.table_names();
@@ -413,4 +413,3 @@ gdf_error err = evaluate_query(input_tables, table_names, column_names, logical_
 EXPECT_TRUE(err == GDF_SUCCESS);
 auto output_table = GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
 CHECK_RESULT(output_table, input.resultTable);}
-

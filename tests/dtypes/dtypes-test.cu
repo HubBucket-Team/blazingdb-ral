@@ -126,7 +126,7 @@ TYPED_TEST(DTypesTest, withGdfDType) {
   {
     std::string query = "\
 LogicalProject(S=[-($0, $1)])\n\
-  EnumerableTableScan(table=[[hr, emps]])";
+  LogicalTableScan(table=[[hr, emps]])";
 
     gdf_error err = evaluate_query(
       input_tables.ToBlazingFrame(), table_names, column_names, query, outputs);

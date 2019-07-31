@@ -24,6 +24,7 @@ struct InputTestItem
     std::string query;
     std::string logicalPlan;
     gdf::library::TableGroup tableGroup;
+    gdf::library::Table resultTable;
 };
 
 struct EvaluateQueryTest : public ::testing::Test
@@ -35,7 +36,7 @@ struct EvaluateQueryTest : public ::testing::Test
                               .query = "select id + salary from main.emps",
                               .logicalPlan =
                                   "LogicalProject(EXPR$0=[+($0, $2)])\n  "
-                                  "EnumerableTableScan(table=[[main, emps]])",
+                                  "LogicalTableScan(table=[[main, emps]])",
                               .tableGroup =
                                   LiteralTableGroupBuilder{
                                       {"main.emps",
@@ -43,7 +44,15 @@ struct EvaluateQueryTest : public ::testing::Test
                                         {"age",  Literals<GDF_INT32>{Literals<GDF_INT32>::vector{10, 20, 10, 20, 10, 20, 10, 20, 10, 2}, Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 0, 0, 0, 0, 1, 1}}},
                                         {"salary", Literals<GDF_INT32>{Literals<GDF_INT32>::vector{9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000, 0}, Literals<GDF_INT32>::bool_vector{1, 1, 1, 1, 1, 1, 1, 1, 1, 1}}}
                                        }
-                                       }}.Build()}}
+                                       }}.Build(),
+                              .resultTable =
+                                  LiteralTableBuilder{
+                                      "ResultSet",
+                                      {{"GDF_INT32", Literals<GDF_INT32>{
+                                                              Literals<GDF_INT32>::vector{0, 8002, 7003, 6004, 0, 0, 0, 0, 1009, 1},
+                                                              Literals<GDF_INT32>::bool_vector{0, 1, 1, 1, 0, 0, 0, 0, 1, 1 }}}}}
+                                      .Build()}
+                              }
     {
     }
  
@@ -70,7 +79,7 @@ struct EvaluateQueryTest : public ::testing::Test
     }
 };
 
-// EnumerableTableScan(table=[[main, emps]])
+// LogicalTableScan(table=[[main, emps]])
 TEST_F(EvaluateQueryTest, TEST_01)
 {
     auto logical_plan = input.logicalPlan;
@@ -126,14 +135,5 @@ TEST_F(EvaluateQueryTest, TEST_01)
     auto output_table = GdfColumnCppsTableBuilder{"output_table", output_columns_cpp}.Build();
     output_table.print(std::cout);
 
-    process_project(bz_frame, plan[0]);
-    std::cout<< "reference_solution\n";
-    auto table_ref = bz_frame.get_columns()[0];
-    for (auto& c: table_ref) {
-        print_gdf_column(c.get_gdf_column());
-    }
-
-    auto reference_table =
-        GdfColumnCppsTableBuilder{"output_table", bz_frame.get_columns()[0]}.Build();
-    CHECK_RESULT(output_table, reference_table);
+    CHECK_RESULT(output_table, input.resultTable);
 } 

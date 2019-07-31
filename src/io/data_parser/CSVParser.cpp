@@ -25,6 +25,8 @@ namespace io {
 
 void init_default_csv_args(cudf::io::csv::reader_options & args){
 
+	args = cudf::io::csv::reader_options();
+
 	args.delimiter = '|';
 	args.lineterminator = '\n';
 	args.quotechar = '"';
@@ -40,7 +42,7 @@ void init_default_csv_args(cudf::io::csv::reader_options & args){
 	args.skip_blank_lines = true;
 	// args.comment
 	args.keep_default_na = true;
-	args.na_filter = false;
+	args.na_filter = true;
 	// args.prefix
 	args.header = -1;	
 }
@@ -64,6 +66,7 @@ void copy_non_data_csv_args(cudf::io::csv::reader_options & args, cudf::io::csv:
 	new_args.keep_default_na = args.keep_default_na;
 	new_args.na_filter		= args.na_filter;
 	new_args.use_cols_indexes = args.use_cols_indexes;
+	new_args.use_cols_names = args.use_cols_names;
 	
 }
 
@@ -195,7 +198,7 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	
 	if (column_indices.size() > 0){
 
-		cudf::io::csv::reader_options raw_args{};
+		cudf::io::csv::reader_options raw_args = cudf::io::csv::reader_options();
 
 		args.names = this->column_names;
 		args.dtype = this->dtype_strings;
@@ -234,7 +237,7 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 }
 
 void csv_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files, ral::io::Schema & schema)  {
-	cudf::io::csv::reader_options raw_args{};
+	cudf::io::csv::reader_options raw_args = cudf::io::csv::reader_options();
 
 	args.names = this->column_names;
 	args.dtype = this->dtype_strings;

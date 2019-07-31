@@ -51,8 +51,8 @@ TEST_F(EvaluateQueryTest, TEST_00) {
           "LogicalProject(n_nationkey=[$0], r_regionkey=[$4])\n    "
           "LogicalFilter(condition=[<($0, 10)])\n      "
           "LogicalJoin(condition=[=($0, $4)], joinType=[left])\n        "
-          "EnumerableTableScan(table=[[main, nation]])\n        "
-          "EnumerableTableScan(table=[[main, region]])",
+          "LogicalTableScan(table=[[main, nation]])\n        "
+          "LogicalTableScan(table=[[main, region]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.nation",
@@ -107,8 +107,8 @@ TEST_F(EvaluateQueryTest, TEST_01) {
           "LogicalProject(n_nationkey=[$0], r_regionkey=[$4], EXPR$2=[+($0, "
           "$4)])\n    LogicalFilter(condition=[<($0, 10)])\n      "
           "LogicalJoin(condition=[=($0, $4)], joinType=[left])\n        "
-          "EnumerableTableScan(table=[[main, nation]])\n        "
-          "EnumerableTableScan(table=[[main, region]])",
+          "LogicalTableScan(table=[[main, nation]])\n        "
+          "LogicalTableScan(table=[[main, region]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.nation",
@@ -166,8 +166,8 @@ TEST_F(EvaluateQueryTest, TEST_02) {
           "LogicalProject(n_nationkey=[$0], r_regionkey=[$4])\n    "
           "LogicalFilter(condition=[AND(<($0, 10), >($0, 5))])\n      "
           "LogicalJoin(condition=[=($2, $4)], joinType=[left])\n        "
-          "EnumerableTableScan(table=[[main, nation]])\n        "
-          "EnumerableTableScan(table=[[main, region]])",
+          "LogicalTableScan(table=[[main, nation]])\n        "
+          "LogicalTableScan(table=[[main, region]])",
       .tableGroup =
           LiteralTableGroupBuilder{
               {"main.nation",

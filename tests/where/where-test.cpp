@@ -70,21 +70,21 @@ INSTANTIATE_TEST_CASE_P(SwingsCompareWithOne,
                             "EqualsOne",
                             "LogicalProject(swings=[$0])\n"
                             "  LogicalFilter(condition=[=($1, 1)])\n"
-                            "    EnumerableTableScan(table=[[main, holas]])",
+                            "    LogicalTableScan(table=[[main, holas]])",
                             {1, 3},
                           },
                           Item{
                             "LessThanOne",
                             "LogicalProject(swings=[$0])\n"
                             "  LogicalFilter(condition=[<($1, 1)])\n"
-                            "    EnumerableTableScan(table=[[main, holas]])",
+                            "    LogicalTableScan(table=[[main, holas]])",
                             {2, 4, 5, 6, 7},
                           },
                           Item{
                             "GreaterThanOne",
                             "LogicalProject(swings=[$0])\n"
                             "  LogicalFilter(condition=[>($1, 1)])\n"
-                            "    EnumerableTableScan(table=[[main, holas]])",
+                            "    LogicalTableScan(table=[[main, holas]])",
                             {},
                           },
                         }),
@@ -97,21 +97,21 @@ INSTANTIATE_TEST_CASE_P(SwingsCompareWithNegativeOne,
                             "EqualsNegativeOne",
                             "LogicalProject(swings=[$0])\n"
                             "  LogicalFilter(condition=[=($1, -1)])\n"
-                            "    EnumerableTableScan(table=[[main, holas]])",
+                            "    LogicalTableScan(table=[[main, holas]])",
                             {5, 7},
                           },
                           Item{
                             "LessThanNegativeOne",
                             "LogicalProject(swings=[$0])\n"
                             "  LogicalFilter(condition=[<($1, -1)])\n"
-                            "    EnumerableTableScan(table=[[main, holas]])",
+                            "    LogicalTableScan(table=[[main, holas]])",
                             {},
                           },
                           Item{
                             "GreaterThanNegativeOne",
                             "LogicalProject(swings=[$0])\n"
                             "  LogicalFilter(condition=[>($1, -1)])\n"
-                            "    EnumerableTableScan(table=[[main, holas]])",
+                            "    LogicalTableScan(table=[[main, holas]])",
                             {1, 2, 3, 4, 6},
                           },
                         }),

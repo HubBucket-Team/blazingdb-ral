@@ -102,7 +102,7 @@ struct calcite_interpreter_TEST : public ::testing::Test {
 	{   //select * from hr.emps
 		std::string query = "\
 LogicalProject(x=[$0], y=[$1], z=[$2])\n\
-  EnumerableTableScan(table=[[hr, emps]])";
+  LogicalTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 			query, outputs);
@@ -120,7 +120,7 @@ TEST_F(calcite_interpreter_TEST, processing_project1) {
 	{   //select x from hr.emps
 		std::string query = "\
 LogicalProject(x=[$0])\n\
-  EnumerableTableScan(table=[[hr, emps]])";
+  LogicalTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 			query, outputs);
@@ -136,7 +136,7 @@ TEST_F(calcite_interpreter_TEST, processing_project2) {
 	{ //select z > 5 from hr.emps
 		std::string query = "\
 LogicalProject(EXPR$0=[>($2, 5)])\n\
-  EnumerableTableScan(table=[[hr, emps]])";
+  LogicalTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 			query, outputs);
@@ -157,7 +157,7 @@ TEST_F(calcite_interpreter_TEST, processing_project3) {
 	{   //select a from hr.sales
 		std::string query = "\
 LogicalProject(a=[$0])\n\
-  EnumerableTableScan(table=[[hr, sales]])";
+  LogicalTableScan(table=[[hr, sales]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 			query, outputs);
@@ -173,7 +173,7 @@ TEST_F(calcite_interpreter_TEST, processing_project4) {
 	{   //select x + y, z from hr.emps
 		std::string query = "\
 LogicalProject(EXPR$0=[+($0, $1)], z=[$2])\n\
-  EnumerableTableScan(table=[[hr, emps]])";
+  LogicalTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 			query, outputs);
@@ -196,7 +196,7 @@ TEST_F(calcite_interpreter_TEST, processing_project5) {
 		std::string query = "\
 LogicalProject(z=[$2])\n\
   LogicalFilter(condition=[=($0, $1)])\n\
-    EnumerableTableScan(table=[[hr, emps]])";
+    LogicalTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 			query, outputs);
@@ -221,7 +221,7 @@ TEST_F(calcite_interpreter_TEST, processing_project6) {
 	{   //select x - y as S from hr.emps
 		std::string query = "\
 LogicalProject(S=[-($0, $1)])\n\
-  EnumerableTableScan(table=[[hr, emps]])";
+  LogicalTableScan(table=[[hr, emps]])";
 
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 				query, outputs);
@@ -347,7 +347,7 @@ TEST_F(calcite_interpreter_TEST, processing_sort) {
 	{   //select x - y as S from hr.emps
 		std::string query = "LogicalSort(sort0=[$0], dir0=[ASC])\n\
   LogicalProject(x=[$0], x=[$1])\n\
-    EnumerableTableScan(table=[[hr, emps]])";
+    LogicalTableScan(table=[[hr, emps]])";
 		std::cout<<"about to evalute"<<std::endl;
 		gdf_error err = evaluate_query(input_tables, table_names, column_names,
 				query, outputs);

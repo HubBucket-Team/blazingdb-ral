@@ -1,4 +1,5 @@
 #pragma once
+#include <blazingdb/io/Util/StringUtil.h>
 #include "column.h"
 #include "table.h"
 
@@ -20,7 +21,12 @@ public:
   std::vector<std::string> table_names() const {
     std::vector<std::string> names;
     for (auto &table : tables_) {
-      names.push_back(table.name());
+      std::string name = table.name();
+      // TODO: Workaorund no normalize table names. Delete this later
+      if (StringUtil::beginsWith(name, "main.")){
+        name = name.substr(5);
+      }
+      names.push_back(name);
     }
     return names;
   }

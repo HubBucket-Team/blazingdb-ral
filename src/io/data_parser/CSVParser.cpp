@@ -132,7 +132,7 @@ cudf::table read_csv_arg_arrow(cudf::csv_read_arg args, std::shared_ptr<arrow::i
 csv_parser::csv_parser(std::string delimiter,
 		std::string lineterminator,
 		int skiprows,
-		int nrows,
+		//int nrows,
 		std::vector<std::string> names,
 		std::vector<gdf_dtype> dtypes) {
 
@@ -141,7 +141,7 @@ csv_parser::csv_parser(std::string delimiter,
 	csv_arg.delimiter = delimiter[0];
 	csv_arg.lineterminator = lineterminator[0];
 	csv_arg.skiprows = skiprows;
-	csv_arg.nrows = -1;		//csv_arg.nrows = nrows;
+	//csv_arg.nrows = -1;		//csv_arg.nrows = nrows;
 	
 	this->column_names = names;
 	this->dtype_strings.resize(dtypes.size());

@@ -16,11 +16,20 @@ namespace adapter {
     public:
         class StringInfo {
         public:
-            explicit StringInfo(gdf_column_cpp & column) {
+            explicit StringInfo(gdf_column_cpp & column)
+                : nvStrings_{nullptr}, stringsLength_{0}, offsetsLength_{0},
+                  stringsPointer_{nullptr}, offsetsPointer_{nullptr},
+                  stringsSize_{0}, offsetsSize_{0}, totalSize_{0} {
                 NVCategory * nvCategory = reinterpret_cast<NVCategory *>(
                     column.get_gdf_column()->dtype_info.category);
 
+                if (!nvCategory) {
+                    nvCategory = NVCategory::create_from_array(nullptr, 0);
+                }
+
                 nvStrings_ = nvCategory->to_strings();
+
+                if (!nvStrings_) { return; }
 
                 stringsLength_ = nvStrings_->size();
                 offsetsLength_ = stringsLength_ + 1;
@@ -46,7 +55,7 @@ namespace adapter {
                 delete[] lengthPerStrings;
             }
 
-           ~StringInfo() {
+            ~StringInfo() {
                 // TODO: remove pointers to map into `result` without bypass
                 delete[] stringsPointer_;
                 delete[] offsetsPointer_;
@@ -99,7 +108,7 @@ namespace adapter {
                 [](const std::pair<gdf_column * const, StringInfo *> & pair) {
                     delete std::get<StringInfo *>(pair);
                 });
-       }
+        }
 
         std::size_t capacity() const noexcept {
             return std::accumulate(
@@ -113,8 +122,8 @@ namespace adapter {
                 });
         }
 
-        const StringInfo &at(gdf_column *gdfColumn) const {
-          return *columnMap_.at(gdfColumn);
+        const StringInfo & At(gdf_column * gdfColumn) const {
+            return *columnMap_.at(gdfColumn);
         }
 
     private:
@@ -122,12 +131,14 @@ namespace adapter {
     };
 
     const GpuFunctionsAdapter::StringsInfo *
-    GpuFunctionsAdapter::createStringsInfo(std::vector<gdf_column_cpp> & columns) {
+    GpuFunctionsAdapter::createStringsInfo(
+        std::vector<gdf_column_cpp> & columns) {
         const StringsInfo * stringsInfo = new StringsInfo{columns};
         return stringsInfo;
     }
 
-    void GpuFunctionsAdapter::destroyStringsInfo(const StringsInfo *stringsInfo) {
+    void
+    GpuFunctionsAdapter::destroyStringsInfo(const StringsInfo * stringsInfo) {
         delete stringsInfo;
     }
 
@@ -135,9 +146,7 @@ namespace adapter {
                                            std::string &       result,
                                            gdf_column_cpp &    column,
                                            const StringsInfo * stringsInfo) {
-        if (column.size() == 0) {
-            return;
-        }
+        if (column.size() == 0) { return; }
 
         if (isGdfString(*column.get_gdf_column())) {
             using blazing::metrics::Chronometer;
@@ -146,7 +155,7 @@ namespace adapter {
 
 
             const StringsInfo::StringInfo & stringInfo =
-                stringsInfo->at(column.get_gdf_column());
+                stringsInfo->At(column.get_gdf_column());
 
             const std::size_t stringsSize   = stringInfo.stringsSize();
             const std::size_t offsetsSize   = stringInfo.offsetsSize();
@@ -190,19 +199,19 @@ namespace adapter {
                 .SetColor(Console::kNone)
                 .EndLine();
         } else {
-          std::size_t data_size = getDataCapacity(column.get_gdf_column());
-          CheckCudaErrors(cudaMemcpy(&result[binary_pointer],
-                                    column.data(),
-                                    data_size,
-                                    cudaMemcpyDeviceToHost));
-          binary_pointer += data_size;
+            std::size_t data_size = getDataCapacity(column.get_gdf_column());
+            CheckCudaErrors(cudaMemcpy(&result[binary_pointer],
+                                       column.data(),
+                                       data_size,
+                                       cudaMemcpyDeviceToHost));
+            binary_pointer += data_size;
 
-          std::size_t valid_size = getValidCapacity(column.get_gdf_column());
-          CheckCudaErrors(cudaMemcpy(&result[binary_pointer],
-                        column.valid(),
-                        valid_size,
-                        cudaMemcpyDeviceToHost));
-          binary_pointer += valid_size;
+            std::size_t valid_size = getValidCapacity(column.get_gdf_column());
+            CheckCudaErrors(cudaMemcpy(&result[binary_pointer],
+                                       column.valid(),
+                                       valid_size,
+                                       cudaMemcpyDeviceToHost));
+            binary_pointer += valid_size;
         }
     }
 

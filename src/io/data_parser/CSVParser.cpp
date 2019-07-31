@@ -251,7 +251,7 @@ void csv_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAcces
 	for(size_t i = 0; i < table_out.num_columns(); i++ ){
 		gdf_column_cpp c;
 		c.create_gdf_column(table_out.get_column(i)); 
-		c.set_name(args.names[i]);
+		if ( i < args.names.size() ) c.set_name(args.names[i]);
 		schema.add_column(c,i);
 	}
 }

@@ -1,6 +1,9 @@
 
 #include "DataLoader.h"
 #include "Traits/RuntimeTraits.h"
+#include <blazingdb/io/Library/Logging/Logger.h>
+
+#include <CodeTimer.h>
 
 namespace ral {
 namespace io {
@@ -24,6 +27,8 @@ data_loader::~data_loader() {
 
 
 void data_loader::load_data(std::vector<gdf_column_cpp> & columns, const std::vector<size_t>  & column_indices, const Schema & schema){
+	static CodeTimer timer;
+	timer.reset();
 
 	std::vector<std::vector<gdf_column_cpp> > columns_per_file; //stores all of the columns parsed from each file
 	//iterates through files and parses them into columns
@@ -101,6 +106,7 @@ void data_loader::load_data(std::vector<gdf_column_cpp> & columns, const std::ve
 			}
 		}
 	}
+	Library::Logging::Logger().logInfo("-> data_loader::load_data  " + std::to_string(timer.getDuration()) + " ms");
 }
 
 void data_loader::get_schema(Schema & schema){

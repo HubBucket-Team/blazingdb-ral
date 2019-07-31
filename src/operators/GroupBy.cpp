@@ -446,6 +446,7 @@ void single_node_aggregations(blazing_frame& input, std::vector<int>& group_colu
 
 void distributed_aggregations_with_groupby(const Context& queryContext, blazing_frame& input, std::vector<int>& group_column_indices, std::vector<gdf_agg_op>& aggregation_types, std::vector<std::string>& aggregation_input_expressions, std::vector<std::string>& aggregation_column_assigned_aliases) {
 	using ral::communication::CommunicationData;
+	static CodeTimer timer;
 
 	if(std::find(aggregation_types.begin(), aggregation_types.end(), GDF_AVG) != aggregation_types.end()) {
 		throw std::runtime_error{"In distributed_aggregations_with_groupby function: AVG is currently not supported in distributed mode"};
@@ -473,8 +474,11 @@ void distributed_aggregations_with_groupby(const Context& queryContext, blazing_
 
 	std::vector<gdf_column_cpp> partitionPlan;
 	if (queryContext.isMasterNode(CommunicationData::getInstance().getSelfNode())) {
+		timer.reset();
 		std::vector<ral::distribution::NodeSamples> samples = ral::distribution::collectSamples(queryContext);
-    samples.emplace_back(rowSize, CommunicationData::getInstance().getSelfNode(), std::move(selfSamples));
+		Library::Logging::Logger().logInfo("-> distributed_aggregations_with_groupby: collectSamples  " + std::to_string(timer.getDuration()) + " ms");
+
+		samples.emplace_back(rowSize, CommunicationData::getInstance().getSelfNode(), std::move(selfSamples));
 
 		partitionPlan = ral::distribution::generatePartitionPlansGroupBy(queryContext, samples);
 
@@ -490,13 +494,16 @@ void distributed_aggregations_with_groupby(const Context& queryContext, blazing_
 	std::vector<gdf_column_cpp> aggregatedTable = compute_aggregations(input, group_column_indices, aggregation_types, aggregation_input_expressions, aggregation_column_assigned_aliases);//aggregationTask.get();
 
 	std::vector<int> groupColumnIndices(group_column_indices.size());
-  std::iota(groupColumnIndices.begin(), groupColumnIndices.end(), 0);
+ 	std::iota(groupColumnIndices.begin(), groupColumnIndices.end(), 0);
 
 	std::vector<ral::distribution::NodeColumns> partitions = ral::distribution::partitionData(queryContext, aggregatedTable, groupColumnIndices, partitionPlan, false);
 
 	ral::distribution::distributePartitions(queryContext, partitions);
 
+	timer.reset();
 	std::vector<ral::distribution::NodeColumns> partitionsToMerge = ral::distribution::collectPartitions(queryContext);
+	Library::Logging::Logger().logInfo("-> distributed_aggregations_with_groupby: collectPartitions  " + std::to_string(timer.getDuration()) + " ms");
+
 	auto it = std::find_if(partitions.begin(), partitions.end(), [&](ral::distribution::NodeColumns& el) {
 			return el.getNode() == CommunicationData::getInstance().getSelfNode();
 		});
@@ -543,7 +550,7 @@ void process_aggregate(blazing_frame& input, std::string query_part, const Conte
 	 *
 	 * 			As you can see the project following aggregate expects the columns to be grouped by to appear BEFORE the expressions
 	 */
-
+	static CodeTimer timer;
 	// Get groups
 	auto rangeStart = query_part.find("(");
 	auto rangeEnd = query_part.rfind(")") - rangeStart - 1;
@@ -576,17 +583,21 @@ void process_aggregate(blazing_frame& input, std::string query_part, const Conte
 		if (!queryContext || queryContext->getTotalNodes() <= 1) {
 			single_node_groupby_without_aggregations(input, group_column_indices);
 		} else{
+			timer.reset();
 			distributed_groupby_without_aggregations(*queryContext, input, group_column_indices);
+			Library::Logging::Logger().logInfo("-> distributed_groupby_without_aggregations: AllTime  " + std::to_string(timer.getDuration()) + " ms");
 		}
 	} else{
 		if (!queryContext || queryContext->getTotalNodes() <= 1) {
 				single_node_aggregations(input, group_column_indices, aggregation_types, aggregation_input_expressions, aggregation_column_assigned_aliases);
 		} else {
+				timer.reset();
 				if (group_column_indices.size() == 0) {
 					distributed_aggregations_without_groupby(*queryContext, input, group_column_indices, aggregation_types, aggregation_input_expressions, aggregation_column_assigned_aliases);
 				} else {
 					distributed_aggregations_with_groupby(*queryContext, input, group_column_indices, aggregation_types, aggregation_input_expressions, aggregation_column_assigned_aliases);
 				}
+				Library::Logging::Logger().logInfo("-> distributed_aggregations: AllTime  " + std::to_string(timer.getDuration()) + " ms");
 		}
 	}
 }

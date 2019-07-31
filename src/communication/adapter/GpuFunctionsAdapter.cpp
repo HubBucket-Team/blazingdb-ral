@@ -1,8 +1,10 @@
 #include <algorithm>
+#include <CodeTimer.h>
 
 #include "communication/adapter/GpuFunctionsAdapter.h"
 #include "Traits/RuntimeTraits.h"
 #include "GDFColumn.cuh"
+#include "blazingdb/io/Library/Logging/Logger.h"
 
 namespace ral {
 namespace communication {
@@ -10,6 +12,9 @@ namespace adapter {
 
     void GpuFunctionsAdapter::copyGpuToCpu(std::size_t& binary_pointer, std::string& result, gdf_column_cpp& column)
     {
+        static CodeTimer timer;
+        timer.reset();
+
         if (column.size() == 0) {
             return;
         }
@@ -73,6 +78,9 @@ namespace adapter {
           delete[] offsetsPointer;
           delete[] lengthPerStrings;
           NVStrings::destroy(nvStrings);
+
+          Library::Logging::Logger().logInfo("-> copyGpuToCpu:GdfString " + std::to_string(timer.getDuration()) + " ms");
+
         } else {
           std::size_t data_size = getDataCapacity(column.get_gdf_column());
           CheckCudaErrors(cudaMemcpy(&result[binary_pointer],
@@ -87,6 +95,8 @@ namespace adapter {
                         valid_size,
                         cudaMemcpyDeviceToHost));
           binary_pointer += valid_size;
+
+          Library::Logging::Logger().logInfo("-> copyGpuToCpu:data_valid " + std::to_string(timer.getDuration()) + " ms");
         }
     }
 

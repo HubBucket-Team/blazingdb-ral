@@ -20,15 +20,15 @@ namespace io {
 
 class csv_parser: public data_parser {
 public:
-	csv_parser(std::string  delimiter,
-			 std::string  line_terminator,
-			int skip_rows,
-			 std::vector<std::string>  names,
-			std::vector<gdf_dtype>  dtypes);
-	csv_parser(cudf::io::csv::reader_options	args);
+	csv_parser(std::string delimiter,
+			std::string lineterminator,
+			int skiprows,
+			std::vector<std::string> names,
+			std::vector<gdf_dtype> dtypes);
+
+	csv_parser(cudf::csv_read_arg args);
 
 	virtual ~csv_parser();
-
 
 	void parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 			const std::string & user_readable_file_handle,
@@ -40,10 +40,9 @@ public:
 			ral::io::Schema & schema);
 
 private:
-	char quote_character = '\"';
-	cudf::io::csv::reader_options args;
 	std::vector<std::string> column_names;
-	std::vector<std::string> dtype_strings; //this is only because we have to convert for args and dont want to have to remember to free up all the junk later	
+	std::vector<std::string> dtype_strings; //this is only because we have to convert for args and dont want to have to remember to free up all the junk later
+	cudf::csv_read_arg csv_arg{ cudf::source_info{""} };	
 };
 
 } /* namespace io */

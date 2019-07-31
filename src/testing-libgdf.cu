@@ -298,7 +298,8 @@ static result_pair parseSchemaService(uint64_t accessToken, Buffer&& requestPayl
 		parser =  std::make_shared<ral::io::csv_parser>(
 				requestPayload.csvDelimiter,
   				requestPayload.csvLineTerminator,
-  				(int) requestPayload.csvSkipRows,
+          (int) requestPayload.csvSkipRows,
+          (int) requestPayload.csvNrows,
   				requestPayload.columnNames, types);
 	}else{
 		//indicate error here
@@ -354,7 +355,8 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 	  		parser =  std::make_shared<ral::io::csv_parser>(
 	  				table.tableSchema.csvDelimiter,
 	  				table.tableSchema.csvLineTerminator,
-	  				table.tableSchema.csvSkipRows,
+            table.tableSchema.csvSkipRows,
+            table.tableSchema.csvNrows,
 	  				table.tableSchema.names, types);
 	  	}else{
 	  		parser = std::make_shared<ral::io::gdf_parser>(table,accessToken);

@@ -46,7 +46,7 @@ namespace adapter {
                 delete[] lengthPerStrings;
             }
 
-            ~StringInfo() {
+           ~StringInfo() {
                 // TODO: remove pointers to map into `result` without bypass
                 delete[] stringsPointer_;
                 delete[] offsetsPointer_;
@@ -87,29 +87,38 @@ namespace adapter {
                 gdf_column * gdfColumn = column.get_gdf_column();
 
                 if (GpuFunctionsAdapter::isGdfString(*gdfColumn)) {
-                    columnMap_.emplace(gdfColumn, StringInfo{column});
+                    columnMap_.emplace(gdfColumn, new StringInfo{column});
                 }
             }
         }
+
+        ~StringsInfo() {
+            std::for_each(
+                columnMap_.cbegin(),
+                columnMap_.cend(),
+                [](const std::pair<gdf_column * const, StringInfo *> & pair) {
+                    delete std::get<StringInfo *>(pair);
+                });
+       }
 
         std::size_t capacity() const noexcept {
             return std::accumulate(
                 columnMap_.cbegin(),
                 columnMap_.cend(),
                 0,
-                [this](int & accumulator,
-                       const std::pair<gdf_column * const, StringInfo> & pair) {
+                [](int & accumulator,
+                   const std::pair<gdf_column * const, StringInfo *> & pair) {
                     return std::move(accumulator) +
-                           std::get<StringInfo>(pair).totalSize();
+                           std::get<StringInfo *>(pair)->totalSize();
                 });
         }
 
         const StringInfo &at(gdf_column *gdfColumn) const {
-          return columnMap_.at(gdfColumn);
+          return *columnMap_.at(gdfColumn);
         }
 
     private:
-        std::unordered_map<gdf_column *, StringInfo> columnMap_;
+        std::unordered_map<gdf_column *, StringInfo *> columnMap_;
     };
 
     const GpuFunctionsAdapter::StringsInfo *
@@ -119,7 +128,7 @@ namespace adapter {
     }
 
     void GpuFunctionsAdapter::destroyStringsInfo(const StringsInfo *stringsInfo) {
-      delete stringsInfo;
+        delete stringsInfo;
     }
 
     void GpuFunctionsAdapter::copyGpuToCpu(std::size_t &       binary_pointer,

@@ -530,11 +530,15 @@ void distributed_aggregations_without_groupby(const Context& queryContext, blazi
 		std::iota(groupColumnIndices.begin(), groupColumnIndices.end(), 0);
 		aggregationsMerger(partitionsToMerge, groupColumnIndices, aggregation_types, input);
 	}else{
+		auto temp_aggregated = aggregatedTable;
 		std::vector<ral::distribution::NodeColumns> selfPartition;
 		selfPartition.emplace_back(queryContext.getMasterNode(), std::move(aggregatedTable));
 		ral::distribution::distributePartitions(queryContext, selfPartition);
 
-		input.empty_columns(); // here we are clearing the input, because since there are no group bys, there will only be one result, which will be with the master node
+
+		input.clear();
+		input.add_table(temp_aggregated);
+		input.empty_columns();
 
 	}
 }

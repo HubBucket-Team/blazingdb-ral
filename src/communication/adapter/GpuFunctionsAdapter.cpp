@@ -5,8 +5,10 @@
 #include "Traits/RuntimeTraits.h"
 #include "GDFColumn.cuh"
 
+#include <CodeTimer.h>
 #include <blazing/metrics/chronometer.hpp>
 #include <blazing/uss/conio.hpp>
+#include "blazingdb/io/Library/Logging/Logger.h"
 
 namespace ral {
 namespace communication {
@@ -147,7 +149,8 @@ namespace adapter {
                                            gdf_column_cpp &    column,
                                            const StringsInfo * stringsInfo) {
         if (column.size() == 0) { return; }
-
+        static CodeTimer timer;
+        timer.reset();
         if (isGdfString(*column.get_gdf_column())) {
             using blazing::metrics::Chronometer;
             std::unique_ptr<Chronometer> chronometer =
@@ -198,6 +201,8 @@ namespace adapter {
                        "\": " + std::to_string(elapsedTime))
                 .SetColor(Console::kNone)
                 .EndLine();
+          
+            Library::Logging::Logger().logInfo("-> copyGpuToCpu:GdfString " + std::to_string(timer.getDuration()) + " ms");
         } else {
             std::size_t data_size = getDataCapacity(column.get_gdf_column());
             CheckCudaErrors(cudaMemcpy(&result[binary_pointer],
@@ -212,6 +217,8 @@ namespace adapter {
                                        valid_size,
                                        cudaMemcpyDeviceToHost));
             binary_pointer += valid_size;
+          
+            Library::Logging::Logger().logInfo("-> copyGpuToCpu:data_valid " + std::to_string(timer.getDuration()) + " ms");
         }
     }
 

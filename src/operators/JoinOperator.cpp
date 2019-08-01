@@ -189,12 +189,13 @@ blazing_frame DistributedJoinOperator::operator()(blazing_frame& frame, const st
 }
 
 std::vector<gdf_column_cpp> DistributedJoinOperator::process_distribution_table(std::vector<gdf_column_cpp>& table, std::vector<int>& columnIndices) {
-    
+    static CodeTimer timer;
     std::vector<NodeColumns> partitions = ral::distribution::generateJoinPartitions(*context_, table, columnIndices);
 
     distributePartitions(*context_, partitions);
-
+    timer.reset();
     std::vector<NodeColumns> remote_node_columns = ral::distribution::collectPartitions(*context_);
+    Library::Logging::Logger().logInfo("-> Join: collectPartitions " + std::to_string(timer.getDuration()) + " ms");
 
     std::vector<gdf_column_cpp> local_table;
     for (auto& local_node_column : partitions) {

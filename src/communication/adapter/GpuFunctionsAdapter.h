@@ -3,6 +3,7 @@
 #include <string>
 #include "GDFColumn.cuh"
 #include "gdf_wrapper/gdf_types.cuh"
+#include <blazingdb/io/Library/Logging/Logger.h>
 
 namespace ral {
 namespace communication {
@@ -32,6 +33,10 @@ namespace adapter {
                                  std::string &       result,
                                  gdf_column_cpp &    column,
                                  const StringsInfo * stringsInfo);
+
+        static void log(std::string message) {
+            Library::Logging::Logger().logInfo(message);
+        }
 
         static std::size_t getDataCapacity(gdf_column* column);
 

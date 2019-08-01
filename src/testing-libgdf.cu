@@ -70,6 +70,7 @@ using namespace blazingdb::protocol;
 #include "communication/network/Client.h"
 #include "communication/network/Server.h"
 #include <blazingdb/communication/Context.h>
+#include "ResultSetRepository.h"
 
 const Path FS_NAMESPACES_FILE("/tmp/file_system.bin");
 using result_pair = std::pair<Status, std::shared_ptr<flatbuffers::DetachedBuffer>>;
@@ -450,6 +451,30 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
   return std::make_pair(Status_Success, responsePayload.getBufferData());
 }
 
+
+static result_pair addToResultRepo (uint64_t accessToken, Buffer&& requestPayloadBuffer) {
+	blazingdb::message::io::AddToResultRepoMessage requestPayload(requestPayloadBuffer.data());
+
+	requestPayload.table();
+	auto parser = std::make_shared<ral::io::gdf_parser>(table,accessToken);
+
+	provider = std::make_shared<ral::io::dummy_data_provider>();
+
+	ral::io::data_loader loader( parser,provider);
+
+	Schema schema;
+	loader.get_schema(schema);
+	std::vector<gdf_column_cpp> columns;
+	loader.load_data(columns,{},schema);
+	blazing_frame frame;
+	frame.add_table(columns);
+	result_set_repository::get_instance().register_query(accessToken,requestPayload.resultToken());
+	result_set_repository::get_instance().update_token(resultToken,frame,0,"");
+
+
+}
+
+
 static result_pair freeMemoryCallback(uint64_t accessToken, Buffer&& requesBuffer)   {
     FreeMemory::freeAll();
     ZeroMessage response{};
@@ -600,6 +625,7 @@ int main(int argc, const char *argv[])
   services.insert(std::make_pair(interpreter::MessageType_FreeResult, &freeResultService));
   services.insert(std::make_pair(interpreter::MessageType_RegisterFileSystem, &registerFileSystem));
   services.insert(std::make_pair(interpreter::MessageType_DeregisterFileSystem, &deregisterFileSystem));
+  services.insert(std::make_pair(interpreter::MessageType_AddToResultRepo, &addToResultRepo));
 
   services.insert(std::make_pair(9, &freeMemoryCallback));
 

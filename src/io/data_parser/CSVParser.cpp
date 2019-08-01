@@ -132,7 +132,6 @@ cudf::table read_csv_arg_arrow(cudf::csv_read_arg args, std::shared_ptr<arrow::i
 csv_parser::csv_parser(std::string delimiter,
 		std::string lineterminator,
 		int skiprows,
-		//int nrows,
 		std::vector<std::string> names,
 		std::vector<gdf_dtype> dtypes) {
 
@@ -141,7 +140,7 @@ csv_parser::csv_parser(std::string delimiter,
 	csv_arg.delimiter = delimiter[0];
 	csv_arg.lineterminator = lineterminator[0];
 	csv_arg.skiprows = skiprows;
-	//csv_arg.nrows = -1;		//csv_arg.nrows = nrows;
+	if (names.size() > 0) csv_arg.header = -1;		
 	
 	this->column_names = names;
 	this->dtype_strings.resize(dtypes.size());
@@ -189,7 +188,7 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		csv_arg.use_cols_indexes.assign(column_indices.begin(), column_indices.end());
 		
 		copy_non_data_csv_read_args(csv_arg, raw_args);
-		cudf::table table_out = read_csv_arg_arrow(raw_args, file); // false because its only necessary read the first line
+		cudf::table table_out = read_csv_arg_arrow(raw_args, file);
 
 		assert(table_out.num_columns() > 0);
 

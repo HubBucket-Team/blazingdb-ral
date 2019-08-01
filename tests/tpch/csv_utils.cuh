@@ -131,6 +131,7 @@ BlazingFrame ToBlazingFrame(std::vector<std::string> filePaths, std::vector<std:
 
     if (checkFile(file_path.c_str())) {
     	cudf::io::csv::reader_options args{};
+      args.input_data_form = FILE_PATH;
       args.filepath_or_buffer		= file_path.c_str();
       args.names			= columnNames[index];
       args.dtype			= dtypes;

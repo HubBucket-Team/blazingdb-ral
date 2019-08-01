@@ -262,7 +262,7 @@ TEST_F(EvaluateQueryTest, TEST_00) {
           "LogicalFilter(condition=[<($0, 15)])\n    "
           "LogicalTableScan(table=[[main, customer]])",
       .filePaths = {"/tmp/customer.psv"},
-      .tableNames = {"main.customer"},
+      .tableNames = {"customer"},
       .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
                        "c_phone", "c_acctbal", "c_mktsegment", "c_comment"}},
       .columnTypes = {{"int32", "str", "str", "int32", "int64", "float32",
@@ -304,7 +304,7 @@ TEST_F(EvaluateQueryTest, TEST_01) {
           "LogicalFilter(condition=[AND(<($0, 150), =($3, 5))])\n    "
           "LogicalTableScan(table=[[main, customer]])",
       .filePaths = {"/tmp/customer.psv"},
-      .tableNames = {"main.customer"},
+      .tableNames = {"customer"},
       .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
                        "c_phone", "c_acctbal", "c_mktsegment", "c_comment"}},
       .columnTypes = {{"int32", "int64", "int64", "int32", "int64", "float32",
@@ -346,7 +346,7 @@ TEST_F(EvaluateQueryTest, TEST_NULL_BINARY) {
     	  "    LogicalProject(r_regionkey=[$0])\n"
           "      LogicalTableScan(table=[[main, region]])",
       .filePaths = {"/tmp/nation.psv","/tmp/region.psv"},
-      .tableNames = {"main.nation", "main.region"},
+      .tableNames = {"nation", "region"},
       .columnNames = {{"n_nationkey", "n_name","n_regionkey", "n_comment"},{"r_regionkey","r_name","r_comment"}},
       .columnTypes = {{"int32", "int64", "int32", "int64"},{"int32", "int64", "int64"}},
       .resultTable =
@@ -391,7 +391,7 @@ TEST_F(EvaluateQueryTest, TEST_NULL_OUTER_JOIN) {
     		  "      LogicalProject(r_regionkey=[$0])\n"
     		  "        LogicalTableScan(table=[[main, region]])\n",
       .filePaths = {"/tmp/nation.psv","/tmp/region.psv"},
-      .tableNames = {"main.nation", "main.region"},
+      .tableNames = {"nation", "region"},
       .columnNames = {{"n_nationkey", "n_name","n_regionkey", "n_comment"},{"r_regionkey","r_name","r_comment"}},
       .columnTypes = {{"int32", "int64", "int32", "int64"},{"int32", "int64", "int64"}},
       .resultTable =
@@ -432,7 +432,7 @@ TEST_F(EvaluateQueryTest, TEST_NULL_OUTER_JOIN_2) {
     		  "      LogicalTableScan(table=[[main, nation]])\n"
     		  "    LogicalTableScan(table=[[main, region]])",
       .filePaths = {"/tmp/nation.psv","/tmp/region.psv"},
-      .tableNames = {"main.nation", "main.region"},
+      .tableNames = {"nation", "region"},
       .columnNames = {{"n_nationkey", "n_name","n_regionkey", "n_comment"},{"r_regionkey","r_name","r_comment"}},
       .columnTypes = {{"int32", "int64", "int32", "int64"},{"int32", "int64", "int64"}},
       .resultTable =
@@ -474,7 +474,7 @@ TEST_F(EvaluateQueryTest, TEST_NULL_OUTER_JOIN_2) {
             		  "        LogicalFilter(condition=[<(*($3, 2), 40)])\n"
             		  "          LogicalTableScan(table=[[main, customer]])",
             	      .filePaths = {"/tmp/customer.psv"},
-            	      .tableNames = {"main.customer"},
+            	      .tableNames = {"customer"},
             	      .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
             	                       "c_phone", "c_acctbal", "c_mktsegment", "c_comment"}},
             	      .columnTypes = {{"int32", "int64", "int64", "int32", "int64", "float32",
@@ -504,94 +504,94 @@ TEST_F(EvaluateQueryTest, TEST_NULL_OUTER_JOIN_2) {
           CHECK_RESULT(output_table, input.resultTable);
         }
 
-        TEST_F(EvaluateQueryTest, TEST_CUSTOMER_1_GB) {
+        // TEST_F(EvaluateQueryTest, TEST_CUSTOMER_1_GB) {
 
-           //we are asuming the user has wget
-         // int download_status = system ("wget -O /tmp/customer.tbl 'https://drive.google.com/a/blazingdb.com/uc?authuser=1&id=1I4pGhK0nw4Gw-zI7PsB6sLm0Sya5f9Cq&export=download'");
-          //EXPECT_TRUE(download_status == 0);
-          auto input = InputTestItem{
-                    .query =
-                        "select c_acctbal + 3 as c_acctbal_new from customer where c_acctbal > 1000",
-                    .logicalPlan =
-                        "LogicalProject(EXPR$0=[+($5, 3)])\n"
-                        "  LogicalFilter(condition=[>($5, 1000)])\n"
-                        "    LogicalTableScan(table=[[main, customer]])",
-                          .filePaths = {"/tmp/customer.tbl"},
-                          .tableNames = {"main.customer"},
-                          .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
-                                           "c_phone", "c_acctbal", "c_mktsegment", "c_comment"}},
-                          .columnTypes = {{"int32", "int64", "int64", "int32", "int64", "float32",
-                                           "int64", "int64"}},
-                    .resultTable =
-                        LiteralTableBuilder{
-                            "ResultSet",
-                            {{"EXPR$0", Literals<GDF_FLOAT32>{37496.2,47956.6,17314.9,29051.7,18251.4,27370.2, 20676.5,16785.2, 32370.1, 56047.8,41177.7,31379.0, 29994.1,34806.4, 3839.33,
-                            38188.1, 46194.8,24929.0,58479.7,45247.3}},
-                            {"EXPR$1", Literals<GDF_FLOAT32>{29,2,15,2,0,5,12,55,1,36,6,41,13,-11,75,-14,28,-9,-11,24}},
-                            {"key", Literals<GDF_FLOAT32>{0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38}},
-                            }}
-                            .Build()};
-                auto logical_plan = input.logicalPlan;
-                auto input_tables =
-                    ToBlazingFrame(input.filePaths, input.columnNames, input.columnTypes);
-                GdfColumnCppsTableBuilder{"input_table", input_tables[0]}.Build();
-                auto table_names = input.tableNames;
-                auto column_names = input.columnNames;
-                std::vector<gdf_column_cpp> outputs;
-                gdf_error err = evaluate_query(input_tables, table_names, column_names,
-                                               logical_plan, outputs);
-                std::cout<<"null count is "<<outputs[0].null_count()<<std::endl;
-                std::cout<<"size is "<<outputs[0].size()<<std::endl;
+        //    //we are asuming the user has wget
+        //  // int download_status = system ("wget -O /tmp/customer.tbl 'https://drive.google.com/a/blazingdb.com/uc?authuser=1&id=1I4pGhK0nw4Gw-zI7PsB6sLm0Sya5f9Cq&export=download'");
+        //   //EXPECT_TRUE(download_status == 0);
+        //   auto input = InputTestItem{
+        //             .query =
+        //                 "select c_acctbal + 3 as c_acctbal_new from customer where c_acctbal > 1000",
+        //             .logicalPlan =
+        //                 "LogicalProject(EXPR$0=[+($5, 3)])\n"
+        //                 "  LogicalFilter(condition=[>($5, 1000)])\n"
+        //                 "    LogicalTableScan(table=[[main, customer]])",
+        //                   .filePaths = {"/tmp/customer.tbl"},
+        //                   .tableNames = {"customer"},
+        //                   .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
+        //                                    "c_phone", "c_acctbal", "c_mktsegment", "c_comment"}},
+        //                   .columnTypes = {{"int32", "int64", "int64", "int32", "int64", "float32",
+        //                                    "int64", "int64"}},
+        //             .resultTable =
+        //                 LiteralTableBuilder{
+        //                     "ResultSet",
+        //                     {{"EXPR$0", Literals<GDF_FLOAT32>{37496.2,47956.6,17314.9,29051.7,18251.4,27370.2, 20676.5,16785.2, 32370.1, 56047.8,41177.7,31379.0, 29994.1,34806.4, 3839.33,
+        //                     38188.1, 46194.8,24929.0,58479.7,45247.3}},
+        //                     {"EXPR$1", Literals<GDF_FLOAT32>{29,2,15,2,0,5,12,55,1,36,6,41,13,-11,75,-14,28,-9,-11,24}},
+        //                     {"key", Literals<GDF_FLOAT32>{0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38}},
+        //                     }}
+        //                     .Build()};
+        //         auto logical_plan = input.logicalPlan;
+        //         auto input_tables =
+        //             ToBlazingFrame(input.filePaths, input.columnNames, input.columnTypes);
+        //         GdfColumnCppsTableBuilder{"input_table", input_tables[0]}.Build();
+        //         auto table_names = input.tableNames;
+        //         auto column_names = input.columnNames;
+        //         std::vector<gdf_column_cpp> outputs;
+        //         gdf_error err = evaluate_query(input_tables, table_names, column_names,
+        //                                        logical_plan, outputs);
+        //         std::cout<<"null count is "<<outputs[0].null_count()<<std::endl;
+        //         std::cout<<"size is "<<outputs[0].size()<<std::endl;
 
-                 EXPECT_TRUE(err == GDF_SUCCESS);
-                auto output_table =
-                    GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
-             //   CHECK_RESULT(output_table, input.resultTable);
-              }
+        //          EXPECT_TRUE(err == GDF_SUCCESS);
+        //         auto output_table =
+        //             GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+        //      //   CHECK_RESULT(output_table, input.resultTable);
+        //       }
 
 
 
-        TEST_F(EvaluateQueryTest, TEST_CUSTOMER_1_GB_COMPLEX) {
+        // TEST_F(EvaluateQueryTest, TEST_CUSTOMER_1_GB_COMPLEX) {
 
-           //we are asuming the user has wget
-         // int download_status = system ("wget -O /tmp/customer.tbl 'https://drive.google.com/a/blazingdb.com/uc?authuser=1&id=1I4pGhK0nw4Gw-zI7PsB6sLm0Sya5f9Cq&export=download'");
-          //EXPECT_TRUE(download_status == 0);
-          auto input = InputTestItem{
-                    .query =
-                        "select c_custkey, c_nationkey, c_acctbal from main.customer where c_custkey < 150 and c_nationkey = 5 or c_custkey = 200 or c_nationkey >= 10 or c_acctbal <= 500",
-                    .logicalPlan =
-                        "LogicalProject(c_custkey=[$0], c_nationkey=[$3], c_acctbal=[$5])\n"
-                        "  LogicalFilter(condition=[OR(AND(<($0, 150), =($3, 5)), =($0, 200), >=($3, 10), <=($5, 500))])\n"
-                        "    LogicalTableScan(table=[[main, customer]])",
-                          .filePaths = {"/tmp/customer.tbl"},
-                          .tableNames = {"main.customer"},
-                          .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
-                                           "c_phone", "c_acctbal", "c_mktsegment", "c_comment"}},
-                          .columnTypes = {{"int32", "int64", "int64", "int32", "int64", "float32",
-                                           "int64", "int64"}},
-                    .resultTable =
-                        LiteralTableBuilder{
-                            "ResultSet",
-                            {{"EXPR$0", Literals<GDF_FLOAT32>{37496.2,47956.6,17314.9,29051.7,18251.4,27370.2, 20676.5,16785.2, 32370.1, 56047.8,41177.7,31379.0, 29994.1,34806.4, 3839.33,
-                            38188.1, 46194.8,24929.0,58479.7,45247.3}},
-                            {"EXPR$1", Literals<GDF_FLOAT32>{29,2,15,2,0,5,12,55,1,36,6,41,13,-11,75,-14,28,-9,-11,24}},
-                            {"key", Literals<GDF_FLOAT32>{0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38}},
-                            }}
-                            .Build()};
-                auto logical_plan = input.logicalPlan;
-                auto input_tables =
-                    ToBlazingFrame(input.filePaths, input.columnNames, input.columnTypes);
-                GdfColumnCppsTableBuilder{"input_table", input_tables[0]}.Build();
-                auto table_names = input.tableNames;
-                auto column_names = input.columnNames;
-                std::vector<gdf_column_cpp> outputs;
-                gdf_error err = evaluate_query(input_tables, table_names, column_names,
-                                               logical_plan, outputs);
-                std::cout<<"null count is "<<outputs[0].null_count()<<std::endl;
-                std::cout<<"size is "<<outputs[0].size()<<std::endl;
+        //    //we are asuming the user has wget
+        //  // int download_status = system ("wget -O /tmp/customer.tbl 'https://drive.google.com/a/blazingdb.com/uc?authuser=1&id=1I4pGhK0nw4Gw-zI7PsB6sLm0Sya5f9Cq&export=download'");
+        //   //EXPECT_TRUE(download_status == 0);
+        //   auto input = InputTestItem{
+        //             .query =
+        //                 "select c_custkey, c_nationkey, c_acctbal from main.customer where c_custkey < 150 and c_nationkey = 5 or c_custkey = 200 or c_nationkey >= 10 or c_acctbal <= 500",
+        //             .logicalPlan =
+        //                 "LogicalProject(c_custkey=[$0], c_nationkey=[$3], c_acctbal=[$5])\n"
+        //                 "  LogicalFilter(condition=[OR(AND(<($0, 150), =($3, 5)), =($0, 200), >=($3, 10), <=($5, 500))])\n"
+        //                 "    LogicalTableScan(table=[[main, customer]])",
+        //                   .filePaths = {"/tmp/customer.tbl"},
+        //                   .tableNames = {"customer"},
+        //                   .columnNames = {{"c_custkey", "c_name", "c_address", "c_nationkey",
+        //                                    "c_phone", "c_acctbal", "c_mktsegment", "c_comment"}},
+        //                   .columnTypes = {{"int32", "int64", "int64", "int32", "int64", "float32",
+        //                                    "int64", "int64"}},
+        //             .resultTable =
+        //                 LiteralTableBuilder{
+        //                     "ResultSet",
+        //                     {{"EXPR$0", Literals<GDF_FLOAT32>{37496.2,47956.6,17314.9,29051.7,18251.4,27370.2, 20676.5,16785.2, 32370.1, 56047.8,41177.7,31379.0, 29994.1,34806.4, 3839.33,
+        //                     38188.1, 46194.8,24929.0,58479.7,45247.3}},
+        //                     {"EXPR$1", Literals<GDF_FLOAT32>{29,2,15,2,0,5,12,55,1,36,6,41,13,-11,75,-14,28,-9,-11,24}},
+        //                     {"key", Literals<GDF_FLOAT32>{0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38}},
+        //                     }}
+        //                     .Build()};
+        //         auto logical_plan = input.logicalPlan;
+        //         auto input_tables =
+        //             ToBlazingFrame(input.filePaths, input.columnNames, input.columnTypes);
+        //         GdfColumnCppsTableBuilder{"input_table", input_tables[0]}.Build();
+        //         auto table_names = input.tableNames;
+        //         auto column_names = input.columnNames;
+        //         std::vector<gdf_column_cpp> outputs;
+        //         gdf_error err = evaluate_query(input_tables, table_names, column_names,
+        //                                        logical_plan, outputs);
+        //         std::cout<<"null count is "<<outputs[0].null_count()<<std::endl;
+        //         std::cout<<"size is "<<outputs[0].size()<<std::endl;
 
-                 EXPECT_TRUE(err == GDF_SUCCESS);
-                auto output_table =
-                    GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
-             //   CHECK_RESULT(output_table, input.resultTable);
-              }
+        //          EXPECT_TRUE(err == GDF_SUCCESS);
+        //         auto output_table =
+        //             GdfColumnCppsTableBuilder{"output_table", outputs}.Build();
+        //      //   CHECK_RESULT(output_table, input.resultTable);
+        //       }

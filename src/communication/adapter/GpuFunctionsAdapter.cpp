@@ -205,19 +205,23 @@ namespace adapter {
             Library::Logging::Logger().logInfo("-> copyGpuToCpu:GdfString " + std::to_string(timer.getDuration()) + " ms");
         } else {
             std::size_t data_size = getDataCapacity(column.get_gdf_column());
-            CheckCudaErrors(cudaMemcpy(&result[binary_pointer],
-                                       column.data(),
-                                       data_size,
-                                       cudaMemcpyDeviceToHost));
+            CheckCudaErrors(cudaMemcpyAsync(&result[binary_pointer],
+                                            column.data(),
+                                            data_size,
+                                            cudaMemcpyDeviceToHost,
+                                            0));
             binary_pointer += data_size;
 
             std::size_t valid_size = getValidCapacity(column.get_gdf_column());
-            CheckCudaErrors(cudaMemcpy(&result[binary_pointer],
-                                       column.valid(),
-                                       valid_size,
-                                       cudaMemcpyDeviceToHost));
+            CheckCudaErrors(cudaMemcpyAsync(&result[binary_pointer],
+                                            column.valid(),
+                                            valid_size,
+                                            cudaMemcpyDeviceToHost,
+                                            0));
             binary_pointer += valid_size;
           
+            cudaStreamSynchronize(0);
+
             Library::Logging::Logger().logInfo("-> copyGpuToCpu:data_valid " + std::to_string(timer.getDuration()) + " ms");
         }
     }

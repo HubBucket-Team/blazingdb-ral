@@ -64,7 +64,7 @@ private:
 	std::vector<size_t> calcite_to_file_indices; //maps calcite columns to our columns
 	std::vector<gdf_dtype> types;
 	std::vector<size_t> num_row_groups;
-
+	int header;
 };
 
 } /* namespace io */

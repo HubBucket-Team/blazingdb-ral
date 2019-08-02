@@ -29,7 +29,7 @@ namespace adapter {
         
         static void destroyStringsInfo(const StringsInfo *stringsInfo);
 
-        static void copyGpuToCpu(std::size_t &       binary_pointer,
+        static void copyGpuToCpu(std::size_t         offset,
                                  std::string &       result,
                                  gdf_column_cpp &    column,
                                  const StringsInfo * stringsInfo);
@@ -43,6 +43,9 @@ namespace adapter {
         static std::size_t getValidCapacity(gdf_column* column);
 
         static std::size_t getStringsCapacity(const StringsInfo *stringsInfo);
+
+        static std::size_t getStringTotalSize(const StringsInfo * stringsInfo,
+                                              gdf_column *        column);
 
         static std::size_t getDTypeSize(gdf_dtype dtype);
 

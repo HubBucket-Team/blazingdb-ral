@@ -144,7 +144,7 @@ namespace adapter {
         delete stringsInfo;
     }
 
-    void GpuFunctionsAdapter::copyGpuToCpu(std::size_t &       binary_pointer,
+    void GpuFunctionsAdapter::copyGpuToCpu(std::size_t         offset,
                                            std::string &       result,
                                            gdf_column_cpp &    column,
                                            const StringsInfo * stringsInfo) {
@@ -171,24 +171,22 @@ namespace adapter {
             // issue. This needs to be addressed
             // TODO: Add to cuStrings functions to evaluate the strings and
             // offsets sizes before generate them and string array length
-            std::memcpy(&result[binary_pointer],
+            std::memcpy(&result[offset],
                         &stringsSize,
                         sizeof(const std::size_t));
-            std::memcpy(&result[binary_pointer + sizeof(const std::size_t)],
+            std::memcpy(&result[offset + sizeof(const std::size_t)],
                         &offsetsSize,
                         sizeof(const std::size_t));
-            std::memcpy(&result[binary_pointer + 2 * sizeof(const std::size_t)],
+            std::memcpy(&result[offset + 2 * sizeof(const std::size_t)],
                         &stringsLength,
                         sizeof(const std::size_t));
-            std::memcpy(&result[binary_pointer + 3 * sizeof(const std::size_t)],
+            std::memcpy(&result[offset + 3 * sizeof(const std::size_t)],
                         stringInfo.stringsPointer(),
                         stringsSize);
-            std::memcpy(&result[binary_pointer + 3 * sizeof(const std::size_t) +
+            std::memcpy(&result[offset + 3 * sizeof(const std::size_t) +
                                 stringsSize],
                         stringInfo.offsetsPointer(),
                         offsetsSize);
-
-            binary_pointer += stringInfo.totalSize();
 
             const std::uintmax_t elapsedTime = chronometer->Elapsed();
 
@@ -205,20 +203,18 @@ namespace adapter {
             Library::Logging::Logger().logInfo("-> copyGpuToCpu:GdfString " + std::to_string(timer.getDuration()) + " ms");
         } else {
             std::size_t data_size = getDataCapacity(column.get_gdf_column());
-            CheckCudaErrors(cudaMemcpyAsync(&result[binary_pointer],
+            CheckCudaErrors(cudaMemcpyAsync(&result[offset],
                                             column.data(),
                                             data_size,
                                             cudaMemcpyDeviceToHost,
                                             0));
-            binary_pointer += data_size;
 
             std::size_t valid_size = getValidCapacity(column.get_gdf_column());
-            CheckCudaErrors(cudaMemcpyAsync(&result[binary_pointer],
+            CheckCudaErrors(cudaMemcpyAsync(&result[offset + data_size],
                                             column.valid(),
                                             valid_size,
                                             cudaMemcpyDeviceToHost,
                                             0));
-            binary_pointer += valid_size;
           
             cudaStreamSynchronize(0);
 
@@ -236,6 +232,12 @@ namespace adapter {
 
     std::size_t GpuFunctionsAdapter::getStringsCapacity(const StringsInfo *stringsInfo) {
       return stringsInfo->capacity();
+    }
+
+    std::size_t
+    GpuFunctionsAdapter::getStringTotalSize(const StringsInfo * stringsInfo,
+                                            gdf_column *        column) {
+        return stringsInfo->At(column).totalSize();
     }
 
     std::size_t GpuFunctionsAdapter::getDTypeSize(gdf_dtype dtype) {

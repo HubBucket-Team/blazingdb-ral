@@ -31,7 +31,8 @@ std::string convert_dtype_to_string(const gdf_dtype & dtype) {
 Schema::Schema(	std::vector<std::string> names,
 		std::vector<size_t> calcite_to_file_indices,
 		std::vector<gdf_dtype> types,
-		std::vector<size_t> num_row_groups) : names(names),calcite_to_file_indices(calcite_to_file_indices), types(types), num_row_groups(num_row_groups) {
+		std::vector<size_t> num_row_groups,
+		int header) : names(names),calcite_to_file_indices(calcite_to_file_indices), types(types), num_row_groups(num_row_groups), header(header) {
 	// TODO Auto-generated constructor stub
 
 }
@@ -56,7 +57,7 @@ Schema::Schema(blazingdb::protocol::TableSchemaSTL schema){
 		this->types[i] = (gdf_dtype) schema.types[i];
 	}
 	this->num_row_groups = schema.numRowGroups;
-
+	this->header = schema.csvHeader;
 }
 
 
@@ -109,6 +110,8 @@ blazingdb::protocol::TableSchemaSTL Schema::getTransport(){
 	}
 
 	transport_schema.numRowGroups = this->num_row_groups;
+	transport_schema.csvHeader = this->header;
+	
 	return transport_schema;
 }
 void Schema::add_column(gdf_column_cpp column,size_t file_index){

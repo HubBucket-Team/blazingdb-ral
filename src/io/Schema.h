@@ -33,7 +33,8 @@ public:
 	Schema(	std::vector<std::string> names,
 			std::vector<size_t> calcite_to_file_indices,
 			std::vector<gdf_dtype> types,
-			std::vector<size_t> num_row_groups);
+			std::vector<size_t> num_row_groups,
+			int header = 0);
 
 	Schema(	std::vector<std::string> names,
 			std::vector<gdf_dtype> types);

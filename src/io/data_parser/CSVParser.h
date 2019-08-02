@@ -23,6 +23,7 @@ public:
 	csv_parser(std::string delimiter,
 			std::string lineterminator,
 			int skiprows,
+			int header,
 			std::vector<std::string> names,
 			std::vector<gdf_dtype> dtypes);
 

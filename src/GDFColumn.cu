@@ -215,11 +215,12 @@ void gdf_column_cpp::create_gdf_column(NVCategory* category, size_t num_values,s
 
     this->allocated_size_data = sizeof(nv_category_index_type) * this->column->size;
     cuDF::Allocator::allocate((void**)&this->column->data, this->allocated_size_data);
-    CheckCudaErrors( cudaMemcpy(
+    CheckCudaErrors( cudaMemcpyAsync(
         this->column->data,
         category->values_cptr(),
         this->allocated_size_data,
-        cudaMemcpyDeviceToDevice) );
+        cudaMemcpyDeviceToDevice,
+        0) );
 
     this->column->valid = nullptr;
     this->allocated_size_valid = 0;
@@ -229,6 +230,8 @@ void gdf_column_cpp::create_gdf_column(NVCategory* category, size_t num_values,s
         this->column->valid = allocate_valid();
         this->column->null_count = category->set_null_bitarray((gdf_valid_type*)this->column->valid);
     }
+
+    cudaStreamSynchronize(0);
 
     this->is_ipc_column = false;
     this->column_token = 0;
@@ -279,7 +282,7 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
 
         if(host_valids != nullptr){
             valid_device = allocate_valid();
-            CheckCudaErrors(cudaMemcpy(valid_device, host_valids, this->allocated_size_valid, cudaMemcpyHostToDevice));
+            CheckCudaErrors(cudaMemcpyAsync(valid_device, host_valids, this->allocated_size_valid, cudaMemcpyHostToDevice, 0));
         }
     }
 
@@ -288,12 +291,14 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
 
     this->set_name(column_name);
     if(input_data != nullptr){
-        CheckCudaErrors(cudaMemcpy(data, input_data, num_values * width_per_value, cudaMemcpyHostToDevice));
+        CheckCudaErrors(cudaMemcpyAsync(data, input_data, num_values * width_per_value, cudaMemcpyHostToDevice, 0));
     }
 
     if(host_valids != nullptr){
         this->update_null_count();
     }
+
+    cudaStreamSynchronize(0);
 
     GDFRefCounter::getInstance()->register_column(this->column);
 }
@@ -331,8 +336,10 @@ void gdf_column_cpp::create_gdf_column(gdf_dtype type, size_t num_values, void *
 
     this->set_name(column_name);
     if(input_data != nullptr){
-        CheckCudaErrors(cudaMemcpy(data, input_data, num_values * width_per_value, cudaMemcpyHostToDevice));
+        CheckCudaErrors(cudaMemcpyAsync(data, input_data, num_values * width_per_value, cudaMemcpyHostToDevice, 0));
     }
+
+    cudaStreamSynchronize(0);
 
     GDFRefCounter::getInstance()->register_column(this->column);
 }

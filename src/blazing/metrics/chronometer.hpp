@@ -8,6 +8,16 @@
 namespace blazing {
 namespace metrics {
 
+class IllegalStateException : public std::exception {
+public:
+    virtual ~IllegalStateException() noexcept = default;
+
+    virtual const char * what() const noexcept {
+        static const char what[] = "Illegal State Exception";
+        return what;
+    };
+};
+
 class Check {
 public:
     static void State(bool expressionValue);
@@ -47,9 +57,7 @@ public:
 
     static std::unique_ptr<Chronometer> MakeUnstarted();
     static std::unique_ptr<Chronometer> MakeStarted();
-
-protected:
-    explicit Chronometer(std::unique_ptr<const Watch> && watch);
+    static std::unique_ptr<Chronometer> Content(const Watch & watch);
 };
 
 }  // namespace metrics

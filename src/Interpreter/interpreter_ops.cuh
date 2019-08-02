@@ -164,8 +164,14 @@ static int64_t scale_to_64_bit_return_bytes(gdf_scalar input){
 	else if(cur_type == GDF_DATE32) data_return = input.data.dt32;
 	else if(cur_type == GDF_DATE64) data_return = input.data.dt64;
 	else if(cur_type == GDF_TIMESTAMP) data_return = input.data.tmst;
-	else if(cur_type == GDF_FLOAT32) data_return =  static_cast<int64_t>(input.data.fp32); //*((int64_t *) &temp_data);
-	else if(cur_type == GDF_FLOAT64) data_return = static_cast<int64_t>(input.data.fp64);  //*((int64_t *) &input.data.fp64);
+	else if(cur_type == GDF_FLOAT32){
+		double * data_return_ptr = (double *) &data_return;
+		*data_return_ptr = input.data.fp32;
+	}
+	else if(cur_type == GDF_FLOAT64){
+		double * data_return_ptr = (double *) &data_return;
+		*data_return_ptr = input.data.fp64;
+	}
 	else {
 		std::cout << "ERROR: data type not found" << std::endl;
 		data_return = 0;
@@ -966,8 +972,8 @@ public:
 			std::vector<column_index_type> final_output_positions_vec,
 			std::vector<gdf_binary_operator> operators,
 			std::vector<gdf_unary_operator> unary_operators,
-			std::vector<gdf_scalar> left_scalars, //should be same size as operations with most of them filled in with invalid types unless scalar is used in oepration
-			std::vector<gdf_scalar> right_scalars//,
+			std::vector<gdf_scalar> & left_scalars, //should be same size as operations with most of them filled in with invalid types unless scalar is used in oepration
+			std::vector<gdf_scalar> & right_scalars//,
 			,cudaStream_t stream,
 			char * temp_space,
 			int BufferSize, int ThreadBlockSize
@@ -1057,7 +1063,7 @@ public:
 		//	std::cout<<"about to copy host valid"<<error<<std::endl;
 		//	CheckCudaErrors(cudaMemcpy(this->valid_ptrs,&host_valid_ptrs[0],sizeof(void *) * num_columns,cudaMemcpyHostToDevice));
 		CheckCudaErrors(cudaMemcpyAsync(this->valid_ptrs,&host_valid_ptrs[0],sizeof(void *) * num_columns,cudaMemcpyHostToDevice,stream));
-		CheckCudaErrors(cudaMemcpyAsync(this->null_counts_inputs,&host_null_counts[0],sizeof(gdf_size_type *) * num_columns,cudaMemcpyHostToDevice,stream));
+		CheckCudaErrors(cudaMemcpyAsync(this->null_counts_inputs,&host_null_counts[0],sizeof(gdf_size_type) * num_columns,cudaMemcpyHostToDevice,stream));
 		//	std::cout<<"copied data and valid"<<error<<std::endl;
 
 

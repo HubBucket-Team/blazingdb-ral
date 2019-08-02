@@ -3,12 +3,16 @@
 #include <string>
 #include "GDFColumn.cuh"
 #include "gdf_wrapper/gdf_types.cuh"
+#include <blazingdb/io/Library/Logging/Logger.h>
 
 namespace ral {
 namespace communication {
 namespace adapter {
 
     struct GpuFunctionsAdapter {
+    public:
+        class StringsInfo;
+
     public:
         using DType = gdf_dtype;
         using DTypeInfo = gdf_dtype_extra_info;
@@ -21,11 +25,24 @@ namespace adapter {
         using NvCategory = NVCategory;
 
     public:
-        static void copyGpuToCpu(std::size_t& binary_pointer, std::string& result, gdf_column_cpp& column);
+        static const StringsInfo *createStringsInfo(std::vector<gdf_column_cpp> & columns);
+        
+        static void destroyStringsInfo(const StringsInfo *stringsInfo);
+
+        static void copyGpuToCpu(std::size_t &       binary_pointer,
+                                 std::string &       result,
+                                 gdf_column_cpp &    column,
+                                 const StringsInfo * stringsInfo);
+
+        static void log(std::string message) {
+            Library::Logging::Logger().logInfo(message);
+        }
 
         static std::size_t getDataCapacity(gdf_column* column);
 
         static std::size_t getValidCapacity(gdf_column* column);
+
+        static std::size_t getStringsCapacity(const StringsInfo *stringsInfo);
 
         static std::size_t getDTypeSize(gdf_dtype dtype);
 

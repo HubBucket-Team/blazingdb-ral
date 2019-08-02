@@ -87,19 +87,14 @@ JoinOperator::JoinOperator(const Context* context)
 
 //TODO: On error clean up everything here so we dont run out of memory
 void JoinOperator::evaluate_join(blazing_frame& input, const std::string& query) {
+    std::string condition = get_named_expression(query, "condition");
+    std::string join_type = get_named_expression(query, "joinType");
 
-    if (input.get_num_rows_in_table(0) > 0 && input.get_num_rows_in_table(1) > 0){
-        std::string condition = get_named_expression(query, "condition");
-        std::string join_type = get_named_expression(query, "joinType");
-
-        ::evaluate_join(condition,
-                        join_type,
-                        input,
-                        left_indices_.get_gdf_column(),
-                        right_indices_.get_gdf_column());
-    }else {
-        std::cout<<"WARNING: evaluate_join on empty tables "<<std::endl;
-    }
+    ::evaluate_join(condition,
+                    join_type,
+                    input,
+                    left_indices_.get_gdf_column(),
+                    right_indices_.get_gdf_column());
 }
 
 
@@ -194,12 +189,13 @@ blazing_frame DistributedJoinOperator::operator()(blazing_frame& frame, const st
 }
 
 std::vector<gdf_column_cpp> DistributedJoinOperator::process_distribution_table(std::vector<gdf_column_cpp>& table, std::vector<int>& columnIndices) {
-    
+    static CodeTimer timer;
     std::vector<NodeColumns> partitions = ral::distribution::generateJoinPartitions(*context_, table, columnIndices);
 
     distributePartitions(*context_, partitions);
-
+    timer.reset();
     std::vector<NodeColumns> remote_node_columns = ral::distribution::collectPartitions(*context_);
+    Library::Logging::Logger().logInfo("-> Join: collectPartitions " + std::to_string(timer.getDuration()) + " ms");
 
     std::vector<gdf_column_cpp> local_table;
     for (auto& local_node_column : partitions) {

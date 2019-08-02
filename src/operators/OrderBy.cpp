@@ -92,6 +92,8 @@ void single_node_sort(blazing_frame& input, std::vector<gdf_column*>& rawCols, s
 
 void distributed_sort(const Context& queryContext, blazing_frame& input, std::vector<gdf_column_cpp>& cols, std::vector<gdf_column*>& rawCols, std::vector<int8_t>& sortOrderTypes, std::vector<int>& sortColIndices) {
 	using ral::communication::CommunicationData;
+	static CodeTimer timer;
+	timer.reset();
 
 	std::vector<gdf_column_cpp> sortedTable(input.get_size_column(0));
 	for(int i = 0; i < sortedTable.size();i++){
@@ -104,7 +106,11 @@ void distributed_sort(const Context& queryContext, blazing_frame& input, std::ve
 
 	size_t rowSize = input.get_num_rows_in_table(0);
 
+
 	std::vector<gdf_column_cpp> selfSamples = ral::distribution::sampling::generateSample(cols, 0.1);
+
+	Library::Logging::Logger().logInfo("-> DistributedSort: Sampling  " + std::to_string(timer.getDuration()) + " ms");
+	timer.reset();
 
 	std::thread sortThread{[](blazing_frame& input, std::vector<gdf_column*>& rawCols, std::vector<int8_t>& sortOrderTypes, std::vector<gdf_column_cpp>& sortedTable){
 		ral::config::GPUManager::getInstance().setDevice();
@@ -115,11 +121,15 @@ void distributed_sort(const Context& queryContext, blazing_frame& input, std::ve
 	std::vector<gdf_column_cpp> partitionPlan;
 	if (queryContext.isMasterNode(CommunicationData::getInstance().getSelfNode())) {
 		std::vector<ral::distribution::NodeSamples> samples = ral::distribution::collectSamples(queryContext);
-    samples.emplace_back(rowSize, CommunicationData::getInstance().getSelfNode(), std::move(selfSamples));
+
+		Library::Logging::Logger().logInfo("-> DistributedSort: collectSamples  " + std::to_string(timer.getDuration()) + " ms");
+
+	    samples.emplace_back(rowSize, CommunicationData::getInstance().getSelfNode(), std::move(selfSamples));
 
 		partitionPlan = ral::distribution::generatePartitionPlans(queryContext, samples, sortOrderTypes);
 
-    ral::distribution::distributePartitionPlan(queryContext, partitionPlan);
+	    ral::distribution::distributePartitionPlan(queryContext, partitionPlan);
+
 	}
 	else {
 		ral::distribution::sendSamplesToMaster(queryContext, std::move(selfSamples), rowSize);
@@ -134,7 +144,10 @@ void distributed_sort(const Context& queryContext, blazing_frame& input, std::ve
 
 	ral::distribution::distributePartitions(queryContext, partitions);
 
+	timer.reset();
 	std::vector<ral::distribution::NodeColumns> partitionsToMerge = ral::distribution::collectPartitions(queryContext);
+	Library::Logging::Logger().logInfo("-> DistributedSort: collectPartitions  " + std::to_string(timer.getDuration()) + " ms");
+
 	auto it = std::find_if(partitions.begin(), partitions.end(), [&](ral::distribution::NodeColumns& el) {
 			return el.getNode() == CommunicationData::getInstance().getSelfNode();
 		});
@@ -148,6 +161,11 @@ void process_sort(blazing_frame & input, std::string query_part, const Context* 
 	static CodeTimer timer;
 	timer.reset();
 	std::cout<<"about to process sort"<<std::endl;
+
+	auto fetchLimit = query_part.find("fetch");
+	if(fetchLimit != std::string::npos) {
+		throw std::runtime_error{"In evaluate_split_query function: LIMIT clause is currently not suported"};
+	}
 
 	//LogicalSort(sort0=[$4], sort1=[$7], dir0=[ASC], dir1=[ASC])
 	auto rangeStart = query_part.find("(");
@@ -175,7 +193,9 @@ void process_sort(blazing_frame & input, std::string query_part, const Context* 
 		single_node_sort(input, rawCols, sortOrderTypes);
 	}
 	else {
+		timer.reset();
 		distributed_sort(*queryContext, input, cols, rawCols, sortOrderTypes, sortColIndices);
+		Library::Logging::Logger().logInfo("-> DistributedSort: AllTime  " + std::to_string(timer.getDuration()) + " ms");
 	}
 }
 

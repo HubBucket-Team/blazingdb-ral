@@ -7,6 +7,7 @@
 namespace {
 using blazingdb::communication::ContextToken;
 using blazingdb::communication::messages::Message;
+using MessageTokenType = blazingdb::communication::messages::MessageToken::TokenType;
 } // namespace
 
 struct ServerMock {
@@ -15,5 +16,5 @@ struct ServerMock {
         return mock;
     }
 
-    MOCK_METHOD1(getMessage, std::shared_ptr<Message>(const ContextToken&));
+    MOCK_METHOD2(getMessage, std::shared_ptr<Message>(const ContextToken&, const MessageTokenType& ));
 };

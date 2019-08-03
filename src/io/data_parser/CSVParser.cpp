@@ -221,6 +221,8 @@ void csv_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAcces
 	cudf::csv_read_arg raw_args = cudf::csv_read_arg{ cudf::source_info{""} };
 	csv_arg.names = this->column_names;
 	csv_arg.dtype = this->dtype_strings;
+	
+	schema.header = csv_arg.header;
 
 	copy_non_data_csv_read_args(csv_arg, raw_args);
 

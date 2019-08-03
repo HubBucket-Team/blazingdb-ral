@@ -110,6 +110,8 @@ set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/config/BlazingConfig.cpp
               ${CMAKE_SOURCE_DIR}/src/Utils.cu
               ${CMAKE_SOURCE_DIR}/src/GDFCounter.cu
               ${CMAKE_SOURCE_DIR}/src/GDFColumn.cu
+              ${CMAKE_SOURCE_DIR}/src/blazing/metrics/chronometer.cpp
+              ${CMAKE_SOURCE_DIR}/src/blazing/uss/conio.cpp
               ${cudf_adapter_source_files}
               ${binary_operation_source_files}
               ${communication_source_files}

@@ -8,6 +8,17 @@
  ============================================================================
  */
 
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h> /* for strncpy */
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <netinet/in.h>
+#include <net/if.h>
+#include <arpa/inet.h>
+
 #include <cuda_runtime.h>
 #include <memory>
 #include <algorithm>
@@ -473,15 +484,39 @@ auto  interpreterServices(const blazingdb::protocol::Buffer &requestPayloadBuffe
 }
 
 
+std::string get_ip(const std::string &iface_name = "eth0") {
+    int fd;
+    struct ifreq ifr;
+    
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
+    
+    /* I want to get an IPv4 IP address */
+    ifr.ifr_addr.sa_family = AF_INET;
+    
+    /* I want IP address attached to "eth0" */
+    strncpy(ifr.ifr_name, iface_name.c_str(), IFNAMSIZ-1);
+    
+    ioctl(fd, SIOCGIFADDR, &ifr);
+    
+    close(fd);
+    
+    /* display result */
+    //printf("%s\n", inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
+    const std::string the_ip(inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
+    
+    return the_ip;
+}
+
 int main(int argc, const char *argv[])
 {
 
     std::cout << "Usage: " << argv[0]
               << " <RAL_ID> <GPU_ID>"
                  " <ORCHESTRATOR_HTTP_COMMUNICATION_[IP|HOSTNAME]> <ORCHESTRATOR_HTTP_COMMUNICATION_PORT>"
-                 " <RAL_HTTP_COMMUNICATION_[IP|HOSTNAME]> <RAL_HTTP_COMMUNICATION_PORT> <RAL_TCP_PROTOCOL_PORT>" << std::endl;
+                 " <RAL_HTTP_COMMUNICATION_[IP|HOSTNAME]> <RAL_HTTP_COMMUNICATION_PORT> <RAL_TCP_PROTOCOL_PORT>"
+                 " <OPTIONAL_NETWORK_INTERFACE_NAME_ETH0_DEFAULT>" << std::endl;
 
-    if (argc != 8) {
+    if (argc < 7) {
         std::cout << "FATAL: Invalid number of arguments" << std::endl;
         return EXIT_FAILURE;
     }
@@ -503,7 +538,7 @@ int main(int argc, const char *argv[])
         return EXIT_FAILURE;
     }
     
-    const std::string ralHost = std::string(argv[5]);
+    std::string ralHost = std::string(argv[5]);
 
     const int ralCommunicationPort = ConnectionUtils::parsePort(argv[6]);
 
@@ -518,7 +553,16 @@ int main(int argc, const char *argv[])
         std::cout << "FATAL: Invalid RAL TCP protocol port " + std::string(argv[7]) << std::endl;
         return EXIT_FAILURE;
     }
-
+    
+    //TODO percy make const and review this hacks
+    std::string network_iface_name = "eth0";
+    if (argc == 9) {
+        network_iface_name = argv[8];
+    }
+    
+    std::cout << "Using the network interface: " + network_iface_name << std::endl;
+    ralHost = get_ip(network_iface_name);
+    
     std::cout << "RAL ID: " << ralId << std::endl;
     std::cout << "GPU ID: " << gpuId << std::endl;
     std::cout << "Orchestrator HTTP communication host: " << orchestratorHost << std::endl;

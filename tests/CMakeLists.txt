@@ -41,6 +41,7 @@ enable_testing()
 message(STATUS "******** Configuring tests ********")
 
 
+add_subdirectory(blazing)
 add_subdirectory(logical-filter)
 add_subdirectory(calcite-interpreter)
 add_subdirectory(communication)

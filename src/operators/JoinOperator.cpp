@@ -251,7 +251,7 @@ std::vector<gdf_column_cpp> DistributedJoinOperator::concat_columns(std::vector<
         }
         for (auto& remote_node_column : remote_node_columns) {
             auto& remote_columns = remote_node_column.getColumnsRef();
-            if (remote_columns.size() && remote_columns[k].get_gdf_column() != nullptr) {
+            if (remote_columns.size() == column_quantity && remote_columns.size() && remote_columns[k].get_gdf_column() != nullptr) {
                 size += remote_columns[k].size();
                 dtype = remote_columns[k].dtype();
                 columns_wrapper.emplace_back(remote_columns[k].get_gdf_column());
@@ -260,12 +260,12 @@ std::vector<gdf_column_cpp> DistributedJoinOperator::concat_columns(std::vector<
 
         // Create output column
         gdf_column_cpp output = ral::utilities::create_column(size, dtype);
-
-        // Perform concatenation
-        CUDF_CALL( gdf_column_concat(output.get_gdf_column(),
-                                    columns_wrapper.data(),
-                                    columns_wrapper.size()) );
-
+        if (size != 0) {
+            // Perform concatenation
+            CUDF_CALL( gdf_column_concat(output.get_gdf_column(),
+                                        columns_wrapper.data(),
+                                        columns_wrapper.size()) );
+        }
         result.emplace_back(output);
     }
 

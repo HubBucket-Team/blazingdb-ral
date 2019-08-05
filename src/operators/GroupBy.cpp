@@ -2,6 +2,7 @@
 #include <future>
 #include <functional>
 #include <iterator>
+#include <numeric>
 #include <regex>
 #include <tuple>
 #include <blazingdb/io/Library/Logging/Logger.h>

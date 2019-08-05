@@ -15,6 +15,7 @@
 #include "DataFrame.h"
 #include <stack>
 #include <algorithm>
+#include <numeric>
 
 //based on calcites relational algebra
 const std::string INNER_JOIN = "inner";

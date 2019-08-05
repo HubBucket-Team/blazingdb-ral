@@ -20,6 +20,7 @@
 #include "../Schema.h"
 #include "io/data_parser/ParserUtil.h"
 
+#include <numeric>
 
 namespace ral {
 namespace io {

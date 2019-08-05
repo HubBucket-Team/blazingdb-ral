@@ -23,38 +23,6 @@
 namespace ral {
 namespace io {
 
-void copy_non_data_csv_read_args(cudf::csv_read_arg & args, cudf::csv_read_arg & new_args){
-	// Todo: Review which more need to be added
-	new_args.names			= args.names;
-    new_args.dtype			= args.dtype;
-    new_args.delimiter		= args.delimiter;
-    new_args.lineterminator = args.lineterminator;
-	new_args.skip_blank_lines = args.skip_blank_lines;
-	new_args.header 		= args.header;
-	new_args.decimal 		= args.decimal;
-	new_args.quotechar 		= args.quotechar;
-	new_args.quoting 		= args.quoting;
-	new_args.doublequote 	= args.doublequote;
-	new_args.delim_whitespace = args.delim_whitespace;
-	new_args.skipinitialspace = args.skipinitialspace;
-	new_args.dayfirst 		= args.dayfirst;
-	new_args.mangle_dupe_cols = args.mangle_dupe_cols;
-	new_args.compression 	= args.compression;
-	new_args.keep_default_na = args.keep_default_na;
-	new_args.na_filter		= args.na_filter;
-	new_args.use_cols_indexes = args.use_cols_indexes;
-	new_args.use_cols_names = args.use_cols_names;
-	new_args.source.type    = args.source.type;
-	new_args.source.filepath = args.source.filepath;
-	new_args.source.file    = args.source.file;
-	new_args.source.buffer.first = args.source.buffer.first;
-	new_args.source.buffer.second = args.source.buffer.second;
-	new_args.skiprows       = args.skiprows;
-	new_args.nrows          = args.nrows;
-	new_args.skipfooter     = args.skipfooter;
-}
-
-
 /**
  * reads contents of an arrow::io::RandomAccessFile in a char * buffer up to the number of bytes specified in bytes_to_read
  * for non local filesystems where latency and availability can be an issue it will ret`ry until it has exhausted its the read attemps and empty reads that are allowed
@@ -115,6 +83,10 @@ cudf::table read_csv_arg_arrow(cudf::csv_read_arg args, std::shared_ptr<arrow::i
 	gdf_error error = read_file_into_buffer(arrow_file_handle, num_bytes, (uint8_t*) args.source.buffer.first,100,10);
 	assert(error == GDF_SUCCESS);
 
+	if (first_row_only) {
+		args.nrows = 1;
+		args.skipfooter = 0;
+	}
 	cudf::table table_out = read_csv(args);
 
 	arrow_file_handle->Close();
@@ -133,10 +105,8 @@ csv_parser::csv_parser(std::string delimiter,
 	csv_arg.source.type = HOST_BUFFER;
 	csv_arg.delimiter = delimiter[0];
 	csv_arg.lineterminator = lineterminator[0];
+	csv_arg.skiprows = skiprows;
 	csv_arg.header = header;
-
-	if (skiprows < -1) csv_arg.skiprows = 0;
-	else csv_arg.skiprows = skiprows;
 
 	this->column_names = names;
 	this->dtype_strings.resize(dtypes.size());
@@ -175,7 +145,6 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 
 	if (column_indices.size() > 0) {
 
-		cudf::csv_read_arg raw_args = cudf::csv_read_arg{ cudf::source_info{""} };
 		csv_arg.names = this->column_names;
 		csv_arg.dtype = this->dtype_strings;
 
@@ -183,8 +152,7 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		csv_arg.use_cols_indexes.resize(column_indices.size());
 		csv_arg.use_cols_indexes.assign(column_indices.begin(), column_indices.end());
 		
-		copy_non_data_csv_read_args(csv_arg, raw_args);
-		cudf::table table_out = read_csv_arg_arrow(raw_args, file);
+		cudf::table table_out = read_csv_arg_arrow(csv_arg, file);
 
 		assert(table_out.num_columns() > 0);
 
@@ -213,13 +181,12 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 
 void csv_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files, ral::io::Schema & schema) {
 
-	cudf::csv_read_arg raw_args = cudf::csv_read_arg{ cudf::source_info{""} };
 	csv_arg.names = this->column_names;
 	csv_arg.dtype = this->dtype_strings;
 
-	copy_non_data_csv_read_args(csv_arg, raw_args);
+	if (csv_arg.skiprows < -1) csv_arg.skiprows = 0;
 
-	cudf::table table_out = read_csv_arg_arrow(raw_args, files[0], true);
+	cudf::table table_out = read_csv_arg_arrow(csv_arg, files[0], true);
 	
 	assert(table_out.num_columns() > 0);
 

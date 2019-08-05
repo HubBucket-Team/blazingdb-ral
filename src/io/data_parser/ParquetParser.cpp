@@ -14,6 +14,8 @@
 #include <parquet/file_reader.h>
 #include <parquet/schema.h>
 
+#include <thread>
+
 #include <GDFColumn.cuh>
 #include <GDFCounter.cuh>
 
@@ -155,14 +157,22 @@ void parquet_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomA
 	}
 	parquet_reader->Close();
 
+	std::thread threads[files.size()];
+
 	for(int file_index = 1; file_index < files.size(); file_index++){
-		parquet_reader = parquet::ParquetFileReader::Open(files[file_index]);
-		file_metadata = parquet_reader->metadata();
-		const parquet::SchemaDescriptor * schema = file_metadata->schema();
-		num_row_groups[file_index] = file_metadata->num_row_groups();
-		parquet_reader->Close();
+		threads[file_index] = std::thread([&, file_index]() 
+		{
+			std::unique_ptr<parquet::ParquetFileReader> parquet_reader = parquet::ParquetFileReader::Open(files[file_index]);
+			std::shared_ptr<parquet::FileMetaData> file_metadata = parquet_reader->metadata();
+			const parquet::SchemaDescriptor * schema = file_metadata->schema();
+			num_row_groups[file_index] = file_metadata->num_row_groups();
+			parquet_reader->Close();
+		});
 	}
-	
+
+	for(int file_index = 1; file_index < files.size(); file_index++){
+		threads[file_index].join();
+	}
 
 	// we currently dont support GDF_DATE32 for parquet so lets filter those out
 	std::vector<std::string> column_names_out;

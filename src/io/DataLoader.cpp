@@ -4,6 +4,7 @@
 #include <blazingdb/io/Library/Logging/Logger.h>
 
 #include <CodeTimer.h>
+#include <thread>
 
 namespace ral {
 namespace io {
@@ -31,21 +32,38 @@ void data_loader::load_data(std::vector<gdf_column_cpp> & columns, const std::ve
 	timer.reset();
 
 	std::vector<std::vector<gdf_column_cpp> > columns_per_file; //stores all of the columns parsed from each file
+	std::vector<std::string> user_readable_file_handles;
+	std::vector<std::shared_ptr<arrow::io::RandomAccessFile>> files;
+
 	//iterates through files and parses them into columns
 	while(this->provider->has_next()){
-		std::vector<gdf_column_cpp> converted_data;
 		//a file handle that we can use in case errors occur to tell the user which file had parsing issues
-		std::string user_readable_file_handle = this->provider->get_current_user_readable_file_handle();
-		std::shared_ptr<arrow::io::RandomAccessFile> file = this->provider->get_next();
-
-		if(file != nullptr){
-			parser->parse(file, user_readable_file_handle, converted_data,schema,column_indices);
-
-			columns_per_file.push_back(converted_data);
-		}else{
-			std::cout<<"Was unable to open "<<user_readable_file_handle<<std::endl;
-		}
+		user_readable_file_handles.push_back(this->provider->get_current_user_readable_file_handle());
+		files.push_back(this->provider->get_next());
 	}
+
+	columns_per_file.resize(files.size());
+	std::vector<std::thread> threads;
+
+	for(int file_index = 0; file_index < files.size(); file_index++){
+		threads.push_back(std::thread([&, file_index]()
+		{
+			std::vector<gdf_column_cpp> converted_data;
+			if(files[file_index] != nullptr){
+				parser->parse(files[file_index], user_readable_file_handles[file_index], converted_data,schema,column_indices);
+				columns_per_file[file_index] = converted_data;
+			}else{
+				std::cout<<"Was unable to open "<<user_readable_file_handles[file_index] <<std::endl;
+			}
+		}));
+	}
+
+	std::for_each(threads.begin(), threads.end(), [](std::thread &this_thread)
+	{
+		this_thread.join();
+	});
+
+	Library::Logging::Logger().logInfo("-> data_loader::load_data  " + std::to_string(timer.getDuration()) + " ms");
 
 	//checking if any errors occurred
 	std::vector<std::string> provider_errors = this->provider->get_errors();
@@ -72,6 +90,7 @@ void data_loader::load_data(std::vector<gdf_column_cpp> & columns, const std::ve
 	//make columns go out of scope while still preserving the size of the vector
 	gdf_column_cpp dummy_column;
 
+	timer.reset();
 	if(num_files == 1){ 	//we have only one file so we can just return the columns we parsed from that file
 		columns = columns_per_file[0];
 
@@ -106,7 +125,7 @@ void data_loader::load_data(std::vector<gdf_column_cpp> & columns, const std::ve
 			}
 		}
 	}
-	Library::Logging::Logger().logInfo("-> data_loader::load_data  " + std::to_string(timer.getDuration()) + " ms");
+	Library::Logging::Logger().logInfo("-> data_loader::load_data concat " + std::to_string(timer.getDuration()) + " ms");
 }
 
 void data_loader::get_schema(Schema & schema){

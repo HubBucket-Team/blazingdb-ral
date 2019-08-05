@@ -18,6 +18,7 @@
 #include <cassert>
 #include <cmath>
 #include <memory>
+#include <numeric>
 #include <iostream>
 #include "groupby.hpp"
 #include "table.hpp"

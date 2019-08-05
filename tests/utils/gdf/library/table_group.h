@@ -66,7 +66,7 @@ template<class TableBuilderType>
 class TypedTableGroupBuilder {
 public:
   TypedTableGroupBuilder(std::initializer_list<TableBuilderType> builders)
-    : builders_{builders} {}
+    : builders_(builders) {}
 
   TableGroup Build(const std::initializer_list<const std::size_t> lengths) {
     std::vector<Table> tables;

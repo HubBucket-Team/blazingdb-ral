@@ -17,6 +17,7 @@
 #include "io/data_parser/ParserUtil.h"
 
 #include <algorithm>
+#include <numeric>
 
 #define checkError(error, txt)  if ( error != GDF_SUCCESS) { std::cerr << "ERROR:  " << error <<  "  in "  << txt << std::endl;  return error; }
 

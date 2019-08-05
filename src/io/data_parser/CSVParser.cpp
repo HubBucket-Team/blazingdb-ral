@@ -23,12 +23,6 @@
 namespace ral {
 namespace io {
 
-void initil_default_values(cudf::csv_read_arg & args) {
-	// Todo: Almost all params are already set
-	args.source.type = HOST_BUFFER;
-	//args.skipfooter = 0;
-}
-
 void copy_non_data_csv_read_args(cudf::csv_read_arg & args, cudf::csv_read_arg & new_args){
 	// Todo: Review which more need to be added
 	new_args.names			= args.names;
@@ -50,14 +44,14 @@ void copy_non_data_csv_read_args(cudf::csv_read_arg & args, cudf::csv_read_arg &
 	new_args.na_filter		= args.na_filter;
 	new_args.use_cols_indexes = args.use_cols_indexes;
 	new_args.use_cols_names = args.use_cols_names;
-	new_args.source.type = args.source.type;
+	new_args.source.type    = args.source.type;
 	new_args.source.filepath = args.source.filepath;
-	new_args.source.file = args.source.file;
+	new_args.source.file    = args.source.file;
 	new_args.source.buffer.first = args.source.buffer.first;
 	new_args.source.buffer.second = args.source.buffer.second;
-	new_args.skiprows = args.skiprows;
-	new_args.nrows = args.nrows;
-	new_args.skipfooter = args.skipfooter;
+	new_args.skiprows       = args.skiprows;
+	new_args.nrows          = args.nrows;
+	new_args.skipfooter     = args.skipfooter;
 }
 
 
@@ -136,13 +130,14 @@ csv_parser::csv_parser(std::string delimiter,
 		std::vector<std::string> names,
 		std::vector<gdf_dtype> dtypes) {
 
-	initil_default_values(csv_arg);
-
+	csv_arg.source.type = HOST_BUFFER;
 	csv_arg.delimiter = delimiter[0];
 	csv_arg.lineterminator = lineterminator[0];
-	csv_arg.skiprows = skiprows;
-	csv_arg.header = header;		
-	
+	csv_arg.header = header;
+
+	if (skiprows < -1) csv_arg.skiprows = 0;
+	else csv_arg.skiprows = skiprows;
+
 	this->column_names = names;
 	this->dtype_strings.resize(dtypes.size());
 	for(int i = 0; i < dtypes.size(); i++){
@@ -221,8 +216,6 @@ void csv_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAcces
 	cudf::csv_read_arg raw_args = cudf::csv_read_arg{ cudf::source_info{""} };
 	csv_arg.names = this->column_names;
 	csv_arg.dtype = this->dtype_strings;
-	
-	schema.header = csv_arg.header;
 
 	copy_non_data_csv_read_args(csv_arg, raw_args);
 

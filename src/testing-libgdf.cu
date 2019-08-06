@@ -455,8 +455,8 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 static result_pair addToResultRepo (uint64_t accessToken, Buffer&& requestPayloadBuffer) {
 	blazingdb::message::io::AddToResultRepoMessage requestPayload(requestPayloadBuffer.data());
 
-	requestPayload.table();
-	auto parser = std::make_shared<ral::io::gdf_parser>(table,accessToken);
+	;
+	auto parser = std::make_shared<ral::io::gdf_parser>(requestPayload.table(),accessToken);
 
 	provider = std::make_shared<ral::io::dummy_data_provider>();
 
@@ -469,9 +469,11 @@ static result_pair addToResultRepo (uint64_t accessToken, Buffer&& requestPayloa
 	blazing_frame frame;
 	frame.add_table(columns);
 	result_set_repository::get_instance().register_query(accessToken,requestPayload.resultToken());
-	result_set_repository::get_instance().update_token(resultToken,frame,0,"");
+	result_set_repository::get_instance().update_token(requestPayload.resultToken(),frame.clone(),0,"");
 
 
+	ZeroMessage response{};
+	return std::make_pair(Status_Success, response.getBufferData());
 }
 
 

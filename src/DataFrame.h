@@ -175,6 +175,17 @@ public:
 		}
 	}
 
+	blazing_frame clone(){
+		blazing_frame new_frame;
+		for(auto table : this->get_columns()){
+			std::vector<gdf_column_cpp> table_columns;
+			for(auto column : table){
+				table_columns.push_back(column.clone());
+			}
+			new_frame.add_table(table_columns);
+		}
+		return new_frame;
+	}
 private:
 	std::vector<std::vector<gdf_column_cpp> > columns;
 	//std::vector<gdf_column *> row_indeces; //per table row indexes used for materializing

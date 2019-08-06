@@ -453,9 +453,9 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 
 
 static result_pair addToResultRepo (uint64_t accessToken, Buffer&& requestPayloadBuffer) {
-	blazingdb::message::io::AddToResultRepoMessage requestPayload(requestPayloadBuffer.data());
+	blazingdb::message::io::RegisterDaskSliceMessage requestPayload(requestPayloadBuffer.data());
 
-	;
+
 	auto parser = std::make_shared<ral::io::gdf_parser>(requestPayload.table(),accessToken);
 
 	provider = std::make_shared<ral::io::dummy_data_provider>();

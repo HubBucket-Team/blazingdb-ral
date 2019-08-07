@@ -92,6 +92,7 @@ set(SRC_FILES ${CMAKE_SOURCE_DIR}/src/config/BlazingConfig.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_parser/ParquetParser.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_parser/CSVParser.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_parser/GDFParser.cpp 
+              ${CMAKE_SOURCE_DIR}/src/io/data_parser/OrcParser.cpp
               ${CMAKE_SOURCE_DIR}/src/io/data_parser/ParserUtil.cpp 
               ${CMAKE_SOURCE_DIR}/src/Traits/RuntimeTraits.cpp
               ${CMAKE_SOURCE_DIR}/src/utilities/RalColumn.cpp

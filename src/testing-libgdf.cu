@@ -309,7 +309,8 @@ static result_pair parseSchemaService(uint64_t accessToken, Buffer&& requestPayl
 		parser =  std::make_shared<ral::io::csv_parser>(
 				requestPayload.csvDelimiter,
   				requestPayload.csvLineTerminator,
-  				(int) requestPayload.csvSkipRows,
+          (int) requestPayload.csvSkipRows,
+          (int) requestPayload.csvHeader,
   				requestPayload.columnNames, types);
 	}else{
 		//indicate error here
@@ -335,7 +336,8 @@ static result_pair parseSchemaService(uint64_t accessToken, Buffer&& requestPayl
 	if(requestPayload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
 		transport_schema.csvDelimiter = requestPayload.csvDelimiter;
 		transport_schema.csvSkipRows = requestPayload.csvSkipRows;
-		transport_schema.csvLineTerminator = requestPayload.csvLineTerminator;
+    transport_schema.csvLineTerminator = requestPayload.csvLineTerminator;
+    transport_schema.csvHeader = requestPayload.csvHeader;
 	}
 	transport_schema.files = requestPayload.files;
 
@@ -365,7 +367,8 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 	  		parser =  std::make_shared<ral::io::csv_parser>(
 	  				table.tableSchema.csvDelimiter,
 	  				table.tableSchema.csvLineTerminator,
-	  				table.tableSchema.csvSkipRows,
+            table.tableSchema.csvSkipRows,
+            table.tableSchema.csvHeader,
 	  				table.tableSchema.names, types);
 	  	}else{
 	  		parser = std::make_shared<ral::io::gdf_parser>(table,accessToken);

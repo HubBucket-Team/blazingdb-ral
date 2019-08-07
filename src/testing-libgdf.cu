@@ -298,10 +298,10 @@ static result_pair parseSchemaService(uint64_t accessToken, Buffer&& requestPayl
 	blazingdb::protocol::orchestrator::DDLCreateTableRequestMessage requestPayload(requestPayloadBuffer.data());
 
 	std::shared_ptr<ral::io::data_parser> parser;
-	if(requestPayload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_PARQUET){
+    if(requestPayload.schemaType == blazingdb::protocol::io::FileSchemaType::FileSchemaType_PARQUET){
 		parser = std::make_shared<ral::io::parquet_parser>();
 
-	}else if(requestPayload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
+    }else if(requestPayload.schemaType == blazingdb::protocol::io::FileSchemaType::FileSchemaType_CSV){
 		std::vector<gdf_dtype> types;
 		for(auto val : requestPayload.columnTypes){
 			types.push_back(ral::traits::convert_string_dtype(val));
@@ -332,7 +332,7 @@ static result_pair parseSchemaService(uint64_t accessToken, Buffer&& requestPayl
 
 	blazingdb::protocol::TableSchemaSTL transport_schema = schema.getTransport();
 
-	if(requestPayload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
+    if(requestPayload.schemaType == blazingdb::protocol::io::FileSchemaType::FileSchemaType_CSV){
 		transport_schema.csvDelimiter = requestPayload.csvDelimiter;
 		transport_schema.csvSkipRows = requestPayload.csvSkipRows;
 		transport_schema.csvLineTerminator = requestPayload.csvLineTerminator;
@@ -353,10 +353,10 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
   for(auto table : requestPayload.tableGroup().tables){
 	  ral::io::Schema schema(table.tableSchema);
 	std::shared_ptr<ral::io::data_parser> parser;
-	  if(table.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_PARQUET){
+      if(table.schemaType == blazingdb::protocol::io::FileSchemaType::FileSchemaType_PARQUET){
 	  		parser = std::make_shared<ral::io::parquet_parser>();
 
-	  	}else if(table.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
+        }else if(table.schemaType == blazingdb::protocol::io::FileSchemaType::FileSchemaType_CSV){
 	  		std::vector<gdf_dtype> types;
 			for(auto val : table.tableSchema.types){
 				types.push_back((gdf_dtype) val);
@@ -380,8 +380,8 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 
 
 
-	  if(table.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV ||
-			  table.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_PARQUET){
+      if(table.schemaType == blazingdb::protocol::io::FileSchemaType::FileSchemaType_CSV ||
+              table.schemaType == blazingdb::protocol::io::FileSchemaType::FileSchemaType_PARQUET){
 		  	 provider = std::make_shared<ral::io::uri_data_provider>(uris);
 	  }else{
 		  provider = std::make_shared<ral::io::dummy_data_provider>();

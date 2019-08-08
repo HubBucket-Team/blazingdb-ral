@@ -63,6 +63,7 @@ using namespace blazingdb::protocol;
 #include "io/data_parser/CSVParser.h"
 #include "io/data_parser/GDFParser.h"
 #include "io/data_parser/ParquetParser.h"
+#include "io/data_parser/JSONParser.h"
 #include "io/data_provider/DummyProvider.h"
 #include "io/data_provider/UriDataProvider.h"
 
@@ -300,7 +301,6 @@ static result_pair parseSchemaService(uint64_t accessToken, Buffer&& requestPayl
 	std::shared_ptr<ral::io::data_parser> parser;
 	if(requestPayload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_PARQUET){
 		parser = std::make_shared<ral::io::parquet_parser>();
-
 	}else if(requestPayload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
 		std::vector<gdf_dtype> types;
 		for(auto val : requestPayload.columnTypes){
@@ -311,7 +311,10 @@ static result_pair parseSchemaService(uint64_t accessToken, Buffer&& requestPayl
   				requestPayload.csvLineTerminator,
   				(int) requestPayload.csvSkipRows,
   				requestPayload.columnNames, types);
-	}else{
+  }else if(requestPayload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_JSON){
+    parser = std::make_shared<ral::io::json_parser>();
+  }
+  else{
 		//indicate error here
 		//this shoudl be done in the orchestrator
 	}
@@ -367,7 +370,10 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 	  				table.tableSchema.csvLineTerminator,
 	  				table.tableSchema.csvSkipRows,
 	  				table.tableSchema.names, types);
-	  	}else{
+      }else if(table.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_JSON){
+        parser = std::make_shared<ral::io::json_parser>();
+      }
+      else{
 	  		parser = std::make_shared<ral::io::gdf_parser>(table,accessToken);
 	  	}
 
@@ -381,7 +387,8 @@ static result_pair executeFileSystemPlanService (uint64_t accessToken, Buffer&& 
 
 
 	  if(table.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV ||
-			  table.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_PARQUET){
+        table.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_PARQUET ||
+        table.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_JSON){
 		  	 provider = std::make_shared<ral::io::uri_data_provider>(uris);
 	  }else{
 		  provider = std::make_shared<ral::io::dummy_data_provider>();

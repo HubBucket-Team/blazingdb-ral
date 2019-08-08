@@ -75,7 +75,7 @@ void copy_non_data_csv_args(cudf::io::csv::reader_options & args, cudf::io::csv:
 
 /**
  * reads contents of an arrow::io::RandomAccessFile in a char * buffer up to the number of bytes specified in bytes_to_read
- * for non local filesystems where latency and availability can be an issue it will ret`ry until it has exhausted its the read attemps and empty reads that are allowed
+ * for non local filesystems where latency and availability can be an issue it will retry until it has exhausted its the read attemps and empty reads that are allowed
  */
 gdf_error read_file_into_buffer(std::shared_ptr<arrow::io::RandomAccessFile> file, int64_t bytes_to_read, uint8_t* buffer, int total_read_attempts_allowed, int empty_reads_allowed){
 
@@ -237,7 +237,7 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	}	
 }
 
-void csv_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files, ral::io::Schema & schema)  {
+void csv_parser::parse_schema(const std::string & user_readable_file_handle, std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files, ral::io::Schema & schema)  {
 	cudf::io::csv::reader_options raw_args = cudf::io::csv::reader_options();
 
 	args.names = this->column_names;

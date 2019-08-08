@@ -1,12 +1,12 @@
 /*
- * ParquetParser.h
+ * jsonParser.h
  *
  *  Created on: Nov 29, 2018
  *      Author: felipe
  */
 
-#ifndef PARQUETPARSER_H_
-#define PARQUETPARSER_H_
+#ifndef jsonPARSER_H_
+#define jsonPARSER_H_
 
 #include "DataParser.h"
 #include <vector>
@@ -17,10 +17,10 @@
 namespace ral {
 namespace io {
 
-class parquet_parser: public data_parser {
+class json_parser: public data_parser {
 public:
-	parquet_parser();
-	virtual ~parquet_parser();
+	json_parser();
+	virtual ~json_parser();
 	void parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 				const std::string & user_readable_file_handle,
 				std::vector<gdf_column_cpp> & columns_out,
@@ -29,11 +29,9 @@ public:
 
 	void parse_schema(const std::string & user_readable_file_handle, std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files,
 			Schema & schema);
-
-
 };
 
 } /* namespace io */
 } /* namespace ral */
 
-#endif /* PARQUETPARSER_H_ */
+#endif /* jsonPARSER_H_ */

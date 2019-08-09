@@ -550,10 +550,10 @@ TEST_F(NVCategoryTest, processing_filter_join) {
 		std::vector<std::string> right_string_reference_result;
 
 		std::transform(reference_result.begin(), reference_result.end(), std::back_inserter(left_string_reference_result),
-						(const std::string& (*)(const std::pair<std::string, std::string>&))std::get<0>);
+						(const std::string& (*)(const std::pair<std::string, std::string>&))std::get<0, std::string, std::string>);
 
 		std::transform(reference_result.begin(), reference_result.end(), std::back_inserter(right_string_reference_result),
-						(const std::string& (*)(const std::pair<std::string, std::string>&))std::get<1>);
+						(const std::string& (*)(const std::pair<std::string, std::string>&))std::get<1, std::string, std::string>);
 
 		std::cout<<"Output:\n";
 		print_gdf_column(outputs[0].get_gdf_column());
@@ -608,10 +608,10 @@ TEST_F(NVCategoryTest, processing_orderby) {
 		std::vector<int32_t> int_reference_result;
 
 		std::transform(reference_result.begin(), reference_result.end(), std::back_inserter(string_reference_result),
-						(const std::string& (*)(const std::pair<std::string, int32_t>&))std::get<0>);
+						(const std::string& (*)(const std::pair<std::string, int32_t>&))std::get<0, std::string, int32_t>);
 
 		std::transform(reference_result.begin(), reference_result.end(), std::back_inserter(int_reference_result),
-						(const int32_t& (*)(const std::pair<std::string, int32_t>&))std::get<1>);
+						(const int32_t& (*)(const std::pair<std::string, int32_t>&))std::get<1, std::string, int32_t>);
 
 		std::cout<<"Output:\n";
 		print_gdf_column(outputs[0].get_gdf_column());
@@ -665,10 +665,10 @@ TEST_F(NVCategoryTest, processing_orderby_desc) {
 		std::vector<int32_t> int_reference_result;
 
 		std::transform(reference_result.begin(), reference_result.end(), std::back_inserter(string_reference_result),
-						(const std::string& (*)(const std::pair<std::string, int32_t>&))std::get<0>);
+						(const std::string& (*)(const std::pair<std::string, int32_t>&))std::get<0, std::string, int32_t>);
 
 		std::transform(reference_result.begin(), reference_result.end(), std::back_inserter(int_reference_result),
-						(const int32_t& (*)(const std::pair<std::string, int32_t>&))std::get<1>);
+						(const int32_t& (*)(const std::pair<std::string, int32_t>&))std::get<1, std::string, int32_t>);
 
 		std::cout<<"Output:\n";
 		print_gdf_column(outputs[0].get_gdf_column());

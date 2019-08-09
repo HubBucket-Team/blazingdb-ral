@@ -14,6 +14,7 @@
 #include "tests/distribution/mocking/ServerMock.h"
 #include "tests/utilities/gdf_column_cpp_utilities.h"
 #include "cuio/parquet/util/bit_util.cuh"
+#include <numeric>
 
 namespace {
 

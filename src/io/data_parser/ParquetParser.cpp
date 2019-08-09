@@ -9,6 +9,7 @@
 #include <cudf/io_functions.hpp>
 #include <cudf/legacy/column.hpp>
 #include <blazingdb/io/Util/StringUtil.h>
+#include "config/GPUManager.cuh"
 
 #include <arrow/io/file.h>
 #include <parquet/file_reader.h>
@@ -163,6 +164,7 @@ void parquet_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomA
 	for(int file_index = 1; file_index < files.size(); file_index++){
 		threads[file_index] = std::thread([&, file_index]() 
 		{
+			ral::config::GPUManager::getInstance().setDevice();
 			std::unique_ptr<parquet::ParquetFileReader> parquet_reader = parquet::ParquetFileReader::Open(files[file_index]);
 			std::shared_ptr<parquet::FileMetaData> file_metadata = parquet_reader->metadata();
 			const parquet::SchemaDescriptor * schema = file_metadata->schema();

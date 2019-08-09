@@ -2,6 +2,7 @@
 #include "DataLoader.h"
 #include "Traits/RuntimeTraits.h"
 #include <blazingdb/io/Library/Logging/Logger.h>
+#include "config/GPUManager.cuh"
 
 #include <CodeTimer.h>
 #include <thread>
@@ -48,6 +49,7 @@ void data_loader::load_data(std::vector<gdf_column_cpp> & columns, const std::ve
 	for(int file_index = 0; file_index < files.size(); file_index++){
 		threads.push_back(std::thread([&, file_index]()
 		{
+			ral::config::GPUManager::getInstance().setDevice();
 			std::vector<gdf_column_cpp> converted_data;
 			if(files[file_index] != nullptr){
 				parser->parse(files[file_index], user_readable_file_handles[file_index], converted_data,schema,column_indices);

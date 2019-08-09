@@ -58,19 +58,18 @@ void json_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		table_out = cudf::read_json(args);
 
 		assert(table_out.num_columns() > 0);
-		
+
 		columns_out.resize(column_indices.size());
 		for(size_t i = 0; i < columns_out.size(); i++){
-
 			if (table_out.get_column(i)->dtype == GDF_STRING){
-				NVStrings* strs = static_cast<NVStrings*>(table_out.get_column(i)->data);
+				NVStrings* strs = static_cast<NVStrings*>(table_out.get_column(column_indices[i])->data);
 				NVCategory* category = NVCategory::create_from_strings(*strs);
-				std::string column_name(table_out.get_column(i)->col_name);
-				columns_out[i].create_gdf_column(category, table_out.get_column(i)->size, column_name);
-				gdf_column_free(table_out.get_column(i));
+				std::string column_name(table_out.get_column(column_indices[i])->col_name);
+				columns_out[i].create_gdf_column(category, table_out.get_column(column_indices[i])->size, column_name);
+				gdf_column_free(table_out.get_column(column_indices[i]));
 			} else {
-				columns_out[i].create_gdf_column(table_out.get_column(i));
-			}			
+				columns_out[i].create_gdf_column(table_out.get_column(column_indices[i]));
+			}
 		}
 	}
 }
@@ -82,13 +81,13 @@ void json_parser::parse_schema(const std::string & user_readable_file_handle, st
 	args.lines = true; //TODO hardcoded
 
 	cudf::table table_out;
-	table_out = cudf::read_json(args);
+	table_out = cudf::read_json(args); //TODO: read first line only
 
 	assert(table_out.num_columns() > 0);
 
  	for(size_t i = 0; i < table_out.num_columns(); i++ ){
 		gdf_column_cpp c;
-		c.create_gdf_column(table_out.get_column(i)); 
+		c.create_gdf_column(table_out.get_column(i));
 		c.set_name(table_out.get_column(i)->col_name);
 		schema_out.add_column(c,i);
 	 }

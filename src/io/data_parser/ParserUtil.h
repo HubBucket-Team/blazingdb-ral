@@ -28,6 +28,8 @@ namespace io {
             const std::vector<gdf_dtype> & column_types,
             const std::vector<size_t> & column_indices_requested);
 
+    gdf_error read_file_into_buffer(std::shared_ptr<arrow::io::RandomAccessFile> file, 
+            int64_t bytes_to_read, uint8_t* buffer, int total_read_attempts_allowed, int empty_reads_allowed);
 
 } /* namespace io */
 } /* namespace ral */

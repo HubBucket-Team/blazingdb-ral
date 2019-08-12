@@ -21,7 +21,7 @@
 #include <numeric>
 #include <iostream>
 #include "groupby.hpp"
-#include "table.hpp"
+#include <cudf/legacy/table.hpp>
 #include "reduction.hpp"
 #include "operators/GroupBy.h"
 #include "copying.hpp"

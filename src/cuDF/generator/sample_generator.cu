@@ -4,7 +4,7 @@
 #include "utilities/RalColumn.h"
 #include <copying.hpp>
 #include <types.hpp>
-#include "cudf/table.hpp"
+#include <cudf/legacy/table.hpp>
 #include "cuDF/safe_nvcategory_gather.hpp"
 
 namespace cudf {

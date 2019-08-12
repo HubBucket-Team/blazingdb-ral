@@ -3,7 +3,7 @@
 
 #include "GDFColumn.cuh"
 #include "Traits/RuntimeTraits.h"
-#include <cudf/table.hpp>
+#include <cudf/legacy/table.hpp>
 
 namespace ral {
 namespace utilities {

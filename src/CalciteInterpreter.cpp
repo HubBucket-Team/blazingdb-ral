@@ -22,11 +22,12 @@
 #include "operators/OrderBy.h"
 #include "operators/GroupBy.h"
 #include "operators/JoinOperator.h"
+#include "utilities/RalColumn.h"
 #include "io/DataLoader.h"
 #include "reduction.hpp"
 #include "stream_compaction.hpp"
 #include "groupby.hpp"
-#include "table.hpp"
+#include <cudf/legacy/table.hpp>
 #include "cudf/binaryop.hpp"
 #include <rmm/thrust_rmm_allocator.h>
 
@@ -540,36 +541,45 @@ void process_filter(blazing_frame & input, std::string query_part){
 		timer.reset();
 		stencil.get_gdf_column()->dtype = GDF_BOOL8; // apply_boolean_mask expects the stencil to be a GDF_BOOL8 which for our purposes the way we are using the GDF_INT8 is the same as GDF_BOOL8
 
-		gdf_column temp_idx = cudf::apply_boolean_mask( *(index_col.get_gdf_column()), *(stencil.get_gdf_column()));
-		temp_idx.col_name = nullptr;
-		gdf_column * temp_idx_ptr = new gdf_column;
-		*temp_idx_ptr = temp_idx;
-		gdf_column_cpp temp_idx_col;
-		temp_idx_col.create_gdf_column(temp_idx_ptr);
+		cudf::table inputToFilter = ral::utilities::create_table(input.get_columns()[0]);
+		cudf::table filteredData = cudf::apply_boolean_mask(inputToFilter, *(stencil.get_gdf_column()));
 
-		Library::Logging::Logger().logInfo("-> Filter sub block 6 took " + std::to_string(timer.getDuration()) + " ms");
-
-		timer.reset();
-		
 		for(int i = 0; i < input.get_width();i++){
-			gdf_column_cpp materialize_temp;
-			if (input.get_column(i).valid())
-				materialize_temp.create_gdf_column(input.get_column(i).dtype(),temp_idx_col.size(),nullptr,get_width_dtype(input.get_column(i).dtype()), input.get_column(i).name());
-			else
-				materialize_temp.create_gdf_column(input.get_column(i).dtype(),temp_idx_col.size(),nullptr,nullptr,get_width_dtype(input.get_column(i).dtype()), input.get_column(i).name());
-
-			materialize_column(
-					input.get_column(i).get_gdf_column(),
-					materialize_temp.get_gdf_column(), //output
-					temp_idx_col.get_gdf_column() //indexes
-			);	
-			input.set_column(i,materialize_temp);
+			gdf_column* temp_col_view = filteredData.get_column(i);
+			temp_col_view->col_name = nullptr; // lets do this because its not always set properly
+			gdf_column_cpp temp;
+			temp.create_gdf_column(filteredData.get_column(i));
+			temp.set_name(input.get_column(i).name());
+			input.set_column(i,temp);
 		}
+
+		// gdf_column temp_idx = cudf::apply_boolean_mask( *(index_col.get_gdf_column()), *(stencil.get_gdf_column()));
+		// temp_idx.col_name = nullptr;
+		// gdf_column * temp_idx_ptr = new gdf_column;
+		// *temp_idx_ptr = temp_idx;
+		// gdf_column_cpp temp_idx_col;
+		// temp_idx_col.create_gdf_column(temp_idx_ptr);
+
+		// Library::Logging::Logger().logInfo("-> Filter sub block 6 took " + std::to_string(timer.getDuration()) + " ms");
+
+		// timer.reset();
+		
+		// for(int i = 0; i < input.get_width();i++){
+		// 	gdf_column_cpp materialize_temp;
+		// 	if (input.get_column(i).valid())
+		// 		materialize_temp.create_gdf_column(input.get_column(i).dtype(),temp_idx_col.size(),nullptr,get_width_dtype(input.get_column(i).dtype()), input.get_column(i).name());
+		// 	else
+		// 		materialize_temp.create_gdf_column(input.get_column(i).dtype(),temp_idx_col.size(),nullptr,nullptr,get_width_dtype(input.get_column(i).dtype()), input.get_column(i).name());
+
+		// 	materialize_column(
+		// 			input.get_column(i).get_gdf_column(),
+		// 			materialize_temp.get_gdf_column(), //output
+		// 			temp_idx_col.get_gdf_column() //indexes
+		// 	);	
+		// 	input.set_column(i,materialize_temp);
+		// }
 	}
 	Library::Logging::Logger().logInfo("-> Filter sub block 7 took " + std::to_string(timer.getDuration()) + " ms");
-
-	//free_gdf_column(&stencil);
-	//free_gdf_column(&temp);
 }
 
 //Returns the index from table if exists

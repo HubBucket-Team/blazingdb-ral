@@ -20,7 +20,7 @@
 #include "utilities/RalColumn.h"
 
 #include "cudf/groupby.hpp"
-#include "cudf/table.hpp"
+#include <cudf/legacy/table.hpp>
 #include "cudf/reduction.hpp"
 #include <rmm/thrust_rmm_allocator.h>
 

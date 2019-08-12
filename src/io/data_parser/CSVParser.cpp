@@ -185,7 +185,7 @@ void csv_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	}	
 }
 
-void csv_parser::parse_schema(const std::string & user_readable_file_handle, std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files, ral::io::Schema & schema)  {
+void csv_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files, ral::io::Schema & schema)  {
 	cudf::io::csv::reader_options raw_args = cudf::io::csv::reader_options();
 
 	args.names = this->column_names;

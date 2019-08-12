@@ -103,7 +103,7 @@ void gdf_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 		    schema.get_names(), this->loaded_columns, user_readable_file_handle, columns, columns_out);
 }
 
-void gdf_parser::parse_schema(const std::string & user_readable_file_handle, std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files,
+void gdf_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files,
 		ral::io::Schema & schema){
 	std::vector<std::string> names;
 	std::vector<gdf_dtype> types;

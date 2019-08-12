@@ -109,7 +109,7 @@ void json_parser::parse(std::shared_ptr<arrow::io::RandomAccessFile> file,
 	}
 }
 
-void json_parser::parse_schema(const std::string & user_readable_file_handle, std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files, ral::io::Schema & schema_out)  {
+void json_parser::parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files, ral::io::Schema & schema_out)  {
 
 	cudf::table table_out;
 	table_out = read_json_arrow(files[0], true);

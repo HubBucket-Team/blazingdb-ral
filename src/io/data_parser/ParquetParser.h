@@ -27,7 +27,7 @@ public:
 				const Schema & schema,
 				std::vector<size_t> column_indices_requested);
 
-	void parse_schema(const std::string & user_readable_file_handle, std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files,
+	void parse_schema(std::vector<std::shared_ptr<arrow::io::RandomAccessFile> > files,
 			Schema & schema);
 
 

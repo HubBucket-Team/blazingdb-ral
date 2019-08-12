@@ -129,8 +129,7 @@ void data_loader::load_data(std::vector<gdf_column_cpp> & columns, const std::ve
 }
 
 void data_loader::get_schema(Schema & schema){
-	std::string current_file_handle = this->provider->get_current_user_readable_file_handle();
-	this->parser->parse_schema(current_file_handle, this->provider->get_all(),schema);
+	this->parser->parse_schema(this->provider->get_all(), schema);
 }
 
 } /* namespace io */

@@ -305,7 +305,8 @@ static result_pair parseSchemaService(uint64_t accessToken, Buffer&& requestPayl
 		std::vector<gdf_dtype> types;
 		for(auto val : requestPayload.columnTypes){
 			types.push_back(ral::traits::convert_string_dtype(val));
-		}
+    }
+    
 		parser =  std::make_shared<ral::io::csv_parser>(
 				requestPayload.csvDelimiter,
   				requestPayload.csvLineTerminator,
@@ -335,7 +336,12 @@ static result_pair parseSchemaService(uint64_t accessToken, Buffer&& requestPayl
 	if(requestPayload.schemaType == blazingdb::protocol::FileSchemaType::FileSchemaType_CSV){
 		transport_schema.csvDelimiter = requestPayload.csvDelimiter;
 		transport_schema.csvSkipRows = requestPayload.csvSkipRows;
-		transport_schema.csvLineTerminator = requestPayload.csvLineTerminator;
+    transport_schema.csvLineTerminator = requestPayload.csvLineTerminator;
+    transport_schema.csvHeader = requestPayload.csvHeader;
+    transport_schema.csvNrows = requestPayload.csvNrows;
+    transport_schema.csvSkipinitialspace = requestPayload.csvSkipinitialspace;
+    transport_schema.csvDelimWhitespace = requestPayload.csvDelimWhitespace;
+    transport_schema.csvSkipBlankLines = requestPayload.csvSkipBlankLines;
 	}
 	transport_schema.files = requestPayload.files;
 
